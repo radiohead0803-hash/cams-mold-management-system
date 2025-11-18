@@ -31,19 +31,8 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
-app.get('/api', (req, res) => {
-  res.json({
-    message: 'Creative Auto Module System API',
-    version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      auth: '/api/auth',
-      molds: '/api/molds',
-      qr: '/api/qr-sessions',
-      inspections: '/api/inspections'
-    }
-  });
-});
+const apiRoutes = require('./routes');
+app.use('/api', apiRoutes);
 
 // 404 Handler
 app.use((req, res) => {
