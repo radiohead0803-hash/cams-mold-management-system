@@ -74,7 +74,6 @@ app.use((err, req, res, next) => {
 // Start Server
 const startServer = async () => {
   try {
-    // Test database connection (non-blocking)
     console.log('🔍 Testing database connection...');
     const dbConnected = await testConnection();
     
@@ -82,7 +81,7 @@ const startServer = async () => {
       console.warn('⚠️  Database connection failed. Server will start without database.');
       console.warn('⚠️  Please check DATABASE_URL environment variable.');
     }
-
+    
     // Start listening
     app.listen(PORT, '0.0.0.0', () => {
       console.log('');
