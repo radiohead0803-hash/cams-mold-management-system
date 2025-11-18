@@ -2,10 +2,10 @@
   "name": "cams-server",
   "version": "1.0.0",
   "description": "Creative Auto Module System - Backend Server",
-  "main": "src/index.js",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
     "build": "echo 'No build step required'",
     "migrate": "node src/migrations/run.js",
     "seed": "node src/seeders/run.js",
