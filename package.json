@@ -1,0 +1,31 @@
+{
+  "name": "cams-mold-management-system",
+  "version": "1.0.0",
+  "description": "Creative Auto Module System - Mold Management System",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "install:server": "cd server && npm install",
+    "install:client": "cd client && npm install",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm start",
+    "start": "cd server && npm start",
+    "build": "cd server && npm run build"
+  },
+  "keywords": [
+    "mold",
+    "management",
+    "qr",
+    "gps",
+    "railway"
+  ],
+  "author": "radiohead0803-hash",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
