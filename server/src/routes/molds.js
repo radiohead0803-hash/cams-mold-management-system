@@ -1,81 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const moldController = require('../controllers/moldController');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 
-/**
- * @route   GET /api/molds
- * @desc    금형 목록 조회 (검색, 필터링, 페이징)
- * @access  Private
- */
+// GET /api/v1/molds
 router.get('/', authenticate, moldController.getMolds);
 
-/**
- * @route   GET /api/molds/stats
- * @desc    금형 통계
- * @access  Private
- */
-router.get('/stats', authenticate, moldController.getMoldStats);
+// GET /api/v1/molds/:id
+router.get('/:id', authenticate, moldController.getMoldById);
 
-/**
- * @route   GET /api/molds/:id
- * @desc    금형 상세 조회
- * @access  Private
- */
-router.get('/:id', authenticate, moldController.getMold);
+// GET /api/v1/molds/qr/:qrCode
+router.get('/qr/:qrCode', authenticate, moldController.getMoldByQR);
 
-/**
- * @route   POST /api/molds
- * @desc    금형 생성
- * @access  Private (HQ Admin, HQ Manager)
- */
-router.post('/', 
-  authenticate, 
-  authorize('hq_admin', 'hq_manager'), 
-  moldController.createMold
-);
+// POST /api/v1/molds
+router.post('/', authenticate, moldController.createMold);
 
-/**
- * @route   PUT /api/molds/:id
- * @desc    금형 수정
- * @access  Private (HQ Admin, HQ Manager, Partner Admin)
- */
-router.put('/:id', 
-  authenticate, 
-  authorize('hq_admin', 'hq_manager', 'partner_admin'), 
-  moldController.updateMold
-);
+// PATCH /api/v1/molds/:id
+router.patch('/:id', authenticate, moldController.updateMold);
 
-/**
- * @route   DELETE /api/molds/:id
- * @desc    금형 삭제
- * @access  Private (HQ Admin, HQ Manager)
- */
-router.delete('/:id', 
-  authenticate, 
-  authorize('hq_admin', 'hq_manager'), 
-  moldController.deleteMold
-);
-
-/**
- * @route   PATCH /api/molds/:id/status
- * @desc    금형 상태 변경
- * @access  Private
- */
-router.patch('/:id/status', 
-  authenticate, 
-  moldController.updateMoldStatus
-);
-
-/**
- * @route   PATCH /api/molds/:id/location
- * @desc    금형 위치 변경
- * @access  Private (HQ Admin, HQ Manager)
- */
-router.patch('/:id/location', 
-  authenticate, 
-  authorize('hq_admin', 'hq_manager'), 
-  moldController.updateMoldLocation
-);
+// GET /api/v1/molds/:id/history
+router.get('/:id/history', authenticate, moldController.getMoldHistory);
 
 module.exports = router;

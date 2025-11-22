@@ -2,9 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
-const compression = require('compression');
-const { testConnection } = require('./config/database');
+const rateLimit = require('express-rate-limit');
+const logger = require('./utils/logger');
+const db = require('./models');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -12,106 +12,88 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   credentials: true
 }));
-app.use(compression());
-app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use('/api/', limiter);
+
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV
   });
 });
 
 // API Routes
-app.get('/api', (req, res) => {
-  res.json({
-    message: 'Creative Auto Module System API',
-    version: '1.0.0',
-    endpoints: {
-      health: '/health',
-      auth: '/api/auth',
-      molds: '/api/molds',
-      qr: '/api/qr-sessions',
-      inspections: '/api/inspections'
+app.use('/api/v1/auth', require('./routes/auth'));
+app.use('/api/v1/users', require('./routes/users'));
+app.use('/api/v1/molds', require('./routes/molds'));
+app.use('/api/v1/checklists', require('./routes/checklists'));
+app.use('/api/v1/inspections', require('./routes/inspections'));
+app.use('/api/v1/transfers', require('./routes/transfers'));
+app.use('/api/v1/alerts', require('./routes/alerts'));
+app.use('/api/v1/reports', require('./routes/reports'));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  logger.error('Error:', err);
+  
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+  
+  res.status(statusCode).json({
+    success: false,
+    error: {
+      message,
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     }
   });
 });
 
-// 404 Handler
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     error: {
-      code: 'NOT_FOUND',
-      message: 'The requested resource was not found'
+      message: 'Route not found'
     }
   });
 });
 
-// Error Handler
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  
-  res.status(err.status || 500).json({
-    success: false,
-    error: {
-      code: err.code || 'INTERNAL_SERVER_ERROR',
-      message: process.env.NODE_ENV === 'development' 
-        ? err.message 
-        : 'An internal server error occurred'
-    }
-  });
-});
-
-// Start Server
+// Database connection and server start
 const startServer = async () => {
   try {
-    // Test database connection (non-blocking)
-    const dbConnected = await testConnection();
+    // Test database connection
+    await db.sequelize.authenticate();
+    logger.info('Database connection established successfully.');
     
-    if (!dbConnected) {
-      console.warn('⚠️  Database connection failed. Server will start without database.');
-      console.warn('⚠️  Please check DATABASE_URL environment variable.');
+    // Sync database (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      await db.sequelize.sync({ alter: false });
+      logger.info('Database synchronized.');
     }
-
-    // Start listening
+    
+    // Start server
     app.listen(PORT, () => {
-      console.log('');
-      console.log('🚀 ═══════════════════════════════════════════════════════');
-      console.log('   Creative Auto Module System - Backend Server');
-      console.log('═══════════════════════════════════════════════════════');
-      console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`   Server:      http://localhost:${PORT}`);
-      console.log(`   Health:      http://localhost:${PORT}/health`);
-      console.log(`   API:         http://localhost:${PORT}/api`);
-      console.log(`   Database:    ${dbConnected ? '✅ Connected' : '❌ Not Connected'}`);
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('');
+      logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.error('Unable to start server:', error);
     process.exit(1);
   }
 };
-
-// Handle shutdown gracefully
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT signal received: closing HTTP server');
-  process.exit(0);
-});
 
 startServer();
 

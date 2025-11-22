@@ -1,5 +1,63 @@
-module.exports = (sequelize, DataTypes) => {
-  const User = sequelize.define('User', {
+const { Model, DataTypes } = require('sequelize');
+
+class User extends Model {
+  static associate(models) {
+    // Daily Check 관계
+    User.hasMany(models.DailyCheck, {
+      foreignKey: 'inspector_id',
+      as: 'dailyChecks'
+    });
+    
+    User.hasMany(models.DailyCheckItem, {
+      foreignKey: 'confirmed_by',
+      as: 'confirmedChecklists'
+    });
+    
+    // Inspection 관계
+    User.hasMany(models.Inspection, {
+      foreignKey: 'inspector_id',
+      as: 'inspections'
+    });
+    
+    User.hasMany(models.InspectionPhoto, {
+      foreignKey: 'uploaded_by',
+      as: 'uploadedPhotos'
+    });
+    
+    // Repair 관계
+    User.hasMany(models.Repair, {
+      foreignKey: 'requested_by',
+      as: 'repairRequests'
+    });
+    
+    // Transfer 관계
+    User.hasMany(models.Transfer, {
+      foreignKey: 'requested_by',
+      as: 'transferRequests'
+    });
+    
+    // Notification 관계
+    User.hasMany(models.Notification, {
+      foreignKey: 'user_id',
+      as: 'notifications'
+    });
+    
+    // GPS Location 관계
+    User.hasMany(models.GPSLocation, {
+      foreignKey: 'recorded_by',
+      as: 'gpsRecords'
+    });
+    
+    // Shot 관계
+    User.hasMany(models.Shot, {
+      foreignKey: 'recorded_by',
+      as: 'shotRecords'
+    });
+  }
+}
+
+module.exports = (sequelize) => {
+  User.init({
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
@@ -7,56 +65,56 @@ module.exports = (sequelize, DataTypes) => {
     },
     username: {
       type: DataTypes.STRING(50),
-      unique: true,
       allowNull: false,
-      comment: '사용자 아이디'
+      unique: true
     },
-    password: {
+    password_hash: {
       type: DataTypes.STRING(255),
-      allowNull: false,
-      comment: '암호화된 비밀번호'
+      allowNull: false
     },
     name: {
       type: DataTypes.STRING(100),
-      allowNull: false,
-      comment: '사용자 이름'
+      allowNull: false
     },
     email: {
       type: DataTypes.STRING(100),
-      unique: true,
-      allowNull: false,
-      comment: '이메일'
+      unique: true
     },
     phone: {
+      type: DataTypes.STRING(20)
+    },
+    // 사용자 유형 (4가지)
+    user_type: {
       type: DataTypes.STRING(20),
-      comment: '전화번호'
-    },
-    role: {
-      type: DataTypes.ENUM('admin', 'hq_staff', 'partner', 'manufacturer', 'viewer'),
       allowNull: false,
-      defaultValue: 'viewer',
-      comment: '사용자 역할'
+      comment: 'system_admin, mold_developer, maker, plant'
     },
-    partner_id: {
-      type: DataTypes.INTEGER,
-      comment: '소속 협력사 ID'
+    company_id: {
+      type: DataTypes.INTEGER
     },
-    manufacturer_id: {
-      type: DataTypes.INTEGER,
-      comment: '소속 제작처 ID'
+    company_name: {
+      type: DataTypes.STRING(100)
+    },
+    company_type: {
+      type: DataTypes.STRING(20),
+      comment: 'hq, maker, plant'
     },
     is_active: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true,
-      comment: '활성 상태'
+      defaultValue: true
     },
-    last_login: {
-      type: DataTypes.DATE,
-      comment: '마지막 로그인 시간'
+    failed_login_attempts: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
     },
-    refresh_token: {
-      type: DataTypes.TEXT,
-      comment: 'JWT Refresh Token'
+    locked_until: {
+      type: DataTypes.DATE
+    },
+    last_login_at: {
+      type: DataTypes.DATE
+    },
+    last_login_ip: {
+      type: DataTypes.STRING(45)
     },
     created_at: {
       type: DataTypes.DATE,
@@ -67,16 +125,16 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.NOW
     }
   }, {
+    sequelize,
+    modelName: 'User',
     tableName: 'users',
-    timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
+    timestamps: false,
     indexes: [
       { fields: ['username'] },
       { fields: ['email'] },
-      { fields: ['role'] },
-      { fields: ['partner_id'] },
-      { fields: ['manufacturer_id'] }
+      { fields: ['user_type'] },
+      { fields: ['company_id'] },
+      { fields: ['company_type'] }
     ]
   });
 

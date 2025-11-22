@@ -5,7 +5,9 @@
 
 ## 📊 테이블 구조 개요
 
-총 **50개 테이블**로 구성되며, 10개 카테고리로 분류됩니다.
+총 **52개 테이블**로 구성되며, 10개 카테고리로 분류됩니다.
+
+**주요 변경사항**: 습합점검(`fitting_checks`)과 세척점검(`cleaning_checks`)은 정기점검(`inspections`) 내 체크리스트 항목으로 통합되었습니다.
 
 ---
 
@@ -20,19 +22,32 @@ CREATE TABLE users (
   name VARCHAR(100) NOT NULL,
   email VARCHAR(100),
   phone VARCHAR(20),
-  role_group VARCHAR(20) NOT NULL, -- 'hq', 'plant', 'maker'
-  role_detail VARCHAR(50),
-  plant_id INTEGER,
-  maker_id INTEGER,
+  
+  -- 사용자 유형 (4가지)
+  user_type VARCHAR(20) NOT NULL, 
+  -- 'system_admin': CAMS 시스템 관리 담당 (본사)
+  -- 'mold_developer': 금형개발 담당 (본사)
+  -- 'maker': 금형제작처
+  -- 'plant': 생산처
+  
+  company_id INTEGER,
+  company_name VARCHAR(100),
+  company_type VARCHAR(20), -- 'hq', 'maker', 'plant'
+  
   is_active BOOLEAN DEFAULT TRUE,
-  last_login TIMESTAMP,
+  failed_login_attempts INTEGER DEFAULT 0,
+  locked_until TIMESTAMP,
+  
+  last_login_at TIMESTAMP,
+  last_login_ip VARCHAR(45),
+  
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_role_group ON users(role_group);
-CREATE INDEX idx_users_plant_id ON users(plant_id);
-CREATE INDEX idx_users_maker_id ON users(maker_id);
+CREATE INDEX idx_users_user_type ON users(user_type);
+CREATE INDEX idx_users_company_id ON users(company_id);
+CREATE INDEX idx_users_company_type ON users(company_type);
 ```
 
 ### 1.2 qr_sessions (QR 세션)
@@ -136,7 +151,6 @@ CREATE TABLE maker_specifications (
   actual_cavity_count INTEGER,
   core_material VARCHAR(100),
   cavity_material VARCHAR(100),
-  hardness VARCHAR(50),
   
   -- 구조 정보
   cooling_type VARCHAR(50),
@@ -156,6 +170,21 @@ CREATE TABLE maker_specifications (
   -- 도면 및 사진
   drawings JSONB, -- 도면 URL 배열
   production_images JSONB, -- 제작 과정 사진
+  
+  -- 상하형 사진 (제작완료 시 필수)
+  upper_mold_images JSONB,               -- 상형 사진 배열
+  lower_mold_images JSONB,               -- 하형 사진 배열
+  
+  -- 경도 측정 결과 (제작완료 후 필수)
+  hardness_upper_mold VARCHAR(50),       -- 상형 금형 경도 (HRC)
+  hardness_lower_mold VARCHAR(50),       -- 하형 금형 경도 (HRC)
+  hardness_test_date DATE,               -- 경도 측정일
+  hardness_test_report VARCHAR(500),     -- 경도 측정 성적서 URL
+  
+  -- 첨부 자료 (제작완료 시 필수)
+  mold_parameter_sheet VARCHAR(500),     -- 금형인자표 URL
+  molding_analysis VARCHAR(500),         -- 성형해석 자료 URL
+  trial_shot_result VARCHAR(500),        -- 초도사출 T/O 결과 URL
   
   -- 완료 정보
   completed BOOLEAN DEFAULT FALSE,
@@ -324,283 +353,204 @@ CREATE INDEX idx_mold_development_mold ON mold_development(mold_id);
 CREATE INDEX idx_mold_development_stage ON mold_development(development_stage);
 ```
 
-### 2.3 development_plan (개발계획 - 단계별 상세)
+### 2.3 mold_development_plans (금형개발계획 - 진도 관리)
 ```sql
-CREATE TABLE development_plan (
+CREATE TABLE mold_development_plans (
   id SERIAL PRIMARY KEY,
-  mold_id INTEGER NOT NULL REFERENCES molds(id),
-  development_id INTEGER REFERENCES mold_development(id),
+  mold_specification_id INTEGER NOT NULL REFERENCES mold_specifications(id),
   
-  -- 단계 정보
-  phase_number INTEGER NOT NULL, -- 1, 2, 3, 4, 5
-  phase_name VARCHAR(100) NOT NULL, -- '기획', '설계', '제작', '시운전', '양산'
-  phase_order INTEGER NOT NULL, -- 정렬 순서
+  -- 자동 입력 항목 (금형제작사양에서)
+  car_model VARCHAR(100),              -- 차종 [자동]
+  part_number VARCHAR(50),             -- 품번 [자동]
+  part_name VARCHAR(200),              -- 품명 [자동]
+  schedule_code VARCHAR(20),           -- 제작일정 코드 (D+144 형식, 자동 계산)
+  export_rate VARCHAR(20),             -- 수출률 (6/1000 형식, 자동 계산)
   
-  -- 일정
-  planned_start_date DATE,
-  planned_end_date DATE,
-  actual_start_date DATE,
-  actual_end_date DATE,
+  -- 수동 입력 항목
+  raw_material VARCHAR(100),           -- 원재료
+  manufacturer VARCHAR(100),           -- 제작자
+  trial_order_date DATE,               -- T/O일정
+  start_status BOOLEAN DEFAULT FALSE,  -- 시작 체크박스
+  completion_status BOOLEAN DEFAULT FALSE, -- 완성 체크박스
+  material_upper_type VARCHAR(100),    -- 상형 재질 (드롭다운)
+  material_lower_type VARCHAR(100),    -- 하형 재질 (드롭다운)
+  part_weight DECIMAL(10, 2),          -- 부품중량(g)
+  images JSONB,                        -- 이미지 업로드
   
   -- 진행률
-  progress_percentage INTEGER DEFAULT 0, -- 0-100%
+  overall_progress INTEGER DEFAULT 0,
+  completed_steps INTEGER DEFAULT 0,
+  total_steps INTEGER DEFAULT 12,      -- 12단계 공정
+  current_step VARCHAR(50),
   
   -- 상태
-  status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'in_progress', 'completed', 'delayed', 'on_hold'
+  status VARCHAR(20), -- 'planning', 'in_progress', 'completed', 'delayed'
   
-  -- 주요 활동 및 산출물
-  key_activities JSONB, -- [{"activity": "요구사항 분석", "completed": true}, ...]
-  deliverables JSONB, -- [{"name": "기획서", "completed": true, "file_url": "..."}, ...]
-  
-  -- 마일스톤
-  milestones JSONB, -- [{"name": "설계 검토", "date": "2024-03-15", "completed": true}, ...]
-  
-  -- 담당자 및 참여자
-  responsible_person VARCHAR(100),
-  team_members JSONB, -- [{"name": "홍길동", "role": "설계"}, ...]
-  
-  -- 이슈 및 리스크
-  issues JSONB, -- [{"issue": "재료 수급 지연", "severity": "high", "status": "resolved"}, ...]
-  risks JSONB, -- [{"risk": "납기 지연 가능성", "probability": "medium", "impact": "high"}, ...]
-  
-  -- 비용
-  planned_cost DECIMAL(12, 2),
-  actual_cost DECIMAL(12, 2),
-  
-  -- 품질 지표
-  quality_metrics JSONB, -- {"defect_rate": 0.5, "rework_count": 2}
-  
-  -- 승인 정보
-  approval_required BOOLEAN DEFAULT FALSE,
-  approval_status VARCHAR(20), -- 'pending', 'approved', 'rejected'
-  approved_by INTEGER REFERENCES users(id),
-  approved_at TIMESTAMP,
-  approval_comments TEXT,
-  
-  -- 첨부 파일
-  attachments JSONB, -- [{"name": "설계도면.pdf", "url": "...", "uploaded_at": "..."}, ...]
-  
-  -- 메모
-  notes TEXT,
-  
+  created_by INTEGER REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_development_plan_mold ON development_plan(mold_id);
-CREATE INDEX idx_development_plan_development ON development_plan(development_id);
-CREATE INDEX idx_development_plan_phase ON development_plan(phase_number);
-CREATE INDEX idx_development_plan_status ON development_plan(status);
+CREATE INDEX idx_development_plans_spec ON mold_development_plans(mold_specification_id);
 ```
 
-### 2.3.1 development_progress_history (개발 진행 이력)
+### 2.3.1 mold_process_steps (공정 단계 - 12단계 진도 관리)
 ```sql
-CREATE TABLE development_progress_history (
+CREATE TABLE mold_process_steps (
   id SERIAL PRIMARY KEY,
-  development_plan_id INTEGER NOT NULL REFERENCES development_plan(id),
-  mold_id INTEGER NOT NULL REFERENCES molds(id),
+  development_plan_id INTEGER NOT NULL REFERENCES mold_development_plans(id),
   
-  -- 변경 정보
-  previous_progress INTEGER,
-  new_progress INTEGER,
-  previous_status VARCHAR(20),
-  new_status VARCHAR(20),
+  -- 단계 정보
+  step_number INTEGER NOT NULL,        -- 1~12
+  step_name VARCHAR(100) NOT NULL,     -- 구분 (공정명)
+  -- 12단계: 도면접수, 몰드베이스발주, 금형설계, 도면검토회, 상형가공, 하형가공,
+  --        상형열처리, 하형열처리, 상형경도측정, 하형경도측정, 조립, 시운전
   
-  -- 변경 내용
-  change_description TEXT,
-  achievements TEXT, -- 달성 사항
-  next_steps TEXT, -- 다음 단계
+  -- 제작일정
+  start_date DATE,                     -- 시작일
+  planned_completion_date DATE,        -- 종료일 (계획)
+  actual_completion_date DATE,         -- 실제 완료일
   
-  -- 변경자
-  updated_by INTEGER REFERENCES users(id),
-  update_date TIMESTAMP DEFAULT NOW(),
+  -- 상태
+  status VARCHAR(20),                  -- 'pending', 'in_progress', 'completed', 'delayed'
+  status_display VARCHAR(50),          -- 상태 표시 (완료, 진행중, 진행예정)
   
-  -- 첨부
-  attachments JSONB,
+  -- 비고 및 일정
+  notes TEXT,                          -- 비고
+  days_remaining VARCHAR(20),          -- 일정 (D+00 형식)
   
-  created_at TIMESTAMP DEFAULT NOW()
+  -- 담당자
+  assignee VARCHAR(100),
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  UNIQUE(development_plan_id, step_number)
 );
 
-CREATE INDEX idx_dev_progress_history_plan ON development_progress_history(development_plan_id);
-CREATE INDEX idx_dev_progress_history_mold ON development_progress_history(mold_id);
-CREATE INDEX idx_dev_progress_history_date ON development_progress_history(update_date);
+CREATE INDEX idx_process_steps_plan ON mold_process_steps(development_plan_id);
+CREATE INDEX idx_process_steps_status ON mold_process_steps(status);
 ```
 
-### 2.4 mold_project (금형체크리스트)
+### 2.4 pre_production_checklists (제작전 체크리스트)
 ```sql
-CREATE TABLE mold_project (
+CREATE TABLE pre_production_checklists (
   id SERIAL PRIMARY KEY,
-  mold_id INTEGER NOT NULL REFERENCES molds(id),
+  mold_specification_id INTEGER NOT NULL REFERENCES mold_specifications(id),
+  maker_id INTEGER NOT NULL REFERENCES users(id),
   
-  -- 기본 정보
-  checklist_type VARCHAR(50), -- '제작완료', '수리완료', '정기점검', '이관전', '기타'
-  checklist_date DATE NOT NULL,
-  inspector_id INTEGER REFERENCES users(id), -- 점검자
-  inspector_name VARCHAR(100),
-  department VARCHAR(100), -- 부서
+  -- 체크리스트 ID 및 제목
+  checklist_id VARCHAR(50) UNIQUE,    -- M-2024-001
+  checklist_title VARCHAR(200),       -- 스마트폰 케이스 금형
+  checklist_type VARCHAR(50) DEFAULT '제작전',
   
-  -- 금형 기본 정보 (자동 입력)
-  mold_code VARCHAR(50),
-  mold_name VARCHAR(200),
-  part_number VARCHAR(50),
-  maker_name VARCHAR(200), -- 제작처
+  -- 상단 헤더 정보
+  total_items INTEGER DEFAULT 81,     -- 총 점검항목 (81개)
+  rejected_items INTEGER DEFAULT 0,   -- 반려
+  progress_rate DECIMAL(5, 2) DEFAULT 0, -- 진행률
+  status VARCHAR(20) DEFAULT '승인대기', -- 상태
   
-  -- 1. 외관 점검 (Appearance Check)
-  appearance_check JSONB, -- {
-    -- "surface_condition": {"status": "OK", "notes": "양호"},
-    -- "rust_corrosion": {"status": "OK", "notes": ""},
-    -- "scratches_dents": {"status": "NG", "notes": "코어부 미세 스크래치"},
-    -- "cleanliness": {"status": "OK", "notes": ""}
+  -- 기본정보 (자동 입력)
+  car_model VARCHAR(100),             -- 차종 [자동]
+  part_number VARCHAR(50),            -- PART NUMBER [자동]
+  part_name VARCHAR(200),             -- PART NAME [자동]
+  created_date DATE,                  -- 작성일 [자동]
+  created_by_name VARCHAR(100),       -- 작성자 [자동]
+  production_plant VARCHAR(100),      -- 양산처 [자동]
+  maker_name VARCHAR(100),            -- 제작처 [자동]
+  injection_machine_tonnage VARCHAR(50), -- 양산 사출기 [수동]
+  clamping_force VARCHAR(50),         -- 형체력 [자동]
+  eo_cut_date DATE,                   -- EO CUT [자동]
+  trial_order_date DATE,              -- 초도 T/O 일정 [자동]
+  
+  -- 부품 그림 (자동 연계)
+  part_images JSONB,                  -- 부품 이미지 배열
+  
+  -- 작성자 정보 (제작처)
+  created_by_maker INTEGER REFERENCES users(id),
+  
+  -- I. 원재료 (Material) - 9개 항목
+  category_material JSONB, -- {
+    -- "shrinkage_rate": {"applicable": true, "status": "OK", "notes": ""},
+    -- "material_specification": {"applicable": true, "status": "OK", "notes": ""},
+    -- "material_certificate": {"applicable": true, "status": "OK", "notes": ""},
+    -- ...
   -- }
   
-  -- 2. 치수 점검 (Dimension Check)
-  dimension_check JSONB, -- {
-    -- "cavity_dimensions": {"status": "OK", "measured": "100.02mm", "standard": "100±0.05mm"},
-    -- "core_dimensions": {"status": "OK", "measured": "99.98mm", "standard": "100±0.05mm"},
-    -- "parting_line": {"status": "OK", "notes": ""},
-    -- "gate_size": {"status": "OK", "measured": "2.5mm", "standard": "2.5±0.1mm"}
+  -- II. 금형 (Mold) - 13개 항목
+  category_mold JSONB, -- {
+    -- "mold_structure": {"applicable": true, "status": "OK", "notes": ""},
+    -- "cooling_system": {"applicable": true, "status": "OK", "notes": ""},
+    -- "ejection_system": {"applicable": true, "status": "OK", "notes": ""},
+    -- ...
   -- }
   
-  -- 3. 기능 점검 (Function Check)
-  function_check JSONB, -- {
-    -- "ejector_operation": {"status": "OK", "notes": "정상 작동"},
-    -- "slide_operation": {"status": "OK", "notes": "슬라이드 2개 정상"},
-    -- "lifter_operation": {"status": "OK", "notes": ""},
-    -- "cooling_channels": {"status": "OK", "notes": "냉각수로 막힘 없음"},
-    -- "hot_runner": {"status": "OK", "notes": "핫러너 정상"}
-  -- }
+  -- III. 가스 배기 (Gas Vent) - 6개 항목
+  category_gas_vent JSONB,
   
-  -- 4. 안전 점검 (Safety Check)
-  safety_check JSONB, -- {
-    -- "sharp_edges": {"status": "OK", "notes": "날카로운 모서리 없음"},
-    -- "pinch_points": {"status": "OK", "notes": ""},
-    -- "guard_installation": {"status": "OK", "notes": "안전 가드 설치 완료"},
-    -- "emergency_stop": {"status": "OK", "notes": "비상정지 장치 정상"}
-  -- }
+  -- IV. 성형 해석 (Moldflow 등) - 11개 항목
+  category_moldflow JSONB,
   
-  -- 5. 구조 점검 (Structure Check)
-  structure_check JSONB, -- {
-    -- "mounting_holes": {"status": "OK", "notes": "장착 구멍 4개 정상"},
-    -- "guide_pins": {"status": "OK", "notes": "가이드 핀 정렬 양호"},
-    -- "locating_ring": {"status": "OK", "notes": ""},
-    -- "sprue_bushing": {"status": "OK", "notes": "스프루 부싱 정상"}
-  -- }
+  -- V. 싱크마크 (Sink Mark) - 10개 항목
+  category_sink_mark JSONB,
   
-  -- 6. 부품 점검 (Parts Check)
-  parts_check JSONB, -- {
-    -- "ejector_pins": {"status": "OK", "count": 12, "notes": "전체 정상"},
-    -- "return_pins": {"status": "OK", "count": 4, "notes": ""},
-    -- "springs": {"status": "OK", "count": 8, "notes": "스프링 장력 정상"},
-    -- "bolts_screws": {"status": "OK", "notes": "모든 볼트 체결 확인"}
-  -- }
+  -- VI. 취출 (Ejection) - 10개 항목
+  category_ejection JSONB,
   
-  -- 7. 성능 점검 (Performance Check)
-  performance_check JSONB, -- {
-    -- "cycle_time": {"status": "OK", "measured": "45s", "target": "45s"},
-    -- "shot_weight": {"status": "OK", "measured": "125g", "target": "125±2g"},
-    -- "cooling_efficiency": {"status": "OK", "notes": "냉각 효율 양호"},
-    -- "part_quality": {"status": "OK", "notes": "성형품 품질 양호"}
-  -- }
+  -- VII. MIC 제품 (MICA 스펙률 등) - 9개 항목
+  category_mic JSONB,
   
-  -- 8. 문서 점검 (Documentation Check)
-  documentation_check JSONB, -- {
-    -- "drawings_available": {"status": "OK", "notes": "도면 완비"},
-    -- "specifications": {"status": "OK", "notes": "사양서 확인"},
-    -- "maintenance_manual": {"status": "OK", "notes": "정비 매뉴얼 제공"},
-    -- "parts_list": {"status": "OK", "notes": "부품 리스트 확인"}
-  -- }
+  -- VIII. 도금 (Coating) - 7개 항목
+  category_coating JSONB,
+  
+  -- IX. 리어 백빔 (Rear Back Beam) - 6개 항목
+  category_rear_back_beam JSONB,
   
   -- 종합 결과
-  total_items INTEGER DEFAULT 0, -- 전체 점검 항목 수
-  ok_items INTEGER DEFAULT 0, -- OK 항목 수
-  ng_items INTEGER DEFAULT 0, -- NG 항목 수
-  na_items INTEGER DEFAULT 0, -- N/A 항목 수
+  ok_items INTEGER DEFAULT 0,
+  ng_items INTEGER DEFAULT 0,
+  na_items INTEGER DEFAULT 0,
+  pass_rate DECIMAL(5, 2),
+  overall_result VARCHAR(20),        -- 'pass', 'conditional_pass', 'fail'
   
-  pass_rate DECIMAL(5, 2), -- 합격률 (%)
-  overall_result VARCHAR(20), -- 'pass', 'conditional_pass', 'fail'
+  -- 특이사항
+  special_notes TEXT,
+  risk_assessment TEXT,
   
-  -- 특이사항 및 조치사항
-  special_notes TEXT, -- 특이사항
-  corrective_actions TEXT, -- 조치사항
-  follow_up_required BOOLEAN DEFAULT FALSE, -- 후속 조치 필요 여부
-  follow_up_date DATE, -- 후속 조치 예정일
+  -- 제출 정보
+  submitted BOOLEAN DEFAULT FALSE,
+  submitted_at TIMESTAMP,
   
-  -- 승인
-  approval_required BOOLEAN DEFAULT FALSE,
-  approval_status VARCHAR(20), -- 'pending', 'approved', 'rejected'
-  approved_by INTEGER REFERENCES users(id),
-  approved_at TIMESTAMP,
-  approval_comments TEXT,
+  -- 승인 정보 (CAMS 금형개발담당자)
+  review_status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
+  reviewed_by INTEGER REFERENCES users(id),
+  reviewed_by_name VARCHAR(100),
+  reviewed_at TIMESTAMP,
+  review_comments TEXT,
+  required_corrections JSONB,        -- 반려 시 수정 요구사항
   
-  -- 첨부 파일
-  images JSONB, -- [{"category": "외관", "url": "...", "description": "..."}, ...]
-  attachments JSONB, -- [{"name": "점검보고서.pdf", "url": "...", "uploaded_at": "..."}, ...]
-  
-  -- 서명
-  inspector_signature VARCHAR(500), -- 점검자 서명 (이미지 URL)
-  approver_signature VARCHAR(500), -- 승인자 서명 (이미지 URL)
+  -- 승인 후 제작 시작
+  production_approved BOOLEAN DEFAULT FALSE,
+  production_start_date DATE,
   
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_mold_project_mold ON mold_project(mold_id);
-CREATE INDEX idx_mold_project_type ON mold_project(checklist_type);
-CREATE INDEX idx_mold_project_date ON mold_project(checklist_date);
-CREATE INDEX idx_mold_project_result ON mold_project(overall_result);
+CREATE INDEX idx_pre_production_spec ON pre_production_checklists(mold_specification_id);
+CREATE INDEX idx_pre_production_maker ON pre_production_checklists(maker_id);
+CREATE INDEX idx_pre_production_status ON pre_production_checklists(review_status);
 ```
 
-### 2.4.1 mold_project_items (체크리스트 상세 항목)
-```sql
-CREATE TABLE mold_project_items (
-  id SERIAL PRIMARY KEY,
-  mold_project_id INTEGER NOT NULL REFERENCES mold_project(id),
-  
-  -- 항목 정보
-  category VARCHAR(50) NOT NULL, -- '외관', '치수', '기능', '안전', '구조', '부품', '성능', '문서'
-  item_number VARCHAR(20), -- 항목 번호 (1.1, 1.2, 2.1, ...)
-  item_name VARCHAR(200) NOT NULL, -- 항목명
-  item_order INTEGER, -- 정렬 순서
-  
-  -- 점검 기준
-  inspection_standard TEXT, -- 점검 기준
-  acceptance_criteria TEXT, -- 합격 기준
-  
-  -- 점검 결과
-  status VARCHAR(10), -- 'OK', 'NG', 'N/A'
-  measured_value VARCHAR(100), -- 측정값
-  standard_value VARCHAR(100), -- 기준값
-  
-  -- 상세 정보
-  notes TEXT, -- 비고
-  defect_description TEXT, -- 불량 내용 (NG인 경우)
-  corrective_action TEXT, -- 조치 방법
-  
-  -- 중요도
-  is_critical BOOLEAN DEFAULT FALSE, -- 필수 항목 여부
-  severity VARCHAR(20), -- 'low', 'medium', 'high', 'critical'
-  
-  -- 첨부
-  images JSONB, -- 해당 항목 관련 이미지
-  
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX idx_mold_project_items_project ON mold_project_items(mold_project_id);
-CREATE INDEX idx_mold_project_items_category ON mold_project_items(category);
-CREATE INDEX idx_mold_project_items_status ON mold_project_items(status);
-```
-
-### 2.4.2 checklist_master_templates (체크리스트 마스터 템플릿)
+### 2.4.1 checklist_master_templates (체크리스트 마스터 템플릿)
 ```sql
 CREATE TABLE checklist_master_templates (
   id SERIAL PRIMARY KEY,
   
   -- 템플릿 정보
-  template_name VARCHAR(200) NOT NULL, -- '제작완료 표준', '수리완료 표준', '정기점검 표준'
-  template_code VARCHAR(50) UNIQUE NOT NULL, -- 'TMPL-PROD-001', 'TMPL-REPAIR-001'
-  checklist_type VARCHAR(50) NOT NULL, -- '제작완료', '수리완료', '정기점검', '이관전'
+  template_name VARCHAR(200) NOT NULL, -- '제작전 표준 체크리스트'
+  template_code VARCHAR(50) UNIQUE NOT NULL, -- 'TMPL-PRE-001'
+  checklist_type VARCHAR(50) NOT NULL DEFAULT '제작전',
   
   -- 버전 관리
   version VARCHAR(20) NOT NULL, -- 'v1.0', 'v1.1', 'v2.0'
@@ -611,30 +561,20 @@ CREATE TABLE checklist_master_templates (
   description TEXT,
   usage_guide TEXT, -- 사용 가이드
   
-  -- 8개 카테고리 템플릿 (JSONB)
-  appearance_check_template JSONB, -- {
-    -- "surface_condition": {
-    --   "item_name": "표면 상태",
-    --   "inspection_standard": "표면에 크랙, 기포, 이물질이 없어야 함",
-    --   "acceptance_criteria": "육안 검사 시 결함 없음",
-    --   "is_required": true,
-    --   "is_critical": true,
-    --   "severity": "high",
-    --   "order": 1
-    -- }
-  -- }
-  
-  dimension_check_template JSONB,
-  function_check_template JSONB,
-  safety_check_template JSONB,
-  structure_check_template JSONB,
-  parts_check_template JSONB,
-  performance_check_template JSONB,
-  documentation_check_template JSONB,
+  -- 9개 카테고리 템플릿 (JSONB) - 총 81개 항목
+  category_material_template JSONB, -- I. 원재료 (9개 항목)
+  category_mold_template JSONB, -- II. 금형 (13개 항목)
+  category_gas_vent_template JSONB, -- III. 가스 배기 (6개 항목)
+  category_moldflow_template JSONB, -- IV. 성형 해석 (11개 항목)
+  category_sink_mark_template JSONB, -- V. 싱크마크 (10개 항목)
+  category_ejection_template JSONB, -- VI. 취출 (10개 항목)
+  category_mic_template JSONB, -- VII. MIC 제품 (9개 항목)
+  category_coating_template JSONB, -- VIII. 도금 (7개 항목)
+  category_rear_back_beam_template JSONB, -- IX. 리어 백빔 (6개 항목)
   
   -- 적용 대상
-  applicable_to JSONB, -- ["모든 금형", "사출금형만", "프레스금형만"]
-  mold_types JSONB, -- ["사출금형", "프레스금형", "다이캐스팅"]
+  applicable_to JSONB, -- ["모든 금형", "사출금형만"]
+  mold_types JSONB, -- ["사출금형", "프레스금형"]
   
   -- 승인 설정
   approval_required BOOLEAN DEFAULT TRUE,
@@ -797,6 +737,64 @@ CREATE INDEX idx_template_history_template ON checklist_template_history(templat
 CREATE INDEX idx_template_history_type ON checklist_template_history(change_type);
 CREATE INDEX idx_template_history_date ON checklist_template_history(change_date);
 ```
+
+### 2.4.6 daily_check_items (일상점검 기록)
+```sql
+CREATE TABLE daily_check_items (
+  id SERIAL PRIMARY KEY,
+  mold_id INTEGER NOT NULL REFERENCES molds(id),
+  checklist_id UUID NOT NULL,
+  check_type VARCHAR(20) NOT NULL,
+  shot_count INTEGER NOT NULL,
+  status VARCHAR(20),
+  notes TEXT,
+  cleaning_agent VARCHAR(50),
+  dilution_ratio VARCHAR(20),
+  confirmed_by INTEGER REFERENCES users(id),
+  confirmed_at TIMESTAMP,
+  extras JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_daily_check_mold ON daily_check_items(mold_id);
+CREATE INDEX idx_daily_check_shot ON daily_check_items(shot_count);
+
+### 2.4.7 daily_check_item_status (항목별 결과)
+```sql
+CREATE TABLE daily_check_item_status (
+  id SERIAL PRIMARY KEY,
+  daily_check_id INTEGER NOT NULL REFERENCES daily_check_items(id),
+  item_id INTEGER NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  notes TEXT,
+  cleaning_agent VARCHAR(50),
+  photo_refs JSONB,
+  issue_id INTEGER REFERENCES mold_issues(id),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_item_status_check ON daily_check_item_status(daily_check_id);
+CREATE INDEX idx_item_status_item ON daily_check_item_status(item_id);
+
+### 2.4.8 inspection_photos (사진/문서 저장)
+```sql
+CREATE TABLE inspection_photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mold_id INTEGER REFERENCES molds(id),
+  checklist_id INTEGER REFERENCES daily_check_items(id),
+  item_status_id INTEGER REFERENCES daily_check_item_status(id),
+  file_url VARCHAR(500) NOT NULL,
+  thumbnail_url VARCHAR(500),
+  file_type VARCHAR(50),
+  uploaded_by INTEGER NOT NULL REFERENCES users(id),
+  shot_count INTEGER,
+  metadata JSONB,
+  uploaded_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_inspection_photos_mold ON inspection_photos(mold_id);
+CREATE INDEX idx_inspection_photos_checklist ON inspection_photos(checklist_id);
+CREATE INDEX idx_inspection_photos_item ON inspection_photos(item_status_id);
 
 ### 2.5 mold_replication (금형육성)
 ```sql
@@ -1964,6 +1962,128 @@ CREATE TABLE mold_images (
 
 CREATE INDEX idx_mold_images_mold ON mold_images(mold_id);
 CREATE INDEX idx_mold_images_type ON mold_images(image_type);
+```
+
+### 10.5 production_quantities (생산수량 기록)
+```sql
+CREATE TABLE production_quantities (
+  id SERIAL PRIMARY KEY,
+  mold_id INTEGER NOT NULL REFERENCES molds(id),
+  production_date DATE NOT NULL,
+  quantity INTEGER NOT NULL,
+  
+  -- GPS 위치
+  gps_latitude DECIMAL(10, 8),
+  gps_longitude DECIMAL(11, 8),
+  gps_accuracy DECIMAL(10, 2),
+  
+  -- 입력자 정보
+  input_by INTEGER NOT NULL REFERENCES users(id),
+  input_by_name VARCHAR(100),
+  
+  -- 연동 정보
+  daily_inspection_id INTEGER REFERENCES daily_checks(id),
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_production_quantities_mold ON production_quantities(mold_id);
+CREATE INDEX idx_production_quantities_date ON production_quantities(production_date);
+```
+
+### 10.6 production_progress (제작 진행 기록)
+```sql
+CREATE TABLE production_progress (
+  id SERIAL PRIMARY KEY,
+  mold_id INTEGER NOT NULL REFERENCES molds(id),
+  
+  -- 진행 단계
+  progress_stage VARCHAR(50) NOT NULL, -- 'design', 'machining', 'assembly', 'trial_pending', 'completed'
+  progress_percentage INTEGER DEFAULT 0, -- 0-100
+  
+  -- 작업 내용
+  work_description TEXT,
+  
+  -- 사진
+  photos JSONB,
+  
+  -- 작업자 정보
+  worker_id INTEGER NOT NULL REFERENCES users(id),
+  worker_name VARCHAR(100),
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_production_progress_mold ON production_progress(mold_id);
+CREATE INDEX idx_production_progress_stage ON production_progress(progress_stage);
+```
+
+### 10.7 trial_run_results (시운전 결과)
+```sql
+CREATE TABLE trial_run_results (
+  id SERIAL PRIMARY KEY,
+  mold_id INTEGER NOT NULL REFERENCES molds(id),
+  trial_date DATE NOT NULL,
+  
+  -- 판정
+  result VARCHAR(10) NOT NULL, -- 'pass', 'fail'
+  
+  -- 체크 항목
+  appearance_check BOOLEAN DEFAULT FALSE,
+  dimension_check BOOLEAN DEFAULT FALSE,
+  function_check BOOLEAN DEFAULT FALSE,
+  performance_check BOOLEAN DEFAULT FALSE,
+  
+  -- 불량 내용 (FAIL 시)
+  defect_description TEXT,
+  
+  -- 사진 첨부 (필수)
+  photos JSONB NOT NULL,
+  
+  -- 검사자 정보
+  inspector_id INTEGER NOT NULL REFERENCES users(id),
+  inspector_name VARCHAR(100),
+  
+  -- 승인 정보
+  approved_by INTEGER REFERENCES users(id),
+  approved_at TIMESTAMP,
+  approval_status VARCHAR(20), -- 'pending', 'approved', 'rejected'
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_trial_run_results_mold ON trial_run_results(mold_id);
+CREATE INDEX idx_trial_run_results_result ON trial_run_results(result);
+```
+
+### 10.8 gps_locations (GPS 위치 이력)
+```sql
+CREATE TABLE gps_locations (
+  id SERIAL PRIMARY KEY,
+  mold_id INTEGER NOT NULL REFERENCES molds(id),
+  
+  -- GPS 좌표
+  latitude DECIMAL(10, 8) NOT NULL,
+  longitude DECIMAL(11, 8) NOT NULL,
+  accuracy DECIMAL(10, 2),
+  
+  -- 위치 정보
+  location_name VARCHAR(200),
+  location_type VARCHAR(50), -- 'plant', 'maker', 'warehouse', 'unknown'
+  
+  -- 기록 정보
+  recorded_by INTEGER NOT NULL REFERENCES users(id),
+  recorded_at TIMESTAMP DEFAULT NOW(),
+  
+  -- 관련 작업
+  related_type VARCHAR(50), -- 'inspection', 'repair', 'transfer', 'production'
+  related_id INTEGER,
+  
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_gps_locations_mold ON gps_locations(mold_id);
+CREATE INDEX idx_gps_locations_date ON gps_locations(recorded_at);
 ```
 
 ---

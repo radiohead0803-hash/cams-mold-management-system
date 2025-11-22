@@ -1,95 +1,137 @@
-module.exports = (sequelize, DataTypes) => {
-  const Mold = sequelize.define('Mold', {
+const { Model, DataTypes } = require('sequelize');
+
+class Mold extends Model {
+  static associate(models) {
+    // Specification 관계
+    Mold.belongsTo(models.MoldSpecification, {
+      foreignKey: 'specification_id',
+      as: 'specification'
+    });
+    
+    // Daily Check 관계
+    Mold.hasMany(models.DailyCheck, {
+      foreignKey: 'mold_id',
+      as: 'dailyChecks'
+    });
+    
+    Mold.hasMany(models.DailyCheckItem, {
+      foreignKey: 'mold_id',
+      as: 'dailyCheckItems'
+    });
+    
+    // Inspection 관계
+    Mold.hasMany(models.Inspection, {
+      foreignKey: 'mold_id',
+      as: 'inspections'
+    });
+    
+    Mold.hasMany(models.InspectionPhoto, {
+      foreignKey: 'mold_id',
+      as: 'photos'
+    });
+    
+    // Repair 관계
+    Mold.hasMany(models.Repair, {
+      foreignKey: 'mold_id',
+      as: 'repairs'
+    });
+    
+    // Transfer 관계
+    Mold.hasMany(models.Transfer, {
+      foreignKey: 'mold_id',
+      as: 'transfers'
+    });
+    
+    // Notification 관계
+    Mold.hasMany(models.Notification, {
+      foreignKey: 'mold_id',
+      as: 'notifications'
+    });
+    
+    // Shot 관계
+    Mold.hasMany(models.Shot, {
+      foreignKey: 'mold_id',
+      as: 'shots'
+    });
+    
+    // GPS Location 관계
+    Mold.hasMany(models.GPSLocation, {
+      foreignKey: 'mold_id',
+      as: 'gpsLocations'
+    });
+    
+    // Mold Issue 관계
+    Mold.hasMany(models.MoldIssue, {
+      foreignKey: 'mold_id',
+      as: 'issues'
+    });
+  }
+}
+
+module.exports = (sequelize) => {
+  Mold.init({
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true
     },
-    mold_id: {
+    mold_code: {
       type: DataTypes.STRING(50),
-      unique: true,
       allowNull: false,
-      comment: '금형 고유 ID (M-2024-001)'
+      unique: true
     },
-    name: {
+    mold_name: {
       type: DataTypes.STRING(200),
-      allowNull: false,
-      comment: '금형명'
+      allowNull: false
     },
-    part_number: {
-      type: DataTypes.STRING(100),
-      comment: 'Part Number'
+    car_model: {
+      type: DataTypes.STRING(100)
     },
     part_name: {
-      type: DataTypes.STRING(200),
-      comment: 'Part Name'
+      type: DataTypes.STRING(200)
     },
-    vehicle_model: {
-      type: DataTypes.STRING(100),
-      comment: '차종'
+    cavity: {
+      type: DataTypes.INTEGER
+    },
+    plant_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    maker_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false
+    },
+    specification_id: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: 'mold_specifications',
+        key: 'id'
+      }
+    },
+    qr_token: {
+      type: DataTypes.STRING(255),
+      unique: true
+    },
+    sop_date: {
+      type: DataTypes.DATEONLY
+    },
+    eop_date: {
+      type: DataTypes.DATEONLY
+    },
+    target_shots: {
+      type: DataTypes.INTEGER
+    },
+    current_shots: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
     },
     status: {
-      type: DataTypes.ENUM('active', 'maintenance', 'repair', 'standby', 'transfer', 'scrapped'),
+      type: DataTypes.STRING(20),
       defaultValue: 'active',
-      comment: '금형 상태'
+      comment: 'active, repair, transfer, idle, scrapped'
     },
-    qr_code: {
-      type: DataTypes.STRING(100),
-      unique: true,
-      comment: 'QR 코드'
-    },
-    current_location_type: {
-      type: DataTypes.ENUM('hq', 'partner', 'manufacturer', 'plant'),
-      comment: '현재 위치 유형'
-    },
-    current_location_id: {
-      type: DataTypes.INTEGER,
-      comment: '현재 위치 ID'
-    },
-    gps_latitude: {
-      type: DataTypes.DECIMAL(10, 8),
-      comment: 'GPS 위도'
-    },
-    gps_longitude: {
-      type: DataTypes.DECIMAL(11, 8),
-      comment: 'GPS 경도'
-    },
-    gps_accuracy: {
-      type: DataTypes.DECIMAL(10, 2),
-      comment: 'GPS 정확도 (미터)'
-    },
-    gps_last_updated: {
-      type: DataTypes.DATE,
-      comment: 'GPS 마지막 업데이트'
-    },
-    partner_id: {
-      type: DataTypes.INTEGER,
-      comment: '협력사 ID'
-    },
-    manufacturer_id: {
-      type: DataTypes.INTEGER,
-      comment: '제작처 ID'
-    },
-    production_count: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-      comment: '누적 생산수량'
-    },
-    last_daily_check: {
-      type: DataTypes.DATE,
-      comment: '마지막 일상점검일'
-    },
-    last_regular_inspection: {
-      type: DataTypes.DATE,
-      comment: '마지막 정기점검일'
-    },
-    next_inspection_due: {
-      type: DataTypes.DATE,
-      comment: '다음 점검 예정일'
-    },
-    created_by: {
-      type: DataTypes.INTEGER,
-      comment: '등록자 ID'
+    location: {
+      type: DataTypes.STRING(200)
     },
     created_at: {
       type: DataTypes.DATE,
@@ -100,17 +142,16 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.NOW
     }
   }, {
+    sequelize,
+    modelName: 'Mold',
     tableName: 'molds',
-    timestamps: true,
-    createdAt: 'created_at',
-    updatedAt: 'updated_at',
+    timestamps: false,
     indexes: [
-      { fields: ['mold_id'] },
-      { fields: ['qr_code'] },
-      { fields: ['status'] },
-      { fields: ['current_location_type', 'current_location_id'] },
-      { fields: ['partner_id'] },
-      { fields: ['manufacturer_id'] }
+      { fields: ['plant_id'] },
+      { fields: ['maker_id'] },
+      { fields: ['specification_id'] },
+      { fields: ['qr_token'] },
+      { fields: ['status'] }
     ]
   });
 

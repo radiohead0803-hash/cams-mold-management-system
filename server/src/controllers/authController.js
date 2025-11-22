@@ -1,257 +1,234 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User, Mold } = require('../models/newIndex');
+const logger = require('../utils/logger');
 
 /**
- * JWT 토큰 생성
+ * 일반 로그인
  */
-const generateToken = (userId) => {
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
-  );
-};
-
-/**
- * Refresh 토큰 생성
- */
-const generateRefreshToken = (userId) => {
-  return jwt.sign(
-    { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d' }
-  );
-};
-
-/**
- * 로그인
- */
-const login = async (req, res, next) => {
+const login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // 입력 검증
     if (!username || !password) {
       return res.status(400).json({
         success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Username and password are required'
-        }
+        error: { message: 'Username and password are required' }
       });
     }
 
-    // 사용자 조회
-    const user = await User.findOne({ where: { username } });
-
+    const user = await User.findOne({ where: { username, is_active: true } });
+    
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: {
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid username or password'
-        }
+        error: { message: 'Invalid credentials' }
       });
     }
 
-    // 비밀번호 검증
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        error: {
-          code: 'INVALID_CREDENTIALS',
-          message: 'Invalid username or password'
-        }
+        error: { message: 'Invalid credentials' }
       });
     }
 
-    // 활성 사용자 확인
-    if (!user.is_active) {
-      return res.status(403).json({
-        success: false,
-        error: {
-          code: 'ACCOUNT_DISABLED',
-          message: 'Your account has been disabled'
-        }
-      });
-    }
-
-    // 토큰 생성
-    const token = generateToken(user.id);
-    const refreshToken = generateRefreshToken(user.id);
+    // JWT 토큰 생성
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        user_type: user.user_type,
+        company_id: user.company_id
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
+    );
 
     // 마지막 로그인 시간 업데이트
     await user.update({ last_login_at: new Date() });
 
-    // 응답
     res.json({
       success: true,
       data: {
         token,
-        refreshToken,
         user: {
           id: user.id,
           username: user.username,
           name: user.name,
           email: user.email,
-          role: user.role,
-          plant_id: user.plant_id,
-          partner_id: user.partner_id
+          user_type: user.user_type,
+          company_id: user.company_id,
+          company_name: user.company_name
         }
       }
     });
   } catch (error) {
-    next(error);
+    logger.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Login failed' }
+    });
   }
 };
 
 /**
- * 로그아웃
+ * QR 코드 기반 로그인
  */
-const logout = async (req, res, next) => {
+const qrLogin = async (req, res) => {
   try {
-    // 클라이언트에서 토큰 삭제 처리
+    const { qr_code, user_id, location } = req.body;
+
+    if (!qr_code || !user_id) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'QR code and user ID are required' }
+      });
+    }
+
+    // GPS 위치 검증 (선택적)
+    if (location && (!location.lat || !location.lng)) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Invalid GPS location format' }
+      });
+    }
+
+    // QR 코드로 금형 조회
+    const mold = await Mold.findOne({ where: { qr_code } });
+    
+    if (!mold) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Mold not found' }
+      });
+    }
+
+    // 사용자 조회
+    const user = await User.findOne({ where: { id: user_id, is_active: true } });
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'User not found' }
+      });
+    }
+
+    // JWT 토큰 생성 (8시간 세션)
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        user_type: user.user_type,
+        company_id: user.company_id,
+        mold_id: mold.id,
+        qr_session: true
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
     res.json({
       success: true,
-      message: 'Logged out successfully'
+      data: {
+        token,
+        mold: {
+          id: mold.id,
+          mold_number: mold.mold_number,
+          mold_name: mold.mold_name,
+          product_name: mold.product_name,
+          total_shots: mold.total_shots,
+          status: mold.status
+        },
+        user: {
+          id: user.id,
+          name: user.name,
+          user_type: user.user_type
+        }
+      }
     });
   } catch (error) {
-    next(error);
+    logger.error('QR login error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'QR login failed' }
+    });
   }
 };
 
 /**
  * 토큰 갱신
  */
-const refreshToken = async (req, res, next) => {
+const refreshToken = async (req, res) => {
   try {
-    const { refreshToken } = req.body;
+    const { token } = req.body;
 
-    if (!refreshToken) {
+    if (!token) {
       return res.status(400).json({
         success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Refresh token is required'
-        }
+        error: { message: 'Token is required' }
       });
     }
 
-    // 토큰 검증
-    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
-
-    // 사용자 조회
-    const user = await User.findByPk(decoded.userId);
-
-    if (!user || !user.is_active) {
-      return res.status(401).json({
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+    
+    const user = await User.findOne({ where: { id: decoded.id, is_active: true } });
+    
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        error: {
-          code: 'INVALID_TOKEN',
-          message: 'Invalid refresh token'
-        }
+        error: { message: 'User not found' }
       });
     }
 
-    // 새 토큰 생성
-    const newToken = generateToken(user.id);
-    const newRefreshToken = generateRefreshToken(user.id);
+    const newToken = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        user_type: user.user_type,
+        company_id: user.company_id
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '8h' }
+    );
 
     res.json({
       success: true,
-      data: {
-        token: newToken,
-        refreshToken: newRefreshToken
-      }
+      data: { token: newToken }
     });
   } catch (error) {
-    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: 'INVALID_TOKEN',
-          message: 'Invalid or expired refresh token'
-        }
-      });
-    }
-    next(error);
+    logger.error('Token refresh error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Token refresh failed' }
+    });
   }
 };
 
 /**
- * 현재 사용자 정보 조회
+ * 로그아웃
  */
-const me = async (req, res, next) => {
+const logout = async (req, res) => {
   try {
-    const user = await User.findByPk(req.user.id, {
-      attributes: { exclude: ['password'] }
-    });
-
+    // 클라이언트에서 토큰 삭제 처리
     res.json({
       success: true,
-      data: user
+      data: { message: 'Logged out successfully' }
     });
   } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * 비밀번호 변경
- */
-const changePassword = async (req, res, next) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-
-    // 입력 검증
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Current password and new password are required'
-        }
-      });
-    }
-
-    // 사용자 조회
-    const user = await User.findByPk(req.user.id);
-
-    // 현재 비밀번호 검증
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
-
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: 'INVALID_PASSWORD',
-          message: 'Current password is incorrect'
-        }
-      });
-    }
-
-    // 새 비밀번호 해시
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // 비밀번호 업데이트
-    await user.update({ password: hashedPassword });
-
-    res.json({
-      success: true,
-      message: 'Password changed successfully'
+    logger.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Logout failed' }
     });
-  } catch (error) {
-    next(error);
   }
 };
 
 module.exports = {
   login,
-  logout,
+  qrLogin,
   refreshToken,
-  me,
-  changePassword
+  logout
 };

@@ -1,120 +1,69 @@
-require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const compression = require('compression');
-const { testConnection } = require('./config/database');
+const { sequelize } = require('./models/newIndex');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(helmet());
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
-}));
-app.use(compression());
-app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'combined'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
+// Routes
+const authRouter = require('./routes/auth');
+const qrRouter = require('./routes/qr');
+const productionRouter = require('./routes/production');
+const developmentRouter = require('./routes/development');
+const preProductionRouter = require('./routes/preProduction');
+const dailyChecksRouter = require('./routes/dailyChecks');
+const periodicInspectionsRouter = require('./routes/periodicInspections');
+
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/qr', qrRouter);
+app.use('/api/v1/production', productionRouter);
+app.use('/api/v1/development', developmentRouter);
+app.use('/api/v1/pre-production', preProductionRouter);
+app.use('/api/daily-checks', dailyChecksRouter);
+app.use('/api/periodic-inspections', periodicInspectionsRouter);
+
+// Health check
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
+  res.json({ 
+    status: 'ok', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    database: sequelize.options.database
   });
 });
 
-// API Routes
-const apiRoutes = require('./routes');
-app.use('/api', apiRoutes);
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'CAMS API Server',
+    version: '04-02',
+    endpoints: {
+      dailyChecks: '/api/daily-checks',
+      periodicInspections: '/api/periodic-inspections',
+      health: '/health'
+    }
+  });
+});
 
-// 404 Handler
+// Error handling
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    success: false,
+    message: err.message || '서버 오류가 발생했습니다.',
+    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    error: {
-      code: 'NOT_FOUND',
-      message: 'The requested resource was not found'
-    }
+    message: '요청한 리소스를 찾을 수 없습니다.'
   });
 });
-
-// Error Handler
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  
-  res.status(err.status || 500).json({
-    success: false,
-    error: {
-      code: err.code || 'INTERNAL_SERVER_ERROR',
-      message: process.env.NODE_ENV === 'development' 
-        ? err.message 
-        : 'An internal server error occurred'
-    }
-  });
-});
-
-// Start Server
-const startServer = async () => {
-  try {
-    console.log('🔍 Testing database connection...');
-    const dbConnected = await testConnection();
-    
-    if (!dbConnected) {
-      console.warn('⚠️  Database connection failed. Server will start without database.');
-      console.warn('⚠️  Please check DATABASE_URL environment variable.');
-    } else {
-      // 데이터베이스 초기화 (프로덕션 환경에서만 한 번 실행)
-      if (process.env.NODE_ENV === 'production' && process.env.INIT_DB === 'true') {
-        console.log('🔧 Initializing database...');
-        const { sequelize } = require('./config/database');
-        await sequelize.sync({ force: true });
-        console.log('✅ Database tables created');
-        
-        // 시드 데이터 삽입
-        const { seedDatabase } = require('./scripts/seed');
-        await seedDatabase();
-        console.log('✅ Seed data inserted');
-      }
-    }
-    
-    // Start listening
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log('');
-      console.log('🚀 ═══════════════════════════════════════════════════════');
-      console.log('   Creative Auto Module System - Backend Server');
-      console.log('═══════════════════════════════════════════════════════');
-      console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`   Server:      http://0.0.0.0:${PORT}`);
-      console.log(`   Health:      http://0.0.0.0:${PORT}/health`);
-      console.log(`   API:         http://0.0.0.0:${PORT}/api`);
-      console.log(`   Database:    ${dbConnected ? '✅ Connected' : '⚠️  Not Connected'}`);
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('');
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error);
-    console.error('Stack:', error.stack);
-  }
-};
-
-// Handle shutdown gracefully
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  process.exit(0);
-});
-
-process.on('SIGINT', () => {
-  console.log('SIGINT signal received: closing HTTP server');
-  process.exit(0);
-});
-
-startServer();
 
 module.exports = app;
