@@ -70,7 +70,7 @@ export default function Login() {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => quickLogin('admin', 'password123')}
+              onClick={() => quickLogin('admin', 'admin123')}
               className="text-left px-3 py-2 bg-white border border-blue-300 rounded hover:bg-blue-100 transition-colors"
             >
               <div className="text-xs font-semibold text-blue-900">시스템 관리</div>
@@ -78,15 +78,15 @@ export default function Login() {
             </button>
             <button
               type="button"
-              onClick={() => quickLogin('hq_manager', 'password123')}
+              onClick={() => quickLogin('developer', 'dev123')}
               className="text-left px-3 py-2 bg-white border border-blue-300 rounded hover:bg-blue-100 transition-colors"
             >
               <div className="text-xs font-semibold text-blue-900">금형개발</div>
-              <div className="text-xs text-blue-700">hq_manager</div>
+              <div className="text-xs text-blue-700">developer</div>
             </button>
             <button
               type="button"
-              onClick={() => quickLogin('maker1', 'password123')}
+              onClick={() => quickLogin('maker1', 'maker123')}
               className="text-left px-3 py-2 bg-white border border-blue-300 rounded hover:bg-blue-100 transition-colors"
             >
               <div className="text-xs font-semibold text-blue-900">제작처</div>
@@ -94,7 +94,7 @@ export default function Login() {
             </button>
             <button
               type="button"
-              onClick={() => quickLogin('plant1', 'password123')}
+              onClick={() => quickLogin('plant1', 'plant123')}
               className="text-left px-3 py-2 bg-white border border-blue-300 rounded hover:bg-blue-100 transition-colors"
             >
               <div className="text-xs font-semibold text-blue-900">생산처</div>
