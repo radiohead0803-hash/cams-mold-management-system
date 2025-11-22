@@ -21,6 +21,12 @@ export default defineConfig({
   preview: {
     port: process.env.PORT || 4173,
     host: '0.0.0.0',
+    strictPort: false,
+    allowedHosts: [
+      'bountiful-nurturing-production-cd5c.up.railway.app',
+      '.railway.app',
+      'localhost'
+    ]
   },
   build: {
     outDir: 'dist',
