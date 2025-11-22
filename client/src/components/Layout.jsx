@@ -65,6 +65,15 @@ export default function Layout() {
           ]
         },
         { 
+          to: '/plants', 
+          icon: Settings, 
+          label: '생산처 관리',
+          subMenus: [
+            { to: '/plants', label: '생산처 목록' },
+            { to: '/plants/performance', label: '생산 현황' }
+          ]
+        },
+        { 
           to: '/alerts', 
           icon: Bell, 
           label: '알림',
@@ -127,6 +136,15 @@ export default function Layout() {
           subMenus: [
             { to: '/makers', label: '제작처 목록' },
             { to: '/makers/performance', label: '성과 모니터링' }
+          ]
+        },
+        { 
+          to: '/plants', 
+          icon: Settings, 
+          label: '생산처 관리',
+          subMenus: [
+            { to: '/plants', label: '생산처 목록' },
+            { to: '/plants/performance', label: '생산 현황' }
           ]
         },
         { 
