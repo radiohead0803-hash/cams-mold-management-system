@@ -9,6 +9,9 @@ import SystemAdminDashboard from './pages/dashboards/SystemAdminDashboard'
 import MoldDeveloperDashboard from './pages/dashboards/MoldDeveloperDashboard'
 import MakerDashboard from './pages/dashboards/MakerDashboard'
 import PlantDashboard from './pages/dashboards/PlantDashboard'
+import MakerMobileDashboard from './pages/dashboards/MakerMobileDashboard'
+import PlantMobileDashboard from './pages/dashboards/PlantMobileDashboard'
+import DeveloperMobileDashboard from './pages/dashboards/DeveloperMobileDashboard'
 import MoldList from './pages/MoldList'
 import MoldDetail from './pages/MoldDetail'
 import MoldRegistration from './pages/MoldRegistration'
@@ -51,6 +54,9 @@ function App() {
         <Route path="dashboard/developer" element={<MoldDeveloperDashboard />} />
         <Route path="dashboard/maker" element={<MakerDashboard />} />
         <Route path="dashboard/plant" element={<PlantDashboard />} />
+        <Route path="mobile/maker" element={<MakerMobileDashboard />} />
+        <Route path="mobile/plant" element={<PlantMobileDashboard />} />
+        <Route path="mobile/developer" element={<DeveloperMobileDashboard />} />
         <Route path="molds" element={<MoldList />} />
         <Route path="molds/new" element={<MoldRegistration />} />
         <Route path="molds/bulk-upload" element={<MoldBulkUpload />} />

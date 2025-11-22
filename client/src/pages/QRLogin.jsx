@@ -244,34 +244,105 @@ export default function QRLogin() {
           </div>
         </div>
 
-        {/* 데모용: 테스트 QR 코드 */}
-        <div className="card bg-gray-50">
-          <p className="text-xs text-gray-600 mb-3">🔧 개발 테스트용 - 빠른 QR 로그인</p>
+        {/* 개발 테스트용: 빠른 로그인 */}
+        <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-2xl">🔧</span>
+            <p className="font-semibold text-purple-900">개발 테스트용 - 빠른 로그인</p>
+          </div>
           
-          <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="space-y-2 mb-4">
             <button
-              onClick={() => handleManualQRInput('QR-MOLD-001')}
-              className="text-left px-3 py-2 bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+              onClick={async () => {
+                try {
+                  const response = await authAPI.login({ username: 'developer', password: 'dev123' });
+                  const { token, user } = response.data.data;
+                  login(user, token);
+                  navigate('/dashboard/developer');
+                } catch (err) {
+                  setError('로그인 실패');
+                }
+              }}
+              className="w-full px-4 py-3 bg-white border-2 border-purple-300 rounded-lg hover:bg-purple-50 transition-colors text-left"
             >
-              <div className="text-xs font-semibold text-gray-900">금형 #001</div>
-              <div className="text-xs text-gray-600">QR-MOLD-001</div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-purple-900">금형개발 담당자</div>
+                  <div className="text-xs text-purple-600">developer / 본사</div>
+                </div>
+                <div className="text-2xl">👨‍💼</div>
+              </div>
             </button>
+
             <button
-              onClick={() => handleManualQRInput('QR-MOLD-002')}
-              className="text-left px-3 py-2 bg-white border border-gray-300 rounded hover:bg-gray-100 transition-colors"
+              onClick={async () => {
+                try {
+                  const response = await authAPI.login({ username: 'maker1', password: 'maker123' });
+                  const { token, user } = response.data.data;
+                  login(user, token);
+                  navigate('/dashboard/maker');
+                } catch (err) {
+                  setError('로그인 실패');
+                }
+              }}
+              className="w-full px-4 py-3 bg-white border-2 border-purple-300 rounded-lg hover:bg-purple-50 transition-colors text-left"
             >
-              <div className="text-xs font-semibold text-gray-900">금형 #002</div>
-              <div className="text-xs text-gray-600">QR-MOLD-002</div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-purple-900">제작처 담당자</div>
+                  <div className="text-xs text-purple-600">maker1 / A제작소</div>
+                </div>
+                <div className="text-2xl">🏭</div>
+              </div>
+            </button>
+
+            <button
+              onClick={async () => {
+                try {
+                  const response = await authAPI.login({ username: 'plant1', password: 'plant123' });
+                  const { token, user } = response.data.data;
+                  login(user, token);
+                  navigate('/dashboard/plant');
+                } catch (err) {
+                  setError('로그인 실패');
+                }
+              }}
+              className="w-full px-4 py-3 bg-white border-2 border-purple-300 rounded-lg hover:bg-purple-50 transition-colors text-left"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-purple-900">생산처 담당자</div>
+                  <div className="text-xs text-purple-600">plant1 / 생산공장1</div>
+                </div>
+                <div className="text-2xl">🏭</div>
+              </div>
             </button>
           </div>
 
           <div className="relative mb-3">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-purple-300"></div>
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="px-2 bg-gray-50 text-gray-500">또는 직접 입력</span>
+              <span className="px-2 bg-gradient-to-br from-purple-50 to-purple-100 text-purple-600">QR 코드 테스트</span>
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <button
+              onClick={() => handleManualQRInput('QR-MOLD-001')}
+              className="text-left px-3 py-2 bg-white border border-purple-300 rounded hover:bg-purple-50 transition-colors"
+            >
+              <div className="text-xs font-semibold text-purple-900">금형 #001</div>
+              <div className="text-xs text-purple-600">QR-MOLD-001</div>
+            </button>
+            <button
+              onClick={() => handleManualQRInput('QR-MOLD-002')}
+              className="text-left px-3 py-2 bg-white border border-purple-300 rounded hover:bg-purple-50 transition-colors"
+            >
+              <div className="text-xs font-semibold text-purple-900">금형 #002</div>
+              <div className="text-xs text-purple-600">QR-MOLD-002</div>
+            </button>
           </div>
 
           <div className="flex gap-2">
