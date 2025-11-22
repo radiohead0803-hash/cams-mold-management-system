@@ -75,9 +75,73 @@ export default function MoldDeveloperDashboard() {
     { label: '이번 주 등록', value: stats.weeklyRegistered }
   ];
 
+  // 테스트 데이터 10건 추가
+  const handleAddTestData = async () => {
+    if (!window.confirm('테스트용 금형 데이터 10건을 추가하시겠습니까?')) {
+      return;
+    }
+
+    const testMolds = [
+      { part_number: 'TEST-001', part_name: '프론트 범퍼', car_model: 'K5', estimated_cost: 45000000 },
+      { part_number: 'TEST-002', part_name: '리어 범퍼', car_model: 'K8', estimated_cost: 48000000 },
+      { part_number: 'TEST-003', part_name: '도어 트림 RH', car_model: 'Sportage', estimated_cost: 42000000 },
+      { part_number: 'TEST-004', part_name: '센터 콘솔', car_model: 'Sorento', estimated_cost: 55000000 },
+      { part_number: 'TEST-005', part_name: '인스트루먼트 패널', car_model: 'K5', estimated_cost: 68000000 },
+      { part_number: 'TEST-006', part_name: '사이드 스텝', car_model: 'K8', estimated_cost: 38000000 },
+      { part_number: 'TEST-007', part_name: '휠 아치 라이너', car_model: 'Sportage', estimated_cost: 35000000 },
+      { part_number: 'TEST-008', part_name: '헤드램프 하우징', car_model: 'Sorento', estimated_cost: 52000000 },
+      { part_number: 'TEST-009', part_name: '테일게이트 트림', car_model: 'K5', estimated_cost: 46000000 },
+      { part_number: 'TEST-010', part_name: '루프 라이닝', car_model: 'K8', estimated_cost: 41000000 }
+    ];
+
+    try {
+      const { moldSpecificationAPI } = await import('../../lib/api');
+      let successCount = 0;
+
+      for (const mold of testMolds) {
+        try {
+          const today = new Date();
+          const deliveryDate = new Date(today);
+          deliveryDate.setDate(deliveryDate.getDate() + 60); // 60일 후
+
+          await moldSpecificationAPI.create({
+            ...mold,
+            car_year: '2024',
+            mold_type: '사출금형',
+            cavity_count: 1,
+            material: 'NAK80',
+            tonnage: 350,
+            target_maker_id: 3, // maker1
+            development_stage: '개발',
+            production_stage: '시제',
+            order_date: today.toISOString().split('T')[0],
+            target_delivery_date: deliveryDate.toISOString().split('T')[0],
+            notes: '테스트 데이터'
+          });
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to create ${mold.part_number}:`, error);
+        }
+      }
+
+      alert(`${successCount}건의 테스트 금형이 등록되었습니다!`);
+      window.location.reload();
+    } catch (error) {
+      console.error('Test data creation failed:', error);
+      alert('테스트 데이터 생성 중 오류가 발생했습니다.');
+    }
+  };
+
   // 헤더 액션 버튼
   const headerActions = (
     <>
+      <button
+        onClick={handleAddTestData}
+        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center space-x-2"
+      >
+        <span>🧪</span>
+        <span>테스트 데이터 추가</span>
+      </button>
       <Link
         to="/molds/new"
         className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition-colors flex items-center space-x-2"

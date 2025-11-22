@@ -100,4 +100,12 @@ export const moldSpecificationAPI = {
   delete: (id) => api.delete(`/mold-specifications/${id}`),
 }
 
+// Maker Specification API
+export const makerSpecificationAPI = {
+  getAll: (params) => api.get('/maker-specifications', { params }),
+  getById: (id) => api.get(`/maker-specifications/${id}`),
+  update: (id, data) => api.patch(`/maker-specifications/${id}`, data),
+  getDashboardStats: () => api.get('/maker-specifications/dashboard/stats'),
+}
+
 export default api

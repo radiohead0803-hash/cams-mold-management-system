@@ -12,6 +12,8 @@ import PlantDashboard from './pages/dashboards/PlantDashboard'
 import MoldList from './pages/MoldList'
 import MoldDetail from './pages/MoldDetail'
 import MoldRegistration from './pages/MoldRegistration'
+import MoldBulkUpload from './pages/MoldBulkUpload'
+import MoldMaster from './pages/MoldMaster'
 import DailyChecklist from './pages/DailyChecklistNew'
 import PeriodicInspection from './pages/PeriodicInspectionNew'
 import TransferManagement from './pages/TransferManagement'
@@ -50,6 +52,8 @@ function App() {
         <Route path="dashboard/plant" element={<PlantDashboard />} />
         <Route path="molds" element={<MoldList />} />
         <Route path="molds/new" element={<MoldRegistration />} />
+        <Route path="molds/bulk-upload" element={<MoldBulkUpload />} />
+        <Route path="molds/master" element={<MoldMaster />} />
         <Route path="molds/:id" element={<MoldDetail />} />
         <Route path="checklist/daily" element={<DailyChecklist />} />
         <Route path="inspection/periodic" element={<PeriodicInspection />} />

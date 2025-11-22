@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { moldSpecificationAPI } from '../lib/api';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 export default function MoldRegistration() {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function MoldRegistration() {
     tonnage: 350,
     
     // 제작 정보
-    target_maker_id: '',
+    target_maker_id: '3', // 기본값으로 maker1 설정
     development_stage: '개발',
     production_stage: '시제',
     
@@ -38,6 +39,14 @@ export default function MoldRegistration() {
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [images, setImages] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  
+  // 제작처 목록 (추후 API에서 가져오기)
+  const [makers] = useState([
+    { id: 3, name: 'A제작소', company_name: 'A제작소' },
+    { id: 5, name: 'B제작소', company_name: 'B제작소' }
+  ]);
 
   // 입력 변경 핸들러
   const handleChange = (e) => {
@@ -57,6 +66,35 @@ export default function MoldRegistration() {
     }
   };
 
+  // 이미지 업로드 핸들러
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    
+    if (images.length + files.length > 5) {
+      alert('최대 5개의 이미지만 업로드할 수 있습니다.');
+      return;
+    }
+
+    const newImages = [...images, ...files];
+    setImages(newImages);
+
+    // 미리보기 생성
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setImagePreviews(prev => [...prev, ...newPreviews]);
+  };
+
+  // 이미지 삭제 핸들러
+  const removeImage = (index) => {
+    const newImages = images.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+    
+    // 메모리 해제
+    URL.revokeObjectURL(imagePreviews[index]);
+    
+    setImages(newImages);
+    setImagePreviews(newPreviews);
+  };
+
   // 유효성 검사
   const validate = () => {
     const newErrors = {};
@@ -69,6 +107,9 @@ export default function MoldRegistration() {
     }
     if (!formData.car_model.trim()) {
       newErrors.car_model = '차종은 필수입니다';
+    }
+    if (!formData.target_maker_id) {
+      newErrors.target_maker_id = '목표 제작처는 필수입니다';
     }
     if (!formData.target_delivery_date) {
       newErrors.target_delivery_date = '목표 납기일은 필수입니다';
@@ -278,6 +319,28 @@ export default function MoldRegistration() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                목표 제작처 <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="target_maker_id"
+                value={formData.target_maker_id}
+                onChange={handleChange}
+                className={`input ${errors.target_maker_id ? 'border-red-500' : ''}`}
+              >
+                <option value="">제작처 선택</option>
+                {makers.map(maker => (
+                  <option key={maker.id} value={maker.id}>
+                    {maker.company_name}
+                  </option>
+                ))}
+              </select>
+              {errors.target_maker_id && (
+                <p className="text-sm text-red-500 mt-1">{errors.target_maker_id}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 개발 단계
               </label>
               <select
@@ -370,6 +433,61 @@ export default function MoldRegistration() {
               rows="4"
               placeholder="추가 정보나 특이사항을 입력하세요"
             />
+          </div>
+        </section>
+
+        {/* 이미지 업로드 */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📷 금형 이미지</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                이미지 업로드 (최대 5개)
+              </label>
+              <div className="flex items-center justify-center w-full">
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-10 h-10 mb-3 text-gray-400" />
+                    <p className="mb-2 text-sm text-gray-500">
+                      <span className="font-semibold">클릭하여 업로드</span> 또는 드래그 앤 드롭
+                    </p>
+                    <p className="text-xs text-gray-500">PNG, JPG, JPEG (최대 5MB)</p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* 이미지 미리보기 */}
+            {imagePreviews.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={16} />
+                    </button>
+                    <div className="absolute bottom-1 left-1 right-1 bg-black bg-opacity-50 text-white text-xs text-center py-1 rounded">
+                      {images[index].name}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
