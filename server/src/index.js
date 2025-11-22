@@ -61,6 +61,7 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/auth', require('./routes/auth'));
 app.use('/api/v1/users', require('./routes/users'));
 app.use('/api/v1/molds', require('./routes/molds'));
+app.use('/api/v1/mold-specifications', require('./routes/moldSpecifications'));
 app.use('/api/v1/checklists', require('./routes/checklists'));
 app.use('/api/v1/inspections', require('./routes/inspections'));
 app.use('/api/v1/transfers', require('./routes/transfers'));
