@@ -33,7 +33,8 @@ export default function Layout() {
           subMenus: [
             { to: '/molds', label: '개발금형현황' },
             { to: '/molds/new', label: '금형 등록' },
-            { to: '/molds/bulk-upload', label: '금형 일괄등록' }
+            { to: '/molds/bulk-upload', label: '금형 일괄등록' },
+            { to: '/molds/lifecycle', label: '개발진행현황' }
           ]
         },
         { 
@@ -41,8 +42,7 @@ export default function Layout() {
           icon: Settings, 
           label: '금형관리',
           subMenus: [
-            { to: '/molds/master', label: '금형관리 마스터' },
-            { to: '/molds/status', label: '상태 관리' }
+            { to: '/molds/master', label: '금형관리 마스터' }
           ]
         },
         { 
@@ -98,7 +98,8 @@ export default function Layout() {
           subMenus: [
             { to: '/molds', label: '개발금형현황' },
             { to: '/molds/new', label: '금형 등록' },
-            { to: '/molds/bulk-upload', label: '금형 일괄등록' }
+            { to: '/molds/bulk-upload', label: '금형 일괄등록' },
+            { to: '/molds/lifecycle', label: '개발진행현황' }
           ]
         },
         { 
@@ -106,8 +107,7 @@ export default function Layout() {
           icon: Settings, 
           label: '금형관리',
           subMenus: [
-            { to: '/molds/master', label: '금형관리 마스터' },
-            { to: '/molds/lifecycle', label: '생명주기 관리' }
+            { to: '/molds/master', label: '금형관리 마스터' }
           ]
         },
         { 

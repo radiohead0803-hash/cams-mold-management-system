@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { moldSpecificationAPI } from '../lib/api';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Sparkles } from 'lucide-react';
 
 export default function MoldRegistration() {
   const navigate = useNavigate();
@@ -95,6 +95,33 @@ export default function MoldRegistration() {
     setImagePreviews(newPreviews);
   };
 
+  // 샘플 데이터 채우기
+  const fillSampleData = () => {
+    const today = new Date();
+    const futureDate = new Date(today);
+    futureDate.setMonth(futureDate.getMonth() + 6);
+
+    setFormData({
+      part_number: `P-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`,
+      part_name: '도어 트림 LH',
+      car_model: 'K5',
+      car_year: today.getFullYear().toString(),
+      mold_type: '사출금형',
+      cavity_count: 2,
+      material: 'NAK80',
+      tonnage: 350,
+      target_maker_id: '3',
+      development_stage: '개발',
+      production_stage: '시제',
+      order_date: today.toISOString().split('T')[0],
+      target_delivery_date: futureDate.toISOString().split('T')[0],
+      estimated_cost: '50000000',
+      notes: '샘플 테스트 금형 - 자동 생성된 데이터입니다.'
+    });
+
+    alert('샘플 데이터가 입력되었습니다!');
+  };
+
   // 유효성 검사
   const validate = () => {
     const newErrors = {};
@@ -140,12 +167,22 @@ export default function MoldRegistration() {
       
       if (response.data.success) {
         const { mold_code, qr_token } = response.data.data.mold;
-        alert(
-          `금형이 성공적으로 등록되었습니다!\n\n` +
-          `금형 코드: ${mold_code}\n` +
-          `QR 코드: ${qr_token}\n\n` +
-          `QR 코드가 자동 생성되었습니다.`
-        );
+        
+        // QR 코드 자동 생성 성공 메시지
+        const message = `
+✅ 금형이 성공적으로 등록되었습니다!
+
+📋 금형 정보:
+• 금형 코드: ${mold_code}
+• QR 토큰: ${qr_token}
+
+🔖 QR 코드가 자동으로 생성되었습니다.
+제작처에서 금형 명판에 부착하여 사용할 수 있습니다.
+
+📸 업로드된 이미지: ${images.length}개
+        `.trim();
+        
+        alert(message);
         navigate('/molds');
       }
     } catch (error) {
@@ -159,11 +196,21 @@ export default function MoldRegistration() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">금형 신규 등록</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          금형 기본정보를 입력하면 QR 코드가 자동으로 생성됩니다
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">금형 신규 등록</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            금형 기본정보를 입력하면 QR 코드가 자동으로 생성됩니다
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={fillSampleData}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors flex items-center space-x-2"
+        >
+          <Sparkles size={18} />
+          <span>샘플 데이터 채우기</span>
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -494,12 +541,23 @@ export default function MoldRegistration() {
         {/* 안내 메시지 */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start space-x-3">
-            <span className="text-2xl">ℹ️</span>
+            <span className="text-2xl">🔖</span>
             <div className="flex-1">
-              <h3 className="font-semibold text-blue-900 mb-1">QR 코드 자동 생성</h3>
-              <p className="text-sm text-blue-800">
-                금형 등록 시 QR 코드가 자동으로 생성됩니다. 생성된 QR 코드는 제작처에서 금형 명판에 부착하여 사용합니다.
-              </p>
+              <h3 className="font-semibold text-blue-900 mb-2">QR 코드 자동 생성 시스템</h3>
+              <div className="text-sm text-blue-800 space-y-2">
+                <p>
+                  금형 등록 시 <strong>고유한 QR 코드가 자동으로 생성</strong>됩니다.
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>금형 코드: M-YYYY-XXX 형식으로 자동 생성</li>
+                  <li>QR 토큰: CAMS-XXXXXXXX-XXXX 형식의 고유 식별자</li>
+                  <li>제작처에서 금형 명판에 QR 코드 부착</li>
+                  <li>생산처에서 QR 스캔으로 금형 정보 즉시 조회</li>
+                </ul>
+                <p className="mt-2 text-xs">
+                  💡 <strong>Tip:</strong> 우측 상단 "샘플 데이터 채우기" 버튼으로 테스트 데이터를 빠르게 입력할 수 있습니다.
+                </p>
+              </div>
             </div>
           </div>
         </div>
