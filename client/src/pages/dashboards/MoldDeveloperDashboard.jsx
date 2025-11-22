@@ -1,51 +1,423 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import DashboardHeader from '../../components/DashboardHeader';
 
 export default function MoldDeveloperDashboard() {
   const [stats] = useState({
-    totalProjects: 24,
-    inProgress: 8,
-    pendingApprovals: 5,
-    completed: 11
+    // 단계별 금형 현황
+    development: 15,
+    manufacturing: 23,
+    production: 198,
+    disposal: 9,
+    
+    // 승인 대기 항목
+    designApproval: 5,
+    trialApproval: 3,
+    repairLiability: 2,
+    
+    // 최근 활동
+    weeklyRegistered: 3,
+    weeklyApproved: 8,
+    monthlyLiability: 12,
+    
+    // 제작처 현황
+    totalMakers: 8,
+    activeMakers: 6
   });
+
+  const [pendingApprovals, setPendingApprovals] = useState([
+    {
+      id: 1,
+      type: 'design',
+      moldCode: 'M2024-056',
+      carModel: 'K5',
+      maker: 'A제작소',
+      submitDate: '2024-01-15',
+      status: 'pending'
+    },
+    {
+      id: 2,
+      type: 'trial',
+      moldCode: 'M2024-048',
+      carModel: '쏘렌토',
+      maker: 'B제작소',
+      trialDate: '2024-01-16',
+      result: 'PASS'
+    },
+    {
+      id: 3,
+      type: 'liability',
+      moldCode: 'M2024-023',
+      plant: 'A공장',
+      maker: 'C제작소',
+      stage: '1차 협의 불합의'
+    }
+  ]);
+
+  const [recentMolds, setRecentMolds] = useState([
+    { id: 1, code: 'M2024-067', name: '도어 트림 금형', carModel: 'K5', stage: '개발', status: 'active' },
+    { id: 2, code: 'M2024-068', name: '범퍼 금형', carModel: 'K8', stage: '제작', status: 'active' },
+    { id: 3, code: 'M2024-069', name: '콘솔 박스', carModel: 'Sportage', stage: '시운전', status: 'trial' },
+    { id: 4, code: 'M2024-070', name: '대시보드', carModel: 'Sorento', stage: '양산', status: 'production' }
+  ]);
+
+  const [makerPerformance, setMakerPerformance] = useState([
+    { id: 1, name: 'A제작소', projects: 12, onTime: 11, quality: 95, rating: 'A' },
+    { id: 2, name: 'B제작소', projects: 8, onTime: 7, quality: 92, rating: 'A' },
+    { id: 3, name: 'C제작소', projects: 15, onTime: 13, quality: 88, rating: 'B' },
+    { id: 4, name: 'D제작소', projects: 6, onTime: 5, quality: 90, rating: 'B' }
+  ]);
+
+  // 헤더 통계
+  const headerStats = [
+    { label: '전체 금형', value: stats.development + stats.manufacturing + stats.production },
+    { label: '승인 대기', value: stats.designApproval + stats.trialApproval + stats.repairLiability },
+    { label: '이번 주 등록', value: stats.weeklyRegistered }
+  ];
+
+  // 헤더 액션 버튼
+  const headerActions = (
+    <>
+      <Link
+        to="/molds/new"
+        className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition-colors flex items-center space-x-2"
+      >
+        <span>➕</span>
+        <span>금형 등록</span>
+      </Link>
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardHeader 
-        title="금형개발 대시보드"
-        subtitle="금형개발 프로젝트 관리 및 승인"
+        title="금형개발 담당 대시보드"
+        subtitle="금형 생명주기 관리 및 승인 워크플로우"
+        stats={headerStats}
+        actions={headerActions}
       />
-      <div className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="전체 프로젝트" value={stats.totalProjects} icon="📋" color="blue" />
-          <StatCard title="진행중" value={stats.inProgress} icon="⚙️" color="orange" />
-          <StatCard title="승인 대기" value={stats.pendingApprovals} icon="⏳" color="red" />
-          <StatCard title="완료" value={stats.completed} icon="✅" color="green" />
+      
+      <div className="p-6 space-y-6">
+        {/* 단계별 금형 현황 */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 단계별 금형 현황</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard title="개발" value={stats.development} icon="📐" color="blue" unit="개" />
+            <StatCard title="제작" value={stats.manufacturing} icon="🔨" color="orange" unit="개" />
+            <StatCard title="양산" value={stats.production} icon="⚙️" color="green" unit="개" />
+            <StatCard title="폐기대상" value={stats.disposal} icon="📦" color="gray" unit="개" />
+          </div>
+        </section>
+
+        {/* 승인 대기 항목 및 최근 활동 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 승인 대기 항목 */}
+          <section className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">✅ 승인 대기 항목</h3>
+            <div className="space-y-3">
+              <ApprovalItem 
+                type="design" 
+                count={stats.designApproval} 
+                label="설계 승인 대기" 
+                icon="📋"
+              />
+              <ApprovalItem 
+                type="trial" 
+                count={stats.trialApproval} 
+                label="시운전 검토 대기" 
+                icon="🧪"
+              />
+              <ApprovalItem 
+                type="liability" 
+                count={stats.repairLiability} 
+                label="수리 귀책 판정 대기" 
+                icon="⚖️"
+              />
+            </div>
+          </section>
+
+          {/* 최근 활동 */}
+          <section className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 최근 활동</h3>
+            <div className="space-y-4">
+              <ActivityStat 
+                label="금형 등록" 
+                value={stats.weeklyRegistered} 
+                period="이번 주" 
+                color="blue"
+              />
+              <ActivityStat 
+                label="승인 완료" 
+                value={stats.weeklyApproved} 
+                period="이번 주" 
+                color="green"
+              />
+              <ActivityStat 
+                label="수리 귀책 판정" 
+                value={stats.monthlyLiability} 
+                period="이번 달" 
+                color="orange"
+              />
+            </div>
+          </section>
+        </div>
+
+        {/* 승인 대기 목록 */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 승인 대기 목록</h3>
+          <div className="space-y-4">
+            {pendingApprovals.map(approval => (
+              <ApprovalCard key={approval.id} approval={approval} />
+            ))}
+          </div>
+          <Link 
+            to="/approvals" 
+            className="mt-4 block text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            전체 승인 목록 보기 →
+          </Link>
+        </section>
+
+        {/* 최근 등록 금형 */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">🔧 최근 등록 금형</h3>
+            <Link to="/molds" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              전체 보기 →
+            </Link>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">금형코드</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">금형명</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">단계</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {recentMolds.map(mold => (
+                  <MoldRow key={mold.id} mold={mold} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 제작처 성과 모니터링 */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">🏭 제작처 성과 모니터링</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제작처</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">진행 프로젝트</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">납기 준수</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">품질 점수</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">등급</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {makerPerformance.map(maker => (
+                  <MakerRow key={maker.id} maker={maker} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* 빠른 작업 */}
+        <section>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">⚡ 빠른 작업</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <QuickActionCard icon="➕" title="금형 등록" description="신규 금형 등록" link="/molds/new" />
+            <QuickActionCard icon="✅" title="승인 처리" description="대기 항목 승인" link="/approvals" />
+            <QuickActionCard icon="🏭" title="제작처 관리" description="제작처 선정/평가" link="/makers" />
+            <QuickActionCard icon="📊" title="통계 리포트" description="금형 현황 통계" link="/reports" />
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+// 통계 카드
+function StatCard({ title, value, icon, color, unit = '' }) {
+  const colors = {
+    blue: 'bg-blue-50 text-blue-600 border-blue-200',
+    green: 'bg-green-50 text-green-600 border-green-200',
+    orange: 'bg-orange-50 text-orange-600 border-orange-200',
+    gray: 'bg-gray-50 text-gray-600 border-gray-200'
+  };
+
+  return (
+    <div className={`bg-white rounded-lg shadow border-l-4 ${colors[color]} p-6`}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-gray-600 mb-1">{title}</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {value.toLocaleString()}{unit && <span className="text-lg ml-1">{unit}</span>}
+          </p>
+        </div>
+        <div className="text-4xl">{icon}</div>
+      </div>
+    </div>
+  );
+}
+
+// 승인 아이템
+function ApprovalItem({ type, count, label, icon }) {
+  return (
+    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+      <div className="flex items-center space-x-3">
+        <span className="text-2xl">{icon}</span>
+        <div>
+          <p className="font-medium text-gray-900">{label}</p>
+          <p className="text-sm text-gray-600">{count}건 대기 중</p>
+        </div>
+      </div>
+      <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">처리 →</button>
+    </div>
+  );
+}
+
+// 활동 통계
+function ActivityStat({ label, value, period, color }) {
+  const colors = {
+    blue: 'text-blue-600',
+    green: 'text-green-600',
+    orange: 'text-orange-600'
+  };
+
+  return (
+    <div className="flex items-center justify-between p-3 border-l-4 border-gray-200 pl-4">
+      <div>
+        <p className="text-sm text-gray-600">{label}</p>
+        <p className="text-sm text-gray-500">({period})</p>
+      </div>
+      <p className={`text-2xl font-bold ${colors[color]}`}>{value}건</p>
+    </div>
+  );
+}
+
+// 승인 카드
+function ApprovalCard({ approval }) {
+  const typeInfo = {
+    design: { label: '설계 승인', color: 'bg-blue-50 border-blue-200', icon: '📋' },
+    trial: { label: '시운전 검토', color: 'bg-green-50 border-green-200', icon: '🧪' },
+    liability: { label: '수리 귀책 판정', color: 'bg-orange-50 border-orange-200', icon: '⚖️' }
+  };
+
+  const info = typeInfo[approval.type];
+
+  return (
+    <div className={`p-4 border rounded-lg ${info.color}`}>
+      <div className="flex items-start justify-between">
+        <div className="flex items-start space-x-3">
+          <span className="text-2xl">{info.icon}</span>
+          <div>
+            <div className="flex items-center space-x-2 mb-1">
+              <span className="font-semibold text-gray-900">{info.label}</span>
+              <span className="text-sm text-gray-600">|</span>
+              <span className="font-medium text-gray-900">{approval.moldCode}</span>
+            </div>
+            {approval.type === 'design' && (
+              <p className="text-sm text-gray-700">
+                차종: {approval.carModel} | 제작처: {approval.maker} | 제출일: {approval.submitDate}
+              </p>
+            )}
+            {approval.type === 'trial' && (
+              <p className="text-sm text-gray-700">
+                차종: {approval.carModel} | 제작처: {approval.maker} | 시운전일: {approval.trialDate} | 판정: {approval.result}
+              </p>
+            )}
+            {approval.type === 'liability' && (
+              <p className="text-sm text-gray-700">
+                생산처: {approval.plant} | 제작처: {approval.maker} | 상태: {approval.stage}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex space-x-2">
+          <button className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">승인</button>
+          <button className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700">상세</button>
         </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ title, value, icon, color }) {
-  const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    orange: 'bg-orange-50 text-orange-600',
-    red: 'bg-red-50 text-red-600'
+// 금형 행
+function MoldRow({ mold }) {
+  const statusColors = {
+    active: 'bg-green-100 text-green-800',
+    trial: 'bg-blue-100 text-blue-800',
+    production: 'bg-purple-100 text-purple-800'
+  };
+
+  const statusLabels = {
+    active: '진행중',
+    trial: '시운전',
+    production: '양산'
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-600 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">{value}</p>
-        </div>
-        <div className={`text-4xl ${colors[color]} p-3 rounded-lg`}>
-          {icon}
-        </div>
+    <tr className="hover:bg-gray-50">
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{mold.code}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{mold.name}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{mold.carModel}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{mold.stage}</td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[mold.status]}`}>
+          {statusLabels[mold.status]}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <Link to={`/molds/${mold.id}`} className="text-blue-600 hover:text-blue-700">상세보기</Link>
+      </td>
+    </tr>
+  );
+}
+
+// 제작처 행
+function MakerRow({ maker }) {
+  const ratingColors = {
+    'A': 'bg-green-100 text-green-800',
+    'B': 'bg-blue-100 text-blue-800',
+    'C': 'bg-yellow-100 text-yellow-800'
+  };
+
+  return (
+    <tr className="hover:bg-gray-50">
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{maker.name}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{maker.projects}개</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{maker.onTime}/{maker.projects}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{maker.quality}점</td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={`px-2 py-1 text-xs font-medium rounded-full ${ratingColors[maker.rating]}`}>
+          {maker.rating}등급
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+// 빠른 작업 카드
+function QuickActionCard({ icon, title, description, link }) {
+  return (
+    <Link 
+      to={link}
+      className="block p-6 bg-white rounded-lg shadow hover:shadow-lg transition-shadow border border-gray-200 hover:border-blue-300"
+    >
+      <div className="text-center">
+        <div className="text-4xl mb-3">{icon}</div>
+        <h4 className="font-semibold text-gray-900 mb-1">{title}</h4>
+        <p className="text-sm text-gray-600">{description}</p>
       </div>
-    </div>
+    </Link>
   );
 }

@@ -91,4 +91,13 @@ export const reportAPI = {
   getInspection: (inspectionId) => api.get(`/reports/inspection/${inspectionId}`),
 }
 
+// Mold Specification API
+export const moldSpecificationAPI = {
+  create: (data) => api.post('/mold-specifications', data),
+  getAll: (params) => api.get('/mold-specifications', { params }),
+  getById: (id) => api.get(`/mold-specifications/${id}`),
+  update: (id, data) => api.patch(`/mold-specifications/${id}`, data),
+  delete: (id) => api.delete(`/mold-specifications/${id}`),
+}
+
 export default api
