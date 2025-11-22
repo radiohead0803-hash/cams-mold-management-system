@@ -26,21 +26,36 @@ postgresql://postgres:***@switchyard.proxy.rlwy.net:34950/railway
 
 ---
 
-## 🔐 로그인 계정
+## 🔐 테스트 계정
 
-### 시스템 관리자
+### 1. 시스템 관리자 (system_admin)
 ```
 Username: admin
 Password: admin123
-User Type: system_admin
+권한: 전체 시스템 관리
 ```
 
-### 제작처 담당자
+### 2. 금형개발 담당자 (mold_developer)
+```
+Username: developer
+Password: dev123
+권한: 금형 개발 관리
+```
+
+### 3. 제작처 담당자 (maker)
 ```
 Username: maker1
 Password: maker123
-User Type: maker
+권한: 제작처 업무 관리
 Company: A제작소
+```
+
+### 4. 생산처 담당자 (plant)
+```
+Username: plant1
+Password: plant123
+권한: 생산 관리
+Company: 생산공장1
 ```
 
 ---
