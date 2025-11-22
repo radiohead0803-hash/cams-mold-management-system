@@ -92,6 +92,10 @@ class MoldSpecification extends Model {
             model: 'users',
             key: 'id'
           }
+        },
+        notes: {
+          type: DataTypes.TEXT,
+          comment: '비고'
         }
       },
       {

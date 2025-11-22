@@ -89,6 +89,7 @@ const createMoldSpecification = async (req, res) => {
       order_date: order_date || new Date(),
       target_delivery_date,
       estimated_cost,
+      notes,
       status: 'draft', // 초안
       mold_id: mold.id,
       created_by: req.user.id,
