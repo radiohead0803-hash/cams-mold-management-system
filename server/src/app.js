@@ -40,6 +40,7 @@ const dailyChecksRouter = require('./routes/dailyChecks');
 const periodicInspectionsRouter = require('./routes/periodicInspections');
 const moldSpecificationsRouter = require('./routes/moldSpecifications');
 const makerSpecificationsRouter = require('./routes/makerSpecifications');
+const companiesRouter = require('./routes/companies');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/qr', qrRouter);
@@ -50,6 +51,7 @@ app.use('/api/daily-checks', dailyChecksRouter);
 app.use('/api/periodic-inspections', periodicInspectionsRouter);
 app.use('/api/v1/mold-specifications', moldSpecificationsRouter);
 app.use('/api/v1/maker-specifications', makerSpecificationsRouter);
+app.use('/api/v1/companies', companiesRouter);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -96,6 +96,22 @@ class MoldSpecification extends Model {
         notes: {
           type: DataTypes.TEXT,
           comment: '비고'
+        },
+        maker_company_id: {
+          type: DataTypes.INTEGER,
+          references: {
+            model: 'companies',
+            key: 'id'
+          },
+          comment: '제작처 회사 ID'
+        },
+        plant_company_id: {
+          type: DataTypes.INTEGER,
+          references: {
+            model: 'companies',
+            key: 'id'
+          },
+          comment: '생산처 회사 ID'
         }
       },
       {
@@ -128,6 +144,16 @@ class MoldSpecification extends Model {
     this.belongsTo(models.User, {
       foreignKey: 'created_by',
       as: 'creator'
+    });
+
+    this.belongsTo(models.Company, {
+      foreignKey: 'maker_company_id',
+      as: 'makerCompany'
+    });
+
+    this.belongsTo(models.Company, {
+      foreignKey: 'plant_company_id',
+      as: 'plantCompany'
     });
 
     this.hasOne(models.MakerSpecification, {

@@ -2,6 +2,12 @@ const { Model, DataTypes } = require('sequelize');
 
 class User extends Model {
   static associate(models) {
+    // Company 관계
+    User.belongsTo(models.Company, {
+      foreignKey: 'company_id',
+      as: 'company'
+    });
+    
     // Daily Check 관계
     User.hasMany(models.DailyCheck, {
       foreignKey: 'inspector_id',

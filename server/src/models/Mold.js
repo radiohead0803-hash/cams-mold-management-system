@@ -2,6 +2,18 @@ const { Model, DataTypes } = require('sequelize');
 
 class Mold extends Model {
   static associate(models) {
+    // Company 관계 - 제작처
+    Mold.belongsTo(models.Company, {
+      foreignKey: 'maker_company_id',
+      as: 'makerCompany'
+    });
+    
+    // Company 관계 - 생산처
+    Mold.belongsTo(models.Company, {
+      foreignKey: 'plant_company_id',
+      as: 'plantCompany'
+    });
+    
     // Specification 관계
     Mold.belongsTo(models.MoldSpecification, {
       foreignKey: 'specification_id',
@@ -100,6 +112,20 @@ module.exports = (sequelize) => {
     maker_id: {
       type: DataTypes.INTEGER,
       allowNull: false
+    },
+    maker_company_id: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: 'companies',
+        key: 'id'
+      }
+    },
+    plant_company_id: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: 'companies',
+        key: 'id'
+      }
     },
     specification_id: {
       type: DataTypes.INTEGER,
