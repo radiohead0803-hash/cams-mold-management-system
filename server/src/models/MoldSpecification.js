@@ -56,13 +56,7 @@ class MoldSpecification extends Model {
         target_delivery_date: {
           type: DataTypes.DATEONLY
         },
-        actual_delivery_date: {
-          type: DataTypes.DATEONLY
-        },
         estimated_cost: {
-          type: DataTypes.DECIMAL(12, 2)
-        },
-        actual_cost: {
           type: DataTypes.DECIMAL(12, 2)
         },
         status: {
