@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown } from 'lucide-react'
+import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2 } from 'lucide-react'
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
@@ -130,21 +130,13 @@ export default function Layout() {
           ]
         },
         { 
-          to: '/makers', 
-          icon: Settings, 
-          label: '제작처 관리',
+          to: '/companies', 
+          icon: Building2, 
+          label: '업체 관리',
           subMenus: [
-            { to: '/makers', label: '제작처 목록' },
-            { to: '/makers/performance', label: '성과 모니터링' }
-          ]
-        },
-        { 
-          to: '/plants', 
-          icon: Settings, 
-          label: '생산처 관리',
-          subMenus: [
-            { to: '/plants', label: '생산처 목록' },
-            { to: '/plants/performance', label: '생산 현황' }
+            { to: '/companies', label: '업체 목록' },
+            { to: '/companies?type=maker', label: '제작처 관리' },
+            { to: '/companies?type=plant', label: '생산처 관리' }
           ]
         },
         { 
