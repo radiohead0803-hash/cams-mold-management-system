@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardHeader from '../../components/DashboardHeader';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function MoldDeveloperDashboard() {
-  const [stats] = useState({
+  const { token } = useAuthStore();
+  const [stats, setStats] = useState({
     // 단계별 금형 현황
     development: 15,
     manufacturing: 23,
@@ -20,10 +22,43 @@ export default function MoldDeveloperDashboard() {
     weeklyApproved: 8,
     monthlyLiability: 12,
     
-    // 제작처 현황
-    totalMakers: 8,
-    activeMakers: 6
+    // 업체 현황
+    totalCompanies: 0,
+    totalMakers: 0,
+    totalPlants: 0,
+    activeMakers: 0,
+    activePlants: 0
   });
+
+  // 업체 통계 가져오기
+  useEffect(() => {
+    fetchCompanyStats();
+  }, []);
+
+  const fetchCompanyStats = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies/stats/all`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setStats(prev => ({
+          ...prev,
+          totalCompanies: parseInt(data.data.total_companies) || 0,
+          totalMakers: parseInt(data.data.total_makers) || 0,
+          totalPlants: parseInt(data.data.total_plants) || 0,
+          activeMakers: parseInt(data.data.active_makers) || 0,
+          activePlants: parseInt(data.data.active_plants) || 0
+        }));
+      }
+    } catch (error) {
+      console.error('업체 통계 조회 에러:', error);
+    }
+  };
 
   const [pendingApprovals, setPendingApprovals] = useState([
     {
@@ -72,7 +107,8 @@ export default function MoldDeveloperDashboard() {
   const headerStats = [
     { label: '전체 금형', value: stats.development + stats.manufacturing + stats.production },
     { label: '승인 대기', value: stats.designApproval + stats.trialApproval + stats.repairLiability },
-    { label: '이번 주 등록', value: stats.weeklyRegistered }
+    { label: '등록 업체', value: stats.totalCompanies, subtext: `제작처 ${stats.totalMakers} | 생산처 ${stats.totalPlants}` },
+    { label: '활성 업체', value: stats.activeMakers + stats.activePlants }
   ];
 
   // 테스트 데이터 10건 추가

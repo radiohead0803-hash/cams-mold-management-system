@@ -66,6 +66,9 @@ export default function DashboardHeader({ title, subtitle, actions, stats }) {
                 <div key={index} className="text-right">
                   <p className="text-xs text-blue-100">{stat.label}</p>
                   <p className="text-2xl font-bold">{stat.value}</p>
+                  {stat.subtext && (
+                    <p className="text-xs text-blue-200 mt-0.5">{stat.subtext}</p>
+                  )}
                 </div>
               ))}
             </div>

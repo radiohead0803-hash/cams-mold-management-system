@@ -14,6 +14,9 @@ const { authenticate, authorize } = require('../middleware/auth');
  * GET    /api/v1/companies/:id/stats - 회사 통계 조회
  */
 
+// 전체 업체 통계 조회 (모든 인증된 사용자)
+router.get('/stats/all', authenticate, companyController.getAllCompaniesStats);
+
 // 회사 목록 조회 (모든 인증된 사용자)
 router.get('/', authenticate, companyController.getCompanies);
 
