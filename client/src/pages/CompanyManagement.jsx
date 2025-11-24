@@ -24,10 +24,19 @@ export default function CompanyManagement() {
       setLoading(true);
       const token = localStorage.getItem('token');
       
+      if (!token) {
+        console.error('토큰이 없습니다');
+        alert('로그인이 필요합니다.');
+        return;
+      }
+      
       let url = `${import.meta.env.VITE_API_URL}/api/v1/companies?limit=100`;
       if (filter !== 'all') {
         url += `&company_type=${filter}`;
       }
+
+      console.log('API 요청 URL:', url);
+      console.log('토큰:', token ? '있음' : '없음');
 
       const response = await fetch(url, {
         headers: {
@@ -36,27 +45,34 @@ export default function CompanyManagement() {
         }
       });
 
+      console.log('응답 상태:', response.status);
+
       if (!response.ok) {
-        throw new Error('회사 목록 조회 실패');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API 에러:', errorData);
+        throw new Error(errorData.error?.message || '회사 목록 조회 실패');
       }
 
       const data = await response.json();
-      setCompanies(data.data.items);
+      console.log('받은 데이터:', data);
+      
+      setCompanies(data.data.items || []);
       
       // 통계 계산
-      const makers = data.data.items.filter(c => c.company_type === 'maker').length;
-      const plants = data.data.items.filter(c => c.company_type === 'plant').length;
-      const active = data.data.items.filter(c => c.is_active).length;
+      const items = data.data.items || [];
+      const makers = items.filter(c => c.company_type === 'maker').length;
+      const plants = items.filter(c => c.company_type === 'plant').length;
+      const active = items.filter(c => c.is_active).length;
       
       setStats({
-        totalCompanies: data.data.total,
+        totalCompanies: data.data.total || 0,
         makers,
         plants,
         activeCompanies: active
       });
     } catch (error) {
       console.error('회사 목록 조회 에러:', error);
-      alert('회사 목록을 불러오는데 실패했습니다.');
+      alert(`회사 목록을 불러오는데 실패했습니다: ${error.message}`);
     } finally {
       setLoading(false);
     }
