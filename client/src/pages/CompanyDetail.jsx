@@ -21,6 +21,17 @@ export default function CompanyDetail() {
   const fetchCompanyDetail = async () => {
     try {
       setLoading(true);
+      
+      if (!token) {
+        alert('로그인이 필요합니다.');
+        navigate('/login');
+        return;
+      }
+
+      console.log('업체 상세 조회 요청:', id);
+      console.log('API URL:', `${import.meta.env.VITE_API_URL}/api/v1/companies/${id}`);
+      console.log('토큰:', token ? '있음' : '없음');
+
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -28,17 +39,23 @@ export default function CompanyDetail() {
         }
       });
 
+      console.log('응답 상태:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('받은 데이터:', data);
         setCompany(data.data);
         setFormData(data.data);
       } else {
-        alert('업체 정보를 불러오는데 실패했습니다.');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API 에러:', errorData);
+        alert(`업체 정보를 불러오는데 실패했습니다. (${response.status})`);
         navigate('/companies');
       }
     } catch (error) {
       console.error('업체 상세 조회 에러:', error);
       alert('업체 정보를 불러오는데 실패했습니다.');
+      navigate('/companies');
     } finally {
       setLoading(false);
     }
