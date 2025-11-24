@@ -81,9 +81,7 @@ const createMoldSpecification = async (req, res) => {
       notes,
       status: 'draft', // 초안
       mold_id: null, // 나중에 업데이트
-      created_by: req.user.id,
-      created_at: new Date(),
-      updated_at: new Date()
+      created_by: req.user.id
     });
 
     // Mold 테이블에 기본 정보 생성
@@ -100,9 +98,7 @@ const createMoldSpecification = async (req, res) => {
       specification_id: specification.id,
       qr_token: qrToken,
       status: 'planning', // 계획 단계
-      location: '본사',
-      created_at: new Date(),
-      updated_at: new Date()
+      location: '본사'
     });
 
     // MoldSpecification의 mold_id 업데이트
