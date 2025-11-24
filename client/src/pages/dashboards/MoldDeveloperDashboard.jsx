@@ -300,7 +300,7 @@ export default function MoldDeveloperDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <QuickActionCard icon="➕" title="금형 등록" description="신규 금형 등록" link="/molds/new" />
             <QuickActionCard icon="✅" title="승인 처리" description="대기 항목 승인" link="/approvals" />
-            <QuickActionCard icon="🏭" title="제작처 관리" description="제작처 선정/평가" link="/makers" />
+            <QuickActionCard icon="🏢" title="업체 관리" description="제작처/생산처 통합관리" link="/companies" />
             <QuickActionCard icon="📊" title="통계 리포트" description="금형 현황 통계" link="/reports" />
           </div>
         </section>

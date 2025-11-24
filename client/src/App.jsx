@@ -26,6 +26,7 @@ import ChecklistMaster from './pages/ChecklistMaster'
 import RepairManagement from './pages/RepairManagement'
 import MoldDocuments from './pages/MoldDocuments'
 import MoldPhotoGallery from './pages/MoldPhotoGallery'
+import CompanyManagement from './pages/CompanyManagement'
 
 function App() {
   const { isAuthenticated, initialize } = useAuthStore()
@@ -71,6 +72,7 @@ function App() {
         <Route path="repairs" element={<RepairManagement />} />
         <Route path="molds/:id/documents" element={<MoldDocuments />} />
         <Route path="molds/:id/photos" element={<MoldPhotoGallery />} />
+        <Route path="companies" element={<CompanyManagement />} />
       </Route>
     </Routes>
   )
