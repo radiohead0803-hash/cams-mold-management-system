@@ -101,9 +101,6 @@ const createMoldSpecification = async (req, res) => {
       location: '본사'
     });
 
-    // MoldSpecification의 mold_id 업데이트
-    await specification.update({ mold_id: mold.id });
-
     logger.info(`Mold specification created: ${specification.id} by user ${req.user.id}`);
 
     res.status(201).json({
