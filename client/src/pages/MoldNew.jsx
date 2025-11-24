@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, AlertCircle, CheckCircle, Factory, Building2 } from 'lucide-react';
-import { api } from '../lib/api';
+import { useAuthStore } from '../stores/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function MoldNew() {
   const navigate = useNavigate();
+  const { token } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [loadingCompanies, setLoadingCompanies] = useState(true);
   const [error, setError] = useState(null);
@@ -39,21 +40,49 @@ export default function MoldNew() {
   const loadCompanies = async () => {
     try {
       setLoadingCompanies(true);
-      const response = await api.get('/companies');
       
-      if (response.data.success) {
-        setCompanies(response.data.data.items || []);
+      if (!token) {
+        console.error('토큰이 없습니다');
+        setError('로그인이 필요합니다.');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+      
+      const url = `${API_URL}/api/v1/companies?limit=100`;
+      console.log('API 요청 URL:', url);
+      console.log('토큰:', token ? '있음' : '없음');
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('응답 상태:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API 에러:', errorData);
+        
+        if (response.status === 401) {
+          setError('로그인이 만료되었습니다. 다시 로그인해주세요.');
+          setTimeout(() => navigate('/login'), 2000);
+        } else {
+          throw new Error(errorData.error?.message || '업체 목록 조회 실패');
+        }
+        return;
+      }
+
+      const data = await response.json();
+      console.log('받은 데이터:', data);
+      
+      if (data.success) {
+        setCompanies(data.data.items || []);
       }
     } catch (err) {
       console.error('Failed to load companies:', err);
-      
-      if (err.response?.status === 401) {
-        setError('로그인이 만료되었습니다. 다시 로그인해주세요.');
-        localStorage.removeItem('cams-auth');
-        setTimeout(() => navigate('/login'), 2000);
-      } else {
-        setError('업체 목록을 불러오는데 실패했습니다: ' + (err.response?.data?.error?.message || err.message));
-      }
+      setError('업체 목록을 불러오는데 실패했습니다: ' + err.message);
     } finally {
       setLoadingCompanies(false);
     }
@@ -74,6 +103,12 @@ export default function MoldNew() {
     setSuccess(null);
 
     try {
+      if (!token) {
+        setError('로그인이 필요합니다.');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
       // 숫자 필드 변환
       const submitData = {
         ...formData,
@@ -84,13 +119,27 @@ export default function MoldNew() {
         plant_company_id: formData.plant_company_id ? parseInt(formData.plant_company_id) : null
       };
 
-      const response = await api.post('/mold-specifications', submitData);
+      const response = await fetch(`${API_URL}/api/v1/mold-specifications`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(submitData)
+      });
 
-      if (response.data.success) {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || '금형 등록 실패');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
         setSuccess({
           message: '금형 정보가 성공적으로 등록되었습니다!',
-          moldCode: response.data.data.mold.mold_code,
-          qrToken: response.data.data.mold.qr_token
+          moldCode: data.data.mold.mold_code,
+          qrToken: data.data.mold.qr_token
         });
         
         // 3초 후 목록으로 이동
@@ -100,10 +149,7 @@ export default function MoldNew() {
       }
     } catch (err) {
       console.error('Failed to create mold:', err);
-      setError(
-        err.response?.data?.error?.message || 
-        '금형 등록에 실패했습니다. 다시 시도해주세요.'
-      );
+      setError(err.message || '금형 등록에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }
