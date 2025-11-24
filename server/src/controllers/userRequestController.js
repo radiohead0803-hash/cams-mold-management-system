@@ -1,7 +1,7 @@
 const { UserRequest, Company, User } = require('../models/newIndex');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 /**
  * 사용자 계정 요청 목록 조회
