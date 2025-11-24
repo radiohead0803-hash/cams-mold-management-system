@@ -1,6 +1,7 @@
 const { Company, User, Mold, MoldSpecification, sequelize } = require('../models/newIndex');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
+const ExcelJS = require('exceljs');
 
 /**
  * 회사 목록 조회 (제작처/생산처 통합)
@@ -458,6 +459,271 @@ const getAllCompaniesStats = async (req, res) => {
   }
 };
 
+/**
+ * 엑셀 샘플 파일 다운로드
+ */
+const downloadSampleExcel = async (req, res) => {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('업체 목록');
+
+    // 헤더 스타일
+    worksheet.columns = [
+      { header: '업체 유형*', key: 'company_type', width: 15 },
+      { header: '업체명*', key: 'company_name', width: 25 },
+      { header: '사업자번호', key: 'business_number', width: 20 },
+      { header: '대표자명', key: 'representative', width: 15 },
+      { header: '전화번호', key: 'phone', width: 20 },
+      { header: '팩스', key: 'fax', width: 20 },
+      { header: '이메일', key: 'email', width: 30 },
+      { header: '주소', key: 'address', width: 40 },
+      { header: '상세주소', key: 'address_detail', width: 30 },
+      { header: '우편번호', key: 'postal_code', width: 15 },
+      { header: '담당자명', key: 'manager_name', width: 15 },
+      { header: '담당자 전화', key: 'manager_phone', width: 20 },
+      { header: '담당자 이메일', key: 'manager_email', width: 30 },
+      { header: '계약 시작일', key: 'contract_start_date', width: 15 },
+      { header: '계약 종료일', key: 'contract_end_date', width: 15 },
+      { header: '비고', key: 'notes', width: 40 }
+    ];
+
+    // 헤더 스타일 적용
+    worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' }
+    };
+    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // 샘플 데이터
+    worksheet.addRow({
+      company_type: 'maker',
+      company_name: '대한금형제작소',
+      business_number: '123-45-67890',
+      representative: '김철수',
+      phone: '02-1234-5678',
+      fax: '02-1234-5679',
+      email: 'info@daehangeum.com',
+      address: '서울시 강남구 테헤란로 123',
+      address_detail: '5층',
+      postal_code: '06234',
+      manager_name: '이영희',
+      manager_phone: '010-1234-5678',
+      manager_email: 'manager@daehangeum.com',
+      contract_start_date: '2024-01-01',
+      contract_end_date: '2025-12-31',
+      notes: '주력 제품: 자동차 부품 금형'
+    });
+
+    worksheet.addRow({
+      company_type: 'plant',
+      company_name: '한국플라스틱공업',
+      business_number: '234-56-78901',
+      representative: '박민수',
+      phone: '031-9876-5432',
+      email: 'contact@hanplastic.com',
+      address: '경기도 안산시 단원구 공단로 456',
+      postal_code: '15588',
+      manager_name: '최수진',
+      manager_phone: '010-9876-5432',
+      manager_email: 'manager@hanplastic.com',
+      contract_start_date: '2024-03-01',
+      contract_end_date: '2026-02-28'
+    });
+
+    // 설명 시트 추가
+    const instructionSheet = workbook.addWorksheet('작성 가이드');
+    instructionSheet.columns = [
+      { header: '항목', key: 'field', width: 20 },
+      { header: '필수여부', key: 'required', width: 12 },
+      { header: '설명', key: 'description', width: 50 },
+      { header: '예시', key: 'example', width: 30 }
+    ];
+
+    instructionSheet.getRow(1).font = { bold: true };
+    instructionSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD9E1F2' }
+    };
+
+    const instructions = [
+      { field: '업체 유형', required: '필수', description: 'maker (제작처) 또는 plant (생산처)', example: 'maker' },
+      { field: '업체명', required: '필수', description: '업체의 정식 명칭', example: '대한금형제작소' },
+      { field: '사업자번호', required: '선택', description: '사업자등록번호 (하이픈 포함 가능)', example: '123-45-67890' },
+      { field: '대표자명', required: '선택', description: '대표자 이름', example: '김철수' },
+      { field: '전화번호', required: '선택', description: '대표 전화번호', example: '02-1234-5678' },
+      { field: '이메일', required: '선택', description: '대표 이메일 주소', example: 'info@company.com' },
+      { field: '주소', required: '선택', description: '사업장 주소', example: '서울시 강남구 테헤란로 123' },
+      { field: '담당자명', required: '선택', description: '담당자 이름', example: '이영희' },
+      { field: '담당자 전화', required: '선택', description: '담당자 연락처', example: '010-1234-5678' },
+      { field: '계약 시작일', required: '선택', description: '계약 시작일 (YYYY-MM-DD)', example: '2024-01-01' },
+      { field: '계약 종료일', required: '선택', description: '계약 종료일 (YYYY-MM-DD)', example: '2025-12-31' }
+    ];
+
+    instructions.forEach(inst => instructionSheet.addRow(inst));
+
+    // 파일 전송
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=company_upload_sample.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    logger.error('Download sample excel error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '샘플 파일 다운로드 실패' }
+    });
+  }
+};
+
+/**
+ * 엑셀 파일로 업체 일괄 등록
+ */
+const bulkUploadCompanies = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: { message: '파일이 업로드되지 않았습니다' }
+      });
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer);
+    
+    const worksheet = workbook.getWorksheet('업체 목록') || workbook.getWorksheet(1);
+    
+    if (!worksheet) {
+      return res.status(400).json({
+        success: false,
+        error: { message: '올바른 형식의 엑셀 파일이 아닙니다' }
+      });
+    }
+
+    const companies = [];
+    const errors = [];
+    let rowNumber = 1;
+
+    // 헤더 행 건너뛰기
+    worksheet.eachRow((row, index) => {
+      if (index === 1) return; // 헤더 행 건너뛰기
+      
+      rowNumber = index;
+      const rowData = {
+        company_type: row.getCell(1).value,
+        company_name: row.getCell(2).value,
+        business_number: row.getCell(3).value,
+        representative: row.getCell(4).value,
+        phone: row.getCell(5).value,
+        fax: row.getCell(6).value,
+        email: row.getCell(7).value,
+        address: row.getCell(8).value,
+        address_detail: row.getCell(9).value,
+        postal_code: row.getCell(10).value,
+        manager_name: row.getCell(11).value,
+        manager_phone: row.getCell(12).value,
+        manager_email: row.getCell(13).value,
+        contract_start_date: row.getCell(14).value,
+        contract_end_date: row.getCell(15).value,
+        notes: row.getCell(16).value
+      };
+
+      // 필수 필드 검증
+      if (!rowData.company_name || !rowData.company_type) {
+        errors.push({
+          row: rowNumber,
+          error: '업체명과 업체 유형은 필수입니다'
+        });
+        return;
+      }
+
+      // 업체 유형 검증
+      if (!['maker', 'plant'].includes(rowData.company_type)) {
+        errors.push({
+          row: rowNumber,
+          error: '업체 유형은 maker 또는 plant여야 합니다'
+        });
+        return;
+      }
+
+      companies.push(rowData);
+    });
+
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: { 
+          message: '데이터 검증 실패',
+          details: errors
+        }
+      });
+    }
+
+    // 트랜잭션으로 일괄 등록
+    const results = await sequelize.transaction(async (t) => {
+      const created = [];
+      const failed = [];
+
+      for (const companyData of companies) {
+        try {
+          // 업체 코드 자동 생성
+          const company_code = await generateCompanyCode(companyData.company_type);
+          
+          // 중복 확인
+          const existing = await Company.findOne({
+            where: { company_name: companyData.company_name },
+            transaction: t
+          });
+
+          if (existing) {
+            failed.push({
+              company_name: companyData.company_name,
+              error: '이미 등록된 업체명입니다'
+            });
+            continue;
+          }
+
+          // 업체 생성
+          const company = await Company.create({
+            ...companyData,
+            company_code,
+            is_active: true
+          }, { transaction: t });
+
+          created.push(company);
+        } catch (error) {
+          failed.push({
+            company_name: companyData.company_name,
+            error: error.message
+          });
+        }
+      }
+
+      return { created, failed };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total: companies.length,
+        created: results.created.length,
+        failed: results.failed.length,
+        createdCompanies: results.created,
+        failedCompanies: results.failed
+      }
+    });
+  } catch (error) {
+    logger.error('Bulk upload companies error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '업체 일괄 등록 실패' }
+    });
+  }
+};
+
 module.exports = {
   getCompanies,
   getCompanyById,
@@ -465,5 +731,7 @@ module.exports = {
   updateCompany,
   deleteCompany,
   getCompanyStats,
-  getAllCompaniesStats
+  getAllCompaniesStats,
+  downloadSampleExcel,
+  bulkUploadCompanies
 };

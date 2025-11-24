@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const companyController = require('../controllers/companyController');
 const { authenticate, authorize } = require('../middleware/auth');
+
+// Multer 설정 (메모리 스토리지)
+const upload = multer({ storage: multer.memoryStorage() });
 
 /**
  * 회사 관리 라우트 (제작처/생산처 통합)
@@ -14,11 +18,22 @@ const { authenticate, authorize } = require('../middleware/auth');
  * GET    /api/v1/companies/:id/stats - 회사 통계 조회
  */
 
+// 엑셀 샘플 파일 다운로드
+router.get('/sample-excel', authenticate, companyController.downloadSampleExcel);
+
 // 전체 업체 통계 조회 (모든 인증된 사용자)
 router.get('/stats/all', authenticate, companyController.getAllCompaniesStats);
 
 // 회사 목록 조회 (모든 인증된 사용자)
 router.get('/', authenticate, companyController.getCompanies);
+
+// 엑셀 파일로 업체 일괄 등록 (시스템 관리자, 금형개발 담당)
+router.post('/bulk-upload',
+  authenticate,
+  authorize(['system_admin', 'mold_developer']),
+  upload.single('file'),
+  companyController.bulkUploadCompanies
+);
 
 // 회사 상세 조회 (모든 인증된 사용자)
 router.get('/:id', authenticate, companyController.getCompanyById);
