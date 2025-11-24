@@ -66,6 +66,14 @@ export default function Layout() {
           ]
         },
         { 
+          to: '/user-requests', 
+          icon: Users, 
+          label: '사용자 관리',
+          subMenus: [
+            { to: '/user-requests', label: '계정 요청 관리' }
+          ]
+        },
+        { 
           to: '/alerts', 
           icon: Bell, 
           label: '알림',
@@ -129,6 +137,14 @@ export default function Layout() {
             { to: '/companies', label: '업체 목록' },
             { to: '/companies?type=maker', label: '제작처 관리' },
             { to: '/companies?type=plant', label: '생산처 관리' }
+          ]
+        },
+        { 
+          to: '/user-requests', 
+          icon: Users, 
+          label: '사용자 관리',
+          subMenus: [
+            { to: '/user-requests', label: '계정 요청 관리' }
           ]
         },
         { 

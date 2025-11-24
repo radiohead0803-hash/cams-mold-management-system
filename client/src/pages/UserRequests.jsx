@@ -304,18 +304,417 @@ export default function UserRequests() {
   );
 }
 
-// 계정 요청 생성 모달 (다음 응답에서 계속)
+// 계정 요청 생성 모달
 function CreateRequestModal({ onClose, onSuccess }) {
-  // 구현 예정
-  return null;
+  const { token } = useAuthStore();
+  const [companies, setCompanies] = useState([]);
+  const [formData, setFormData] = useState({
+    company_id: '',
+    username: '',
+    name: '',
+    email: '',
+    phone: '',
+    user_type: '',
+    department: '',
+    position: '',
+    request_reason: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies?limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data.data.items || []);
+      }
+    } catch (error) {
+      console.error('업체 목록 조회 에러:', error);
+    }
+  };
+
+  const handleCompanyChange = (companyId) => {
+    const company = companies.find(c => c.id === parseInt(companyId));
+    setFormData({
+      ...formData,
+      company_id: companyId,
+      user_type: company ? company.company_type : ''
+    });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.company_id || !formData.username || !formData.name) {
+      alert('업체, 사용자 ID, 이름은 필수입니다.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/user-requests`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        alert('계정 요청이 생성되었습니다.');
+        onSuccess();
+      } else {
+        const error = await response.json();
+        alert(`요청 실패: ${error.error?.message}`);
+      }
+    } catch (error) {
+      console.error('요청 생성 에러:', error);
+      alert('요청 생성에 실패했습니다.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">사용자 계정 요청</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">
+              ×
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                업체 선택 *
+              </label>
+              <select
+                value={formData.company_id}
+                onChange={(e) => handleCompanyChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">업체를 선택하세요</option>
+                {companies.map(company => (
+                  <option key={company.id} value={company.id}>
+                    {company.company_name} ({company.company_code})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  사용자 ID *
+                </label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="user123"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  이름 *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="홍길동"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  이메일
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="user@example.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  전화번호
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="010-1234-5678"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  부서
+                </label>
+                <input
+                  type="text"
+                  value={formData.department}
+                  onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                  placeholder="생산팀"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  직급
+                </label>
+                <input
+                  type="text"
+                  value={formData.position}
+                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                  placeholder="대리"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                요청 사유
+              </label>
+              <textarea
+                value={formData.request_reason}
+                onChange={(e) => setFormData({ ...formData, request_reason: e.target.value })}
+                placeholder="계정 생성이 필요한 사유를 입력하세요"
+                rows="3"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {submitting ? '요청 중...' : '요청 생성'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ApproveModal({ request, onClose, onSuccess }) {
-  // 구현 예정
-  return null;
+  const { token } = useAuthStore();
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!password) {
+      alert('초기 비밀번호를 입력하세요.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/user-requests/${request.id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ initial_password: password })
+      });
+
+      if (response.ok) {
+        alert('계정이 승인되고 생성되었습니다.');
+        onSuccess();
+      } else {
+        const error = await response.json();
+        alert(`승인 실패: ${error.error?.message}`);
+      }
+    } catch (error) {
+      console.error('승인 에러:', error);
+      alert('승인에 실패했습니다.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">계정 승인</h2>
+          
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">사용자 ID: <span className="font-medium">{request.username}</span></p>
+            <p className="text-sm text-gray-600">이름: <span className="font-medium">{request.name}</span></p>
+            <p className="text-sm text-gray-600">업체: <span className="font-medium">{request.company?.company_name}</span></p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                초기 비밀번호 *
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="초기 비밀번호 입력"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                사용자에게 전달할 초기 비밀번호를 입력하세요
+              </p>
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {submitting ? '승인 중...' : '승인'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function RejectModal({ request, onClose, onSuccess }) {
-  // 구현 예정
-  return null;
+  const { token } = useAuthStore();
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!reason) {
+      alert('거부 사유를 입력하세요.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/user-requests/${request.id}/reject`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ rejection_reason: reason })
+      });
+
+      if (response.ok) {
+        alert('요청이 거부되었습니다.');
+        onSuccess();
+      } else {
+        const error = await response.json();
+        alert(`거부 실패: ${error.error?.message}`);
+      }
+    } catch (error) {
+      console.error('거부 에러:', error);
+      alert('거부에 실패했습니다.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">계정 요청 거부</h2>
+          
+          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">사용자 ID: <span className="font-medium">{request.username}</span></p>
+            <p className="text-sm text-gray-600">이름: <span className="font-medium">{request.name}</span></p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                거부 사유 *
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="거부 사유를 입력하세요"
+                rows="4"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {submitting ? '거부 중...' : '거부'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
 }

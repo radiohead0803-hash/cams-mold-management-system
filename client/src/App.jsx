@@ -28,6 +28,7 @@ import MoldDocuments from './pages/MoldDocuments'
 import MoldPhotoGallery from './pages/MoldPhotoGallery'
 import CompanyManagement from './pages/CompanyManagement'
 import CompanyDetail from './pages/CompanyDetail'
+import UserRequests from './pages/UserRequests'
 
 function App() {
   const { isAuthenticated, initialize } = useAuthStore()
@@ -75,6 +76,7 @@ function App() {
         <Route path="molds/:id/photos" element={<MoldPhotoGallery />} />
         <Route path="companies" element={<CompanyManagement />} />
         <Route path="companies/:id" element={<CompanyDetail />} />
+        <Route path="user-requests" element={<UserRequests />} />
       </Route>
     </Routes>
   )
