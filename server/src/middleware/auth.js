@@ -66,7 +66,7 @@ const authorize = (allowedRoles = []) => {
       });
     }
 
-    if (allowedRoles.length > 0 && !allowedRoles.includes(req.user.role)) {
+    if (allowedRoles.length > 0 && !allowedRoles.includes(req.user.user_type)) {
       return res.status(403).json({
         success: false,
         error: {
