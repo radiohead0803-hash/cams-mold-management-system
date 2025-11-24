@@ -80,29 +80,7 @@ const getCompanyById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    const company = await Company.findByPk(id, {
-      include: [
-        {
-          model: User,
-          as: 'users',
-          attributes: ['id', 'username', 'name', 'email', 'phone', 'user_type', 'is_active']
-        },
-        {
-          model: Mold,
-          as: 'makerMolds',
-          attributes: ['id', 'mold_code', 'mold_name', 'status'],
-          where: { is_active: true },
-          required: false
-        },
-        {
-          model: Mold,
-          as: 'plantMolds',
-          attributes: ['id', 'mold_code', 'mold_name', 'status'],
-          where: { is_active: true },
-          required: false
-        }
-      ]
-    });
+    const company = await Company.findByPk(id);
 
     if (!company) {
       return res.status(404).json({
@@ -117,6 +95,7 @@ const getCompanyById = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get company by ID error:', error);
+    logger.error('Error details:', error.stack);
     res.status(500).json({
       success: false,
       error: { message: '회사 조회 실패' }
