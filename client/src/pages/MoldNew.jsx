@@ -40,6 +40,14 @@ export default function MoldNew() {
     try {
       setLoadingCompanies(true);
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('No token found');
+        setError('로그인이 필요합니다.');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+      
       const response = await axios.get(`${API_URL}/api/v1/companies`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -49,7 +57,14 @@ export default function MoldNew() {
       }
     } catch (err) {
       console.error('Failed to load companies:', err);
-      setError('업체 목록을 불러오는데 실패했습니다.');
+      
+      if (err.response?.status === 401) {
+        setError('로그인이 만료되었습니다. 다시 로그인해주세요.');
+        localStorage.removeItem('token');
+        setTimeout(() => navigate('/login'), 2000);
+      } else {
+        setError('업체 목록을 불러오는데 실패했습니다: ' + (err.response?.data?.error?.message || err.message));
+      }
     } finally {
       setLoadingCompanies(false);
     }
