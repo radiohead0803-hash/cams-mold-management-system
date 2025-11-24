@@ -4,7 +4,7 @@ const userController = require('../controllers/userController');
 const { authenticate, authorize } = require('../middleware/auth');
 
 // GET /api/v1/users
-router.get('/', authenticate, authorize(['system_admin', 'hq_manager']), userController.getUsers);
+router.get('/', authenticate, authorize(['system_admin', 'mold_developer']), userController.getUsers);
 
 // GET /api/v1/users/:id
 router.get('/:id', authenticate, userController.getUserById);

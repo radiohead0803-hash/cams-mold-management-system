@@ -1,13 +1,13 @@
-const { User } = require('../models');
+const { User, Company } = require('../models/newIndex');
 const bcrypt = require('bcryptjs');
 const logger = require('../utils/logger');
 
 const getUsers = async (req, res) => {
   try {
-    const { role, company_id, is_active, limit = 50, offset = 0 } = req.query;
+    const { user_type, company_id, is_active, limit = 50, offset = 0 } = req.query;
     
     const where = {};
-    if (role) where.role = role;
+    if (user_type) where.user_type = user_type;
     if (company_id) where.company_id = company_id;
     if (is_active !== undefined) where.is_active = is_active === 'true';
 
@@ -67,12 +67,28 @@ const getUserById = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { username, password, name, email, phone, role, company_id } = req.body;
+    const { username, password, name, email, phone, user_type, company_id, department, position } = req.body;
 
-    if (!username || !password || !name || !role) {
+    if (!username || !password || !name || !user_type) {
       return res.status(400).json({
         success: false,
-        error: { message: 'username, password, name, and role are required' }
+        error: { message: '사용자 ID, 비밀번호, 이름, 사용자 유형은 필수입니다' }
+      });
+    }
+
+    // user_type 검증
+    if (!['system_admin', 'mold_developer', 'maker', 'plant'].includes(user_type)) {
+      return res.status(400).json({
+        success: false,
+        error: { message: '올바른 사용자 유형이 아닙니다' }
+      });
+    }
+
+    // 업체 사용자인 경우 company_id 필수
+    if (['maker', 'plant'].includes(user_type) && !company_id) {
+      return res.status(400).json({
+        success: false,
+        error: { message: '업체 사용자는 업체 ID가 필요합니다' }
       });
     }
 
@@ -80,7 +96,7 @@ const createUser = async (req, res) => {
     if (existingUser) {
       return res.status(409).json({
         success: false,
-        error: { message: 'Username already exists' }
+        error: { message: '이미 존재하는 사용자 ID입니다' }
       });
     }
 
@@ -92,8 +108,10 @@ const createUser = async (req, res) => {
       name,
       email,
       phone,
-      role,
+      user_type,
       company_id,
+      department,
+      position,
       is_active: true
     });
 
@@ -104,14 +122,14 @@ const createUser = async (req, res) => {
         username: user.username,
         name: user.name,
         email: user.email,
-        role: user.role
+        user_type: user.user_type
       }
     });
   } catch (error) {
     logger.error('Create user error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to create user' }
+      error: { message: '사용자 생성 실패' }
     });
   }
 };

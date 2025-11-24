@@ -1,4 +1,4 @@
-const { MoldSpecification, Mold, User } = require('../models/newIndex');
+const { MoldSpecification, Mold, User, Company } = require('../models/newIndex');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
 
@@ -19,7 +19,8 @@ const createMoldSpecification = async (req, res) => {
       cavity_count,
       material,
       tonnage,
-      target_maker_id,
+      maker_company_id,
+      plant_company_id,
       development_stage,
       production_stage,
       order_date,
@@ -66,6 +67,10 @@ const createMoldSpecification = async (req, res) => {
       car_model,
       part_name,
       cavity: cavity_count,
+      maker_company_id: maker_company_id || null,
+      plant_company_id: plant_company_id || null,
+      plant_id: null, // 초기에는 null
+      maker_id: null, // 초기에는 null
       qr_token: qrToken,
       status: 'planning', // 계획 단계
       location: '본사',
@@ -83,7 +88,9 @@ const createMoldSpecification = async (req, res) => {
       cavity_count,
       material,
       tonnage,
-      target_maker_id,
+      target_maker_id: maker_company_id || null,
+      maker_company_id: maker_company_id || null,
+      plant_company_id: plant_company_id || null,
       development_stage: development_stage || '개발',
       production_stage: production_stage || '시제',
       order_date: order_date || new Date(),
@@ -150,6 +157,16 @@ const getMoldSpecifications = async (req, res) => {
           model: User,
           as: 'creator',
           attributes: ['id', 'name', 'email']
+        },
+        {
+          model: Company,
+          as: 'makerCompany',
+          attributes: ['id', 'company_name', 'company_code', 'company_type']
+        },
+        {
+          model: Company,
+          as: 'plantCompany',
+          attributes: ['id', 'company_name', 'company_code', 'company_type']
         }
       ],
       limit: parseInt(limit),
@@ -192,9 +209,14 @@ const getMoldSpecificationById = async (req, res) => {
           attributes: ['id', 'name', 'email']
         },
         {
-          model: User,
-          as: 'targetMaker',
-          attributes: ['id', 'name', 'company_name']
+          model: Company,
+          as: 'makerCompany',
+          attributes: ['id', 'company_name', 'company_code', 'company_type', 'manager_name', 'manager_phone']
+        },
+        {
+          model: Company,
+          as: 'plantCompany',
+          attributes: ['id', 'company_name', 'company_code', 'company_type', 'manager_name', 'manager_phone']
         }
       ]
     });

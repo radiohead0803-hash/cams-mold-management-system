@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 const {
   createMoldSpecification,
   getMoldSpecifications,
@@ -13,7 +13,7 @@ const {
 router.use(authenticate);
 
 // 금형 사양 등록 (금형개발 담당만 가능)
-router.post('/', createMoldSpecification);
+router.post('/', authorize(['mold_developer', 'system_admin']), createMoldSpecification);
 
 // 금형 사양 목록 조회
 router.get('/', getMoldSpecifications);

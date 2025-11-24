@@ -107,11 +107,13 @@ module.exports = (sequelize) => {
     },
     plant_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: true,
+      comment: '생산처 ID (초기 등록 시 null 가능)'
     },
     maker_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: true,
+      comment: '제작처 ID (초기 등록 시 null 가능)'
     },
     maker_company_id: {
       type: DataTypes.INTEGER,

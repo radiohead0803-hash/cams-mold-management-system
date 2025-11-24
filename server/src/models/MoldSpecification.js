@@ -38,9 +38,10 @@ class MoldSpecification extends Model {
         target_maker_id: {
           type: DataTypes.INTEGER,
           references: {
-            model: 'users',
+            model: 'companies',
             key: 'id'
-          }
+          },
+          comment: '제작처 회사 ID (maker_company_id와 동일)'
         },
         development_stage: {
           type: DataTypes.STRING(20),
@@ -136,7 +137,7 @@ class MoldSpecification extends Model {
       as: 'mold'
     });
 
-    this.belongsTo(models.User, {
+    this.belongsTo(models.Company, {
       foreignKey: 'target_maker_id',
       as: 'targetMaker'
     });
