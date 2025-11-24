@@ -1,4 +1,4 @@
-const { Company, User, Mold, MoldSpecification } = require('../models');
+const { Company, User, Mold, MoldSpecification } = require('../models/newIndex');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
 
