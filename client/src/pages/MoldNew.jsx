@@ -130,7 +130,11 @@ export default function MoldNew() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || '금형 등록 실패');
+        console.error('Server error:', errorData);
+        const errorMsg = errorData.error?.details 
+          ? `${errorData.error.message}: ${errorData.error.details}`
+          : errorData.error?.message || '금형 등록 실패';
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
