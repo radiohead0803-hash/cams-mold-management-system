@@ -303,7 +303,6 @@ function CompanyRow({ company, onRefresh }) {
 function AddCompanyModal({ onClose, onSuccess }) {
   const { token } = useAuthStore();
   const [formData, setFormData] = useState({
-    company_code: '',
     company_name: '',
     company_type: 'maker',
     business_number: '',
@@ -320,8 +319,8 @@ function AddCompanyModal({ onClose, onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.company_code || !formData.company_name) {
-      alert('업체 코드와 업체명은 필수입니다.');
+    if (!formData.company_name) {
+      alert('업체명은 필수입니다.');
       return;
     }
 
@@ -399,16 +398,12 @@ function AddCompanyModal({ onClose, onSuccess }) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  업체 코드 *
+                  업체 코드
                 </label>
-                <input
-                  type="text"
-                  value={formData.company_code}
-                  onChange={(e) => setFormData({ ...formData, company_code: e.target.value })}
-                  placeholder="MKR-001 또는 PLT-001"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
+                <div className="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-600">
+                  {formData.company_type === 'maker' ? '자동생성 (MKR-XXX)' : '자동생성 (PLT-XXX)'}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">* 업체 구분에 따라 자동으로 생성됩니다</p>
               </div>
             </div>
 

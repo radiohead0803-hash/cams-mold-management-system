@@ -125,11 +125,40 @@ const getCompanyById = async (req, res) => {
 };
 
 /**
+ * 자동 업체 코드 생성
+ */
+const generateCompanyCode = async (company_type) => {
+  const prefix = company_type === 'maker' ? 'MKR' : 'PLT';
+  
+  // 해당 타입의 마지막 코드 조회
+  const lastCompany = await Company.findOne({
+    where: { 
+      company_type,
+      company_code: { [Op.like]: `${prefix}-%` }
+    },
+    order: [['company_code', 'DESC']]
+  });
+
+  let nextNumber = 1;
+  if (lastCompany) {
+    // 마지막 코드에서 숫자 부분 추출 (예: MKR-003 → 3)
+    const match = lastCompany.company_code.match(/\d+$/);
+    if (match) {
+      nextNumber = parseInt(match[0]) + 1;
+    }
+  }
+
+  // 3자리 숫자로 포맷 (예: 1 → 001)
+  const formattedNumber = String(nextNumber).padStart(3, '0');
+  return `${prefix}-${formattedNumber}`;
+};
+
+/**
  * 회사 등록 (제작처/생산처)
  */
 const createCompany = async (req, res) => {
   try {
-    const {
+    let {
       company_code,
       company_name,
       company_type,
@@ -159,10 +188,10 @@ const createCompany = async (req, res) => {
     } = req.body;
 
     // 필수 필드 검증
-    if (!company_code || !company_name || !company_type) {
+    if (!company_name || !company_type) {
       return res.status(400).json({
         success: false,
-        error: { message: '회사 코드, 회사명, 회사 유형은 필수입니다' }
+        error: { message: '회사명, 회사 유형은 필수입니다' }
       });
     }
 
@@ -172,6 +201,12 @@ const createCompany = async (req, res) => {
         success: false,
         error: { message: '회사 유형은 maker 또는 plant여야 합니다' }
       });
+    }
+
+    // 업체 코드 자동 생성 (제공되지 않은 경우)
+    if (!company_code) {
+      company_code = await generateCompanyCode(company_type);
+      logger.info(`Auto-generated company code: ${company_code}`);
     }
 
     // 중복 확인
