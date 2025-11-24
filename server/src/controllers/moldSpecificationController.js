@@ -60,25 +60,7 @@ const createMoldSpecification = async (req, res) => {
     const sequence = lastMold ? (parseInt(lastMold.id) + 1) : 1;
     const moldCode = `M-${year}-${String(sequence).padStart(3, '0')}`;
 
-    // Mold 테이블에 기본 정보 생성
-    const mold = await Mold.create({
-      mold_code: moldCode,
-      mold_name: part_name,
-      car_model,
-      part_name,
-      cavity: cavity_count,
-      maker_company_id: maker_company_id || null,
-      plant_company_id: plant_company_id || null,
-      plant_id: null, // 초기에는 null
-      maker_id: null, // 초기에는 null
-      qr_token: qrToken,
-      status: 'planning', // 계획 단계
-      location: '본사',
-      created_at: new Date(),
-      updated_at: new Date()
-    });
-
-    // MoldSpecification 생성
+    // MoldSpecification 먼저 생성 (mold_id 없이)
     const specification = await MoldSpecification.create({
       part_number,
       part_name,
@@ -98,11 +80,33 @@ const createMoldSpecification = async (req, res) => {
       estimated_cost,
       notes,
       status: 'draft', // 초안
-      mold_id: mold.id,
+      mold_id: null, // 나중에 업데이트
       created_by: req.user.id,
       created_at: new Date(),
       updated_at: new Date()
     });
+
+    // Mold 테이블에 기본 정보 생성
+    const mold = await Mold.create({
+      mold_code: moldCode,
+      mold_name: part_name,
+      car_model,
+      part_name,
+      cavity: cavity_count,
+      maker_company_id: maker_company_id || null,
+      plant_company_id: plant_company_id || null,
+      plant_id: null, // 초기에는 null
+      maker_id: null, // 초기에는 null
+      specification_id: specification.id,
+      qr_token: qrToken,
+      status: 'planning', // 계획 단계
+      location: '본사',
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    // MoldSpecification의 mold_id 업데이트
+    await specification.update({ mold_id: mold.id });
 
     logger.info(`Mold specification created: ${specification.id} by user ${req.user.id}`);
 
