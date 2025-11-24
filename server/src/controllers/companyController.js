@@ -452,17 +452,17 @@ const getAllCompaniesStats = async (req, res) => {
   try {
     const [stats] = await sequelize.query(`
       SELECT 
-        COUNT(*) as total_companies,
-        COUNT(CASE WHEN company_type = 'maker' THEN 1 END) as total_makers,
-        COUNT(CASE WHEN company_type = 'plant' THEN 1 END) as total_plants,
-        COUNT(CASE WHEN is_active = true THEN 1 END) as active_companies,
-        COUNT(CASE WHEN company_type = 'maker' AND is_active = true THEN 1 END) as active_makers,
-        COUNT(CASE WHEN company_type = 'plant' AND is_active = true THEN 1 END) as active_plants,
-        ROUND(AVG(CASE WHEN rating IS NOT NULL THEN rating END), 2) as avg_rating,
-        ROUND(AVG(CASE WHEN company_type = 'maker' AND rating IS NOT NULL THEN rating END), 2) as avg_maker_rating,
-        ROUND(AVG(CASE WHEN company_type = 'plant' AND rating IS NOT NULL THEN rating END), 2) as avg_plant_rating,
-        SUM(total_molds) as total_molds_managed,
-        SUM(active_molds) as total_active_molds
+        COUNT(*)::int as total_companies,
+        COUNT(CASE WHEN company_type = 'maker' THEN 1 END)::int as total_makers,
+        COUNT(CASE WHEN company_type = 'plant' THEN 1 END)::int as total_plants,
+        COUNT(CASE WHEN is_active = true THEN 1 END)::int as active_companies,
+        COUNT(CASE WHEN company_type = 'maker' AND is_active = true THEN 1 END)::int as active_makers,
+        COUNT(CASE WHEN company_type = 'plant' AND is_active = true THEN 1 END)::int as active_plants,
+        ROUND(CAST(AVG(CASE WHEN rating IS NOT NULL THEN rating END) AS NUMERIC), 2) as avg_rating,
+        ROUND(CAST(AVG(CASE WHEN company_type = 'maker' AND rating IS NOT NULL THEN rating END) AS NUMERIC), 2) as avg_maker_rating,
+        ROUND(CAST(AVG(CASE WHEN company_type = 'plant' AND rating IS NOT NULL THEN rating END) AS NUMERIC), 2) as avg_plant_rating,
+        COALESCE(SUM(total_molds), 0)::int as total_molds_managed,
+        COALESCE(SUM(active_molds), 0)::int as total_active_molds
       FROM companies;
     `);
 
