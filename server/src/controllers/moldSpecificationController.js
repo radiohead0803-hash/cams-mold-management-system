@@ -70,7 +70,7 @@ const createMoldSpecification = async (req, res) => {
       cavity_count,
       material,
       tonnage,
-      target_maker_id: maker_company_id || null,
+      target_maker_id: null, // Company ID가 아닌 User ID가 필요하므로 null
       maker_company_id: maker_company_id || null,
       plant_company_id: plant_company_id || null,
       development_stage: development_stage || '개발',
