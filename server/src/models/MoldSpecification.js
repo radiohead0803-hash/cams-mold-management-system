@@ -63,17 +63,6 @@ class MoldSpecification extends Model {
           type: DataTypes.STRING(20),
           comment: 'draft, sent_to_maker, in_production, completed'
         },
-        external_system_id: {
-          type: DataTypes.STRING(100),
-          comment: '부품정보 시스템 ID'
-        },
-        external_sync_enabled: {
-          type: DataTypes.BOOLEAN,
-          defaultValue: false
-        },
-        last_sync_date: {
-          type: DataTypes.DATE
-        },
         mold_id: {
           type: DataTypes.INTEGER,
           references: {
