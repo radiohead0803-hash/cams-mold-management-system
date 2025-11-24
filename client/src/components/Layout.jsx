@@ -56,21 +56,13 @@ export default function Layout() {
           ]
         },
         { 
-          to: '/makers', 
-          icon: Settings, 
-          label: '제작처 관리',
+          to: '/companies', 
+          icon: Building2, 
+          label: '업체 관리',
           subMenus: [
-            { to: '/makers', label: '제작처 목록' },
-            { to: '/makers/performance', label: '성과 평가' }
-          ]
-        },
-        { 
-          to: '/plants', 
-          icon: Settings, 
-          label: '생산처 관리',
-          subMenus: [
-            { to: '/plants', label: '생산처 목록' },
-            { to: '/plants/performance', label: '생산 현황' }
+            { to: '/companies', label: '업체 목록' },
+            { to: '/companies?type=maker', label: '제작처 관리' },
+            { to: '/companies?type=plant', label: '생산처 관리' }
           ]
         },
         { 

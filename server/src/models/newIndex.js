@@ -36,6 +36,7 @@ const MoldDevelopmentPlan = require('./MoldDevelopmentPlan');
 const MoldProcessStep = require('./MoldProcessStep');
 const PreProductionChecklist = require('./PreProductionChecklist');
 const Company = require('./Company');
+const UserRequest = require('./UserRequest');
 
 // Helper function to initialize models
 const initModel = (ModelClass, sequelize) => {
@@ -77,7 +78,8 @@ const models = {
   MoldDevelopmentPlan: initModel(MoldDevelopmentPlan, sequelize),
   MoldProcessStep: initModel(MoldProcessStep, sequelize),
   PreProductionChecklist: initModel(PreProductionChecklist, sequelize),
-  Company: initModel(Company, sequelize)
+  Company: initModel(Company, sequelize),
+  UserRequest: initModel(UserRequest, sequelize)
 };
 
 // Setup associations
