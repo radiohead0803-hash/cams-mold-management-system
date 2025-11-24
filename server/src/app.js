@@ -10,15 +10,30 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
-  'https://bountiful-nurturing-production-cd5c.up.railway.app'
+  'https://bountiful-nurturing-production-cd5c.up.railway.app',
+  'https://cams-mold-management-system-production-cd5c.up.railway.app'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
+    // origin이 없는 경우 (같은 도메인 요청, Postman 등) 허용
     if (!origin) return callback(null, true);
-    if (process.env.CORS_ORIGIN === '*' || allowedOrigins.indexOf(origin) !== -1) {
+    
+    // 환경변수로 모든 origin 허용 설정
+    if (process.env.CORS_ORIGIN === '*') {
+      return callback(null, true);
+    }
+    
+    // Railway 도메인 패턴 매칭 (*.up.railway.app)
+    if (origin.includes('.up.railway.app')) {
+      return callback(null, true);
+    }
+    
+    // 허용된 origin 목록 확인
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
