@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, AlertCircle, CheckCircle, Factory, Building2 } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -39,18 +39,7 @@ export default function MoldNew() {
   const loadCompanies = async () => {
     try {
       setLoadingCompanies(true);
-      const token = localStorage.getItem('token');
-      
-      if (!token) {
-        console.error('No token found');
-        setError('로그인이 필요합니다.');
-        setTimeout(() => navigate('/login'), 2000);
-        return;
-      }
-      
-      const response = await axios.get(`${API_URL}/api/v1/companies`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/companies');
       
       if (response.data.success) {
         setCompanies(response.data.data.items || []);
@@ -60,7 +49,7 @@ export default function MoldNew() {
       
       if (err.response?.status === 401) {
         setError('로그인이 만료되었습니다. 다시 로그인해주세요.');
-        localStorage.removeItem('token');
+        localStorage.removeItem('cams-auth');
         setTimeout(() => navigate('/login'), 2000);
       } else {
         setError('업체 목록을 불러오는데 실패했습니다: ' + (err.response?.data?.error?.message || err.message));
@@ -85,8 +74,6 @@ export default function MoldNew() {
     setSuccess(null);
 
     try {
-      const token = localStorage.getItem('token');
-      
       // 숫자 필드 변환
       const submitData = {
         ...formData,
@@ -97,16 +84,7 @@ export default function MoldNew() {
         plant_company_id: formData.plant_company_id ? parseInt(formData.plant_company_id) : null
       };
 
-      const response = await axios.post(
-        `${API_URL}/api/v1/mold-specifications`,
-        submitData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const response = await api.post('/mold-specifications', submitData);
 
       if (response.data.success) {
         setSuccess({
