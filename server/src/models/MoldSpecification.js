@@ -63,13 +63,6 @@ class MoldSpecification extends Model {
           type: DataTypes.STRING(20),
           comment: 'draft, sent_to_maker, in_production, completed'
         },
-        mold_id: {
-          type: DataTypes.INTEGER,
-          references: {
-            model: 'molds',
-            key: 'id'
-          }
-        },
         created_by: {
           type: DataTypes.INTEGER,
           references: {
@@ -106,7 +99,6 @@ class MoldSpecification extends Model {
         underscored: true,
         indexes: [
           { fields: ['part_number'] },
-          { fields: ['mold_id'] },
           { fields: ['target_maker_id'] },
           { fields: ['status'] }
         ]
@@ -115,11 +107,6 @@ class MoldSpecification extends Model {
   }
 
   static associate(models) {
-    this.belongsTo(models.Mold, {
-      foreignKey: 'mold_id',
-      as: 'mold'
-    });
-
     this.belongsTo(models.Company, {
       foreignKey: 'target_maker_id',
       as: 'targetMaker'

@@ -60,7 +60,7 @@ const createMoldSpecification = async (req, res) => {
     const sequence = lastMold ? (parseInt(lastMold.id) + 1) : 1;
     const moldCode = `M-${year}-${String(sequence).padStart(3, '0')}`;
 
-    // MoldSpecification 먼저 생성 (mold_id 없이)
+    // MoldSpecification 먼저 생성
     const specification = await MoldSpecification.create({
       part_number,
       part_name,
@@ -80,7 +80,6 @@ const createMoldSpecification = async (req, res) => {
       estimated_cost,
       notes,
       status: 'draft', // 초안
-      mold_id: null, // 나중에 업데이트
       created_by: req.user.id
     });
 
