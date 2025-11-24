@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardHeader from '../components/DashboardHeader';
+import { useAuthStore } from '../stores/authStore';
 
 export default function CompanyManagement() {
+  const { token } = useAuthStore();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, maker, plant
@@ -22,7 +24,6 @@ export default function CompanyManagement() {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
       if (!token) {
         console.error('토큰이 없습니다');
@@ -300,6 +301,7 @@ function CompanyRow({ company, onRefresh }) {
 
 // 업체 등록 모달
 function AddCompanyModal({ onClose, onSuccess }) {
+  const { token } = useAuthStore();
   const [formData, setFormData] = useState({
     company_code: '',
     company_name: '',
@@ -325,7 +327,6 @@ function AddCompanyModal({ onClose, onSuccess }) {
 
     try {
       setSubmitting(true);
-      const token = localStorage.getItem('token');
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies`, {
         method: 'POST',
