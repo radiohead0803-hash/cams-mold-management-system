@@ -325,8 +325,16 @@ function AddCompanyModal({ onClose, onSuccess }) {
       return;
     }
 
+    if (!token) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
     try {
       setSubmitting(true);
+
+      console.log('업체 등록 요청:', formData);
+      console.log('토큰:', token ? '있음' : '없음');
 
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies`, {
         method: 'POST',
@@ -337,16 +345,22 @@ function AddCompanyModal({ onClose, onSuccess }) {
         body: JSON.stringify(formData)
       });
 
+      console.log('응답 상태:', response.status);
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error?.message || '업체 등록 실패');
+        const error = await response.json().catch(() => ({}));
+        console.error('API 에러 응답:', error);
+        throw new Error(error.error?.message || `업체 등록 실패 (${response.status})`);
       }
 
+      const result = await response.json();
+      console.log('등록 성공:', result);
+      
       alert('업체가 성공적으로 등록되었습니다.');
       onSuccess();
     } catch (error) {
       console.error('업체 등록 에러:', error);
-      alert(error.message);
+      alert(`등록 실패: ${error.message}`);
     } finally {
       setSubmitting(false);
     }
