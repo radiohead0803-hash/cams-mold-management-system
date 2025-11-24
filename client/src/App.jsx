@@ -15,6 +15,7 @@ import DeveloperMobileDashboard from './pages/dashboards/DeveloperMobileDashboar
 import MoldList from './pages/MoldList'
 import MoldDetail from './pages/MoldDetail'
 import MoldRegistration from './pages/MoldRegistration'
+import MoldNew from './pages/MoldNew'
 import MoldBulkUpload from './pages/MoldBulkUpload'
 import MoldMaster from './pages/MoldMaster'
 import MoldLifecycle from './pages/MoldLifecycle'
@@ -61,7 +62,8 @@ function App() {
         <Route path="mobile/plant" element={<PlantMobileDashboard />} />
         <Route path="mobile/developer" element={<DeveloperMobileDashboard />} />
         <Route path="molds" element={<MoldList />} />
-        <Route path="molds/new" element={<MoldRegistration />} />
+        <Route path="molds/new" element={<MoldNew />} />
+        <Route path="molds/register" element={<MoldRegistration />} />
         <Route path="molds/bulk-upload" element={<MoldBulkUpload />} />
         <Route path="molds/master" element={<MoldMaster />} />
         <Route path="molds/lifecycle" element={<MoldLifecycle />} />
