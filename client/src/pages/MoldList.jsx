@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { moldAPI } from '../lib/api'
+import { moldSpecificationAPI } from '../lib/api'
 import { Package, Search, Filter, Edit, Image as ImageIcon } from 'lucide-react'
 
 export default function MoldList() {
@@ -18,8 +18,35 @@ export default function MoldList() {
   const loadMolds = async () => {
     try {
       setLoading(true)
-      const response = await moldAPI.getAll({ limit: 100 })
-      setMolds(response.data.data.items || [])
+      const response = await moldSpecificationAPI.getAll({ limit: 100 })
+      
+      // API 응답 데이터를 화면 표시 형식으로 변환
+      const specifications = response.data.data.items || []
+      const transformedMolds = specifications.map(spec => ({
+        id: spec.id,
+        mold_code: spec.Mold?.mold_code || 'N/A',
+        part_number: spec.part_number,
+        part_name: spec.part_name,
+        car_model: spec.car_model,
+        car_year: spec.car_year,
+        mold_type: spec.mold_type,
+        cavity_count: spec.cavity_count,
+        cavity: spec.cavity_count,
+        material: spec.material,
+        tonnage: spec.tonnage,
+        status: spec.status || 'planning',
+        location: spec.Mold?.location || '본사',
+        qr_token: spec.Mold?.qr_token,
+        target_maker: spec.MakerCompany?.company_name || 'N/A',
+        development_stage: spec.development_stage,
+        production_stage: spec.production_stage,
+        order_date: spec.order_date,
+        target_delivery_date: spec.target_delivery_date,
+        estimated_cost: spec.estimated_cost,
+        notes: spec.notes
+      }))
+      
+      setMolds(transformedMolds)
     } catch (error) {
       console.error('Failed to load molds:', error)
     } finally {
