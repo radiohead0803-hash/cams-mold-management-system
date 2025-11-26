@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, AlertCircle, CheckCircle, Factory, Building2 } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle, CheckCircle, Factory, Building2, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -13,6 +13,8 @@ export default function MoldNew() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [companies, setCompanies] = useState([]);
+  const [partImages, setPartImages] = useState([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
   
   const [formData, setFormData] = useState({
     part_number: '',
@@ -30,7 +32,8 @@ export default function MoldNew() {
     order_date: new Date().toISOString().split('T')[0],
     target_delivery_date: '',
     estimated_cost: '',
-    notes: ''
+    notes: '',
+    part_images: []
   });
 
   useEffect(() => {
@@ -96,6 +99,37 @@ export default function MoldNew() {
     }));
   };
 
+  const handleImageSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    // 이미지 미리보기 생성
+    const newImages = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      name: file.name,
+      size: file.size
+    }));
+
+    setPartImages(prev => [...prev, ...newImages]);
+  };
+
+  const removeImage = (index) => {
+    setPartImages(prev => {
+      const updated = [...prev];
+      // 메모리 해제
+      URL.revokeObjectURL(updated[index].preview);
+      updated.splice(index, 1);
+      return updated;
+    });
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -142,6 +176,13 @@ export default function MoldNew() {
       const data = await response.json();
 
       if (data.success) {
+        const specificationId = data.data.specification.id;
+        
+        // 부품 사진 업로드 (있는 경우)
+        if (partImages.length > 0) {
+          await uploadPartImages(specificationId);
+        }
+        
         setSuccess({
           message: '금형 정보가 성공적으로 등록되었습니다!',
           moldCode: data.data.mold.mold_code,
@@ -158,6 +199,37 @@ export default function MoldNew() {
       setError(err.message || '금형 등록에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const uploadPartImages = async (specificationId) => {
+    try {
+      setUploadingImages(true);
+      
+      const formData = new FormData();
+      partImages.forEach(img => {
+        formData.append('photos', img.file);
+      });
+
+      const response = await fetch(`${API_URL}/api/v1/mold-specifications/${specificationId}/part-images`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('부품 사진 업로드 실패');
+      }
+
+      const data = await response.json();
+      console.log('부품 사진 업로드 성공:', data);
+    } catch (err) {
+      console.error('Failed to upload part images:', err);
+      // 에러가 발생해도 금형 등록은 성공했으므로 계속 진행
+    } finally {
+      setUploadingImages(false);
     }
   };
 
@@ -568,6 +640,81 @@ export default function MoldNew() {
           </div>
         </div>
 
+        {/* 부품 사진 */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b flex items-center">
+            <ImageIcon className="text-purple-600 mr-2" size={20} />
+            부품 사진
+          </h2>
+          
+          <div className="space-y-4">
+            {/* 파일 선택 버튼 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                부품 사진 업로드 (선택사항)
+              </label>
+              <div className="flex items-center gap-3">
+                <label className="btn-secondary cursor-pointer flex items-center gap-2">
+                  <Upload size={18} />
+                  사진 선택
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-xs text-gray-500">
+                  💡 최대 10개까지 업로드 가능 (JPG, PNG, GIF)
+                </p>
+              </div>
+            </div>
+
+            {/* 이미지 미리보기 */}
+            {partImages.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {partImages.map((img, index) => (
+                  <div key={index} className="relative group">
+                    <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50">
+                      <img
+                        src={img.preview}
+                        alt={img.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    >
+                      <X size={16} />
+                    </button>
+                    <div className="mt-1 text-xs text-gray-600 truncate">
+                      {img.name}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formatFileSize(img.size)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {partImages.length === 0 && (
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <ImageIcon className="mx-auto mb-3 text-gray-400" size={48} />
+                <p className="text-sm text-gray-600 mb-2">
+                  부품 사진을 업로드하면 금형 정보와 함께 저장됩니다
+                </p>
+                <p className="text-xs text-gray-500">
+                  사진은 선택사항이며, 나중에 추가할 수 있습니다
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* 비고 */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -641,12 +788,12 @@ export default function MoldNew() {
           <button
             type="submit"
             className="btn-primary flex items-center"
-            disabled={loading}
+            disabled={loading || uploadingImages}
           >
-            {loading ? (
+            {loading || uploadingImages ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                등록 중...
+                {uploadingImages ? '사진 업로드 중...' : '등록 중...'}
               </>
             ) : (
               <>

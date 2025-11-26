@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const { sequelize } = require('./models/newIndex');
 
 const app = express();
@@ -48,6 +49,10 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 정적 파일 제공 (업로드된 이미지)
+const uploadDir = process.env.UPLOAD_PATH || 'uploads/';
+app.use('/uploads', express.static(path.join(__dirname, '..', uploadDir)));
 
 // Routes
 const authRouter = require('./routes/auth');

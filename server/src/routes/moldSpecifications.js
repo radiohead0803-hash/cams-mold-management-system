@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
+const { uploadPhotos } = require('../middleware/upload');
 const {
   createMoldSpecification,
   getMoldSpecifications,
   getMoldSpecificationById,
   updateMoldSpecification,
-  deleteMoldSpecification
+  deleteMoldSpecification,
+  uploadPartImages,
+  deletePartImage
 } = require('../controllers/moldSpecificationController');
 
 // 모든 라우트에 인증 미들웨어 적용
@@ -26,5 +29,11 @@ router.patch('/:id', updateMoldSpecification);
 
 // 금형 사양 삭제
 router.delete('/:id', deleteMoldSpecification);
+
+// 부품 사진 업로드 (최대 10개)
+router.post('/:id/part-images', uploadPhotos, uploadPartImages);
+
+// 부품 사진 삭제
+router.delete('/:id/part-images/:imageIndex', deletePartImage);
 
 module.exports = router;

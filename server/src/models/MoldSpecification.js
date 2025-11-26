@@ -97,6 +97,12 @@ class MoldSpecification extends Model {
             key: 'id'
           },
           comment: '연동된 금형 마스터 ID'
+        },
+        part_images: {
+          type: DataTypes.JSONB,
+          allowNull: true,
+          defaultValue: null,
+          comment: '부품 사진 URL 배열 - [{"url": "...", "filename": "...", "uploaded_at": "..."}]'
         }
       },
       {

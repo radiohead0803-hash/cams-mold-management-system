@@ -1,6 +1,8 @@
 const { MoldSpecification, Mold, User, Company } = require('../models/newIndex');
 const logger = require('../utils/logger');
 const crypto = require('crypto');
+const path = require('path');
+const fs = require('fs');
 
 /**
  * 금형 사양 등록 (금형개발 담당)
@@ -26,7 +28,8 @@ const createMoldSpecification = async (req, res) => {
       order_date,
       target_delivery_date,
       estimated_cost,
-      notes
+      notes,
+      part_images
     } = req.body;
 
     // 필수 필드 검증
@@ -79,6 +82,7 @@ const createMoldSpecification = async (req, res) => {
       target_delivery_date,
       estimated_cost,
       notes,
+      part_images: part_images || null,
       status: 'draft', // 초안
       created_by: req.user.id
     });
@@ -324,10 +328,152 @@ const deleteMoldSpecification = async (req, res) => {
   }
 };
 
+/**
+ * 부품 사진 업로드
+ */
+const uploadPartImages = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 파일 업로드 확인
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: '업로드할 파일이 없습니다' }
+      });
+    }
+
+    const specification = await MoldSpecification.findByPk(id);
+
+    if (!specification) {
+      // 업로드된 파일 삭제
+      req.files.forEach(file => {
+        fs.unlinkSync(file.path);
+      });
+      return res.status(404).json({
+        success: false,
+        error: { message: '금형 사양을 찾을 수 없습니다' }
+      });
+    }
+
+    // 기존 이미지 배열 가져오기
+    const existingImages = specification.part_images || [];
+
+    // 새 이미지 정보 생성
+    const newImages = req.files.map(file => ({
+      url: `/uploads/${file.filename}`,
+      filename: file.originalname,
+      size: file.size,
+      mimetype: file.mimetype,
+      uploaded_at: new Date().toISOString(),
+      uploaded_by: req.user.id
+    }));
+
+    // 이미지 배열 업데이트
+    const updatedImages = [...existingImages, ...newImages];
+
+    await specification.update({
+      part_images: updatedImages,
+      updated_at: new Date()
+    });
+
+    logger.info(`Part images uploaded for specification ${id} by user ${req.user.id}`);
+
+    res.json({
+      success: true,
+      data: {
+        images: newImages,
+        total: updatedImages.length,
+        message: `${newImages.length}개의 사진이 업로드되었습니다`
+      }
+    });
+  } catch (error) {
+    logger.error('Upload part images error:', error);
+    // 에러 발생 시 업로드된 파일 삭제
+    if (req.files) {
+      req.files.forEach(file => {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (err) {
+          logger.error('Failed to delete file:', err);
+        }
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: { message: '사진 업로드 실패', details: error.message }
+    });
+  }
+};
+
+/**
+ * 부품 사진 삭제
+ */
+const deletePartImage = async (req, res) => {
+  try {
+    const { id, imageIndex } = req.params;
+
+    const specification = await MoldSpecification.findByPk(id);
+
+    if (!specification) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '금형 사양을 찾을 수 없습니다' }
+      });
+    }
+
+    const images = specification.part_images || [];
+    const index = parseInt(imageIndex);
+
+    if (index < 0 || index >= images.length) {
+      return res.status(400).json({
+        success: false,
+        error: { message: '잘못된 이미지 인덱스입니다' }
+      });
+    }
+
+    // 파일 시스템에서 삭제
+    const imageToDelete = images[index];
+    const uploadDir = process.env.UPLOAD_PATH || 'uploads/';
+    const filename = path.basename(imageToDelete.url);
+    const filePath = path.join(uploadDir, filename);
+
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // 배열에서 제거
+    images.splice(index, 1);
+
+    await specification.update({
+      part_images: images,
+      updated_at: new Date()
+    });
+
+    logger.info(`Part image deleted from specification ${id} by user ${req.user.id}`);
+
+    res.json({
+      success: true,
+      data: {
+        remaining: images.length,
+        message: '사진이 삭제되었습니다'
+      }
+    });
+  } catch (error) {
+    logger.error('Delete part image error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '사진 삭제 실패', details: error.message }
+    });
+  }
+};
+
 module.exports = {
   createMoldSpecification,
   getMoldSpecifications,
   getMoldSpecificationById,
   updateMoldSpecification,
-  deleteMoldSpecification
+  deleteMoldSpecification,
+  uploadPartImages,
+  deletePartImage
 };
