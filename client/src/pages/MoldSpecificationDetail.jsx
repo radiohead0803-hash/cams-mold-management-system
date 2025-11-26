@@ -93,7 +93,11 @@ export default function MoldSpecificationDetail() {
         estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null
       };
 
-      await moldSpecificationAPI.update(id, updateData);
+      console.log('Saving data:', updateData);
+      
+      const response = await moldSpecificationAPI.update(id, updateData);
+      
+      console.log('Save response:', response);
       
       setSuccess('저장되었습니다!');
       setEditMode(false);
@@ -102,7 +106,14 @@ export default function MoldSpecificationDetail() {
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Failed to save:', err);
-      setError('저장에 실패했습니다: ' + (err.response?.data?.error?.message || err.message));
+      console.error('Error response:', err.response);
+      
+      const errorMessage = err.response?.data?.error?.message 
+        || err.response?.data?.message 
+        || err.message 
+        || '알 수 없는 오류가 발생했습니다';
+      
+      setError('저장에 실패했습니다: ' + errorMessage);
     } finally {
       setSaving(false);
     }
