@@ -433,7 +433,7 @@ export default function MoldList() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <Link
-                        to={`/molds/${mold.id}`}
+                        to={`/molds/specifications/${mold.id}`}
                         className="text-primary-600 hover:text-primary-900"
                       >
                         상세보기
