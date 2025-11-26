@@ -89,6 +89,14 @@ class MoldSpecification extends Model {
             key: 'id'
           },
           comment: '생산처 회사 ID'
+        },
+        mold_id: {
+          type: DataTypes.INTEGER,
+          references: {
+            model: 'molds',
+            key: 'id'
+          },
+          comment: '연동된 금형 마스터 ID'
         }
       },
       {
@@ -130,6 +138,11 @@ class MoldSpecification extends Model {
     this.hasOne(models.MakerSpecification, {
       foreignKey: 'specification_id',
       as: 'makerSpecification'
+    });
+
+    this.hasOne(models.Mold, {
+      foreignKey: 'specification_id',
+      as: 'mold'
     });
   }
 }

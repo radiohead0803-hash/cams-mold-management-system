@@ -70,7 +70,7 @@ const createMoldSpecification = async (req, res) => {
       cavity_count,
       material,
       tonnage,
-      target_maker_id: null, // Company ID가 아닌 User ID가 필요하므로 null
+      target_maker_id: maker_company_id || null, // 제작처 회사 ID
       maker_company_id: maker_company_id || null,
       plant_company_id: plant_company_id || null,
       development_stage: development_stage || '개발',
@@ -98,6 +98,11 @@ const createMoldSpecification = async (req, res) => {
       qr_token: qrToken,
       status: 'planning', // 계획 단계
       location: '본사'
+    });
+
+    // MoldSpecification에 mold_id 연동
+    await specification.update({
+      mold_id: mold.id
     });
 
     logger.info(`Mold specification created: ${specification.id} by user ${req.user.id}`);
