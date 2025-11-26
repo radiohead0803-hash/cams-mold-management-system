@@ -116,7 +116,9 @@ export default function MoldNew() {
         tonnage: formData.tonnage ? parseInt(formData.tonnage) : null,
         estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
         maker_company_id: formData.maker_company_id ? parseInt(formData.maker_company_id) : null,
-        plant_company_id: formData.plant_company_id ? parseInt(formData.plant_company_id) : null
+        plant_company_id: formData.plant_company_id ? parseInt(formData.plant_company_id) : null,
+        target_delivery_date: formData.target_delivery_date || null,
+        order_date: formData.order_date || null
       };
 
       const response = await fetch(`${API_URL}/api/v1/mold-specifications`, {
