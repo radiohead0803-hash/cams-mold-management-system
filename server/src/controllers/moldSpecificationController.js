@@ -329,14 +329,14 @@ const deleteMoldSpecification = async (req, res) => {
 };
 
 /**
- * 부품 사진 업로드
+ * 부품 사진 업로드 (단일 이미지)
  */
-const uploadPartImages = async (req, res) => {
+const uploadPartImage = async (req, res) => {
   try {
     const { id } = req.params;
 
     // 파일 업로드 확인
-    if (!req.files || req.files.length === 0) {
+    if (!req.file) {
       return res.status(400).json({
         success: false,
         error: { message: '업로드할 파일이 없습니다' }
@@ -347,57 +347,57 @@ const uploadPartImages = async (req, res) => {
 
     if (!specification) {
       // 업로드된 파일 삭제
-      req.files.forEach(file => {
-        fs.unlinkSync(file.path);
-      });
+      fs.unlinkSync(req.file.path);
       return res.status(404).json({
         success: false,
         error: { message: '금형 사양을 찾을 수 없습니다' }
       });
     }
 
-    // 기존 이미지 배열 가져오기
-    const existingImages = specification.part_images || [];
+    // 기존 이미지가 있으면 파일 삭제
+    if (specification.part_images && specification.part_images.url) {
+      const uploadDir = process.env.UPLOAD_PATH || 'uploads/';
+      const oldFilename = path.basename(specification.part_images.url);
+      const oldFilePath = path.join(uploadDir, oldFilename);
+      
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+      }
+    }
 
-    // 새 이미지 정보 생성
-    const newImages = req.files.map(file => ({
-      url: `/uploads/${file.filename}`,
-      filename: file.originalname,
-      size: file.size,
-      mimetype: file.mimetype,
+    // 새 이미지 정보 생성 (단일 객체)
+    const newImage = {
+      url: `/uploads/${req.file.filename}`,
+      filename: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
       uploaded_at: new Date().toISOString(),
       uploaded_by: req.user.id
-    }));
-
-    // 이미지 배열 업데이트
-    const updatedImages = [...existingImages, ...newImages];
+    };
 
     await specification.update({
-      part_images: updatedImages,
+      part_images: newImage,
       updated_at: new Date()
     });
 
-    logger.info(`Part images uploaded for specification ${id} by user ${req.user.id}`);
+    logger.info(`Part image uploaded for specification ${id} by user ${req.user.id}`);
 
     res.json({
       success: true,
       data: {
-        images: newImages,
-        total: updatedImages.length,
-        message: `${newImages.length}개의 사진이 업로드되었습니다`
+        image: newImage,
+        message: '부품 사진이 업로드되었습니다'
       }
     });
   } catch (error) {
-    logger.error('Upload part images error:', error);
+    logger.error('Upload part image error:', error);
     // 에러 발생 시 업로드된 파일 삭제
-    if (req.files) {
-      req.files.forEach(file => {
-        try {
-          fs.unlinkSync(file.path);
-        } catch (err) {
-          logger.error('Failed to delete file:', err);
-        }
-      });
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (err) {
+        logger.error('Failed to delete file:', err);
+      }
     }
     res.status(500).json({
       success: false,
@@ -411,7 +411,7 @@ const uploadPartImages = async (req, res) => {
  */
 const deletePartImage = async (req, res) => {
   try {
-    const { id, imageIndex } = req.params;
+    const { id } = req.params;
 
     const specification = await MoldSpecification.findByPk(id);
 
@@ -422,31 +422,25 @@ const deletePartImage = async (req, res) => {
       });
     }
 
-    const images = specification.part_images || [];
-    const index = parseInt(imageIndex);
-
-    if (index < 0 || index >= images.length) {
+    if (!specification.part_images || !specification.part_images.url) {
       return res.status(400).json({
         success: false,
-        error: { message: '잘못된 이미지 인덱스입니다' }
+        error: { message: '삭제할 이미지가 없습니다' }
       });
     }
 
     // 파일 시스템에서 삭제
-    const imageToDelete = images[index];
     const uploadDir = process.env.UPLOAD_PATH || 'uploads/';
-    const filename = path.basename(imageToDelete.url);
+    const filename = path.basename(specification.part_images.url);
     const filePath = path.join(uploadDir, filename);
 
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
-    // 배열에서 제거
-    images.splice(index, 1);
-
+    // DB에서 제거
     await specification.update({
-      part_images: images,
+      part_images: null,
       updated_at: new Date()
     });
 
@@ -455,7 +449,6 @@ const deletePartImage = async (req, res) => {
     res.json({
       success: true,
       data: {
-        remaining: images.length,
         message: '사진이 삭제되었습니다'
       }
     });
@@ -474,6 +467,6 @@ module.exports = {
   getMoldSpecificationById,
   updateMoldSpecification,
   deleteMoldSpecification,
-  uploadPartImages,
+  uploadPartImage,
   deletePartImage
 };

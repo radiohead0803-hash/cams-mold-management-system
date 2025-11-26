@@ -13,8 +13,8 @@ export default function MoldNew() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [companies, setCompanies] = useState([]);
-  const [partImages, setPartImages] = useState([]);
-  const [uploadingImages, setUploadingImages] = useState(false);
+  const [partImage, setPartImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   const [formData, setFormData] = useState({
     part_number: '',
@@ -100,28 +100,57 @@ export default function MoldNew() {
   };
 
   const handleImageSelect = (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+    const file = e.target.files[0];
+    if (!file) return;
 
-    // 이미지 미리보기 생성
-    const newImages = files.map(file => ({
+    // 기존 이미지 메모리 해제
+    if (partImage?.preview) {
+      URL.revokeObjectURL(partImage.preview);
+    }
+
+    // 새 이미지 설정
+    setPartImage({
       file,
       preview: URL.createObjectURL(file),
       name: file.name,
       size: file.size
-    }));
-
-    setPartImages(prev => [...prev, ...newImages]);
+    });
   };
 
-  const removeImage = (index) => {
-    setPartImages(prev => {
-      const updated = [...prev];
-      // 메모리 해제
-      URL.revokeObjectURL(updated[index].preview);
-      updated.splice(index, 1);
-      return updated;
-    });
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const blob = items[i].getAsFile();
+        if (blob) {
+          // 기존 이미지 메모리 해제
+          if (partImage?.preview) {
+            URL.revokeObjectURL(partImage.preview);
+          }
+
+          // 붙여넣기한 이미지 설정
+          const fileName = `pasted-image-${Date.now()}.png`;
+          const file = new File([blob], fileName, { type: blob.type });
+          
+          setPartImage({
+            file,
+            preview: URL.createObjectURL(file),
+            name: fileName,
+            size: file.size
+          });
+        }
+        break;
+      }
+    }
+  };
+
+  const removeImage = () => {
+    if (partImage?.preview) {
+      URL.revokeObjectURL(partImage.preview);
+    }
+    setPartImage(null);
   };
 
   const formatFileSize = (bytes) => {
@@ -179,8 +208,8 @@ export default function MoldNew() {
         const specificationId = data.data.specification.id;
         
         // 부품 사진 업로드 (있는 경우)
-        if (partImages.length > 0) {
-          await uploadPartImages(specificationId);
+        if (partImage) {
+          await uploadPartImage(specificationId);
         }
         
         setSuccess({
@@ -202,16 +231,14 @@ export default function MoldNew() {
     }
   };
 
-  const uploadPartImages = async (specificationId) => {
+  const uploadPartImage = async (specificationId) => {
     try {
-      setUploadingImages(true);
+      setUploadingImage(true);
       
       const formData = new FormData();
-      partImages.forEach(img => {
-        formData.append('photos', img.file);
-      });
+      formData.append('file', partImage.file);
 
-      const response = await fetch(`${API_URL}/api/v1/mold-specifications/${specificationId}/part-images`, {
+      const response = await fetch(`${API_URL}/api/v1/mold-specifications/${specificationId}/part-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -226,10 +253,10 @@ export default function MoldNew() {
       const data = await response.json();
       console.log('부품 사진 업로드 성공:', data);
     } catch (err) {
-      console.error('Failed to upload part images:', err);
+      console.error('Failed to upload part image:', err);
       // 에러가 발생해도 금형 등록은 성공했으므로 계속 진행
     } finally {
-      setUploadingImages(false);
+      setUploadingImage(false);
     }
   };
 
@@ -644,14 +671,14 @@ export default function MoldNew() {
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b flex items-center">
             <ImageIcon className="text-purple-600 mr-2" size={20} />
-            부품 사진
+            부품 사진 업로드 (선택사항)
           </h2>
           
           <div className="space-y-4">
             {/* 파일 선택 버튼 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                부품 사진 업로드 (선택사항)
+                사진 선택
               </label>
               <div className="flex items-center gap-3">
                 <label className="btn-secondary cursor-pointer flex items-center gap-2">
@@ -660,7 +687,6 @@ export default function MoldNew() {
                   <input
                     type="file"
                     accept="image/*"
-                    multiple
                     onChange={handleImageSelect}
                     className="hidden"
                   />
@@ -671,45 +697,45 @@ export default function MoldNew() {
               </div>
             </div>
 
-            {/* 이미지 미리보기 */}
-            {partImages.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {partImages.map((img, index) => (
-                  <div key={index} className="relative group">
-                    <div className="aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50">
-                      <img
-                        src={img.preview}
-                        alt={img.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                    >
-                      <X size={16} />
-                    </button>
-                    <div className="mt-1 text-xs text-gray-600 truncate">
-                      {img.name}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {formatFileSize(img.size)}
-                    </div>
-                  </div>
-                ))}
+            {/* 이미지 미리보기 또는 붙여넣기 영역 */}
+            {partImage ? (
+              <div className="relative">
+                <div className="aspect-video max-w-md rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-50">
+                  <img
+                    src={partImage.preview}
+                    alt={partImage.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors shadow-lg"
+                >
+                  <X size={20} />
+                </button>
+                <div className="mt-2 text-sm text-gray-600">
+                  <div className="font-medium truncate">{partImage.name}</div>
+                  <div className="text-xs text-gray-500">{formatFileSize(partImage.size)}</div>
+                </div>
               </div>
-            )}
-
-            {partImages.length === 0 && (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+            ) : (
+              <div 
+                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary-400 transition-colors cursor-pointer"
+                onPaste={handlePaste}
+                tabIndex={0}
+              >
                 <ImageIcon className="mx-auto mb-3 text-gray-400" size={48} />
-                <p className="text-sm text-gray-600 mb-2">
+                <p className="text-sm text-gray-600 mb-2 font-medium">
                   부품 사진을 업로드하면 금형 정보와 함께 저장됩니다
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 mb-3">
                   사진은 선택사항이며, 나중에 추가할 수 있습니다
                 </p>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md text-sm">
+                  <span className="font-mono font-semibold">Ctrl + V</span>
+                  <span>로 캐프처 이미지 붙여넣기 가능</span>
+                </div>
               </div>
             )}
           </div>
@@ -788,12 +814,12 @@ export default function MoldNew() {
           <button
             type="submit"
             className="btn-primary flex items-center"
-            disabled={loading || uploadingImages}
+            disabled={loading || uploadingImage}
           >
-            {loading || uploadingImages ? (
+            {loading || uploadingImage ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                {uploadingImages ? '사진 업로드 중...' : '등록 중...'}
+                {uploadingImage ? '사진 업로드 중...' : '등록 중...'}
               </>
             ) : (
               <>
