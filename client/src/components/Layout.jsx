@@ -116,7 +116,8 @@ export default function Layout() {
           icon: Settings, 
           label: '금형관리',
           subMenus: [
-            { to: '/molds/master', label: '금형관리 마스터' }
+            { to: '/molds/master', label: '금형관리 마스터' },
+            { to: '/master-data', label: '기초정보 관리' }
           ]
         },
         { 

@@ -108,4 +108,31 @@ export const makerSpecificationAPI = {
   getDashboardStats: () => api.get('/maker-specifications/dashboard/stats'),
 }
 
+// Master Data API
+export const masterDataAPI = {
+  // 차종
+  getCarModels: (params) => api.get('/master-data/car-models', { params }),
+  createCarModel: (data) => api.post('/master-data/car-models', data),
+  updateCarModel: (id, data) => api.patch(`/master-data/car-models/${id}`, data),
+  deleteCarModel: (id) => api.delete(`/master-data/car-models/${id}`),
+  
+  // 재질
+  getMaterials: (params) => api.get('/master-data/materials', { params }),
+  createMaterial: (data) => api.post('/master-data/materials', data),
+  updateMaterial: (id, data) => api.patch(`/master-data/materials/${id}`, data),
+  deleteMaterial: (id) => api.delete(`/master-data/materials/${id}`),
+  
+  // 금형타입
+  getMoldTypes: (params) => api.get('/master-data/mold-types', { params }),
+  createMoldType: (data) => api.post('/master-data/mold-types', data),
+  updateMoldType: (id, data) => api.patch(`/master-data/mold-types/${id}`, data),
+  deleteMoldType: (id) => api.delete(`/master-data/mold-types/${id}`),
+  
+  // 톤수
+  getTonnages: (params) => api.get('/master-data/tonnages', { params }),
+  createTonnage: (data) => api.post('/master-data/tonnages', data),
+  updateTonnage: (id, data) => api.patch(`/master-data/tonnages/${id}`, data),
+  deleteTonnage: (id) => api.delete(`/master-data/tonnages/${id}`),
+}
+
 export default api
