@@ -21,6 +21,12 @@ db.InspectionPhoto = require('./InspectionPhoto')(sequelize, Sequelize.DataTypes
 db.MoldIssue = require('./MoldIssue')(sequelize, Sequelize.DataTypes);
 db.Alert = require('./Alert')(sequelize, Sequelize.DataTypes);
 
+// Master data models
+db.CarModel = require('./CarModel').init(sequelize);
+db.Material = require('./Material').init(sequelize);
+db.MoldType = require('./MoldType').init(sequelize);
+db.Tonnage = require('./Tonnage').init(sequelize);
+
 // Setup associations
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
