@@ -265,13 +265,13 @@ const updateMoldSpecification = async (req, res) => {
       });
     }
 
-    // 상태가 'completed'인 경우 수정 불가
-    if (specification.status === 'completed') {
-      return res.status(400).json({
-        success: false,
-        error: { message: '완료된 금형은 수정할 수 없습니다' }
-      });
-    }
+    // 상태가 'completed'인 경우 수정 불가 (임시 비활성화)
+    // if (specification.status === 'completed') {
+    //   return res.status(400).json({
+    //     success: false,
+    //     error: { message: '완료된 금형은 수정할 수 없습니다' }
+    //   });
+    // }
 
     // 허용된 필드만 업데이트
     const allowedFields = [
