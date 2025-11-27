@@ -22,29 +22,46 @@ export default function MoldList() {
       
       // API 응답 데이터를 화면 표시 형식으로 변환
       const specifications = response.data.data.items || []
-      const transformedMolds = specifications.map(spec => ({
-        id: spec.id,
-        mold_code: spec.Mold?.mold_code || 'N/A',
-        part_number: spec.part_number,
-        part_name: spec.part_name,
-        car_model: spec.car_model,
-        car_year: spec.car_year,
-        mold_type: spec.mold_type,
-        cavity_count: spec.cavity_count,
-        cavity: spec.cavity_count,
-        material: spec.material,
-        tonnage: spec.tonnage,
-        status: spec.status || 'planning',
-        location: spec.Mold?.location || '본사',
-        qr_token: spec.Mold?.qr_token,
-        target_maker: spec.MakerCompany?.company_name || 'N/A',
-        development_stage: spec.development_stage,
-        production_stage: spec.production_stage,
-        order_date: spec.order_date,
-        target_delivery_date: spec.target_delivery_date,
-        estimated_cost: spec.estimated_cost,
-        notes: spec.notes
-      }))
+      const transformedMolds = specifications.map(spec => {
+        // part_images JSONB에서 첫 번째 이미지 URL 추출
+        let imageUrl = null;
+        if (spec.part_images) {
+          if (typeof spec.part_images === 'string') {
+            try {
+              const parsed = JSON.parse(spec.part_images);
+              imageUrl = parsed?.url || null;
+            } catch (e) {
+              console.error('Failed to parse part_images:', e);
+            }
+          } else if (spec.part_images?.url) {
+            imageUrl = spec.part_images.url;
+          }
+        }
+
+        return {
+          id: spec.id,
+          mold_code: spec.Mold?.mold_code || 'N/A',
+          part_number: spec.part_number,
+          part_name: spec.part_name,
+          car_model: spec.car_model,
+          car_year: spec.car_year,
+          mold_type: spec.mold_type,
+          cavity_count: spec.cavity_count,
+          material: spec.material,
+          tonnage: spec.tonnage,
+          status: spec.status || 'draft',
+          location: spec.PlantCompany?.company_name || '본사',
+          maker_company: spec.MakerCompany?.company_name || '-',
+          plant_company: spec.PlantCompany?.company_name || '-',
+          development_stage: spec.development_stage || '-',
+          production_stage: spec.production_stage || '-',
+          order_date: spec.order_date,
+          target_delivery_date: spec.target_delivery_date,
+          estimated_cost: spec.estimated_cost,
+          notes: spec.notes,
+          image_url: imageUrl
+        };
+      })
       
       setMolds(transformedMolds)
     } catch (error) {
@@ -357,7 +374,16 @@ export default function MoldList() {
                     상태
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    위치
+                    제작처
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    생산처
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    개발단계
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    생산단계
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cavity
@@ -420,10 +446,19 @@ export default function MoldList() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{mold.location || '-'}</div>
+                      <div className="text-sm text-gray-900">{mold.maker_company || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{mold.cavity || '-'}</div>
+                      <div className="text-sm text-gray-900">{mold.plant_company || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{mold.development_stage || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{mold.production_stage || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{mold.cavity_count || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{mold.material || '-'}</div>
