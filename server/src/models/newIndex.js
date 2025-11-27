@@ -37,6 +37,10 @@ const MoldProcessStep = require('./MoldProcessStep');
 const PreProductionChecklist = require('./PreProductionChecklist');
 const Company = require('./Company');
 const UserRequest = require('./UserRequest');
+const CarModel = require('./CarModel');
+const Material = require('./Material');
+const MoldType = require('./MoldType');
+const Tonnage = require('./Tonnage');
 
 // Helper function to initialize models
 const initModel = (ModelClass, sequelize) => {
@@ -79,7 +83,11 @@ const models = {
   MoldProcessStep: initModel(MoldProcessStep, sequelize),
   PreProductionChecklist: initModel(PreProductionChecklist, sequelize),
   Company: initModel(Company, sequelize),
-  UserRequest: initModel(UserRequest, sequelize)
+  UserRequest: initModel(UserRequest, sequelize),
+  CarModel: initModel(CarModel, sequelize),
+  Material: initModel(Material, sequelize),
+  MoldType: initModel(MoldType, sequelize),
+  Tonnage: initModel(Tonnage, sequelize)
 };
 
 // Setup associations
