@@ -1,4 +1,4 @@
-const { CarModel, Material, MoldType, Tonnage } = require('../models');
+const { CarModel, Material, MoldType, Tonnage } = require('../models/newIndex');
 const logger = require('../utils/logger');
 
 // ===== 차종 관리 =====
