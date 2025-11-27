@@ -22,6 +22,14 @@ export default function MoldList() {
       
       // API 응답 데이터를 화면 표시 형식으로 변환
       const specifications = response.data.data.items || []
+      
+      // 디버깅: 첫 번째 항목의 구조 확인
+      if (specifications.length > 0) {
+        console.log('First specification:', specifications[0]);
+        console.log('makerCompany:', specifications[0].makerCompany);
+        console.log('plantCompany:', specifications[0].plantCompany);
+      }
+      
       const transformedMolds = specifications.map(spec => {
         // part_images JSONB에서 첫 번째 이미지 URL 추출
         let imageUrl = null;
@@ -38,9 +46,13 @@ export default function MoldList() {
           }
         }
 
+        // 대소문자 구분 확인 (makerCompany vs MakerCompany)
+        const makerCompany = spec.makerCompany || spec.MakerCompany;
+        const plantCompany = spec.plantCompany || spec.PlantCompany;
+
         return {
           id: spec.id,
-          mold_code: spec.Mold?.mold_code || 'N/A',
+          mold_code: spec.mold?.mold_code || spec.Mold?.mold_code || 'N/A',
           part_number: spec.part_number,
           part_name: spec.part_name,
           car_model: spec.car_model,
@@ -50,9 +62,9 @@ export default function MoldList() {
           material: spec.material,
           tonnage: spec.tonnage,
           status: spec.status || 'draft',
-          location: spec.PlantCompany?.company_name || '본사',
-          maker_company: spec.MakerCompany?.company_name || '-',
-          plant_company: spec.PlantCompany?.company_name || '-',
+          location: plantCompany?.company_name || '본사',
+          maker_company: makerCompany?.company_name || '-',
+          plant_company: plantCompany?.company_name || '-',
           development_stage: spec.development_stage || '-',
           production_stage: spec.production_stage || '-',
           order_date: spec.order_date,
