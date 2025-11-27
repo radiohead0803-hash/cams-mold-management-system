@@ -22,10 +22,10 @@ db.MoldIssue = require('./MoldIssue')(sequelize, Sequelize.DataTypes);
 db.Alert = require('./Alert')(sequelize, Sequelize.DataTypes);
 
 // Master data models
-db.CarModel = require('./CarModel').init(sequelize);
-db.Material = require('./Material').init(sequelize);
-db.MoldType = require('./MoldType').init(sequelize);
-db.Tonnage = require('./Tonnage').init(sequelize);
+db.CarModel = require('./CarModel')(sequelize, Sequelize.DataTypes);
+db.Material = require('./Material')(sequelize, Sequelize.DataTypes);
+db.MoldType = require('./MoldType')(sequelize, Sequelize.DataTypes);
+db.Tonnage = require('./Tonnage')(sequelize, Sequelize.DataTypes);
 
 // Setup associations
 Object.keys(db).forEach(modelName => {
