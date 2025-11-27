@@ -254,6 +254,8 @@ const updateMoldSpecification = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    logger.info(`Updating mold specification ${id} with data:`, updateData);
+
     const specification = await MoldSpecification.findByPk(id);
 
     if (!specification) {
@@ -271,8 +273,23 @@ const updateMoldSpecification = async (req, res) => {
       });
     }
 
+    // 허용된 필드만 업데이트
+    const allowedFields = [
+      'part_number', 'part_name', 'car_model', 'car_year',
+      'mold_type', 'cavity_count', 'material', 'tonnage',
+      'development_stage', 'production_stage',
+      'order_date', 'target_delivery_date', 'estimated_cost', 'notes'
+    ];
+
+    const filteredData = {};
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        filteredData[field] = updateData[field];
+      }
+    });
+
     await specification.update({
-      ...updateData,
+      ...filteredData,
       updated_at: new Date()
     });
 
@@ -284,9 +301,19 @@ const updateMoldSpecification = async (req, res) => {
     });
   } catch (error) {
     logger.error('Update mold specification error:', error);
+    logger.error('Error stack:', error.stack);
+    logger.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      sql: error.sql
+    });
+    
     res.status(500).json({
       success: false,
-      error: { message: '금형 사양 수정 실패' }
+      error: { 
+        message: '금형 사양 수정 실패',
+        details: error.message
+      }
     });
   }
 };
