@@ -1,16 +1,73 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useHqRepairs } from '../hooks/useHqRepairs';
-import { Wrench, ChevronRight, AlertTriangle, Clock, CheckCircle2, Filter } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Wrench, ChevronRight, AlertTriangle, Clock, CheckCircle2, Filter, RefreshCw, ArrowLeft } from 'lucide-react';
+import api from '../lib/api';
 
 /**
  * HQ 수리요청 목록 페이지
  * 시스템 관리자 및 금형개발 담당자용
  */
+const STATUS_FILTERS = [
+  { key: 'open', label: '진행 중' },
+  { key: 'completed', label: '완료' },
+  { key: 'rejected', label: '반려' },
+  { key: 'all', label: '전체' },
+];
+
+const statusLabelMap = {
+  requested: '요청',
+  liability_review: '귀책협의',
+  approved: '승인',
+  in_repair: '수리중',
+  completed: '완료',
+  rejected: '반려',
+};
+
+const severityLabelMap = {
+  low: 'LOW',
+  medium: 'MEDIUM',
+  high: 'HIGH',
+  critical: 'CRITICAL',
+  urgent: 'URGENT',
+};
+
 export default function HqRepairListPage() {
   const navigate = useNavigate();
-  const [statusFilter, setStatusFilter] = useState('requested');
-  const { data, loading, error, refetch } = useHqRepairs(statusFilter);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [repairs, setRepairs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const status = searchParams.get('status') || 'open';
+
+  const loadRepairs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await api.get(`/hq/repairs?status=${status}`);
+      
+      if (response.data.success) {
+        setRepairs(response.data.data.items || []);
+      } else {
+        throw new Error(response.data.error?.message || '수리요청 목록 조회 실패');
+      }
+    } catch (err) {
+      console.error('load repairs error', err);
+      setError(err.response?.data?.error?.message || '수리요청 목록을 불러오지 못했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadRepairs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  const handleChangeStatus = (key) => {
+    setSearchParams({ status: key });
+  };
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -40,6 +97,12 @@ export default function HqRepairListPage() {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <button
+                className="p-2 rounded-lg hover:bg-slate-100 transition"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="w-5 h-5 text-slate-600" />
+              </button>
               <Wrench className="w-6 h-6 text-slate-600" />
               <div>
                 <h1 className="text-xl font-bold text-slate-900">수리요청 관리</h1>
@@ -47,7 +110,7 @@ export default function HqRepairListPage() {
               </div>
             </div>
             <button
-              onClick={() => refetch()}
+              onClick={() => loadRepairs()}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium"
             >
               새로고침
@@ -66,56 +129,19 @@ export default function HqRepairListPage() {
               <span className="text-sm font-medium text-slate-700">필터:</span>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => setStatusFilter('')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  statusFilter === '' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                전체
-              </button>
-              <button
-                onClick={() => setStatusFilter('requested')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  statusFilter === 'requested' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                요청됨
-              </button>
-              <button
-                onClick={() => setStatusFilter('in_progress')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  statusFilter === 'in_progress' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                진행중
-              </button>
-              <button
-                onClick={() => setStatusFilter('completed')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  statusFilter === 'completed' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                완료
-              </button>
-              <button
-                onClick={() => setStatusFilter('confirmed')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  statusFilter === 'confirmed' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                확정
-              </button>
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => handleChangeStatus(f.key)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                    status === f.key 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -142,7 +168,7 @@ export default function HqRepairListPage() {
         )}
 
         {/* 데이터 없음 */}
-        {!loading && !error && data.length === 0 && (
+        {!loading && !error && repairs.length === 0 && (
           <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
             <Wrench className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-500">해당 조건의 수리요청이 없습니다.</p>
@@ -150,7 +176,7 @@ export default function HqRepairListPage() {
         )}
 
         {/* 수리요청 목록 */}
-        {!loading && !error && data.length > 0 && (
+        {!loading && !error && repairs.length > 0 && (
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
@@ -176,7 +202,7 @@ export default function HqRepairListPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
-                {data.map((repair) => {
+                {repairs.map((repair) => {
                   const statusBadge = getStatusBadge(repair.status);
                   const urgencyBadge = getUrgencyBadge(repair.severity);
                   
