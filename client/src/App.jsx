@@ -32,6 +32,8 @@ import CompanyManagement from './pages/CompanyManagement'
 import CompanyDetail from './pages/CompanyDetail'
 import UserRequests from './pages/UserRequests'
 import MasterData from './pages/MasterData'
+import ScanInfoPage from './pages/ScanInfoPage'
+import RepairRequestPage from './pages/RepairRequestPage'
 
 function App() {
   const { isAuthenticated, initialize } = useAuthStore()
@@ -44,6 +46,8 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/qr-login" element={<QRLogin />} />
+      <Route path="/scan-info" element={<ScanInfoPage />} />
+      <Route path="/repair-request" element={<RepairRequestPage />} />
       
       <Route
         path="/"

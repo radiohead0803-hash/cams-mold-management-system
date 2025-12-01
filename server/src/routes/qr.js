@@ -19,4 +19,7 @@ router.delete('/session/:session_token', authenticate, qrController.endSession);
 // 활성 세션 목록
 router.get('/sessions/active', authenticate, qrController.getActiveSessions);
 
+// QR 세션을 통한 수리요청 생성
+router.post('/molds/:id/repairs', authenticate, qrController.createRepairRequest);
+
 module.exports = router;

@@ -1,5 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
-const { QRSession, Mold, User } = require('../models/newIndex');
+const { QRSession, Mold, User, Repair, Notification } = require('../models/newIndex');
 const logger = require('../utils/logger');
 
 /**
@@ -262,9 +262,129 @@ const getActiveSessions = async (req, res) => {
   }
 };
 
+/**
+ * QR 세션을 통한 수리요청 생성
+ * POST /api/v1/qr/molds/:id/repairs
+ */
+const createRepairRequest = async (req, res) => {
+  try {
+    const moldId = parseInt(req.params.id);
+    const userId = req.user.id;
+    const { 
+      sessionId, 
+      sessionToken,
+      defectType, 
+      description, 
+      urgency,
+      images 
+    } = req.body;
+
+    // 1. 금형 존재 확인
+    const mold = await Mold.findByPk(moldId);
+    if (!mold) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Mold not found' }
+      });
+    }
+
+    // 2. QR 세션 확인 (선택사항)
+    let qrSessionId = null;
+    if (sessionToken) {
+      const session = await QRSession.findOne({
+        where: { session_token: sessionToken }
+      });
+      if (session) {
+        qrSessionId = session.id;
+      }
+    } else if (sessionId) {
+      qrSessionId = sessionId;
+    }
+
+    // 3. 수리요청 번호 생성 (REP-YYYYMMDD-XXX)
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
+    const count = await Repair.count({
+      where: {
+        request_date: {
+          [require('sequelize').Op.gte]: new Date(today.setHours(0, 0, 0, 0))
+        }
+      }
+    });
+    const requestNumber = `REP-${dateStr}-${String(count + 1).padStart(3, '0')}`;
+
+    // 4. 수리요청 생성
+    const repair = await Repair.create({
+      mold_id: moldId,
+      qr_session_id: qrSessionId,
+      request_number: requestNumber,
+      requested_by: userId,
+      request_date: new Date(),
+      issue_type: defectType || 'general',
+      issue_description: description,
+      severity: urgency || 'medium',
+      status: 'requested',
+      photos: images ? JSON.stringify(images) : null
+    });
+
+    // 5. 알림 생성 (본사/제작처 담당자에게)
+    try {
+      // 시스템 관리자와 금형개발 담당자에게 알림
+      const admins = await User.findAll({
+        where: {
+          user_type: ['system_admin', 'mold_developer'],
+          is_active: true
+        }
+      });
+
+      for (const admin of admins) {
+        await Notification.create({
+          user_id: admin.id,
+          notification_type: 'repair_request',
+          title: '새로운 수리요청',
+          message: `금형 ${mold.mold_code} - ${defectType || '수리요청'}`,
+          priority: urgency === 'urgent' || urgency === 'high' ? 'high' : 'normal',
+          related_type: 'repair',
+          related_id: repair.id,
+          action_url: `/repairs/${repair.id}`,
+          is_read: false
+        });
+      }
+    } catch (notifError) {
+      logger.error('Notification creation error:', notifError);
+      // 알림 실패해도 수리요청은 성공으로 처리
+    }
+
+    // 6. 응답
+    res.status(201).json({
+      success: true,
+      data: {
+        repair: {
+          id: repair.id,
+          request_number: requestNumber,
+          mold_id: moldId,
+          status: repair.status,
+          created_at: repair.created_at
+        }
+      }
+    });
+
+  } catch (error) {
+    logger.error('Create repair request error:', error);
+    res.status(500).json({
+      success: false,
+      error: { 
+        message: 'Failed to create repair request',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }
+    });
+  }
+};
+
 module.exports = {
   scanQR,
   validateSession,
   endSession,
-  getActiveSessions
+  getActiveSessions,
+  createRepairRequest
 };

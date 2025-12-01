@@ -108,17 +108,31 @@ export default function QRLogin() {
     await handleManualQRInput(qrData)
   }
 
-  // 데모용: QR 코드 값 직접 입력
+  // QR 스캔 처리 - 금형 정보 조회 후 ScanInfo 페이지로 이동
   const handleManualQRInput = async (qrValue) => {
     try {
       setError('')
-      const response = await authAPI.qrLogin({ qr_code: qrValue })
-      const { token, user } = response.data.data
-
-      login(user, token)
-      navigate('/')
+      
+      // QR 스캔 API 호출
+      const response = await authAPI.scanQR({ 
+        qr_code: qrValue,
+        location: null // GPS 위치는 선택사항
+      })
+      
+      if (response.data.success) {
+        const { session, mold, user } = response.data.data
+        
+        // ScanInfo 페이지로 이동
+        navigate('/scan-info', {
+          state: {
+            session,
+            mold,
+            user
+          }
+        })
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'QR 로그인에 실패했습니다.')
+      setError(err.response?.data?.error?.message || 'QR 스캔에 실패했습니다.')
     }
   }
 
