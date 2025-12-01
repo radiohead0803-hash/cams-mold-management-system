@@ -4,11 +4,13 @@ import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp } f
 import DashboardHeader from '../../components/DashboardHeader';
 import MoldLocationMap from '../../components/MoldLocationMap';
 import { useDashboardKpi } from '../../hooks/useDashboardKpi';
+import { useMoldLocations } from '../../hooks/useMoldLocations';
 
 export default function SystemAdminDashboard() {
   const navigate = useNavigate();
   const { data: stats, loading, error, refetch } = useDashboardKpi();
-  const [showMap, setShowMap] = useState(false);
+  const { locations, loading: locLoading, error: locError, refetch: refetchLocations } = useMoldLocations();
+  const [showMap, setShowMap] = useState(true);
   
   // Mock system status
   const systemStatus = {
@@ -177,6 +179,38 @@ export default function SystemAdminDashboard() {
           </div>
         </section>
 
+        {/* 금형 위치 현황 카드 */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📍 금형 위치 현황</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-5">
+              <p className="text-xs text-gray-500 font-medium">총 금형 수</p>
+              <p className="mt-2 text-3xl font-bold text-gray-900">{locations.length}</p>
+              <p className="mt-1 text-xs text-gray-400">Total Locations</p>
+            </div>
+            <div className="rounded-xl bg-white border border-green-200 shadow-sm p-5">
+              <p className="text-xs text-green-600 font-medium">정상 위치</p>
+              <p className="mt-2 text-3xl font-bold text-green-600">{locations.filter(l => !l.hasDrift).length}</p>
+              <p className="mt-1 text-xs text-gray-400">Normal</p>
+            </div>
+            <div className="rounded-xl bg-white border border-red-200 shadow-sm p-5">
+              <p className="text-xs text-red-600 font-medium">위치 이탈</p>
+              <p className="mt-2 text-3xl font-bold text-red-600">{locations.filter(l => l.hasDrift).length}</p>
+              <p className="mt-1 text-xs text-gray-400">Moved</p>
+            </div>
+            <div className="rounded-xl bg-white border border-blue-200 shadow-sm p-5">
+              <button
+                onClick={() => setShowMap(!showMap)}
+                className="w-full text-left"
+              >
+                <p className="text-xs text-blue-600 font-medium">지도 보기</p>
+                <p className="mt-2 text-lg font-bold text-blue-600">{showMap ? '열림' : '닫힘'}</p>
+                <p className="mt-1 text-xs text-gray-400">Toggle Map</p>
+              </button>
+            </div>
+          </div>
+        </section>
+
         {/* NG 금형 별도 강조 */}
         {stats.ngMolds > 0 && (
           <section>
@@ -240,32 +274,53 @@ export default function SystemAdminDashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">등록된 위치</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.gpsRegistered || 0}개</p>
+                  <p className="text-sm font-medium text-gray-700">정상 위치</p>
+                  <p className="text-2xl font-bold text-green-600">{locations.filter(l => !l.hasDrift).length}개</p>
                 </div>
                 <div className="text-3xl">✅</div>
               </div>
               <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-gray-700">위치 이탈</p>
-                  <p className="text-2xl font-bold text-red-600">{stats.gpsAbnormal || 0}개</p>
+                  <p className="text-2xl font-bold text-red-600">{locations.filter(l => l.hasDrift).length}개</p>
                 </div>
                 <div className="text-3xl">⚠️</div>
               </div>
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">총 금형</p>
+                  <p className="text-2xl font-bold text-gray-600">{locations.length}개</p>
+                </div>
+                <div className="text-3xl">📦</div>
+              </div>
             </div>
-            <button 
-              onClick={() => setShowMap(!showMap)}
-              className="mt-4 w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              {showMap ? 'GPS 지도 닫기' : 'GPS 지도 보기'}
-            </button>
           </section>
         </div>
 
         {/* 금형 위치 지도 */}
         {showMap && (
           <section>
-            <MoldLocationMap />
+            {locLoading && (
+              <div className="bg-white rounded-xl shadow p-6">
+                <div className="flex items-center justify-center h-96">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-500">위치 데이터 로딩 중...</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {locError && !locLoading && (
+              <div className="bg-white rounded-xl shadow p-6">
+                <div className="flex items-center gap-3 text-red-600">
+                  <AlertTriangle className="w-5 h-5" />
+                  <p>{locError}</p>
+                </div>
+              </div>
+            )}
+            {!locLoading && !locError && (
+              <MoldLocationMap locations={locations} onRefresh={refetchLocations} />
+            )}
           </section>
         )}
 

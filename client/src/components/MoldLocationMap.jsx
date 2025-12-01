@@ -1,35 +1,14 @@
-import { useState, useEffect } from 'react';
-import { MapPin, Navigation, AlertCircle, CheckCircle } from 'lucide-react';
-import api from '../lib/api';
+import { useState } from 'react';
+import { MapPin } from 'lucide-react';
 import KakaoMap from './KakaoMap';
 
-export default function MoldLocationMap() {
-  const [locations, setLocations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+/**
+ * 금형 위치 지도 컴포넌트 (데이터 주입 방식)
+ * @param {Array} locations - 금형 위치 데이터 배열
+ * @param {Function} onRefresh - 새로고침 콜백
+ */
+export default function MoldLocationMap({ locations = [], onRefresh }) {
   const [selectedMold, setSelectedMold] = useState(null);
-
-  useEffect(() => {
-    fetchLocations();
-  }, []);
-
-  const fetchLocations = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await api.get('/hq/mold-locations');
-      
-      if (response.data.success) {
-        setLocations(response.data.data.items || []);
-      }
-    } catch (err) {
-      console.error('Location fetch error:', err);
-      setError(err.response?.data?.error?.message || '위치 데이터를 불러올 수 없습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // GPS 상태별 색상
   const getStatusColor = (hasDrift) => {
@@ -40,30 +19,6 @@ export default function MoldLocationMap() {
     return hasDrift ? '위치 이탈' : '정상';
   };
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-xl shadow p-6">
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">지도 로딩 중...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-xl shadow p-6">
-        <div className="flex items-center gap-3 text-red-600">
-          <AlertCircle className="w-5 h-5" />
-          <p>{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-white rounded-xl shadow overflow-hidden">
       <div className="p-6 border-b border-gray-200">
@@ -72,12 +27,14 @@ export default function MoldLocationMap() {
             <MapPin className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">금형 위치 현황</h3>
           </div>
-          <button
-            onClick={fetchLocations}
-            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            새로고침
-          </button>
+          {onRefresh && (
+            <button
+              onClick={onRefresh}
+              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              새로고침
+            </button>
+          )}
         </div>
       </div>
 
@@ -95,8 +52,8 @@ export default function MoldLocationMap() {
             <p className="text-xs font-semibold text-gray-700 mb-1">📍 금형 위치 현황</p>
             <p className="text-xs text-gray-500">총 {locations.length}개</p>
             <div className="mt-2 flex gap-2 text-xs">
-              <span className="text-green-600">정상 {locations.filter(l => !l.has_drift).length}</span>
-              <span className="text-red-600">이탈 {locations.filter(l => l.has_drift).length}</span>
+              <span className="text-green-600">정상 {locations.filter(l => !l.hasDrift).length}</span>
+              <span className="text-red-600">이탈 {locations.filter(l => l.hasDrift).length}</span>
             </div>
           </div>
 
@@ -117,10 +74,10 @@ export default function MoldLocationMap() {
             ) : (
               locations.map((location) => (
                 <button
-                  key={location.mold_id}
+                  key={location.id}
                   onClick={() => setSelectedMold(location)}
                   className={`w-full text-left p-3 rounded-lg border transition ${
-                    selectedMold?.mold_id === location.mold_id
+                    selectedMold?.id === location.id
                       ? 'bg-blue-50 border-blue-300'
                       : 'bg-white border-gray-200 hover:border-blue-200'
                   }`}
@@ -128,23 +85,22 @@ export default function MoldLocationMap() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full ${getStatusColor(location.has_drift)}`}></div>
+                        <div className={`w-2 h-2 rounded-full ${getStatusColor(location.hasDrift)}`}></div>
                         <p className="text-sm font-semibold text-gray-900 truncate">
-                          {location.mold_code}
+                          {location.moldCode}
                         </p>
                       </div>
                       <p className="text-xs text-gray-600 truncate mb-1">
-                        {location.mold_name || '-'}
+                        {location.moldName || '-'}
                       </p>
-                      {location.current_location && (
+                      {location.plantName && (
                         <p className="text-xs text-gray-500">
-                          📍 {location.current_location}
+                          📍 {location.plantName}
                         </p>
                       )}
-                      {location.has_drift && (
+                      {location.hasDrift && (
                         <div className="mt-2 flex items-center gap-1 text-xs text-red-600">
-                          <AlertCircle className="w-3 h-3" />
-                          <span>위치 이탈 감지</span>
+                          <span>⚠️ 위치 이탈 감지</span>
                         </div>
                       )}
                     </div>
@@ -162,13 +118,13 @@ export default function MoldLocationMap() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-semibold text-gray-900 mb-1">
-                {selectedMold.mold_code} - {selectedMold.mold_name}
+                {selectedMold.moldCode} - {selectedMold.moldName}
               </p>
               <div className="space-y-1 text-xs text-gray-600">
-                <p>📍 위치: {selectedMold.current_location || '미등록'}</p>
-                <p>📊 상태: {getStatusText(selectedMold.has_drift)}</p>
-                {selectedMold.last_gps_time && (
-                  <p>🕐 최근 GPS: {new Date(selectedMold.last_gps_time).toLocaleString('ko-KR')}</p>
+                <p>📍 위치: {selectedMold.plantName || '미등록'}</p>
+                <p>📊 상태: {getStatusText(selectedMold.hasDrift)}</p>
+                {selectedMold.lastUpdated && (
+                  <p>🕐 최근 GPS: {new Date(selectedMold.lastUpdated).toLocaleString('ko-KR')}</p>
                 )}
               </div>
             </div>
