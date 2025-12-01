@@ -68,6 +68,7 @@ const companiesRouter = require('./routes/companies');
 const userRequestsRouter = require('./routes/userRequests');
 const usersRouter = require('./routes/users');
 const masterDataRouter = require('./routes/masterData');
+const hqDashboardRouter = require('./routes/hqDashboard');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/qr', qrRouter);
@@ -82,6 +83,7 @@ app.use('/api/v1/companies', companiesRouter);
 app.use('/api/v1/user-requests', userRequestsRouter);
 app.use('/api/v1/users', usersRouter);
 app.use('/api/v1/master-data', masterDataRouter);
+app.use('/api/v1/hq', hqDashboardRouter);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -1,21 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import DashboardHeader from '../../components/DashboardHeader';
+import api from '../../lib/api';
 
 export default function SystemAdminDashboard() {
-  const [stats, setStats] = useState({
-    totalMolds: 245,
-    activeMolds: 198,
-    repairMolds: 12,
-    idleMolds: 35,
-    totalUsers: 156,
-    todayQRScans: 1234,
-    criticalAlerts: 3,
-    majorAlerts: 12,
-    minorAlerts: 45,
-    gpsRegistered: 198,
-    gpsAbnormal: 2
-  });
+  const navigate = useNavigate();
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [recentActivities, setRecentActivities] = useState([
     {
@@ -59,12 +51,63 @@ export default function SystemAdminDashboard() {
     gpsServiceStatus: 'warning'
   });
 
+  // API에서 대시보드 데이터 가져오기
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/hq/dashboard/summary');
+        setStats(response.data.data);
+      } catch (err) {
+        console.error('Dashboard data fetch error:', err);
+        setError('대시보드 데이터를 불러오지 못했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
   // 헤더 통계
-  const headerStats = [
+  const headerStats = stats ? [
     { label: '전체 금형', value: stats.totalMolds },
-    { label: '활성 사용자', value: stats.totalUsers },
+    { label: '양산 중', value: stats.activeMolds },
     { label: 'Critical 알람', value: stats.criticalAlerts }
-  ];
+  ] : [];
+
+  // 로딩 상태
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">대시보드 로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 에러 상태
+  if (error || !stats) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
+          <div className="text-center">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">데이터 로딩 실패</h2>
+            <p className="text-gray-600 mb-6">{error || '대시보드 데이터를 불러올 수 없습니다.'}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              다시 시도
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -79,10 +122,61 @@ export default function SystemAdminDashboard() {
         <section>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 금형 현황 요약</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard title="전체 금형" value={stats.totalMolds} icon="🔧" color="blue" unit="개" />
-            <StatCard title="양산 중" value={stats.activeMolds} icon="⚙️" color="green" unit="개" />
-            <StatCard title="수리 중" value={stats.repairMolds} icon="🔨" color="orange" unit="개" />
-            <StatCard title="보관/대기" value={stats.idleMolds} icon="📦" color="gray" unit="개" />
+            <StatCard 
+              title="전체 금형" 
+              value={stats.totalMolds} 
+              icon="🔧" 
+              color="blue" 
+              unit="개"
+              onClick={() => navigate('/molds')}
+            />
+            <StatCard 
+              title="양산 중" 
+              value={stats.activeMolds} 
+              icon="⚙️" 
+              color="green" 
+              unit="개"
+              onClick={() => navigate('/molds?status=active')}
+            />
+            <StatCard 
+              title="NG 금형" 
+              value={stats.ngMolds} 
+              icon="⚠️" 
+              color="red" 
+              unit="개"
+              onClick={() => navigate('/molds?status=ng')}
+            />
+            <StatCard 
+              title="수리 진행" 
+              value={stats.openRepairs} 
+              icon="🔨" 
+              color="orange" 
+              unit="건"
+              onClick={() => navigate('/repairs')}
+            />
+          </div>
+        </section>
+
+        {/* QR 스캔 및 알림 */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📱 실시간 활동</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <StatCard 
+              title="오늘 QR 스캔" 
+              value={stats.todayScans} 
+              icon="📱" 
+              color="purple" 
+              unit="건"
+              onClick={() => navigate('/qr-sessions')}
+            />
+            <StatCard 
+              title="Critical 알림" 
+              value={stats.criticalAlerts} 
+              icon="🔔" 
+              color="red" 
+              unit="건"
+              onClick={() => navigate('/alerts')}
+            />
           </div>
         </section>
 
@@ -201,16 +295,24 @@ export default function SystemAdminDashboard() {
 }
 
 // 통계 카드 컴포넌트
-function StatCard({ title, value, icon, color, unit = '' }) {
+function StatCard({ title, value, icon, color, unit = '', onClick }) {
   const colors = {
     blue: 'bg-blue-50 text-blue-600 border-blue-200',
     green: 'bg-green-50 text-green-600 border-green-200',
     orange: 'bg-orange-50 text-orange-600 border-orange-200',
+    red: 'bg-red-50 text-red-600 border-red-200',
+    purple: 'bg-purple-50 text-purple-600 border-purple-200',
     gray: 'bg-gray-50 text-gray-600 border-gray-200'
   };
 
+  const Component = onClick ? 'button' : 'div';
+  const clickableClass = onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : '';
+
   return (
-    <div className={`bg-white rounded-lg shadow border-l-4 ${colors[color]} p-6`}>
+    <Component 
+      onClick={onClick}
+      className={`bg-white rounded-lg shadow border-l-4 ${colors[color]} p-6 ${clickableClass} w-full text-left`}
+    >
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-600 mb-1">{title}</p>
@@ -220,7 +322,7 @@ function StatCard({ title, value, icon, color, unit = '' }) {
         </div>
         <div className="text-4xl">{icon}</div>
       </div>
-    </div>
+    </Component>
   );
 }
 
