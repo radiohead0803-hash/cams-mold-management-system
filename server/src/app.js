@@ -73,6 +73,8 @@ const dashRouter = require('./routes/dashRoutes');
 const makerRepairRouter = require('./routes/makerRepair');
 const plantRepairRouter = require('./routes/plantRepair');
 const hqLocationRouter = require('./routes/hqLocation');
+const plantProductionRouter = require('./routes/plantProduction');
+const hqJobsRouter = require('./routes/hqJobs');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/qr', qrRouter);
@@ -90,9 +92,11 @@ app.use('/api/v1/master-data', masterDataRouter);
 app.use('/api/v1/dash', dashRouter);
 app.use('/api/v1/maker', makerRepairRouter);
 app.use('/api/v1/plant', plantRepairRouter);
+app.use('/api/v1/plant', plantProductionRouter);
 // HQ routes combined
 app.use('/api/v1/hq', hqDashboardRouter);
 app.use('/api/v1/hq', hqLocationRouter);
+app.use('/api/v1/hq', hqJobsRouter);
 
 // Health check
 app.get('/health', (req, res) => {

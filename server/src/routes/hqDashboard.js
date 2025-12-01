@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const { authenticate, authorize } = require('../middleware/auth');
-const { Mold, Repair, QRSession, Notification, User, sequelize } = require('../models/newIndex');
+const { Mold, Repair, QRSession, Notification, User, Inspection, Alert, sequelize } = require('../models/newIndex');
 
 // 모든 /api/v1/hq/* 엔드포인트는 system_admin, mold_developer만 접근 가능
 router.use(authenticate, authorize(['system_admin', 'mold_developer']));
@@ -75,6 +75,25 @@ router.get('/dashboard/summary', async (req, res) => {
       }
     });
 
+    // 7) 타수 초과 금형 (미해결 over_shot 알람)
+    const overShotCount = await Alert.count({
+      where: {
+        alert_type: 'over_shot',
+        is_resolved: false
+      }
+    });
+
+    // 8) 정기검사 필요 금형 (scheduled 상태)
+    const inspectionDueCount = await Inspection.count({
+      where: {
+        inspection_type: 'periodic',
+        status: 'scheduled',
+        inspection_date: {
+          [Op.lte]: new Date()
+        }
+      }
+    });
+
     return res.json({
       success: true,
       data: {
@@ -83,7 +102,9 @@ router.get('/dashboard/summary', async (req, res) => {
         ngMolds,
         openRepairs,
         todayScans,
-        criticalAlerts
+        criticalAlerts,
+        overShotCount,        // 타수 초과
+        inspectionDueCount    // 정기검사 필요
       }
     });
   } catch (error) {
@@ -283,6 +304,112 @@ router.get('/repair-requests/:id', async (req, res) => {
       success: false,
       error: {
         message: '수리요청 상세 조회 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/v1/hq/molds/inspection-due
+ * 정기검사 필요 금형 목록
+ */
+router.get('/molds/inspection-due', async (req, res) => {
+  try {
+    const inspections = await Inspection.findAll({
+      where: {
+        inspection_type: 'periodic',
+        status: 'scheduled',
+        inspection_date: {
+          [Op.lte]: new Date()
+        }
+      },
+      include: [
+        {
+          association: 'mold',
+          attributes: ['id', 'mold_code', 'mold_name', 'current_shots', 'target_shots', 'status']
+        }
+      ],
+      order: [['inspection_date', 'ASC']],
+      limit: 100
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        inspections
+      }
+    });
+
+  } catch (error) {
+    console.error('Inspection due list error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '정기검사 필요 금형 목록 조회 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/v1/hq/molds/over-shot
+ * 타수 초과 금형 목록
+ */
+router.get('/molds/over-shot', async (req, res) => {
+  try {
+    const alerts = await Alert.findAll({
+      where: {
+        alert_type: 'over_shot',
+        is_resolved: false
+      },
+      order: [['created_at', 'DESC']],
+      limit: 100
+    });
+
+    // 금형 정보 포함
+    const moldIds = alerts.map(a => a.metadata?.mold_id).filter(Boolean);
+    const molds = await Mold.findAll({
+      where: {
+        id: {
+          [Op.in]: moldIds
+        }
+      }
+    });
+
+    const moldMap = new Map(molds.map(m => [m.id, m]));
+
+    const result = alerts.map(alert => {
+      const mold = moldMap.get(alert.metadata?.mold_id);
+      return {
+        alert_id: alert.id,
+        severity: alert.severity,
+        message: alert.message,
+        created_at: alert.created_at,
+        metadata: alert.metadata,
+        mold: mold ? {
+          id: mold.id,
+          mold_code: mold.mold_code,
+          mold_name: mold.mold_name,
+          current_shots: mold.current_shots,
+          target_shots: mold.target_shots,
+          status: mold.status
+        } : null
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        alerts: result
+      }
+    });
+
+  } catch (error) {
+    console.error('Over shot list error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '타수 초과 금형 목록 조회 중 오류가 발생했습니다.'
       }
     });
   }
