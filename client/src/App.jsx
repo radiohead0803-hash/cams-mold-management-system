@@ -34,6 +34,8 @@ import UserRequests from './pages/UserRequests'
 import MasterData from './pages/MasterData'
 import ScanInfoPage from './pages/ScanInfoPage'
 import RepairRequestPage from './pages/RepairRequestPage'
+import HqRepairListPage from './pages/HqRepairListPage'
+import MakerRepairListPage from './pages/MakerRepairListPage'
 
 function App() {
   const { isAuthenticated, initialize } = useAuthStore()
@@ -87,6 +89,8 @@ function App() {
         <Route path="companies/:id" element={<CompanyDetail />} />
         <Route path="user-requests" element={<UserRequests />} />
         <Route path="master-data" element={<MasterData />} />
+        <Route path="hq/repair-requests" element={<HqRepairListPage />} />
+        <Route path="maker/repair-requests" element={<MakerRepairListPage />} />
       </Route>
     </Routes>
   )

@@ -132,7 +132,7 @@ export default function SystemAdminDashboard() {
               icon="🔨" 
               color="orange" 
               unit="건"
-              onClick={() => navigate('/repairs')}
+              onClick={() => navigate('/hq/repair-requests')}
             />
           </div>
         </section>
