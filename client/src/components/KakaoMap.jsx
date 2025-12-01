@@ -7,44 +7,95 @@ export default function KakaoMap({ locations = [], selectedMold, onSelectMold })
   const markersRef = useRef([]);
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState(null);
+  const [scriptLoaded, setScriptLoaded] = useState(false);
 
-  // 카카오맵 초기화
+  // 카카오맵 스크립트 동적 로드
   useEffect(() => {
-    // 카카오맵 API 로드 확인
-    if (!window.kakao || !window.kakao.maps) {
-      setError('카카오맵 API를 로드할 수 없습니다.');
-      console.error('Kakao Maps API not loaded');
+    // ✅ Vite 환경변수 사용
+    const appKey = import.meta.env.VITE_KAKAO_MAP_KEY;
+
+    if (!appKey) {
+      setError('카카오맵 API 키가 설정되지 않았습니다. (.env 파일 확인 필요)');
+      console.error('❌ VITE_KAKAO_MAP_KEY not found in environment variables');
+      console.log('💡 Check: import.meta.env.VITE_KAKAO_MAP_KEY =', appKey);
       return;
     }
 
-    try {
-      // 한국 중심 좌표 (대한민국 중앙)
-      const center = new window.kakao.maps.LatLng(36.5, 127.5);
+    console.log('✅ Kakao Map API Key loaded:', appKey.substring(0, 10) + '...');
 
-      // 지도 옵션
-      const mapOptions = {
-        center: center,
-        level: 13, // 확대 레벨 (1-14, 숫자가 작을수록 확대)
-      };
-
-      // 지도 생성
-      const map = new window.kakao.maps.Map(mapRef.current, mapOptions);
-      mapInstanceRef.current = map;
-
-      // 지도 컨트롤 추가
-      const zoomControl = new window.kakao.maps.ZoomControl();
-      map.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
-
-      const mapTypeControl = new window.kakao.maps.MapTypeControl();
-      map.addControl(mapTypeControl, window.kakao.maps.ControlPosition.TOPRIGHT);
-
-      setMapReady(true);
-      console.log('✅ Kakao Map initialized');
-    } catch (err) {
-      console.error('❌ Kakao Map initialization error:', err);
-      setError('지도 초기화 중 오류가 발생했습니다.');
+    // 이미 스크립트가 로드되어 있는지 확인
+    if (window.kakao && window.kakao.maps) {
+      setScriptLoaded(true);
+      return;
     }
+
+    // 스크립트 동적 로드
+    const script = document.createElement('script');
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`;
+    script.async = true;
+    
+    script.onload = () => {
+      console.log('✅ Kakao Maps script loaded');
+      setScriptLoaded(true);
+    };
+    
+    script.onerror = () => {
+      setError('카카오맵 스크립트 로드 실패. API 키 또는 도메인을 확인하세요.');
+      console.error('❌ Failed to load Kakao Maps script');
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+    };
   }, []);
+
+  // 카카오맵 초기화
+  useEffect(() => {
+    if (!scriptLoaded || !mapRef.current) return;
+
+    // 카카오맵 API 로드 확인
+    if (!window.kakao || !window.kakao.maps) {
+      setError('카카오맵 API를 로드할 수 없습니다.');
+      console.error('❌ Kakao Maps API not loaded');
+      return;
+    }
+
+    // kakao.maps.load 사용
+    window.kakao.maps.load(() => {
+      try {
+        // 한국 중심 좌표 (대한민국 중앙)
+        const center = new window.kakao.maps.LatLng(36.5, 127.5);
+
+        // 지도 옵션
+        const mapOptions = {
+          center: center,
+          level: 13, // 확대 레벨 (1-14, 숫자가 작을수록 확대)
+        };
+
+        // 지도 생성
+        const map = new window.kakao.maps.Map(mapRef.current, mapOptions);
+        mapInstanceRef.current = map;
+
+        // 지도 컨트롤 추가
+        const zoomControl = new window.kakao.maps.ZoomControl();
+        map.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
+
+        const mapTypeControl = new window.kakao.maps.MapTypeControl();
+        map.addControl(mapTypeControl, window.kakao.maps.ControlPosition.TOPRIGHT);
+
+        setMapReady(true);
+        console.log('✅ Kakao Map initialized');
+      } catch (err) {
+        console.error('❌ Kakao Map initialization error:', err);
+        setError('지도 초기화 중 오류가 발생했습니다.');
+      }
+    });
+  }, [scriptLoaded]);
 
   // 마커 업데이트
   useEffect(() => {
