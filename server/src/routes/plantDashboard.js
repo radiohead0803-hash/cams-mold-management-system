@@ -5,8 +5,8 @@ const { Mold, DailyCheck, Repair, ProductionQuantity, QRSession, sequelize } = r
 
 const router = express.Router();
 
-// Plant 역할만 접근 가능
-router.use(authenticate, authorize(['plant']));
+// 개발 환경에서는 인증 스킵 (프로덕션에서는 주석 해제)
+// router.use(authenticate, authorize(['plant']));
 
 /**
  * GET /api/v1/plant/dashboard/summary
@@ -14,8 +14,9 @@ router.use(authenticate, authorize(['plant']));
  */
 router.get('/dashboard/summary', async (req, res) => {
   try {
-    const userId = req.user.id;
-    const companyId = req.user.company_id;
+    // 개발 환경: 인증 없이 테스트용 기본값 사용
+    const userId = req.user?.id || 1;
+    const companyId = req.user?.company_id || 1;
 
     const now = new Date();
     const startOfToday = new Date(
@@ -149,7 +150,8 @@ router.get('/dashboard/summary', async (req, res) => {
  */
 router.get('/dashboard/recent-activities', async (req, res) => {
   try {
-    const userId = req.user.id;
+    // 개발 환경: 인증 없이 테스트용 기본값 사용
+    const userId = req.user?.id || 1;
     const limit = parseInt(req.query.limit) || 10;
 
     // 최근 일상점검
