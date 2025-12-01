@@ -45,11 +45,12 @@ router.get('/dashboard/summary', async (req, res) => {
       }
     });
 
-    // 4) 진행 중 수리요청 (completed, rejected 제외)
+    // 4) 진행 중 수리요청
+    // 실제 모델: requested, liability_review, approved, in_repair, completed, rejected
     const openRepairs = await Repair.count({
       where: {
         status: {
-          [Op.notIn]: ['completed', 'rejected', 'cancelled']
+          [Op.notIn]: ['completed', 'rejected']
         }
       }
     });

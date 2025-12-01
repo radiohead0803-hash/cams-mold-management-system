@@ -410,7 +410,7 @@ const createRepairRequest = async (req, res) => {
       issue_type: issueType || 'general',           // ERD: issue_type
       issue_description: description,                // ERD: issue_description
       severity: severity || 'medium',                // ERD: severity (low, medium, high, urgent)
-      status: 'requested',                           // ERD: status (소문자)
+      status: 'requested',                           // ERD: status (소문자) - 실제 모델: requested, liability_review, approved, in_repair, completed, rejected
       photos: images ? JSON.stringify(images) : null
     });
 
