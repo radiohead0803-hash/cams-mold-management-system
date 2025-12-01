@@ -1,14 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
+import MoldLocationMap from '../../components/MoldLocationMap';
 import { useDashboardKpi } from '../../hooks/useDashboardKpi';
 
 export default function SystemAdminDashboard() {
   const navigate = useNavigate();
   const { data: stats, loading, error, refetch } = useDashboardKpi();
-
-  const [recentActivities, setRecentActivities] = useState([
+  const [showMap, setShowMap] = useState(false);
+  
+  // Mock system status
+  const systemStatus = {
+    dbStatus: 'healthy',
+    gpsServiceStatus: 'warning'
+  };
+  
+  // Mock recent activities
+  const recentActivities = [
     {
       id: 1,
       type: 'critical',
@@ -32,23 +41,8 @@ export default function SystemAdminDashboard() {
       title: '수리 완료',
       description: '금형: M2024-023 | 제작처: C제작소',
       action: '품질 확인 후 정상화'
-    },
-    {
-      id: 4,
-      type: 'info',
-      time: '09:15',
-      title: '신규 금형 등록',
-      description: '금형: M2024-067 | 차종: K5',
-      action: 'QR 코드 발급 완료'
     }
-  ]);
-
-  const [systemStatus, setSystemStatus] = useState({
-    dbStatus: 'healthy',
-    apiStatus: 'healthy',
-    qrServiceStatus: 'healthy',
-    gpsServiceStatus: 'warning'
-  });
+  ];
 
   // 헤더 통계
   const headerStats = stats ? [
@@ -259,11 +253,21 @@ export default function SystemAdminDashboard() {
                 <div className="text-3xl">⚠️</div>
               </div>
             </div>
-            <button className="mt-4 w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              GPS 지도 보기
+            <button 
+              onClick={() => setShowMap(!showMap)}
+              className="mt-4 w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              {showMap ? 'GPS 지도 닫기' : 'GPS 지도 보기'}
             </button>
           </section>
         </div>
+
+        {/* 금형 위치 지도 */}
+        {showMap && (
+          <section>
+            <MoldLocationMap />
+          </section>
+        )}
 
         {/* 시스템 상태 */}
         <section className="bg-white rounded-lg shadow p-6">
