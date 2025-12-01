@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Navigation, AlertCircle, CheckCircle } from 'lucide-react';
 import api from '../lib/api';
-import NaverMap from './NaverMap';
+import KakaoMap from './KakaoMap';
 
 export default function MoldLocationMap() {
   const [locations, setLocations] = useState([]);
@@ -82,9 +82,9 @@ export default function MoldLocationMap() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-0">
-        {/* 네이버 지도 영역 */}
+        {/* 카카오맵 영역 */}
         <div className="lg:col-span-2 bg-gray-100 h-96 lg:h-[600px] relative">
-          <NaverMap 
+          <KakaoMap 
             locations={locations}
             selectedMold={selectedMold}
             onSelectMold={setSelectedMold}
@@ -100,9 +100,9 @@ export default function MoldLocationMap() {
             </div>
           </div>
 
-          {/* 네이버 지도 안내 */}
-          <div className="absolute top-4 right-4 bg-green-50 border border-green-200 rounded-lg p-2 z-10">
-            <p className="text-xs text-green-700">✅ 네이버 지도 연동 완료</p>
+          {/* 카카오맵 안내 */}
+          <div className="absolute top-4 right-4 bg-yellow-50 border border-yellow-200 rounded-lg p-2 z-10">
+            <p className="text-xs text-yellow-700">✅ 카카오맵 연동 완료</p>
           </div>
         </div>
 
