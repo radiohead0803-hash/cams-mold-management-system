@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { CarModel } = require('../../models');
+const db = require('../../models');
+const { CarModel } = db;
 // const { requireAdmin } = require('../../middlewares/auth');  // 관리자 권한 체크 미들웨어가 있다면 사용
 
 // [GET] /api/admin/car-models - 차종 목록 조회

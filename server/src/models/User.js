@@ -2,63 +2,35 @@ const { Model, DataTypes } = require('sequelize');
 
 class User extends Model {
   static associate(models) {
-    // Company 관계
-    User.belongsTo(models.Company, {
-      foreignKey: 'company_id',
-      as: 'company'
-    });
+    // 실제로 존재하는 모델과의 관계만 정의
     
-    // Daily Check 관계
-    User.hasMany(models.DailyCheck, {
-      foreignKey: 'inspector_id',
-      as: 'dailyChecks'
-    });
+    // DailyCheckItem 관계 (models/index.js에 등록됨)
+    if (models.DailyCheckItem) {
+      User.hasMany(models.DailyCheckItem, {
+        foreignKey: 'confirmed_by',
+        as: 'confirmedChecklists'
+      });
+    }
     
-    User.hasMany(models.DailyCheckItem, {
-      foreignKey: 'confirmed_by',
-      as: 'confirmedChecklists'
-    });
+    // InspectionPhoto 관계 (models/index.js에 등록됨)
+    if (models.InspectionPhoto) {
+      User.hasMany(models.InspectionPhoto, {
+        foreignKey: 'uploaded_by',
+        as: 'uploadedPhotos'
+      });
+    }
     
-    // Inspection 관계
-    User.hasMany(models.Inspection, {
-      foreignKey: 'inspector_id',
-      as: 'inspections'
-    });
+    // Alert 관계 (models/index.js에 등록됨)
+    if (models.Alert) {
+      User.hasMany(models.Alert, {
+        foreignKey: 'created_by',
+        as: 'createdAlerts'
+      });
+    }
     
-    User.hasMany(models.InspectionPhoto, {
-      foreignKey: 'uploaded_by',
-      as: 'uploadedPhotos'
-    });
-    
-    // Repair 관계
-    User.hasMany(models.Repair, {
-      foreignKey: 'requested_by',
-      as: 'repairRequests'
-    });
-    
-    // Transfer 관계
-    User.hasMany(models.Transfer, {
-      foreignKey: 'requested_by',
-      as: 'transferRequests'
-    });
-    
-    // Notification 관계
-    User.hasMany(models.Notification, {
-      foreignKey: 'user_id',
-      as: 'notifications'
-    });
-    
-    // GPS Location 관계
-    User.hasMany(models.GPSLocation, {
-      foreignKey: 'recorded_by',
-      as: 'gpsRecords'
-    });
-    
-    // Shot 관계
-    User.hasMany(models.Shot, {
-      foreignKey: 'recorded_by',
-      as: 'shotRecords'
-    });
+    // 향후 추가될 모델들을 위한 주석
+    // Company, DailyCheck, Inspection, Repair, Transfer, Notification, GPSLocation, Shot
+    // 이 모델들이 추가되면 아래 관계를 활성화하세요
   }
 }
 
