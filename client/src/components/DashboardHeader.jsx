@@ -1,5 +1,6 @@
 import { useAuthStore } from '../stores/authStore';
-import { Bell, Settings, RefreshCw } from 'lucide-react';
+import { Settings, RefreshCw } from 'lucide-react';
+import NotificationBell from './NotificationBell';
 
 export default function DashboardHeader({ title, subtitle, actions, stats }) {
   const { user } = useAuthStore();
@@ -37,10 +38,9 @@ export default function DashboardHeader({ title, subtitle, actions, stats }) {
           </div>
 
           <div className="flex items-center space-x-2">
-            <button className="p-2 hover:bg-blue-500 rounded-lg transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            <div className="p-2 hover:bg-blue-500 rounded-lg transition-colors">
+              <NotificationBell />
+            </div>
             <button className="p-2 hover:bg-blue-500 rounded-lg transition-colors">
               <RefreshCw size={20} />
             </button>

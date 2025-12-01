@@ -20,7 +20,7 @@ class Notification extends Model {
         notification_type: {
           type: DataTypes.STRING(50),
           allowNull: false,
-          comment: 'inspection_due, repair_request, transfer_request, approval_needed, etc'
+          comment: 'location_moved, location_back, ng_detected, repair_status, inspection_due, repair_request, transfer_request, approval_needed, etc'
         },
         title: {
           type: DataTypes.STRING(200),
@@ -77,6 +77,15 @@ class Notification extends Model {
       foreignKey: 'user_id',
       as: 'user'
     });
+    
+    // Mold 관계 추가 (related_type이 'mold'일 때 사용)
+    if (models.Mold) {
+      this.belongsTo(models.Mold, {
+        foreignKey: 'related_id',
+        as: 'mold',
+        constraints: false
+      });
+    }
   }
 }
 

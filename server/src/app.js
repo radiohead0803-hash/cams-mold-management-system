@@ -84,9 +84,11 @@ const hqRepairsRouter = require('./routes/hqRepairs');
 const hqMoldsRouter = require('./routes/hqMolds');
 const carModelsRouter = require('./routes/admin/carModels');
 const mobileMoldsRouter = require('./routes/mobileMolds');
+const notificationsRouter = require('./routes/notifications');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/mobile', mobileMoldsRouter);
+app.use('/api/v1/notifications', notificationsRouter);
 app.use('/api/v1/qr', qrRouter);
 app.use('/api/v1/production', productionRouter);
 app.use('/api/v1/development', developmentRouter);

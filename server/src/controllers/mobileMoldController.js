@@ -1,5 +1,6 @@
 const { Mold, MoldLocationLog, Plant } = require('../models');
 const { calculateDistanceM, isValidCoordinate } = require('../utils/geo');
+const { notifyAdmins } = require('../services/notificationService');
 
 // 위치 이탈 판정 기준 (미터)
 const MOVE_THRESHOLD_M = 300; // 300m 이상이면 '이탈'로 간주
@@ -97,10 +98,37 @@ exports.updateMoldLocation = async (req, res) => {
       location_status: status
     });
 
-    // 3) 위치 이탈 시 알림 생성 (선택적)
+    // 3) 위치 이탈 시 알림 생성
     if (status === 'moved') {
-      // TODO: Alert 생성 로직 추가
       console.log(`[GPS Alert] 금형 ${mold.mold_code} 위치 이탈 감지: ${distance}m`);
+      
+      // 시스템 관리자에게 알림 전송
+      await notifyAdmins({
+        type: 'location_moved',
+        title: `금형 위치 이탈: ${mold.mold_code}`,
+        message: `${mold.mold_code} (${mold.mold_name || '이름 없음'}) 금형이 기준 위치에서 ${distance}m 떨어진 곳에서 스캔되었습니다.`,
+        moldId: mold.id,
+        priority: distance > 1000 ? 'urgent' : 'high'
+      });
+    } else if (status === 'normal' && distance && distance < MOVE_THRESHOLD_M) {
+      // 이전에 이탈 상태였다가 복귀한 경우
+      const prevLog = await MoldLocationLog.findOne({
+        where: { mold_id: mold.id },
+        order: [['scanned_at', 'DESC']],
+        offset: 1 // 방금 생성한 로그 제외
+      });
+      
+      if (prevLog && prevLog.status === 'moved') {
+        console.log(`[GPS Alert] 금형 ${mold.mold_code} 위치 복귀`);
+        
+        await notifyAdmins({
+          type: 'location_back',
+          title: `금형 위치 복귀: ${mold.mold_code}`,
+          message: `${mold.mold_code} (${mold.mold_name || '이름 없음'}) 금형이 기준 위치로 복귀되었습니다.`,
+          moldId: mold.id,
+          priority: 'normal'
+        });
+      }
     }
 
     return res.json({
