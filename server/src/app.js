@@ -82,6 +82,7 @@ const checklistFormsRouter = require('./routes/checklistForms');
 const devPlansRouter = require('./routes/devPlans');
 const hqRepairsRouter = require('./routes/hqRepairs');
 const hqMoldsRouter = require('./routes/hqMolds');
+const carModelsRouter = require('./routes/admin/carModels');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/qr', qrRouter);
@@ -109,6 +110,8 @@ app.use('/api/v1/hq', hqCheckItemsRouter);
 app.use('/api/v1/hq', hqTemplatesRouter);
 app.use('/api/v1/hq/repairs', hqRepairsRouter);
 app.use('/api/v1/hq/molds', hqMoldsRouter);
+// Admin routes
+app.use('/api/v1/admin/car-models', carModelsRouter);
 // Checklist forms (all users)
 app.use('/api/v1/checklists', checklistFormsRouter);
 // Development plans
