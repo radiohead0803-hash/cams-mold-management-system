@@ -44,8 +44,16 @@ class Mold extends Model {
       });
     }
     
+    // MoldLocationLog 관계
+    if (models.MoldLocationLog) {
+      Mold.hasMany(models.MoldLocationLog, {
+        foreignKey: 'mold_id',
+        as: 'locationLogs'
+      });
+    }
+    
     // 향후 추가될 모델들을 위한 주석
-    // Company, DailyCheck, Inspection, Repair, Transfer, Notification, GPSLocation, Shot
+    // Company, DailyCheck, Inspection, Repair, Transfer, Notification, Shot
   }
 }
 
@@ -140,6 +148,31 @@ module.exports = (sequelize) => {
     location: {
       type: DataTypes.STRING(200)
     },
+    last_gps_lat: {
+      type: DataTypes.DECIMAL(10, 7),
+      comment: '마지막 GPS 위도'
+    },
+    last_gps_lng: {
+      type: DataTypes.DECIMAL(10, 7),
+      comment: '마지막 GPS 경도'
+    },
+    last_gps_time: {
+      type: DataTypes.DATE,
+      comment: '마지막 GPS 업데이트 시간'
+    },
+    location_status: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'normal',
+      comment: '현재 위치 상태 (normal/moved)'
+    },
+    base_gps_lat: {
+      type: DataTypes.DECIMAL(10, 7),
+      comment: '기준 GPS 위도 (등록된 위치)'
+    },
+    base_gps_lng: {
+      type: DataTypes.DECIMAL(10, 7),
+      comment: '기준 GPS 경도 (등록된 위치)'
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW
@@ -159,7 +192,9 @@ module.exports = (sequelize) => {
       { fields: ['specification_id'] },
       { fields: ['qr_token'] },
       { fields: ['status'] },
-      { fields: ['car_model_id'] }
+      { fields: ['car_model_id'] },
+      { fields: ['location_status'] },
+      { fields: ['last_gps_time'] }
     ]
   });
 

@@ -20,6 +20,7 @@ db.DailyCheckItemStatus = require('./DailyCheckItemStatus')(sequelize, Sequelize
 db.InspectionPhoto = require('./InspectionPhoto')(sequelize, Sequelize.DataTypes);
 db.MoldIssue = require('./MoldIssue')(sequelize, Sequelize.DataTypes);
 db.Alert = require('./Alert')(sequelize, Sequelize.DataTypes);
+db.MoldLocationLog = require('./MoldLocationLog')(sequelize, Sequelize.DataTypes);
 
 // Master data models
 db.CarModel = require('./CarModel')(sequelize, Sequelize.DataTypes);

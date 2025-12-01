@@ -16,7 +16,7 @@ router.get('/mold-locations', async (req, res) => {
     console.log('[GPS Locations] Request received');
     
     // 🔥 임시: Mock 데이터 반환 (DB 에러 우회)
-    const USE_MOCK_DATA = true;
+    const USE_MOCK_DATA = false; // 실제 DB 사용으로 변경
     
     if (USE_MOCK_DATA) {
       console.log('[GPS Locations] Using MOCK data');
@@ -52,9 +52,21 @@ router.get('/mold-locations', async (req, res) => {
       });
     }
     
-    // 실제 DB 쿼리 (Mock 데이터 비활성화 시)
+    // 실제 DB 쿼리 - 새로운 GPS 필드 사용
     const molds = await Mold.findAll({
-      attributes: ['id', 'mold_code', 'mold_name', 'status', 'company_id', 'location']
+      attributes: [
+        'id', 
+        'mold_code', 
+        'mold_name', 
+        'status', 
+        'location',
+        'last_gps_lat',
+        'last_gps_lng',
+        'last_gps_time',
+        'location_status',
+        'base_gps_lat',
+        'base_gps_lng'
+      ]
     }).catch(err => {
       console.error('[GPS Locations] Mold query error:', err);
       return [];
@@ -68,62 +80,24 @@ router.get('/mold-locations', async (req, res) => {
       });
     }
 
-    const moldIds = molds.map(m => m.id);
-
-    // GPS 위치 조회
-    const allLocations = await GPSLocation.findAll({
-      where: { mold_id: moldIds },
-      order: [['recorded_at', 'DESC']]
-    }).catch(err => {
-      console.error('[GPS Locations] GPS query error:', err);
-      return [];
-    });
-
-    // 위치 이탈 알람 조회
-    const alerts = await Alert.findAll({
-      where: {
-        alert_type: 'gps_drift',
-        is_resolved: false,
-        mold_id: moldIds
-      },
-      order: [['created_at', 'DESC']]
-    }).catch(err => {
-      console.error('[GPS Locations] Alert query error:', err);
-      return [];
-    });
-
-    // 금형별로 최신 위치 매핑
-    const latestLocByMold = new Map();
-    for (const loc of allLocations) {
-      if (!latestLocByMold.has(loc.mold_id)) {
-        latestLocByMold.set(loc.mold_id, loc);
-      }
-    }
-
-    // 금형별로 알람 매핑
-    const alertByMold = new Map();
-    for (const alert of alerts) {
-      if (!alertByMold.has(alert.mold_id)) {
-        alertByMold.set(alert.mold_id, alert);
-      }
-    }
-
-    // 결과 조합
-    const items = molds.map(mold => {
-      const loc = latestLocByMold.get(mold.id);
-      const alert = alertByMold.get(mold.id);
-
-      return {
+    // 결과 조합 - location_status 기반
+    const items = molds
+      .filter(mold => mold.last_gps_lat && mold.last_gps_lng) // GPS 좌표가 있는 것만
+      .map(mold => ({
+        id: mold.id,
         mold_id: mold.id,
         mold_code: mold.mold_code,
         mold_name: mold.mold_name,
-        latitude: loc?.latitude || null,
-        longitude: loc?.longitude || null,
+        latitude: parseFloat(mold.last_gps_lat),
+        longitude: parseFloat(mold.last_gps_lng),
         current_location: mold.location || '미등록',
-        has_drift: !!alert,
-        last_gps_time: loc?.recorded_at || null
-      };
-    }).filter(item => item.latitude && item.longitude); // GPS 좌표가 있는 것만
+        registered_location: mold.location,
+        has_drift: mold.location_status === 'moved',
+        location_status: mold.location_status || 'normal',
+        last_gps_time: mold.last_gps_time,
+        base_gps_lat: mold.base_gps_lat ? parseFloat(mold.base_gps_lat) : null,
+        base_gps_lng: mold.base_gps_lng ? parseFloat(mold.base_gps_lng) : null
+      }));
 
     console.log(`[GPS Locations] Returning ${items.length} locations`);
 
