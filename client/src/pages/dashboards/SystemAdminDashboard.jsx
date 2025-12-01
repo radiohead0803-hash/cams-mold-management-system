@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import DashboardHeader from '../../components/DashboardHeader';
-import api from '../../lib/api';
+import { useDashboardKpi } from '../../hooks/useDashboardKpi';
 
 export default function SystemAdminDashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { data: stats, loading, error, refetch } = useDashboardKpi();
 
   const [recentActivities, setRecentActivities] = useState([
     {
@@ -51,24 +49,6 @@ export default function SystemAdminDashboard() {
     gpsServiceStatus: 'warning'
   });
 
-  // API에서 대시보드 데이터 가져오기
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get('/hq/dashboard/summary');
-        setStats(response.data.data);
-      } catch (err) {
-        console.error('Dashboard data fetch error:', err);
-        setError('대시보드 데이터를 불러오지 못했습니다.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, []);
-
   // 헤더 통계
   const headerStats = stats ? [
     { label: '전체 금형', value: stats.totalMolds },
@@ -98,7 +78,7 @@ export default function SystemAdminDashboard() {
             <h2 className="text-xl font-semibold text-gray-900 mb-2">데이터 로딩 실패</h2>
             <p className="text-gray-600 mb-6">{error || '대시보드 데이터를 불러올 수 없습니다.'}</p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => refetch()}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               다시 시도
