@@ -100,8 +100,8 @@ router.patch('/repair-requests/:id/status', async (req, res) => {
 
     // TODO: 제작처 권한 확인 (company_id 체크)
 
-    // 상태 업데이트
-    repair.status = status;
+    // 상태 업데이트 (ERD 기준 소문자)
+    repair.status = status;  // 'in_progress' or 'completed'
     if (status === 'in_progress') {
       repair.started_at = new Date();
     } else if (status === 'completed') {

@@ -58,14 +58,14 @@ router.patch('/repair-requests/:id/confirm', async (req, res) => {
       });
     }
 
-    // 상태 업데이트
+    // 상태 업데이트 (ERD 기준 소문자)
     if (decision === 'confirmed') {
-      repair.status = 'confirmed';
+      repair.status = 'confirmed';  // ERD: lowercase
       repair.confirmed_at = new Date();
       repair.confirmed_by = userId;
     } else {
       // 거부 시 다시 요청 상태로 되돌림
-      repair.status = 'requested';
+      repair.status = 'requested';  // ERD: lowercase
     }
 
     if (comment) {

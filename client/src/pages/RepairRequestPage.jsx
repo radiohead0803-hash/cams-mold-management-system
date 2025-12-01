@@ -11,9 +11,9 @@ export default function RepairRequestPage() {
   const navigate = useNavigate();
   const { state } = useLocation();
 
-  const [defectType, setDefectType] = useState('');
-  const [description, setDescription] = useState('');
-  const [urgency, setUrgency] = useState('medium');
+  const [issueType, setIssueType] = useState('');      // ERD: issue_type
+  const [description, setDescription] = useState('');   // ERD: issue_description
+  const [severity, setSeverity] = useState('medium');   // ERD: severity
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -39,7 +39,7 @@ export default function RepairRequestPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!defectType.trim() || !description.trim()) {
+    if (!issueType.trim() || !description.trim()) {
       setError('불량 유형과 상세 내용을 입력해주세요.');
       return;
     }
@@ -48,11 +48,12 @@ export default function RepairRequestPage() {
     setLoading(true);
 
     try {
+      // ERD 기준 필드명으로 전송
       const response = await api.post(`/qr/molds/${moldId}/repairs`, {
         sessionToken,
-        defectType: defectType.trim(),
-        description: description.trim(),
-        urgency
+        issueType: issueType.trim(),      // ERD: issue_type
+        description: description.trim(),   // ERD: issue_description
+        severity                           // ERD: severity
       });
 
       if (response.data.success) {
@@ -127,8 +128,8 @@ export default function RepairRequestPage() {
               불량 유형 <span className="text-rose-400">*</span>
             </label>
             <select
-              value={defectType}
-              onChange={(e) => setDefectType(e.target.value)}
+              value={issueType}
+              onChange={(e) => setIssueType(e.target.value)}
               className="w-full rounded-xl bg-slate-900 border border-slate-700 text-slate-100 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
               disabled={loading}
               required
@@ -172,9 +173,9 @@ export default function RepairRequestPage() {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setUrgency('low')}
+                onClick={() => setSeverity('low')}
                 className={`p-3 rounded-xl border-2 transition ${
-                  urgency === 'low'
+                  severity === 'low'
                     ? 'border-blue-500 bg-blue-500/10 text-blue-400'
                     : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
                 }`}
@@ -186,9 +187,9 @@ export default function RepairRequestPage() {
 
               <button
                 type="button"
-                onClick={() => setUrgency('medium')}
+                onClick={() => setSeverity('medium')}
                 className={`p-3 rounded-xl border-2 transition ${
-                  urgency === 'medium'
+                  severity === 'medium'
                     ? 'border-yellow-500 bg-yellow-500/10 text-yellow-400'
                     : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
                 }`}
@@ -200,9 +201,9 @@ export default function RepairRequestPage() {
 
               <button
                 type="button"
-                onClick={() => setUrgency('high')}
+                onClick={() => setSeverity('high')}
                 className={`p-3 rounded-xl border-2 transition ${
-                  urgency === 'high'
+                  severity === 'high'
                     ? 'border-orange-500 bg-orange-500/10 text-orange-400'
                     : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
                 }`}
@@ -214,9 +215,9 @@ export default function RepairRequestPage() {
 
               <button
                 type="button"
-                onClick={() => setUrgency('urgent')}
+                onClick={() => setSeverity('urgent')}
                 className={`p-3 rounded-xl border-2 transition ${
-                  urgency === 'urgent'
+                  severity === 'urgent'
                     ? 'border-rose-500 bg-rose-500/10 text-rose-400'
                     : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-600'
                 }`}
@@ -239,7 +240,7 @@ export default function RepairRequestPage() {
           {/* 제출 버튼 */}
           <button
             type="submit"
-            disabled={loading || !defectType || !description}
+            disabled={loading || !issueType || !description}
             className="w-full py-4 bg-rose-500 hover:bg-rose-600 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-2xl transition"
           >
             {loading ? '등록 중...' : '수리요청 등록'}

@@ -273,9 +273,9 @@ const createRepairRequest = async (req, res) => {
     const { 
       sessionId, 
       sessionToken,
-      defectType, 
-      description, 
-      urgency,
+      issueType,      // ERD: issue_type
+      description,    // ERD: issue_description
+      severity,       // ERD: severity (not urgency)
       images 
     } = req.body;
 
@@ -313,17 +313,17 @@ const createRepairRequest = async (req, res) => {
     });
     const requestNumber = `REP-${dateStr}-${String(count + 1).padStart(3, '0')}`;
 
-    // 4. 수리요청 생성
+    // 4. 수리요청 생성 (ERD 기준 필드명)
     const repair = await Repair.create({
       mold_id: moldId,
       qr_session_id: qrSessionId,
       request_number: requestNumber,
       requested_by: userId,
       request_date: new Date(),
-      issue_type: defectType || 'general',
-      issue_description: description,
-      severity: urgency || 'medium',
-      status: 'requested',
+      issue_type: issueType || 'general',           // ERD: issue_type
+      issue_description: description,                // ERD: issue_description
+      severity: severity || 'medium',                // ERD: severity (low, medium, high, urgent)
+      status: 'requested',                           // ERD: status (소문자)
       photos: images ? JSON.stringify(images) : null
     });
 
@@ -342,11 +342,11 @@ const createRepairRequest = async (req, res) => {
           user_id: admin.id,
           notification_type: 'repair_request',
           title: '새로운 수리요청',
-          message: `금형 ${mold.mold_code} - ${defectType || '수리요청'}`,
-          priority: urgency === 'urgent' || urgency === 'high' ? 'high' : 'normal',
+          message: `금형 ${mold.mold_code} - ${issueType || '수리요청'}`,
+          priority: severity === 'urgent' || severity === 'high' ? 'high' : 'normal',  // ERD: priority
           related_type: 'repair',
           related_id: repair.id,
-          action_url: `/repairs/${repair.id}`,
+          action_url: `/hq/repair-requests/${repair.id}`,  // ERD: action_url
           is_read: false
         });
       }
