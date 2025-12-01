@@ -1,6 +1,8 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+// Railway 배포 URL (프로덕션)
+const PRODUCTION_API_URL = 'https://cams-mold-management-system-production.up.railway.app'
+const API_URL = import.meta.env.VITE_API_URL || PRODUCTION_API_URL || 'http://localhost:3001'
 
 const api = axios.create({
   baseURL: `${API_URL}/api/v1`,
