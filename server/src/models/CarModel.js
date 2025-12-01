@@ -3,8 +3,13 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class CarModel extends Model {
     static associate(models) {
-      // 향후 금형이 차종을 참조하게 할 경우
-      // CarModel.hasMany(models.Mold, { foreignKey: 'car_model_id', as: 'molds' });
+      // Mold 관계 (차종에 속한 금형들)
+      if (models.Mold) {
+        CarModel.hasMany(models.Mold, {
+          foreignKey: 'car_model_id',
+          as: 'molds'
+        });
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 const express = require('express');
 const { Op } = require('sequelize');
-const { Mold, Alert, Inspection } = require('../models/newIndex');
+const { Mold, Alert, Inspection, CarModel } = require('../models/newIndex');
 
 const router = express.Router();
 
@@ -39,6 +39,11 @@ router.get('/over-shot', async (req, res) => {
 
     const molds = await Mold.findAll({
       where: { id: moldIds },
+      include: [{
+        model: CarModel,
+        as: 'carModel',
+        attributes: ['id', 'code', 'name', 'oem']
+      }]
     });
 
     const moldById = new Map(molds.map((m) => [m.id, m]));
@@ -56,6 +61,12 @@ router.get('/over-shot', async (req, res) => {
             mold_id: mold.id,
             mold_code: mold.mold_code,
             mold_name: mold.mold_name,
+            car_model: mold.carModel ? {
+              id: mold.carModel.id,
+              code: mold.carModel.code,
+              name: mold.carModel.name,
+              oem: mold.carModel.oem
+            } : null,
             status: mold.status,
             current_shots: mold.current_shots,
             target_shots: mold.target_shots,
@@ -116,6 +127,11 @@ router.get('/inspection-due', async (req, res) => {
 
     const molds = await Mold.findAll({
       where: { id: moldIds },
+      include: [{
+        model: CarModel,
+        as: 'carModel',
+        attributes: ['id', 'code', 'name', 'oem']
+      }]
     });
 
     const moldById = new Map(molds.map((m) => [m.id, m]));
@@ -130,6 +146,12 @@ router.get('/inspection-due', async (req, res) => {
           mold_id: mold.id,
           mold_code: mold.mold_code,
           mold_name: mold.mold_name,
+          car_model: mold.carModel ? {
+            id: mold.carModel.id,
+            code: mold.carModel.code,
+            name: mold.carModel.name,
+            oem: mold.carModel.oem
+          } : null,
           status: mold.status,
           inspection_date: i.inspection_date,
         };

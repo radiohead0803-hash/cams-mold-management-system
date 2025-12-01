@@ -2,81 +2,50 @@ const { Model, DataTypes } = require('sequelize');
 
 class Mold extends Model {
   static associate(models) {
-    // Company 관계 - 제작처
-    Mold.belongsTo(models.Company, {
-      foreignKey: 'maker_company_id',
-      as: 'makerCompany'
-    });
+    // 실제로 존재하는 모델과의 관계만 정의
     
-    // Company 관계 - 생산처
-    Mold.belongsTo(models.Company, {
-      foreignKey: 'plant_company_id',
-      as: 'plantCompany'
-    });
+    // CarModel 관계 (차종)
+    if (models.CarModel) {
+      Mold.belongsTo(models.CarModel, {
+        foreignKey: 'car_model_id',
+        as: 'carModel'
+      });
+    }
     
-    // Specification 관계
-    Mold.belongsTo(models.MoldSpecification, {
-      foreignKey: 'specification_id',
-      as: 'specification'
-    });
+    // DailyCheckItem 관계
+    if (models.DailyCheckItem) {
+      Mold.hasMany(models.DailyCheckItem, {
+        foreignKey: 'mold_id',
+        as: 'dailyCheckItems'
+      });
+    }
     
-    // Daily Check 관계
-    Mold.hasMany(models.DailyCheck, {
-      foreignKey: 'mold_id',
-      as: 'dailyChecks'
-    });
+    // InspectionPhoto 관계
+    if (models.InspectionPhoto) {
+      Mold.hasMany(models.InspectionPhoto, {
+        foreignKey: 'mold_id',
+        as: 'photos'
+      });
+    }
     
-    Mold.hasMany(models.DailyCheckItem, {
-      foreignKey: 'mold_id',
-      as: 'dailyCheckItems'
-    });
+    // MoldIssue 관계
+    if (models.MoldIssue) {
+      Mold.hasMany(models.MoldIssue, {
+        foreignKey: 'mold_id',
+        as: 'issues'
+      });
+    }
     
-    // Inspection 관계
-    Mold.hasMany(models.Inspection, {
-      foreignKey: 'mold_id',
-      as: 'inspections'
-    });
+    // Alert 관계
+    if (models.Alert) {
+      Mold.hasMany(models.Alert, {
+        foreignKey: 'mold_id',
+        as: 'alerts'
+      });
+    }
     
-    Mold.hasMany(models.InspectionPhoto, {
-      foreignKey: 'mold_id',
-      as: 'photos'
-    });
-    
-    // Repair 관계
-    Mold.hasMany(models.Repair, {
-      foreignKey: 'mold_id',
-      as: 'repairs'
-    });
-    
-    // Transfer 관계
-    Mold.hasMany(models.Transfer, {
-      foreignKey: 'mold_id',
-      as: 'transfers'
-    });
-    
-    // Notification 관계
-    Mold.hasMany(models.Notification, {
-      foreignKey: 'mold_id',
-      as: 'notifications'
-    });
-    
-    // Shot 관계
-    Mold.hasMany(models.Shot, {
-      foreignKey: 'mold_id',
-      as: 'shots'
-    });
-    
-    // GPS Location 관계
-    Mold.hasMany(models.GPSLocation, {
-      foreignKey: 'mold_id',
-      as: 'gpsLocations'
-    });
-    
-    // Mold Issue 관계
-    Mold.hasMany(models.MoldIssue, {
-      foreignKey: 'mold_id',
-      as: 'issues'
-    });
+    // 향후 추가될 모델들을 위한 주석
+    // Company, DailyCheck, Inspection, Repair, Transfer, Notification, GPSLocation, Shot
   }
 }
 
@@ -97,7 +66,17 @@ module.exports = (sequelize) => {
       allowNull: false
     },
     car_model: {
-      type: DataTypes.STRING(100)
+      type: DataTypes.STRING(100),
+      comment: '차종 (레거시 문자열 필드, 향후 car_model_id 사용 권장)'
+    },
+    car_model_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'car_models',
+        key: 'id'
+      },
+      comment: '차종 ID (car_models 테이블 FK)'
     },
     part_name: {
       type: DataTypes.STRING(200)
@@ -179,7 +158,8 @@ module.exports = (sequelize) => {
       { fields: ['maker_id'] },
       { fields: ['specification_id'] },
       { fields: ['qr_token'] },
-      { fields: ['status'] }
+      { fields: ['status'] },
+      { fields: ['car_model_id'] }
     ]
   });
 
