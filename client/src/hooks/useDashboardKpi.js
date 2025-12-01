@@ -14,7 +14,7 @@ export function useDashboardKpi() {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/dash/kpi');
+      const response = await api.get('/hq/dashboard/summary');
       
       if (response.data.success) {
         setData(response.data.data);

@@ -51,9 +51,9 @@ export default function SystemAdminDashboard() {
 
   // 헤더 통계
   const headerStats = stats ? [
-    { label: '전체 금형', value: stats.totalMolds },
-    { label: '양산 중', value: stats.activeMolds },
-    { label: 'Critical 알람', value: stats.criticalAlerts }
+    { label: '전체 금형', value: stats.totalMolds || 0 },
+    { label: '양산 중', value: stats.activeMolds || 0 },
+    { label: 'Critical 알람', value: stats.criticalAlerts || 0 }
   ] : [];
 
   // 로딩 상태
@@ -104,7 +104,7 @@ export default function SystemAdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard 
               title="전체 금형" 
-              value={stats.totalMolds} 
+              value={stats.totalMolds || 0} 
               icon="🔧" 
               color="blue" 
               unit="개"
@@ -112,7 +112,7 @@ export default function SystemAdminDashboard() {
             />
             <StatCard 
               title="양산 중" 
-              value={stats.activeMolds} 
+              value={stats.activeMolds || 0} 
               icon="⚙️" 
               color="green" 
               unit="개"
@@ -120,7 +120,7 @@ export default function SystemAdminDashboard() {
             />
             <StatCard 
               title="NG 금형" 
-              value={stats.ngMolds} 
+              value={stats.ngMolds || 0} 
               icon="⚠️" 
               color="red" 
               unit="개"
@@ -128,7 +128,7 @@ export default function SystemAdminDashboard() {
             />
             <StatCard 
               title="수리 진행" 
-              value={stats.openRepairs} 
+              value={stats.openRepairs || 0} 
               icon="🔨" 
               color="orange" 
               unit="건"
@@ -143,7 +143,7 @@ export default function SystemAdminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <StatCard 
               title="오늘 QR 스캔" 
-              value={stats.todayScans} 
+              value={stats.todayScans || 0} 
               icon="📱" 
               color="purple" 
               unit="건"
@@ -151,7 +151,7 @@ export default function SystemAdminDashboard() {
             />
             <StatCard 
               title="Critical 알림" 
-              value={stats.criticalAlerts} 
+              value={stats.criticalAlerts || 0} 
               icon="🔔" 
               color="red" 
               unit="건"
@@ -168,19 +168,19 @@ export default function SystemAdminDashboard() {
             <div className="space-y-3">
               <AlertItem 
                 level="critical" 
-                count={stats.criticalAlerts} 
+                count={stats.criticalAlerts || 0} 
                 label="Critical" 
                 description="즉시 조치 필요"
               />
               <AlertItem 
                 level="major" 
-                count={stats.majorAlerts} 
+                count={stats.majorAlerts || 0} 
                 label="Major" 
                 description="빠른 대응 필요"
               />
               <AlertItem 
                 level="minor" 
-                count={stats.minorAlerts} 
+                count={stats.minorAlerts || 0} 
                 label="Minor" 
                 description="모니터링 필요"
               />
@@ -200,14 +200,14 @@ export default function SystemAdminDashboard() {
               <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-gray-700">등록된 위치</p>
-                  <p className="text-2xl font-bold text-green-600">{stats.gpsRegistered}개</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.gpsRegistered || 0}개</p>
                 </div>
                 <div className="text-3xl">✅</div>
               </div>
               <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-gray-700">위치 이탈</p>
-                  <p className="text-2xl font-bold text-red-600">{stats.gpsAbnormal}개</p>
+                  <p className="text-2xl font-bold text-red-600">{stats.gpsAbnormal || 0}개</p>
                 </div>
                 <div className="text-3xl">⚠️</div>
               </div>
@@ -222,8 +222,8 @@ export default function SystemAdminDashboard() {
         <section className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">⚙️ 시스템 상태</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <SystemStatusCard title="활성 사용자" value={stats.totalUsers} status="healthy" unit="명" />
-            <SystemStatusCard title="금일 QR 스캔" value={stats.todayQRScans} status="healthy" unit="회" />
+            <SystemStatusCard title="활성 사용자" value={stats.totalUsers || 0} status="healthy" unit="명" />
+            <SystemStatusCard title="금일 QR 스캔" value={stats.todayQRScans || 0} status="healthy" unit="회" />
             <SystemStatusCard title="데이터베이스" value="정상" status={systemStatus.dbStatus} />
             <SystemStatusCard title="GPS 서비스" value="주의" status={systemStatus.gpsServiceStatus} />
           </div>

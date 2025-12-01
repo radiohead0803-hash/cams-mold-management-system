@@ -95,6 +95,52 @@ router.get('/dashboard/summary', async (req, res) => {
       }
     });
 
+    // 9) GPS 위치 등록/이탈 (Alert 기반)
+    const gpsRegistered = await Mold.count({
+      where: {
+        status: {
+          [Op.notIn]: ['scrapped', 'disposed']
+        }
+      }
+    });
+
+    const gpsAbnormal = await Alert.count({
+      where: {
+        alert_type: 'gps_drift',
+        is_resolved: false
+      }
+    });
+
+    // 10) 알림 레벨별 집계
+    const majorAlerts = await Notification.count({
+      where: {
+        priority: 'high',
+        created_at: {
+          [Op.gte]: startOfToday
+        }
+      }
+    });
+
+    const minorAlerts = await Notification.count({
+      where: {
+        priority: {
+          [Op.in]: ['normal', 'low']
+        },
+        created_at: {
+          [Op.gte]: startOfToday
+        }
+      }
+    });
+
+    // 11) 시스템 상태
+    const totalUsers = await User.count({
+      where: {
+        is_active: true
+      }
+    });
+
+    const todayQRScans = todayScans; // 이미 계산됨
+
     return res.json({
       success: true,
       data: {
@@ -105,7 +151,13 @@ router.get('/dashboard/summary', async (req, res) => {
         todayScans,
         criticalAlerts,
         overShotCount,        // 타수 초과
-        inspectionDueCount    // 정기검사 필요
+        inspectionDueCount,   // 정기검사 필요
+        gpsRegistered,        // GPS 등록
+        gpsAbnormal,          // GPS 이탈
+        majorAlerts,          // Major 알림
+        minorAlerts,          // Minor 알림
+        totalUsers,           // 활성 사용자
+        todayQRScans          // 오늘 QR 스캔
       }
     });
   } catch (error) {
