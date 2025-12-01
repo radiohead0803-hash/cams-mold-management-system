@@ -57,6 +57,7 @@ export const moldAPI = {
   create: (data) => api.post('/molds', data),
   update: (id, data) => api.patch(`/molds/${id}`, data),
   getHistory: (id) => api.get(`/molds/${id}/history`),
+  getLocations: () => api.get('/hq/mold-locations'), // 금형 위치 조회
 }
 
 // Checklist API
