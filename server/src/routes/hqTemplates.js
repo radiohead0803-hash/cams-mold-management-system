@@ -1,0 +1,410 @@
+const express = require('express');
+const router = express.Router();
+const { authenticate, authorize } = require('../middleware/auth');
+const { 
+  ChecklistMasterTemplate, 
+  ChecklistTemplateItem, 
+  ChecklistTemplateDeployment,
+  ChecklistTemplateHistory 
+} = require('../models/newIndex');
+const logger = require('../utils/logger');
+
+// 본사 관리자 및 금형개발 담당자만 접근 가능
+router.use(authenticate, authorize(['system_admin', 'mold_developer']));
+
+/**
+ * GET /api/v1/hq/checklist-templates
+ * 체크리스트 템플릿 목록 조회
+ */
+router.get('/checklist-templates', async (req, res) => {
+  try {
+    const { template_type, is_active } = req.query;
+
+    const where = {};
+    if (template_type) where.template_type = template_type;
+    if (is_active !== undefined) where.is_active = is_active === 'true';
+
+    const templates = await ChecklistMasterTemplate.findAll({
+      where,
+      order: [['created_at', 'DESC']]
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        templates
+      }
+    });
+
+  } catch (error) {
+    logger.error('Templates list error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '템플릿 목록 조회 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/v1/hq/checklist-templates/:id
+ * 체크리스트 템플릿 상세 조회
+ */
+router.get('/checklist-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const template = await ChecklistMasterTemplate.findByPk(id, {
+      include: [
+        {
+          association: 'items',
+          order: [['order_index', 'ASC']]
+        }
+      ]
+    });
+
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '템플릿을 찾을 수 없습니다.'
+        }
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        template
+      }
+    });
+
+  } catch (error) {
+    logger.error('Template detail error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '템플릿 조회 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * POST /api/v1/hq/checklist-templates
+ * 체크리스트 템플릿 생성
+ */
+router.post('/checklist-templates', async (req, res) => {
+  try {
+    const { template_name, template_type, description } = req.body;
+
+    if (!template_name || !template_type) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '템플릿명과 타입은 필수입니다.'
+        }
+      });
+    }
+
+    const template = await ChecklistMasterTemplate.create({
+      template_name,
+      template_type,
+      description: description || null,
+      is_active: true
+    });
+
+    // 히스토리 기록
+    await ChecklistTemplateHistory.create({
+      template_id: template.id,
+      action: 'created',
+      changes: JSON.stringify({ template_name, template_type, description }),
+      changed_by: req.user.name || req.user.username
+    });
+
+    logger.info(`Template created: ${template_name} by user ${req.user.id}`);
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        template
+      }
+    });
+
+  } catch (error) {
+    logger.error('Template create error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '템플릿 생성 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * PUT /api/v1/hq/checklist-templates/:id
+ * 체크리스트 템플릿 수정
+ */
+router.put('/checklist-templates/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { template_name, template_type, description, is_active } = req.body;
+
+    const template = await ChecklistMasterTemplate.findByPk(id);
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '템플릿을 찾을 수 없습니다.'
+        }
+      });
+    }
+
+    const oldValues = {
+      template_name: template.template_name,
+      template_type: template.template_type,
+      description: template.description,
+      is_active: template.is_active
+    };
+
+    if (template_name) template.template_name = template_name;
+    if (template_type) template.template_type = template_type;
+    if (description !== undefined) template.description = description;
+    if (is_active !== undefined) template.is_active = is_active;
+
+    await template.save();
+
+    // 히스토리 기록
+    await ChecklistTemplateHistory.create({
+      template_id: template.id,
+      action: 'updated',
+      changes: JSON.stringify({ old: oldValues, new: { template_name, template_type, description, is_active } }),
+      changed_by: req.user.name || req.user.username
+    });
+
+    logger.info(`Template updated: ${template.template_name} by user ${req.user.id}`);
+
+    return res.json({
+      success: true,
+      data: {
+        template
+      }
+    });
+
+  } catch (error) {
+    logger.error('Template update error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '템플릿 수정 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/v1/hq/checklist-templates/:id/items
+ * 템플릿 항목 목록 조회
+ */
+router.get('/checklist-templates/:id/items', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const items = await ChecklistTemplateItem.findAll({
+      where: { template_id: id },
+      order: [['order_index', 'ASC']]
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        items
+      }
+    });
+
+  } catch (error) {
+    logger.error('Template items list error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '템플릿 항목 조회 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * POST /api/v1/hq/checklist-templates/:id/items
+ * 템플릿 항목 추가
+ */
+router.post('/checklist-templates/:id/items', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { item_name, order_index, is_required } = req.body;
+
+    if (!item_name) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: '항목명은 필수입니다.'
+        }
+      });
+    }
+
+    const item = await ChecklistTemplateItem.create({
+      template_id: id,
+      item_name,
+      order_index: order_index || 0,
+      is_required: is_required !== undefined ? is_required : true
+    });
+
+    logger.info(`Template item added: ${item_name} to template ${id}`);
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        item
+      }
+    });
+
+  } catch (error) {
+    logger.error('Template item create error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '템플릿 항목 추가 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * PUT /api/v1/hq/checklist-template-items/:itemId
+ * 템플릿 항목 수정
+ */
+router.put('/checklist-template-items/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { item_name, order_index, is_required } = req.body;
+
+    const item = await ChecklistTemplateItem.findByPk(itemId);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '템플릿 항목을 찾을 수 없습니다.'
+        }
+      });
+    }
+
+    if (item_name) item.item_name = item_name;
+    if (order_index !== undefined) item.order_index = order_index;
+    if (is_required !== undefined) item.is_required = is_required;
+
+    await item.save();
+
+    return res.json({
+      success: true,
+      data: {
+        item
+      }
+    });
+
+  } catch (error) {
+    logger.error('Template item update error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '템플릿 항목 수정 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * DELETE /api/v1/hq/checklist-template-items/:itemId
+ * 템플릿 항목 삭제
+ */
+router.delete('/checklist-template-items/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+
+    const item = await ChecklistTemplateItem.findByPk(itemId);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '템플릿 항목을 찾을 수 없습니다.'
+        }
+      });
+    }
+
+    await item.destroy();
+
+    return res.json({
+      success: true,
+      message: '템플릿 항목이 삭제되었습니다.'
+    });
+
+  } catch (error) {
+    logger.error('Template item delete error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '템플릿 항목 삭제 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+/**
+ * POST /api/v1/hq/checklist-templates/:id/deploy
+ * 템플릿 배포
+ */
+router.post('/checklist-templates/:id/deploy', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { target_type, target_id, scope } = req.body;
+
+    const template = await ChecklistMasterTemplate.findByPk(id);
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          message: '템플릿을 찾을 수 없습니다.'
+        }
+      });
+    }
+
+    const deployment = await ChecklistTemplateDeployment.create({
+      template_id: id,
+      deployed_date: new Date(),
+      deployed_by: req.user.name || req.user.username,
+      target_type: target_type || null,
+      target_id: target_id || null,
+      scope: scope ? JSON.stringify(scope) : null
+    });
+
+    logger.info(`Template deployed: ${template.template_name} by user ${req.user.id}`);
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        deployment
+      }
+    });
+
+  } catch (error) {
+    logger.error('Template deploy error:', error);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: '템플릿 배포 중 오류가 발생했습니다.'
+      }
+    });
+  }
+});
+
+module.exports = router;

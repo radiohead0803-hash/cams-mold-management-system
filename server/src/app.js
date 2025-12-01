@@ -75,6 +75,9 @@ const plantRepairRouter = require('./routes/plantRepair');
 const hqLocationRouter = require('./routes/hqLocation');
 const plantProductionRouter = require('./routes/plantProduction');
 const hqJobsRouter = require('./routes/hqJobs');
+const hqCheckItemsRouter = require('./routes/hqCheckItems');
+const hqTemplatesRouter = require('./routes/hqTemplates');
+const checklistFormsRouter = require('./routes/checklistForms');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/qr', qrRouter);
@@ -97,6 +100,10 @@ app.use('/api/v1/plant', plantProductionRouter);
 app.use('/api/v1/hq', hqDashboardRouter);
 app.use('/api/v1/hq', hqLocationRouter);
 app.use('/api/v1/hq', hqJobsRouter);
+app.use('/api/v1/hq', hqCheckItemsRouter);
+app.use('/api/v1/hq', hqTemplatesRouter);
+// Checklist forms (all users)
+app.use('/api/v1/checklists', checklistFormsRouter);
 
 // Health check
 app.get('/health', (req, res) => {
