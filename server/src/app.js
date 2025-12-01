@@ -80,6 +80,7 @@ const hqTemplatesRouter = require('./routes/hqTemplates');
 const checklistFormsRouter = require('./routes/checklistForms');
 const devPlansRouter = require('./routes/devPlans');
 const hqRepairsRouter = require('./routes/hqRepairs');
+const hqMoldsRouter = require('./routes/hqMolds');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/qr', qrRouter);
@@ -105,6 +106,7 @@ app.use('/api/v1/hq', hqJobsRouter);
 app.use('/api/v1/hq', hqCheckItemsRouter);
 app.use('/api/v1/hq', hqTemplatesRouter);
 app.use('/api/v1/hq/repairs', hqRepairsRouter);
+app.use('/api/v1/hq/molds', hqMoldsRouter);
 // Checklist forms (all users)
 app.use('/api/v1/checklists', checklistFormsRouter);
 // Development plans
