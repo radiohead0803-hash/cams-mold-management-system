@@ -8,6 +8,7 @@ const {
   ChecklistTemplateHistory 
 } = require('../models/newIndex');
 const logger = require('../utils/logger');
+const { writeTemplateHistory, getTemplateHistory } = require('../services/templateHistory');
 
 // 본사 관리자 및 금형개발 담당자만 접근 가능
 router.use(authenticate, authorize(['system_admin', 'mold_developer']));
@@ -116,11 +117,11 @@ router.post('/checklist-templates', async (req, res) => {
     });
 
     // 히스토리 기록
-    await ChecklistTemplateHistory.create({
-      template_id: template.id,
+    await writeTemplateHistory({
+      templateId: template.id,
       action: 'created',
       changes: JSON.stringify({ template_name, template_type, description }),
-      changed_by: req.user.name || req.user.username
+      changedBy: req.user.name || req.user.username
     });
 
     logger.info(`Template created: ${template_name} by user ${req.user.id}`);
@@ -177,11 +178,11 @@ router.put('/checklist-templates/:id', async (req, res) => {
     await template.save();
 
     // 히스토리 기록
-    await ChecklistTemplateHistory.create({
-      template_id: template.id,
+    await writeTemplateHistory({
+      templateId: template.id,
       action: 'updated',
       changes: JSON.stringify({ old: oldValues, new: { template_name, template_type, description, is_active } }),
-      changed_by: req.user.name || req.user.username
+      changedBy: req.user.name || req.user.username
     });
 
     logger.info(`Template updated: ${template.template_name} by user ${req.user.id}`);

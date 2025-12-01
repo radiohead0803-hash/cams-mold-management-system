@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const { authenticate } = require('../middleware/auth');
+const { createRepairsFromDailyCheck } = require('../services/autoRepair');
 const { 
   Mold,
   ChecklistMasterTemplate,
@@ -260,6 +261,20 @@ router.post('/daily', async (req, res) => {
       logger.info(`Daily check NG alert created for mold ${mold.mold_code}`);
     }
 
+    // 4. NG 항목이 있으면 자동 수리요청 생성
+    let autoRepair = null;
+    if (hasNG) {
+      try {
+        autoRepair = await createRepairsFromDailyCheck(dailyCheck.id, userId);
+        if (autoRepair) {
+          logger.info(`Auto repair created: ${autoRepair.request_number} from daily check ${dailyCheck.id}`);
+        }
+      } catch (autoRepairError) {
+        logger.error('Auto repair creation error:', autoRepairError);
+        // 자동 수리요청 실패해도 점검 자체는 성공으로 처리
+      }
+    }
+
     logger.info(`Daily check completed: mold ${moldId} by user ${userId}`);
 
     return res.status(201).json({
@@ -271,7 +286,11 @@ router.post('/daily', async (req, res) => {
           check_date: dailyCheck.check_date,
           status: dailyCheck.status,
           hasNG
-        }
+        },
+        autoRepair: autoRepair ? {
+          id: autoRepair.id,
+          request_number: autoRepair.request_number
+        } : null
       }
     });
 
