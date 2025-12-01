@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
-const { QRSession, Mold, User, Repair, Notification } = require('../models/newIndex');
+const { QRSession, Mold, User, Repair, Notification, GPSLocation, Alert } = require('../models/newIndex');
 const logger = require('../utils/logger');
+const { calculateDistanceKm, isValidCoordinate } = require('../utils/geo');
 
 /**
  * QR 코드 스캔 및 세션 생성
@@ -68,7 +69,92 @@ const scanQR = async (req, res) => {
       }
     });
 
-    // 4. 사용자 정보 조회
+    // 4. GPS 위치 기록 및 이탈 감지
+    let gpsAlertId = null;
+    
+    if (location && location.latitude && location.longitude) {
+      const { latitude, longitude } = location;
+      
+      // GPS 좌표 유효성 검증
+      if (isValidCoordinate(latitude, longitude)) {
+        // GPS 위치 기록
+        await GPSLocation.create({
+          mold_id: mold.id,
+          latitude,
+          longitude,
+          recorded_at: new Date()
+        });
+        
+        // 마지막 위치와 비교하여 이탈 감지
+        const lastLocation = await GPSLocation.findOne({
+          where: { mold_id: mold.id },
+          order: [['recorded_at', 'DESC']],
+          offset: 1, // 방금 저장한 것 제외하고 그 이전 것
+          limit: 1
+        });
+        
+        if (lastLocation) {
+          const distKm = calculateDistanceKm(
+            Number(lastLocation.latitude),
+            Number(lastLocation.longitude),
+            Number(latitude),
+            Number(longitude)
+          );
+          
+          // 1km 이상 이동 시 위치 이탈로 판단
+          const DRIFT_THRESHOLD_KM = 1.0;
+          
+          if (distKm > DRIFT_THRESHOLD_KM) {
+            // Alert 생성
+            const gpsAlert = await Alert.create({
+              alert_type: 'gps_drift',
+              severity: 'high',
+              message: `금형 위치 이탈 감지: ${mold.mold_code} (이동 거리 ${distKm.toFixed(2)}km)`,
+              metadata: {
+                mold_id: mold.id,
+                mold_code: mold.mold_code,
+                prev_lat: lastLocation.latitude,
+                prev_lng: lastLocation.longitude,
+                new_lat: latitude,
+                new_lng: longitude,
+                dist_km: distKm
+              },
+              is_resolved: false
+            });
+            
+            gpsAlertId = gpsAlert.id;
+            
+            // 관리자에게 알림 전송
+            try {
+              const admins = await User.findAll({
+                where: {
+                  user_type: ['system_admin', 'mold_developer'],
+                  is_active: true
+                }
+              });
+              
+              for (const admin of admins) {
+                await Notification.create({
+                  user_id: admin.id,
+                  notification_type: 'gps_drift',
+                  title: `금형 위치 이탈 - ${mold.mold_code}`,
+                  message: `금형 ${mold.mold_code} 위치가 비정상적으로 이동했습니다. (약 ${distKm.toFixed(2)}km)`,
+                  priority: 'high',
+                  related_type: 'mold',
+                  related_id: mold.id,
+                  action_url: `/hq/molds/${mold.id}?tab=location`,
+                  is_read: false
+                });
+              }
+            } catch (notifError) {
+              logger.error('GPS drift notification error:', notifError);
+            }
+          }
+        }
+      }
+    }
+
+    // 5. 사용자 정보 조회
     const user = await User.findByPk(userId, {
       attributes: ['id', 'username', 'name', 'user_type', 'company_name']
     });
@@ -99,7 +185,8 @@ const scanQR = async (req, res) => {
           user_type: user.user_type,
           company_name: user.company_name
         },
-        permissions: getUserPermissions(user.user_type)
+        permissions: getUserPermissions(user.user_type),
+        gps_alert_id: gpsAlertId  // 위치 이탈 감지 시 alert ID 반환
       }
     });
 
