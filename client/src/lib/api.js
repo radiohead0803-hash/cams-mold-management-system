@@ -43,6 +43,7 @@ export const authAPI = {
   qrLogin: (data) => api.post('/auth/qr-login', data),
   logout: () => api.post('/auth/logout'),
   refreshToken: (token) => api.post('/auth/refresh', { token }),
+  me: () => api.get('/auth/me'),
 }
 
 // Mold API

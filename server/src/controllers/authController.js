@@ -226,9 +226,53 @@ const logout = async (req, res) => {
   }
 };
 
+/**
+ * 현재 사용자 정보 조회
+ */
+const me = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const user = await User.findOne({ 
+      where: { id: userId, is_active: true },
+      attributes: ['id', 'username', 'name', 'email', 'user_type', 'company_id', 'company_name', 'company_type']
+    });
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'User not found' }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email,
+          user_type: user.user_type,
+          company_id: user.company_id,
+          company_name: user.company_name,
+          company_type: user.company_type
+        }
+      }
+    });
+  } catch (error) {
+    logger.error('Get user info error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to get user info' }
+    });
+  }
+};
+
 module.exports = {
   login,
   qrLogin,
   refreshToken,
-  logout
+  logout,
+  me
 };
