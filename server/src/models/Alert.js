@@ -53,10 +53,12 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Alert.associate = (models) => {
-    Alert.belongsTo(models.Mold, {
-      foreignKey: 'mold_id',
-      as: 'mold'
-    });
+    if (models.Mold) {
+      Alert.belongsTo(models.Mold, {
+        foreignKey: 'mold_id',
+        as: 'mold'
+      });
+    }
   };
 
   return Alert;

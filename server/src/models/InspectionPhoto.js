@@ -56,22 +56,35 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   InspectionPhoto.associate = (models) => {
-    InspectionPhoto.belongsTo(models.Mold, {
-      foreignKey: 'mold_id',
-      as: 'mold'
-    });
-    InspectionPhoto.belongsTo(models.DailyCheckItem, {
-      foreignKey: 'checklist_id',
-      as: 'checklist'
-    });
-    InspectionPhoto.belongsTo(models.DailyCheckItemStatus, {
-      foreignKey: 'item_status_id',
-      as: 'itemStatus'
-    });
-    InspectionPhoto.belongsTo(models.User, {
-      foreignKey: 'uploaded_by',
-      as: 'uploader'
-    });
+    // 실제로 존재하는 모델과의 관계만 정의
+    
+    if (models.Mold) {
+      InspectionPhoto.belongsTo(models.Mold, {
+        foreignKey: 'mold_id',
+        as: 'mold'
+      });
+    }
+    
+    if (models.DailyCheckItem) {
+      InspectionPhoto.belongsTo(models.DailyCheckItem, {
+        foreignKey: 'checklist_id',
+        as: 'checklist'
+      });
+    }
+    
+    if (models.DailyCheckItemStatus) {
+      InspectionPhoto.belongsTo(models.DailyCheckItemStatus, {
+        foreignKey: 'item_status_id',
+        as: 'itemStatus'
+      });
+    }
+    
+    if (models.User) {
+      InspectionPhoto.belongsTo(models.User, {
+        foreignKey: 'uploaded_by',
+        as: 'uploader'
+      });
+    }
   };
 
   return InspectionPhoto;

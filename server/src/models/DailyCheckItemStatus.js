@@ -46,18 +46,26 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   DailyCheckItemStatus.associate = (models) => {
-    DailyCheckItemStatus.belongsTo(models.DailyCheckItem, {
-      foreignKey: 'daily_check_id',
-      as: 'dailyCheck'
-    });
-    DailyCheckItemStatus.belongsTo(models.MoldIssue, {
-      foreignKey: 'issue_id',
-      as: 'issue'
-    });
-    DailyCheckItemStatus.hasMany(models.InspectionPhoto, {
-      foreignKey: 'item_status_id',
-      as: 'photos'
-    });
+    if (models.DailyCheckItem) {
+      DailyCheckItemStatus.belongsTo(models.DailyCheckItem, {
+        foreignKey: 'daily_check_id',
+        as: 'dailyCheck'
+      });
+    }
+    
+    if (models.MoldIssue) {
+      DailyCheckItemStatus.belongsTo(models.MoldIssue, {
+        foreignKey: 'issue_id',
+        as: 'issue'
+      });
+    }
+    
+    if (models.InspectionPhoto) {
+      DailyCheckItemStatus.hasMany(models.InspectionPhoto, {
+        foreignKey: 'item_status_id',
+        as: 'photos'
+      });
+    }
   };
 
   return DailyCheckItemStatus;

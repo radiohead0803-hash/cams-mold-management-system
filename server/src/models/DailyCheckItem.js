@@ -3,15 +3,28 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
   class DailyCheckItem extends Model {
     static associate(models) {
-      DailyCheckItem.belongsTo(models.DailyCheck, {
-        foreignKey: 'check_id',
-        as: 'check'
-      });
-
-      DailyCheckItem.belongsTo(models.CheckItemMaster, {
-        foreignKey: 'item_master_id',
-        as: 'itemMaster'
-      });
+      // 실제로 존재하는 모델과의 관계만 정의
+      
+      // Mold 관계
+      if (models.Mold) {
+        DailyCheckItem.belongsTo(models.Mold, {
+          foreignKey: 'mold_id',
+          as: 'mold'
+        });
+      }
+      
+      // User 관계 (확인자)
+      if (models.User) {
+        DailyCheckItem.belongsTo(models.User, {
+          foreignKey: 'confirmed_by',
+          as: 'confirmedByUser'
+        });
+      }
+      
+      // 향후 추가될 모델들을 위한 주석
+      // DailyCheck, CheckItemMaster 모델이 추가되면 아래 관계를 활성화하세요
+      // DailyCheckItem.belongsTo(models.DailyCheck, { foreignKey: 'check_id', as: 'check' });
+      // DailyCheckItem.belongsTo(models.CheckItemMaster, { foreignKey: 'item_master_id', as: 'itemMaster' });
     }
   }
 

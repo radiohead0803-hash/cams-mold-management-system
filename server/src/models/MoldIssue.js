@@ -64,14 +64,19 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   MoldIssue.associate = (models) => {
-    MoldIssue.belongsTo(models.Mold, {
-      foreignKey: 'mold_id',
-      as: 'mold'
-    });
-    MoldIssue.hasMany(models.DailyCheckItemStatus, {
-      foreignKey: 'issue_id',
-      as: 'checkItemStatuses'
-    });
+    if (models.Mold) {
+      MoldIssue.belongsTo(models.Mold, {
+        foreignKey: 'mold_id',
+        as: 'mold'
+      });
+    }
+    
+    if (models.DailyCheckItemStatus) {
+      MoldIssue.hasMany(models.DailyCheckItemStatus, {
+        foreignKey: 'issue_id',
+        as: 'checkItemStatuses'
+      });
+    }
   };
 
   return MoldIssue;
