@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
 import { useDashboardKpi } from '../../hooks/useDashboardKpi';
 
@@ -98,67 +99,113 @@ export default function SystemAdminDashboard() {
       />
       
       <div className="p-6 space-y-6">
-        {/* 금형 현황 요약 */}
+        {/* 핵심 KPI 카드 - 6개 그리드 */}
         <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 금형 현황 요약</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard 
-              title="전체 금형" 
-              value={stats.totalMolds || 0} 
-              icon="🔧" 
-              color="blue" 
-              unit="개"
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 핵심 지표 (KPI)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* 전체 금형 수 */}
+            <button
               onClick={() => navigate('/molds')}
-            />
-            <StatCard 
-              title="양산 중" 
-              value={stats.activeMolds || 0} 
-              icon="⚙️" 
-              color="green" 
-              unit="개"
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-blue-300 transition-all"
+            >
+              <div>
+                <p className="text-xs text-gray-500 font-medium">전체 금형 수</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{stats.totalMolds || 0}</p>
+                <p className="mt-1 text-xs text-gray-400">Total Molds</p>
+              </div>
+              <Factory className="w-10 h-10 text-gray-400" />
+            </button>
+
+            {/* 양산 중 금형 */}
+            <button
               onClick={() => navigate('/molds?status=active')}
-            />
-            <StatCard 
-              title="NG 금형" 
-              value={stats.ngMolds || 0} 
-              icon="⚠️" 
-              color="red" 
-              unit="개"
-              onClick={() => navigate('/molds?status=ng')}
-            />
-            <StatCard 
-              title="수리 진행" 
-              value={stats.openRepairs || 0} 
-              icon="🔨" 
-              color="orange" 
-              unit="건"
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-green-300 transition-all"
+            >
+              <div>
+                <p className="text-xs text-green-600 font-medium">양산 중 금형</p>
+                <p className="mt-2 text-3xl font-bold text-green-600">{stats.activeMolds || 0}</p>
+                <p className="mt-1 text-xs text-gray-400">Active Production</p>
+              </div>
+              <LayoutDashboard className="w-10 h-10 text-green-400" />
+            </button>
+
+            {/* 진행 중 수리요청 */}
+            <button
               onClick={() => navigate('/hq/repair-requests')}
-            />
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-orange-300 transition-all"
+            >
+              <div>
+                <p className="text-xs text-orange-600 font-medium">진행 중 수리</p>
+                <p className="mt-2 text-3xl font-bold text-orange-600">{stats.openRepairs || 0}</p>
+                <p className="mt-1 text-xs text-gray-400">Open Repairs</p>
+              </div>
+              <Wrench className="w-10 h-10 text-orange-400" />
+            </button>
+
+            {/* 오늘 QR 스캔 */}
+            <button
+              onClick={() => navigate('/qr-sessions')}
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-purple-300 transition-all"
+            >
+              <div>
+                <p className="text-xs text-purple-600 font-medium">오늘 QR 스캔</p>
+                <p className="mt-2 text-3xl font-bold text-purple-600">{stats.todayScans || 0}</p>
+                <p className="mt-1 text-xs text-gray-400">Today's Scans</p>
+              </div>
+              <QrCode className="w-10 h-10 text-purple-400" />
+            </button>
+
+            {/* 타수 초과 금형 */}
+            <button
+              onClick={() => navigate('/hq/molds/over-shot')}
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-red-300 transition-all"
+            >
+              <div>
+                <p className="text-xs text-red-600 font-medium">타수 초과 금형</p>
+                <p className="mt-2 text-3xl font-bold text-red-600">{stats.overShotCount || 0}</p>
+                <p className="mt-1 text-xs text-gray-400">Over Shot</p>
+              </div>
+              <AlertTriangle className="w-10 h-10 text-red-400" />
+            </button>
+
+            {/* 정기검사 필요 */}
+            <button
+              onClick={() => navigate('/hq/molds/inspection-due')}
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-blue-300 transition-all"
+            >
+              <div>
+                <p className="text-xs text-blue-600 font-medium">정기검사 필요</p>
+                <p className="mt-2 text-3xl font-bold text-blue-600">{stats.inspectionDueCount || 0}</p>
+                <p className="mt-1 text-xs text-gray-400">Inspection Due</p>
+              </div>
+              <TrendingUp className="w-10 h-10 text-blue-400" />
+            </button>
           </div>
         </section>
 
-        {/* QR 스캔 및 알림 */}
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">📱 실시간 활동</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <StatCard 
-              title="오늘 QR 스캔" 
-              value={stats.todayScans || 0} 
-              icon="📱" 
-              color="purple" 
-              unit="건"
-              onClick={() => navigate('/qr-sessions')}
-            />
-            <StatCard 
-              title="Critical 알림" 
-              value={stats.criticalAlerts || 0} 
-              icon="🔔" 
-              color="red" 
-              unit="건"
-              onClick={() => navigate('/alerts')}
-            />
-          </div>
-        </section>
+        {/* NG 금형 별도 강조 */}
+        {stats.ngMolds > 0 && (
+          <section>
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                  <div>
+                    <p className="text-sm font-semibold text-red-900">NG 금형 발생</p>
+                    <p className="text-xs text-red-700">즉시 조치가 필요한 금형이 있습니다.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/molds?status=ng')}
+                  className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition"
+                >
+                  {stats.ngMolds || 0}개 확인하기
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
 
         {/* 실시간 알람 및 시스템 상태 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
