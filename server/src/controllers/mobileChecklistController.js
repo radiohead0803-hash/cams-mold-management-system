@@ -4,7 +4,7 @@ const { Mold } = require('../models');
  * 점검 세션 시작 - 템플릿으로 폼 생성
  * POST /api/v1/mobile/molds/:moldId/checklists/start
  */
-exports.startChecklist = async (req, res) => {
+async function startChecklist(req, res) {
   try {
     const { moldId } = req.params;
     const { templateId, siteType } = req.body;
@@ -63,13 +63,13 @@ exports.startChecklist = async (req, res) => {
       message: '서버 오류가 발생했습니다.'
     });
   }
-};
+}
 
 /**
  * 점검 결과 제출
  * POST /api/v1/mobile/checklists/:instanceId/submit
  */
-exports.submitChecklist = async (req, res) => {
+async function submitChecklist(req, res) {
   try {
     const { instanceId } = req.params;
     const { answers, comment } = req.body;
@@ -109,7 +109,7 @@ exports.submitChecklist = async (req, res) => {
       message: '서버 오류가 발생했습니다.'
     });
   }
-};
+}
 
 /**
  * 하드코딩된 템플릿 데이터 (임시)
