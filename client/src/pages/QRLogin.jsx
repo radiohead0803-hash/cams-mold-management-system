@@ -128,7 +128,7 @@ export default function QRLogin() {
     await handleManualQRInput(qrData)
   }
 
-  // QR 스캔 처리 - 금형 정보 조회 후 역할별 페이지로 이동
+  // QR 스캔 처리 - 금형 정보 조회 후 금형 페이지로 이동
   const handleManualQRInput = async (qrValue) => {
     try {
       setError('')
@@ -156,10 +156,18 @@ export default function QRLogin() {
         const authStore = useAuthStore.getState()
         const userRole = authStore.user?.role || 'production'
         
-        console.log('[QRLogin] Navigating by role:', userRole)
+        console.log('[QRLogin] Navigating to mold page:', mold.id, 'role:', userRole)
         
-        // 역할별 페이지로 이동
-        navigateByRole(navigate, userRole)
+        // 금형 개요 페이지로 이동
+        navigate(`/mobile/molds/${mold.id}`, {
+          state: { 
+            role: userRole,
+            mold: {
+              ...mold,
+              shotRate: mold.maxShots > 0 ? Math.round((mold.shotCounter / mold.maxShots) * 100) : 0
+            }
+          }
+        })
       }
     } catch (err) {
       console.error('[QRLogin] QR scan error:', err)
