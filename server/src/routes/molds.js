@@ -24,4 +24,14 @@ router.patch('/:id', authenticate, moldController.updateMold);
 // GET /api/v1/molds/:id/history
 router.get('/:id/history', authenticate, moldController.getMoldHistory);
 
+// GPS Location routes
+// GET /api/v1/molds/locations - 전체 금형 위치 조회 (필터링 지원)
+router.get('/locations', authenticate, moldController.getMoldLocations);
+
+// GET /api/v1/molds/:id/location - 특정 금형 위치 조회
+router.get('/:id/location', authenticate, moldController.getMoldLocation);
+
+// POST /api/v1/molds/:id/location - 금형 위치 업데이트
+router.post('/:id/location', authenticate, moldController.updateMoldLocation);
+
 module.exports = router;
