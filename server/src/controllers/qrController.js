@@ -159,6 +159,9 @@ const scanQR = async (req, res) => {
       attributes: ['id', 'username', 'name', 'user_type', 'company_name']
     });
 
+    // 6. 사용자 역할 및 금형 상태에 따라 가능한 작업 결정
+    const availableActions = determineAvailableActions(user.user_type, mold.status, mold);
+
     res.json({
       success: true,
       data: {
@@ -185,6 +188,7 @@ const scanQR = async (req, res) => {
           user_type: user.user_type,
           company_name: user.company_name
         },
+        availableActions,  // 가능한 작업 목록
         permissions: getUserPermissions(user.user_type),
         gps_alert_id: gpsAlertId  // 위치 이탈 감지 시 alert ID 반환
       }
@@ -467,6 +471,146 @@ const createRepairRequest = async (req, res) => {
     });
   }
 };
+
+/**
+ * 사용자 역할 및 금형 상태에 따라 가능한 작업 결정
+ */
+function determineAvailableActions(userType, moldStatus, mold) {
+  const actions = [];
+  
+  // 생산처 (plant)
+  if (userType === 'plant') {
+    // 일상점검 (항상 가능)
+    actions.push({
+      id: 'daily_check',
+      label: '일상점검',
+      description: '금형 일상점검 수행',
+      icon: 'clipboard-check',
+      route: `/mobile/molds/${mold.id}/check/daily`
+    });
+    
+    // 생산수량 입력 (양산 중일 때)
+    if (moldStatus === 'production') {
+      actions.push({
+        id: 'production_quantity',
+        label: '생산수량 입력',
+        description: '생산 Shot 수 기록',
+        icon: 'hash',
+        route: `/mobile/molds/${mold.id}/production`
+      });
+    }
+    
+    // 정기점검 (양산 중일 때)
+    if (moldStatus === 'production') {
+      actions.push({
+        id: 'periodic_check',
+        label: '정기점검',
+        description: '금형 정기점검 수행',
+        icon: 'clipboard-list',
+        route: `/mobile/molds/${mold.id}/check/periodic`
+      });
+    }
+    
+    // 수리요청 (항상 가능)
+    actions.push({
+      id: 'repair_request',
+      label: '수리요청',
+      description: 'NG 발생 시 수리 요청',
+      icon: 'wrench',
+      route: `/mobile/molds/${mold.id}/repair/request`
+    });
+    
+    // 이관요청 (양산 중일 때)
+    if (moldStatus === 'production') {
+      actions.push({
+        id: 'transfer_request',
+        label: '이관요청',
+        description: '금형 이관 신청',
+        icon: 'truck',
+        route: `/mobile/molds/${mold.id}/transfer`
+      });
+    }
+  }
+  
+  // 제작처 (maker)
+  if (userType === 'maker') {
+    // 시운전 (개발/제작 단계)
+    if (['design', 'manufacturing', 'trial'].includes(moldStatus)) {
+      actions.push({
+        id: 'tryout',
+        label: '시운전 (TRY-OUT)',
+        description: '금형 시운전 수행',
+        icon: 'play-circle',
+        route: `/mobile/molds/${mold.id}/tryout`
+      });
+    }
+    
+    // 수리작업 (수리 중일 때)
+    if (moldStatus === 'under_repair') {
+      actions.push({
+        id: 'repair_work',
+        label: '수리작업',
+        description: '수리 진행 상황 기록',
+        icon: 'tool',
+        route: `/mobile/molds/${mold.id}/repair/work`
+      });
+    }
+    
+    // QR 부착 확인
+    actions.push({
+      id: 'qr_attach_confirm',
+      label: 'QR 부착 확인',
+      description: 'QR 코드 부착 체크리스트',
+      icon: 'qr-code',
+      route: `/mobile/molds/${mold.id}/qr/confirm`
+    });
+    
+    // 경도측정 (개발/제작 단계)
+    if (['design', 'manufacturing'].includes(moldStatus)) {
+      actions.push({
+        id: 'hardness_test',
+        label: '경도측정',
+        description: '금형 경도 측정 기록',
+        icon: 'activity',
+        route: `/mobile/molds/${mold.id}/hardness`
+      });
+    }
+  }
+  
+  // 금형개발 담당 (mold_developer)
+  if (userType === 'mold_developer') {
+    // 개발 체크리스트
+    if (['design', 'manufacturing', 'trial'].includes(moldStatus)) {
+      actions.push({
+        id: 'dev_checklist',
+        label: '개발 체크리스트',
+        description: '금형 개발 단계 체크',
+        icon: 'check-square',
+        route: `/mobile/molds/${mold.id}/dev/checklist`
+      });
+    }
+    
+    // 승인/반려
+    actions.push({
+      id: 'approval',
+      label: '승인/반려',
+      description: '개발 단계 승인 처리',
+      icon: 'check-circle',
+      route: `/mobile/molds/${mold.id}/approval`
+    });
+  }
+  
+  // 공통: 금형 상세 정보 조회 (모든 역할)
+  actions.push({
+    id: 'view_detail',
+    label: '금형 상세 정보',
+    description: '금형 정보 및 이력 조회',
+    icon: 'info',
+    route: `/mobile/molds/${mold.id}`
+  });
+  
+  return actions;
+}
 
 module.exports = {
   scanQR,
