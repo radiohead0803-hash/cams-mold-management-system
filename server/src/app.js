@@ -87,8 +87,10 @@ const mobileMoldsRouter = require('./routes/mobileMolds');
 const mobileQrRouter = require('./routes/mobileQr');
 const repairRequestsRouter = require('./routes/repairRequests');
 const notificationsRouter = require('./routes/notifications');
+const dashboardRouter = require('./routes/dashboard');
 
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/mobile', mobileMoldsRouter);
 app.use('/api/v1/mobile', mobileQrRouter);
 app.use('/api/v1', repairRequestsRouter);
