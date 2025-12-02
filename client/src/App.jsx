@@ -36,6 +36,9 @@ import ScanInfoPage from './pages/ScanInfoPage'
 import RepairRequestPage from './pages/RepairRequestPage'
 import HqRepairListPage from './pages/HqRepairListPage'
 import MakerRepairListPage from './pages/MakerRepairListPage'
+import MoldOverviewPage from './pages/mobile/MoldOverviewPage'
+import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
+import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
 
 function App() {
   const { isAuthenticated, initialize } = useAuthStore()
@@ -50,6 +53,12 @@ function App() {
       <Route path="/qr-login" element={<QRLogin />} />
       <Route path="/scan-info" element={<ScanInfoPage />} />
       <Route path="/repair-request" element={<RepairRequestPage />} />
+      
+      {/* Mobile Routes */}
+      <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
+      <Route path="/mobile/molds/:moldId/check/:category" element={<ChecklistStartPage />} />
+      <Route path="/mobile/molds/:moldId/repair/requests" element={<RepairRequestListPage />} />
+      <Route path="/mobile/molds/:moldId/repair/progress" element={<RepairRequestListPage showStatusOnly />} />
       
       <Route
         path="/"
