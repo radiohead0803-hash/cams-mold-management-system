@@ -1,4 +1,4 @@
-const { Mold } = require('../models');
+const { Mold, ChecklistTemplate, ChecklistTemplateItem, ChecklistInstance } = require('../models');
 
 /**
  * 점검 세션 시작 - 템플릿으로 폼 생성
@@ -27,32 +27,61 @@ async function startChecklist(req, res) {
       });
     }
 
-    // TODO: 나중에 실제 템플릿 DB에서 조회
-    // 현재는 하드코딩된 템플릿 데이터 반환
-    const templateData = getTemplateData(templateId);
+    // 실제 DB에서 템플릿 + 항목 조회
+    const template = await ChecklistTemplate.findByPk(templateId, {
+      include: [
+        {
+          model: ChecklistTemplateItem,
+          as: 'items',
+          order: [['order_no', 'ASC']]
+        }
+      ]
+    });
     
-    if (!templateData) {
+    if (!template) {
       return res.status(404).json({
         success: false,
         message: '템플릿을 찾을 수 없습니다.'
       });
     }
 
-    // TODO: 나중에 실제 ChecklistInstance DB에 저장
-    // 현재는 임시 instanceId 생성
-    const instanceId = Date.now();
+    // 실제 ChecklistInstance DB에 저장
+    const instance = await ChecklistInstance.create({
+      template_id: template.id,
+      mold_id: mold.id,
+      plant_id: mold.plant_id || null,
+      site_type: siteType,
+      category: template.category,
+      shot_counter: mold.shot_counter || 0,
+      status: 'draft',
+      inspected_by: userId
+    });
 
     return res.json({
       success: true,
       data: {
-        instanceId,
+        instanceId: instance.id,
         mold: {
           id: mold.id,
           code: mold.mold_code,
           name: mold.mold_name,
           currentShot: mold.shot_counter || 0
         },
-        template: templateData
+        template: {
+          id: template.id,
+          code: template.code,
+          name: template.name,
+          category: template.category,
+          items: template.items.map(item => ({
+            id: item.id,
+            order_no: item.order_no,
+            section: item.section,
+            label: item.label,
+            field_type: item.field_type,
+            required: item.required,
+            ng_criteria: item.ng_criteria
+          }))
+        }
       }
     });
 
@@ -82,21 +111,58 @@ async function submitChecklist(req, res) {
       });
     }
 
-    // TODO: 나중에 실제 DB에 저장
-    // 현재는 로그만 출력
-    console.log('[submitChecklist] instanceId:', instanceId);
-    console.log('[submitChecklist] answers:', answers);
-    console.log('[submitChecklist] comment:', comment);
+    // 인스턴스 조회
+    const instance = await ChecklistInstance.findByPk(instanceId);
+    if (!instance) {
+      return res.status(404).json({
+        success: false,
+        message: '점검 세션을 찾을 수 없습니다.'
+      });
+    }
+
+    // 실제 DB에 답변 저장
+    const { ChecklistAnswer } = require('../models');
+    
+    for (const answer of answers) {
+      const answerData = {
+        instance_id: instance.id,
+        item_id: answer.itemId
+      };
+
+      // 필드 타입에 따라 적절한 컬럼에 저장
+      if (answer.fieldType === 'boolean') {
+        answerData.value_bool = answer.value;
+        answerData.is_ng = answer.value === false; // false면 NG
+      } else if (answer.fieldType === 'number') {
+        answerData.value_number = answer.value;
+      } else if (answer.fieldType === 'text') {
+        answerData.value_text = answer.value;
+      }
+
+      await ChecklistAnswer.create(answerData);
+    }
+
+    // 인스턴스 상태 업데이트
+    await instance.update({
+      status: 'submitted',
+      inspected_at: new Date()
+    });
 
     // NG 항목 카운트
     const ngCount = answers.filter(a => 
       a.fieldType === 'boolean' && a.value === false
     ).length;
 
+    console.log('[submitChecklist] Saved:', {
+      instanceId: instance.id,
+      answersCount: answers.length,
+      ngCount
+    });
+
     return res.json({
       success: true,
       data: {
-        instanceId,
+        instanceId: instance.id,
         ngCount,
         message: '점검 결과가 저장되었습니다.'
       }
@@ -111,10 +177,16 @@ async function submitChecklist(req, res) {
   }
 }
 
-/**
- * 하드코딩된 템플릿 데이터 (임시)
- * TODO: 나중에 DB에서 조회
- */
+// 하드코딩된 템플릿 데이터 제거됨 - 이제 DB에서 조회
+// getTemplateData() 함수는 더 이상 사용하지 않음
+
+module.exports = {
+  startChecklist,
+  submitChecklist
+};
+
+/* 
+// 이전 하드코딩 버전 (참고용)
 function getTemplateData(templateId) {
   const templates = {
     1: {
@@ -229,8 +301,4 @@ function getTemplateData(templateId) {
 
   return templates[templateId] || null;
 }
-
-module.exports = {
-  startChecklist,
-  submitChecklist
-};
+*/

@@ -1,4 +1,4 @@
-const { Mold, Plant } = require('../models');
+const { Mold, Plant, ChecklistTemplate } = require('../models');
 
 /**
  * QR 코드 스캔 - 금형 정보 조회
@@ -34,25 +34,12 @@ exports.scanQr = async (req, res) => {
       });
     }
 
-    // TODO: 나중에 실제 템플릿 DB에서 조회
-    // 현재는 하드코딩된 템플릿 목록 반환
-    const templates = [
-      {
-        id: 1,
-        code: 'DAILY',
-        name: '일상 점검',
-        category: 'daily',
-        description: '매일 실시하는 기본 점검'
-      },
-      {
-        id: 2,
-        code: 'REG_20K',
-        name: '2만샷 정기점검',
-        category: 'regular',
-        shot_interval: 20000,
-        description: '2만샷마다 실시하는 정기 점검'
-      }
-    ];
+    // 실제 DB에서 템플릿 조회
+    const templates = await ChecklistTemplate.findAll({
+      where: { is_active: true },
+      order: [['category', 'ASC']],
+      attributes: ['id', 'code', 'name', 'category', 'shot_interval']
+    });
 
     return res.json({
       success: true,

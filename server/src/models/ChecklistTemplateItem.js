@@ -1,64 +1,63 @@
-module.exports = (sequelize, DataTypes) => {
-  const ChecklistTemplateItem = sequelize.define('ChecklistTemplateItem', {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    template_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false
-    },
-    category: {
-      type: DataTypes.STRING(100),
-      allowNull: false
-    },
-    item_name: {
-      type: DataTypes.STRING(200),
-      allowNull: false
-    },
-    item_order: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0
-    },
-    is_required: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: true
-    },
-    requires_photo: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false
-    },
-    guide_text: {
-      type: DataTypes.TEXT
-    },
-    guide_image_url: {
-      type: DataTypes.STRING(500)
-    },
-    default_options: {
-      type: DataTypes.JSONB,
-      comment: 'JSON array of default options for this item'
-    },
-    created_at: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
-    }
-  }, {
-    tableName: 'checklist_template_items',
-    timestamps: false,
-    indexes: [
-      { fields: ['template_id'] },
-      { fields: ['category'] },
-      { fields: ['item_order'] }
-    ]
-  });
+const { Model, DataTypes } = require('sequelize');
 
-  ChecklistTemplateItem.associate = (models) => {
-    ChecklistTemplateItem.belongsTo(models.ChecklistMasterTemplate, {
+class ChecklistTemplateItem extends Model {
+  static init(sequelize) {
+    return super.init(
+      {
+        id: {
+          type: DataTypes.BIGINT,
+          primaryKey: true,
+          autoIncrement: true
+        },
+        template_id: {
+          type: DataTypes.BIGINT,
+          allowNull: false
+        },
+        order_no: {
+          type: DataTypes.INTEGER,
+          allowNull: false
+        },
+        section: {
+          type: DataTypes.STRING(50),
+          comment: '공통, 냉각, 성형조건 등'
+        },
+        label: {
+          type: DataTypes.STRING(200),
+          allowNull: false
+        },
+        field_type: {
+          type: DataTypes.STRING(20),
+          allowNull: false,
+          comment: 'boolean | number | text'
+        },
+        required: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: true
+        },
+        ng_criteria: {
+          type: DataTypes.STRING(100),
+          comment: 'NG 판정 기준'
+        },
+        default_value: {
+          type: DataTypes.STRING(100)
+        }
+      },
+      {
+        sequelize,
+        modelName: 'ChecklistTemplateItem',
+        tableName: 'checklist_template_items',
+        timestamps: false,
+        underscored: true
+      }
+    );
+  }
+
+  static associate(models) {
+    this.belongsTo(models.ChecklistTemplate, {
       foreignKey: 'template_id',
       as: 'template'
     });
-  };
+  }
+}
 
-  return ChecklistTemplateItem;
-};
+module.exports = ChecklistTemplateItem;
