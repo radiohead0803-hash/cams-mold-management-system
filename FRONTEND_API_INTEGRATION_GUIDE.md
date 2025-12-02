@@ -1,7 +1,9 @@
 # 프론트엔드-백엔드 API 연동 가이드
 
 **작성일**: 2025-12-02
+**최종 업데이트**: 2025-12-02 16:30
 **Phase 1 완료**: 로그인 및 대시보드 API 연동
+**Phase 2 완료**: QR 스캔 및 점검 워크플로우
 
 ---
 
@@ -379,15 +381,15 @@ Network Error
 - ✅ `GET /api/v1/dashboard/maker/kpis` - 제작처 KPI
 - ✅ `GET /api/v1/dashboard/developer/kpis` - 금형개발 KPI
 
-### Phase 2: GPS 및 QR (예정 ⏳)
+### Phase 2: QR 및 점검 (완료 ✅)
+- ✅ `POST /api/v1/qr/scan` - QR 스캔
+- ✅ `POST /api/v1/inspections/daily` - 일상점검
+- ✅ `POST /api/v1/inspections/periodic` - 정기점검
+
+### Phase 3: GPS (예정 ⏳)
 - ⏳ `GET /api/v1/molds/locations` - 전체 금형 위치
 - ⏳ `GET /api/v1/molds/:id/location` - 특정 금형 위치
 - ⏳ `POST /api/v1/molds/:id/location` - 금형 위치 업데이트
-- ⏳ `POST /api/v1/qr/scan` - QR 스캔
-
-### Phase 3: 점검 (예정 ⏳)
-- ⏳ `POST /api/v1/inspections/daily` - 일상점검
-- ⏳ `POST /api/v1/inspections/periodic` - 정기점검
 
 ### Phase 4: 수리요청 (예정 ⏳)
 - ⏳ `POST /api/v1/repair-requests` - 수리요청 생성
