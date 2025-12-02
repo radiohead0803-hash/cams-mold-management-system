@@ -226,9 +226,25 @@ async function getRepairSummary(req, res) {
   }
 }
 
+// Phase 3 메서드들을 repairController에서 가져오기
+const {
+  createRepairRequest,
+  approveRepairRequest,
+  rejectRepairRequest,
+  assignRepairRequest,
+  updateRepairProgress,
+  updateBlameParty
+} = require('./repairController');
+
 module.exports = {
   listRepairRequests,
   getRepairRequestDetail,
+  createRepairRequest,
   updateRepairRequestStatus,
+  approveRepairRequest,
+  rejectRepairRequest,
+  assignRepairRequest,
+  updateRepairProgress,
+  updateBlameParty,
   getRepairSummary
 };
