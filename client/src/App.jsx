@@ -39,6 +39,10 @@ import MakerRepairListPage from './pages/MakerRepairListPage'
 import MoldOverviewPage from './pages/mobile/MoldOverviewPage'
 import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
 import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
+import QrScanPage from './pages/qr/QrScanPage'
+import DailyInspectionPage from './pages/qr/DailyInspectionPage'
+import PeriodicInspectionPage from './pages/qr/PeriodicInspectionPage'
+import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
   const { isAuthenticated, initialize } = useAuthStore()
@@ -59,6 +63,11 @@ function App() {
       <Route path="/mobile/molds/:moldId/check/:category" element={<ChecklistStartPage />} />
       <Route path="/mobile/molds/:moldId/repair/requests" element={<RepairRequestListPage />} />
       <Route path="/mobile/molds/:moldId/repair/progress" element={<RepairRequestListPage showStatusOnly />} />
+      
+      {/* QR Scan and Inspection Routes */}
+      <Route path="/qr/scan" element={<ProtectedRoute><QrScanPage /></ProtectedRoute>} />
+      <Route path="/qr/daily-inspection/:sessionId" element={<ProtectedRoute><DailyInspectionPage /></ProtectedRoute>} />
+      <Route path="/qr/periodic-inspection/:sessionId" element={<ProtectedRoute><PeriodicInspectionPage /></ProtectedRoute>} />
       
       <Route
         path="/"
