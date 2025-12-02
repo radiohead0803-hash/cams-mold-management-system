@@ -23,3 +23,6 @@ export async function startQrSession(qrCode: string) {
   });
   return res.data.data;
 }
+
+// Alias for consistency
+export const scanQr = startQrSession;

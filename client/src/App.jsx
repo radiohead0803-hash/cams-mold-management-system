@@ -40,8 +40,10 @@ import MoldOverviewPage from './pages/mobile/MoldOverviewPage'
 import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
 import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
 import QrScanPage from './pages/qr/QrScanPage'
-import DailyInspectionPage from './pages/qr/DailyInspectionPage'
-import PeriodicInspectionPage from './pages/qr/PeriodicInspectionPage'
+import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
+import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
+import DailyInspectionPage from './pages/inspections/DailyInspectionPage'
+import PeriodicInspectionPage from './pages/inspections/PeriodicInspectionPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
 function App() {
@@ -65,9 +67,15 @@ function App() {
       <Route path="/mobile/molds/:moldId/repair/progress" element={<RepairRequestListPage showStatusOnly />} />
       
       {/* QR Scan and Inspection Routes */}
-      <Route path="/qr/scan" element={<ProtectedRoute><QrScanPage /></ProtectedRoute>} />
-      <Route path="/qr/daily-inspection/:sessionId" element={<ProtectedRoute><DailyInspectionPage /></ProtectedRoute>} />
-      <Route path="/qr/periodic-inspection/:sessionId" element={<ProtectedRoute><PeriodicInspectionPage /></ProtectedRoute>} />
+      <Route path="/qr/scan" element={<ProtectedRoute allowedRoles={['plant', 'maker']}><QrScanPage /></ProtectedRoute>} />
+      
+      {/* Old routes with query params (backward compatibility) */}
+      <Route path="/qr/daily-inspection/:sessionId" element={<ProtectedRoute allowedRoles={['plant']}><DailyInspectionPageQr /></ProtectedRoute>} />
+      <Route path="/qr/periodic-inspection/:sessionId" element={<ProtectedRoute allowedRoles={['plant']}><PeriodicInspectionPageQr /></ProtectedRoute>} />
+      
+      {/* New routes with path params */}
+      <Route path="/qr/daily-inspection/:sessionId/:moldId" element={<ProtectedRoute allowedRoles={['plant']}><DailyInspectionPage /></ProtectedRoute>} />
+      <Route path="/qr/periodic-inspection/:sessionId/:moldId" element={<ProtectedRoute allowedRoles={['plant']}><PeriodicInspectionPage /></ProtectedRoute>} />
       
       <Route
         path="/"

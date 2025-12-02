@@ -30,25 +30,31 @@ export default function QrScanPage() {
     }
   };
 
-  const goAction = (action: string) => {
+  const handleStartDailyInspection = () => {
     if (!result) return;
-    const sessionId = result.sessionId;
-    const moldId = result.mold.id;
-
-    switch (action) {
-      case 'daily_inspection':
-        navigate(`/qr/daily-inspection/${sessionId}?moldId=${moldId}`);
-        break;
-      case 'periodic_inspection':
-        navigate(`/qr/periodic-inspection/${sessionId}?moldId=${moldId}`);
-        break;
-      case 'create_repair_request':
-        navigate(`/qr/repair-request/${sessionId}?moldId=${moldId}`);
-        break;
-      default:
-        alert(`아직 화면이 준비되지 않은 작업: ${action}`);
-    }
+    navigate(
+      `/qr/daily-inspection/${result.sessionId}/${result.mold.id}`,
+      { state: { mold: result.mold } }
+    );
   };
+
+  const handleStartPeriodicInspection = () => {
+    if (!result) return;
+    navigate(
+      `/qr/periodic-inspection/${result.sessionId}/${result.mold.id}`,
+      { state: { mold: result.mold } }
+    );
+  };
+
+  const handleCreateRepairRequest = () => {
+    if (!result) return;
+    navigate(`/qr/repair-request/${result.sessionId}/${result.mold.id}`, {
+      state: { mold: result.mold },
+    });
+  };
+
+  const hasAction = (action: string) =>
+    result?.availableActions?.includes(action);
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col items-center py-10 px-4">
@@ -127,23 +133,40 @@ export default function QrScanPage() {
 
             {/* 가능한 작업 버튼 */}
             <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-4">
-              <div className="text-xs text-slate-300 mb-2">
-                이 금형에서 수행 가능한 작업
+              <div className="text-xs font-medium text-slate-300 mb-3">
+                가능한 작업
               </div>
               <div className="flex flex-wrap gap-2">
-                {result.availableActions.map((action) => (
+                {hasAction('daily_inspection') && (
                   <button
-                    key={action}
-                    type="button"
-                    onClick={() => goAction(action)}
-                    className="px-3 py-1.5 rounded-2xl text-xs font-medium bg-slate-800 hover:bg-sky-500/70 text-slate-100 hover:text-white border border-slate-600 hover:border-sky-400 transition-all"
+                    onClick={handleStartDailyInspection}
+                    className="px-3 py-2 rounded-2xl bg-sky-500/90 hover:bg-sky-400 text-xs text-white font-medium shadow-md shadow-sky-500/40"
                   >
-                    {toKoreanLabel(action)}
+                    일상점검 시작
                   </button>
-                ))}
+                )}
+
+                {hasAction('periodic_inspection') && (
+                  <button
+                    onClick={handleStartPeriodicInspection}
+                    className="px-3 py-2 rounded-2xl bg-emerald-500/90 hover:bg-emerald-400 text-xs text-white font-medium shadow-md shadow-emerald-500/40"
+                  >
+                    정기점검 시작
+                  </button>
+                )}
+
+                {hasAction('create_repair_request') && (
+                  <button
+                    onClick={handleCreateRepairRequest}
+                    className="px-3 py-2 rounded-2xl bg-rose-500/90 hover:bg-rose-400 text-xs text-white font-medium shadow-md shadow-rose-500/40"
+                  >
+                    수리요청 작성
+                  </button>
+                )}
+
                 {result.availableActions.length === 0 && (
                   <div className="text-[11px] text-slate-500">
-                    현재 사용자/상태에서 가능한 작업이 없습니다.
+                    현재 수행 가능한 작업이 없습니다.
                   </div>
                 )}
               </div>
@@ -153,19 +176,4 @@ export default function QrScanPage() {
       </div>
     </div>
   );
-}
-
-function toKoreanLabel(action: string) {
-  switch (action) {
-    case 'daily_inspection':
-      return '일상점검 작성';
-    case 'periodic_inspection':
-      return '정기점검 작성';
-    case 'create_repair_request':
-      return '수리요청 작성';
-    case 'tryout_check':
-      return 'TRIAL / TRY-OUT 체크';
-    default:
-      return action;
-  }
 }
