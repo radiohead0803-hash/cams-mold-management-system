@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
 import MoldLocationMap from '../../components/MoldLocationMap';
+import NaverMoldLocationMap from '../../components/NaverMoldLocationMap';
 import { useDashboardKpi } from '../../hooks/useDashboardKpi';
 import { useMoldLocations } from '../../hooks/useMoldLocations';
 
@@ -11,6 +12,7 @@ export default function SystemAdminDashboard() {
   const { data: stats, loading, error, refetch } = useDashboardKpi();
   const { locations, loading: locLoading, error: locError, refetch: refetchLocations } = useMoldLocations();
   const [showMap, setShowMap] = useState(true);
+  const [mapType, setMapType] = useState('naver'); // 'kakao' | 'naver' - 네이버를 기본으로 설정
   
   // Mock system status
   const systemStatus = {
@@ -300,27 +302,75 @@ export default function SystemAdminDashboard() {
         {/* 금형 위치 지도 */}
         {showMap && (
           <section>
-            {locLoading && (
-              <div className="bg-white rounded-xl shadow p-6">
-                <div className="flex items-center justify-center h-96">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-500">위치 데이터 로딩 중...</p>
+            {/* 지도 타입 선택 헤더 */}
+            <div className="bg-white rounded-t-xl shadow-sm border border-gray-200 border-b-0 px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-900">금형 위치 현황</span>
+                  <button
+                    onClick={refetchLocations}
+                    className="text-xs text-gray-500 hover:text-gray-900 transition-colors"
+                  >
+                    새로고침
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-gray-500 mr-1">지도 타입</div>
+                  <button
+                    onClick={() => setMapType('kakao')}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      mapType === 'kakao'
+                        ? 'bg-gray-900 text-white border-gray-900'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    Kakao
+                  </button>
+                  <button
+                    onClick={() => setMapType('naver')}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                      mapType === 'naver'
+                        ? 'bg-gray-900 text-white border-gray-900'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    Naver
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 지도 컨텐츠 */}
+            <div className="rounded-b-xl overflow-hidden">
+              {locLoading && (
+                <div className="bg-white shadow p-6">
+                  <div className="flex items-center justify-center h-96">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-gray-500">위치 데이터 로딩 중...</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-            {locError && !locLoading && (
-              <div className="bg-white rounded-xl shadow p-6">
-                <div className="flex items-center gap-3 text-red-600">
-                  <AlertTriangle className="w-5 h-5" />
-                  <p>{locError}</p>
+              )}
+              {locError && !locLoading && (
+                <div className="bg-white shadow p-6">
+                  <div className="flex items-center gap-3 text-red-600">
+                    <AlertTriangle className="w-5 h-5" />
+                    <p>{locError}</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            {!locLoading && !locError && (
-              <MoldLocationMap locations={locations} onRefresh={refetchLocations} />
-            )}
+              )}
+              {!locLoading && !locError && (
+                <>
+                  {mapType === 'kakao' ? (
+                    <MoldLocationMap locations={locations} onRefresh={refetchLocations} />
+                  ) : (
+                    <NaverMoldLocationMap locations={locations} onRefresh={refetchLocations} />
+                  )}
+                </>
+              )}
+            </div>
           </section>
         )}
 
