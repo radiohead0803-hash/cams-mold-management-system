@@ -20,13 +20,16 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const response = await authAPI.login({ username: testUsername, password: testPassword })
-      const { token, user } = response.data.data
-      
-      login(user, token)
-      navigate('/')
+      const result = await login(testUsername, testPassword)
+      if (result.success) {
+        // 역할별 대시보드로 이동
+        const role = result.user.role || result.user.user_type
+        navigate(getDashboardPath(role))
+      } else {
+        setError(result.error || '로그인에 실패했습니다')
+      }
     } catch (err) {
-      setError(err.response?.data?.error?.message || '로그인에 실패했습니다')
+      setError(err?.message || '로그인에 실패했습니다')
     } finally {
       setLoading(false)
     }
@@ -38,13 +41,16 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const response = await authAPI.login({ username, password })
-      const { token, user } = response.data.data
-      
-      login(user, token)
-      navigate('/')
+      const result = await login(username, password)
+      if (result.success) {
+        // 역할별 대시보드로 이동
+        const role = result.user.role || result.user.user_type
+        navigate(getDashboardPath(role))
+      } else {
+        setError(result.error || '로그인에 실패했습니다')
+      }
     } catch (err) {
-      setError(err.response?.data?.error?.message || '로그인에 실패했습니다')
+      setError(err?.message || '로그인에 실패했습니다')
     } finally {
       setLoading(false)
     }
@@ -165,4 +171,20 @@ export default function Login() {
       </div>
     </div>
   )
+}
+
+// 역할별 대시보드 경로 결정
+function getDashboardPath(role) {
+  switch (role) {
+    case 'system_admin':
+      return '/dashboard/admin'
+    case 'mold_developer':
+      return '/dashboard/developer'
+    case 'maker':
+      return '/dashboard/maker'
+    case 'plant':
+      return '/dashboard/plant'
+    default:
+      return '/'
+  }
 }
