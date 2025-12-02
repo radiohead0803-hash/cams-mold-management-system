@@ -3,8 +3,16 @@ const router = express.Router();
 const {
   listRepairRequests,
   getRepairRequestDetail,
-  updateRepairRequestStatus
+  updateRepairRequestStatus,
+  getRepairSummary
 } = require('../controllers/repairRequestController');
+
+/**
+ * 수리요청 요약 (대시보드용)
+ * GET /api/v1/repair-requests/summary
+ * ⚠️ 주의: /repair-requests/:id 보다 먼저 정의해야 함
+ */
+router.get('/repair-requests/summary', getRepairSummary);
 
 /**
  * 수리요청 목록 조회
