@@ -43,3 +43,6 @@ coverage/
 # Build
 dist/
 build/
+
+# Frontend build (will be generated during deployment)
+public/

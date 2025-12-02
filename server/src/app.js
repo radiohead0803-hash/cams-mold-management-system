@@ -153,6 +153,31 @@ app.get('/', (req, res) => {
   });
 });
 
+// Serve static files from React build (production only)
+if (process.env.NODE_ENV === 'production') {
+  const publicPath = path.join(__dirname, '../public');
+  app.use(express.static(publicPath));
+  
+  // SPA fallback - serve index.html for all non-API routes
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+      return next();
+    }
+    
+    // Serve index.html for all other routes
+    res.sendFile(path.join(publicPath, 'index.html'), (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err);
+        res.status(404).json({
+          success: false,
+          message: '요청한 리소스를 찾을 수 없습니다.'
+        });
+      }
+    });
+  });
+}
+
 // Error handling
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -163,11 +188,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use((req, res) => {
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
   res.status(404).json({
     success: false,
-    message: '요청한 리소스를 찾을 수 없습니다.'
+    message: '요청한 API 리소스를 찾을 수 없습니다.'
   });
 });
 
