@@ -16,6 +16,7 @@
     "db:reset": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate && sequelize-cli db:seed:all",
     "db:update": "railway run node update-database.js",
     "db:rollback": "railway run node rollback-database.js",
+    "qr:generate": "node ../scripts/generate-qr-codes.js",
     "lint": "eslint src/**/*.js",
     "test": "jest"
   },
