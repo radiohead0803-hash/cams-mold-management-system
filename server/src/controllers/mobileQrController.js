@@ -2,18 +2,22 @@ const { Mold, ChecklistTemplate } = require('../models/newIndex');
 
 /**
  * QR 코드 스캔 - 금형 정보 조회
- * GET /api/v1/mobile/qrcode/scan?code=M2024-001
+ * GET /api/v1/qr/scan?code=M2024-001
+ * POST /api/v1/qr/scan { code: "M2024-001" }
  */
 exports.scanQr = async (req, res) => {
   try {
-    const { code } = req.query;
+    // POST body 또는 GET query 둘 다 지원
+    const code = req.body.code || req.query.code;
 
     if (!code) {
       return res.status(400).json({
         success: false,
-        message: 'QR 코드가 필요합니다.'
+        message: 'QR 코드 정보(code)가 없습니다.'
       });
     }
+
+    console.log('[scanQr] Scanning code:', code);
 
     // 금형 조회 (Plant 모델 없이)
     const mold = await Mold.findOne({
