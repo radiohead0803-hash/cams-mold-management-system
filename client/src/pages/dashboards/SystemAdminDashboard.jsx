@@ -11,6 +11,25 @@ export default function SystemAdminDashboard() {
   const { data: stats, loading, error, refetch } = useDashboardKpi();
   const { locations, loading: locLoading, error: locError, refetch: refetchLocations } = useMoldLocations();
   const [showMap, setShowMap] = useState(true);
+  const [selectedMoldId, setSelectedMoldId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // 검색 필터링
+  const filteredLocations = locations.filter((loc) => {
+    if (!searchTerm) return true;
+    const keyword = searchTerm.toLowerCase();
+    return (
+      loc.moldCode.toLowerCase().includes(keyword) ||
+      (loc.moldName || '').toLowerCase().includes(keyword) ||
+      loc.plantName.toLowerCase().includes(keyword)
+    );
+  });
+
+  // 통계 계산
+  const total = filteredLocations.length;
+  const moved = filteredLocations.filter((l) => l.hasDrift || l.status === 'moved').length;
+  const ng = filteredLocations.filter((l) => l.status === 'ng').length;
+  const normal = total - moved - ng;
   
   // Mock system status
   const systemStatus = {
@@ -275,21 +294,21 @@ export default function SystemAdminDashboard() {
               <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-gray-700">정상 위치</p>
-                  <p className="text-2xl font-bold text-green-600">{locations.filter(l => !l.hasDrift).length}개</p>
+                  <p className="text-2xl font-bold text-green-600">{normal}개</p>
                 </div>
                 <div className="text-3xl">✅</div>
               </div>
               <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-gray-700">위치 이탈</p>
-                  <p className="text-2xl font-bold text-red-600">{locations.filter(l => l.hasDrift).length}개</p>
+                  <p className="text-2xl font-bold text-red-600">{moved}개</p>
                 </div>
                 <div className="text-3xl">⚠️</div>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div>
                   <p className="text-sm font-medium text-gray-700">총 금형</p>
-                  <p className="text-2xl font-bold text-gray-600">{locations.length}개</p>
+                  <p className="text-2xl font-bold text-gray-600">{total}개</p>
                 </div>
                 <div className="text-3xl">📦</div>
               </div>
@@ -319,7 +338,10 @@ export default function SystemAdminDashboard() {
               </div>
             )}
             {!locLoading && !locError && (
-              <NaverMoldLocationMap locations={locations} onRefresh={refetchLocations} />
+              <NaverMoldLocationMap 
+                locations={filteredLocations} 
+                selectedMoldId={selectedMoldId}
+              />
             )}
           </section>
         )}
