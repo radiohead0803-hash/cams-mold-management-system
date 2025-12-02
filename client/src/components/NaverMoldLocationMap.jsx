@@ -2,6 +2,11 @@ import { useEffect, useRef } from "react";
 
 const NAVER_SCRIPT_ID = "naver-map-sdk";
 
+// 인증 실패시 브라우저 콘솔로 이유 확인
+window.navermap_authFailure = function () {
+  console.error("[NaverMap] Open API 인증 실패 - ncpKeyId 또는 Web 서비스 URL 설정을 다시 확인하세요.");
+};
+
 export default function NaverMoldLocationMap({ locations, selectedMoldId }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -127,7 +132,7 @@ export default function NaverMoldLocationMap({ locations, selectedMoldId }) {
       const script = document.createElement("script");
       script.id = NAVER_SCRIPT_ID;
       script.async = true;
-      script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}`;
+      script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`;
 
       script.onload = () => {
         initMapAndMarkers();
