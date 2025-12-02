@@ -9,40 +9,31 @@ exports.getMyNotifications = async (req, res) => {
     const userId = req.user?.id || 1; // 개발 중에는 기본값 1 사용
     const { limit = 50, offset = 0, unreadOnly = false } = req.query;
 
-    // 임시: Notification 모델이 없거나 에러 발생 시 빈 배열 반환
-    let notifications = [];
-    let unreadCount = 0;
-
-    try {
-      const where = { user_id: userId };
-      
-      if (unreadOnly === 'true') {
-        where.is_read = false;
-      }
-
-      notifications = await Notification.findAll({
-        where,
-        order: [['created_at', 'DESC']],
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        include: [
-          {
-            model: Mold,
-            as: 'mold',
-            attributes: ['id', 'mold_code', 'mold_name'],
-            required: false
-          }
-        ]
-      });
-
-      // 읽지 않은 알림 개수
-      unreadCount = await Notification.count({
-        where: { user_id: userId, is_read: false }
-      });
-    } catch (dbError) {
-      console.warn('[getMyNotifications] DB error, returning empty array:', dbError.message);
-      // DB 에러 시 빈 배열 반환 (에러 없이 계속 진행)
+    const where = { user_id: userId };
+    
+    if (unreadOnly === 'true') {
+      where.is_read = false;
     }
+
+    const notifications = await Notification.findAll({
+      where,
+      order: [['created_at', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      include: [
+        {
+          model: Mold,
+          as: 'mold',
+          attributes: ['id', 'mold_code', 'mold_name'],
+          required: false
+        }
+      ]
+    });
+
+    // 읽지 않은 알림 개수
+    const unreadCount = await Notification.count({
+      where: { user_id: userId, is_read: false }
+    });
 
     return res.json({
       success: true,
@@ -55,14 +46,9 @@ exports.getMyNotifications = async (req, res) => {
 
   } catch (err) {
     console.error('[getMyNotifications] error:', err);
-    // 최종 에러 시에도 빈 배열 반환
-    return res.json({
-      success: true,
-      data: {
-        notifications: [],
-        unreadCount: 0,
-        total: 0
-      }
+    return res.status(500).json({
+      success: false,
+      message: '알림 조회에 실패했습니다.'
     });
   }
 };
@@ -177,16 +163,9 @@ exports.getUnreadCount = async (req, res) => {
   try {
     const userId = req.user?.id || 1;
 
-    let count = 0;
-
-    try {
-      count = await Notification.count({
-        where: { user_id: userId, is_read: false }
-      });
-    } catch (dbError) {
-      console.warn('[getUnreadCount] DB error, returning 0:', dbError.message);
-      // DB 에러 시 0 반환
-    }
+    const count = await Notification.count({
+      where: { user_id: userId, is_read: false }
+    });
 
     return res.json({
       success: true,
@@ -195,10 +174,9 @@ exports.getUnreadCount = async (req, res) => {
 
   } catch (err) {
     console.error('[getUnreadCount] error:', err);
-    // 최종 에러 시에도 0 반환
-    return res.json({
-      success: true,
-      data: { count: 0 }
+    return res.status(500).json({
+      success: false,
+      message: '알림 개수 조회에 실패했습니다.'
     });
   }
 };
