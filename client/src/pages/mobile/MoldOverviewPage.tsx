@@ -290,7 +290,9 @@ export default function MoldOverviewPage() {
                   <button
                     key={btn.id}
                     disabled={!enabled}
-                    onClick={() => enabled && navigate(`/mobile/molds/${moldId}/check/${btn.id}`)}
+                    onClick={() => enabled && navigate(`/mobile/molds/${moldId}/check/${btn.id}`, {
+                      state: { role, mold }
+                    })}
                     className={`
                       px-3 py-2.5 rounded-xl border text-left text-xs font-medium
                       transition-colors
