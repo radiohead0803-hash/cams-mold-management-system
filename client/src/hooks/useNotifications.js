@@ -18,7 +18,7 @@ export function useNotifications() {
       setLoading(true);
       setError(null);
       
-      const response = await api.get('/api/v1/notifications');
+      const response = await api.get('/notifications');
       
       if (response.data.success) {
         setItems(response.data.data.notifications || []);
@@ -37,7 +37,7 @@ export function useNotifications() {
    */
   const markAsRead = useCallback(async (id) => {
     try {
-      await api.patch(`/api/v1/notifications/${id}/read`);
+      await api.patch(`/notifications/${id}/read`);
       
       // 로컬 상태 업데이트
       setItems(prev =>
@@ -53,7 +53,7 @@ export function useNotifications() {
    */
   const markAllAsRead = useCallback(async () => {
     try {
-      await api.patch('/api/v1/notifications/read-all');
+      await api.patch('/notifications/read-all');
       
       // 로컬 상태 업데이트
       setItems(prev =>
@@ -70,7 +70,7 @@ export function useNotifications() {
    */
   const deleteNotification = useCallback(async (id) => {
     try {
-      await api.delete(`/api/v1/notifications/${id}`);
+      await api.delete(`/notifications/${id}`);
       
       // 로컬 상태 업데이트
       setItems(prev => prev.filter(n => n.id !== id));
