@@ -2,8 +2,28 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { authAPI } from '../lib/api'
+import api from '../lib/api'
 import { QrCode, Camera, X, AlertCircle, CheckCircle } from 'lucide-react'
 import jsQR from 'jsqr'
+
+// 역할별 라우팅 함수
+const navigateByRole = (navigate, role) => {
+  switch (role) {
+    case 'developer':
+    case 'hq':
+      navigate('/mobile/qr-scan') // 본사 → QR 스캔 페이지
+      break
+    case 'maker':
+      navigate('/mobile/qr-scan') // 제작처 → QR 스캔 페이지
+      break
+    case 'production':
+    case 'plant':
+      navigate('/mobile/qr-scan') // 생산처 → QR 스캔 페이지
+      break
+    default:
+      navigate('/mobile/qr-scan')
+  }
+}
 
 export default function QRLogin() {
   const navigate = useNavigate()
@@ -108,31 +128,43 @@ export default function QRLogin() {
     await handleManualQRInput(qrData)
   }
 
-  // QR 스캔 처리 - 금형 정보 조회 후 ScanInfo 페이지로 이동
+  // QR 스캔 처리 - 금형 정보 조회 후 역할별 페이지로 이동
   const handleManualQRInput = async (qrValue) => {
     try {
       setError('')
       
-      // QR 스캔 API 호출
-      const response = await authAPI.scanQR({ 
-        qr_code: qrValue,
-        location: null // GPS 위치는 선택사항
+      console.log('[QRLogin] Scanning QR code:', qrValue)
+      
+      // QR 스캔 API 호출 (신규 엔드포인트)
+      const response = await api.post('/api/v1/mobile/qr/scan', { 
+        code: qrValue
       })
       
+      console.log('[QRLogin] QR scan response:', response.data)
+      
       if (response.data.success) {
-        const { session, mold, user } = response.data.data
+        const { mold, templates } = response.data.data
         
-        // ScanInfo 페이지로 이동
-        navigate('/scan-info', {
-          state: {
-            session,
-            mold,
-            user
-          }
-        })
+        // 금형 정보를 localStorage에 저장
+        localStorage.setItem('cams_scanned_mold', JSON.stringify({
+          mold,
+          templates,
+          scannedAt: new Date().toISOString()
+        }))
+        
+        // 현재 로그인된 사용자 역할 확인
+        const authStore = useAuthStore.getState()
+        const userRole = authStore.user?.role || 'production'
+        
+        console.log('[QRLogin] Navigating by role:', userRole)
+        
+        // 역할별 페이지로 이동
+        navigateByRole(navigate, userRole)
       }
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'QR 스캔에 실패했습니다.')
+      console.error('[QRLogin] QR scan error:', err)
+      const errorMsg = err.response?.data?.message || 'QR 스캔에 실패했습니다.'
+      setError(errorMsg)
     }
   }
 
@@ -272,8 +304,10 @@ export default function QRLogin() {
                   const response = await authAPI.login({ username: 'developer', password: 'dev123' });
                   const { token, user } = response.data.data;
                   login(user, token);
-                  navigate('/dashboard/developer');
+                  console.log('[QRLogin] Quick login - developer:', user);
+                  navigateByRole(navigate, user.role || 'developer');
                 } catch (err) {
+                  console.error('[QRLogin] Quick login error:', err);
                   setError('로그인 실패');
                 }
               }}
@@ -294,8 +328,10 @@ export default function QRLogin() {
                   const response = await authAPI.login({ username: 'maker1', password: 'maker123' });
                   const { token, user } = response.data.data;
                   login(user, token);
-                  navigate('/dashboard/maker');
+                  console.log('[QRLogin] Quick login - maker:', user);
+                  navigateByRole(navigate, user.role || 'maker');
                 } catch (err) {
+                  console.error('[QRLogin] Quick login error:', err);
                   setError('로그인 실패');
                 }
               }}
@@ -316,8 +352,10 @@ export default function QRLogin() {
                   const response = await authAPI.login({ username: 'plant1', password: 'plant123' });
                   const { token, user } = response.data.data;
                   login(user, token);
-                  navigate('/dashboard/plant');
+                  console.log('[QRLogin] Quick login - plant:', user);
+                  navigateByRole(navigate, user.role || 'plant');
                 } catch (err) {
+                  console.error('[QRLogin] Quick login error:', err);
                   setError('로그인 실패');
                 }
               }}
