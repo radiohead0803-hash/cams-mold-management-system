@@ -1,66 +1,57 @@
-const { Model, DataTypes } = require('sequelize');
-
-class ChecklistTemplate extends Model {
-  static init(sequelize) {
-    return super.init(
-      {
-        id: {
-          type: DataTypes.BIGINT,
-          primaryKey: true,
-          autoIncrement: true
-        },
-        code: {
-          type: DataTypes.STRING(50),
-          allowNull: false,
-          unique: true
-        },
-        name: {
-          type: DataTypes.STRING(100),
-          allowNull: false
-        },
-        category: {
-          type: DataTypes.STRING(20),
-          allowNull: false,
-          comment: 'daily | regular'
-        },
-        shot_interval: {
-          type: DataTypes.INTEGER,
-          comment: '정기점검 샷 간격'
-        },
-        is_active: {
-          type: DataTypes.BOOLEAN,
-          defaultValue: true
-        },
-        version: {
-          type: DataTypes.INTEGER,
-          defaultValue: 1
-        },
-        created_at: {
-          type: DataTypes.DATE,
-          defaultValue: DataTypes.NOW
-        }
+module.exports = (sequelize, DataTypes) => {
+  const ChecklistTemplate = sequelize.define(
+    'ChecklistTemplate',
+    {
+      code: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
       },
-      {
-        sequelize,
-        modelName: 'ChecklistTemplate',
-        tableName: 'checklist_templates',
-        timestamps: false,
-        underscored: true
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false
+      },
+      category: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'daily | regular'
+      },
+      shot_interval: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: '정기점검 샷 간격'
+      },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+      },
+      version: {
+        type: DataTypes.INTEGER,
+        defaultValue: 1
       }
-    );
-  }
+    },
+    {
+      tableName: 'checklist_templates',
+      underscored: true,
+      timestamps: false
+    }
+  );
 
-  static associate(models) {
-    this.hasMany(models.ChecklistTemplateItem, {
-      foreignKey: 'template_id',
-      as: 'items'
+  ChecklistTemplate.associate = (models) => {
+    // ChecklistTemplate 1 : N ChecklistTemplateItem
+    ChecklistTemplate.hasMany(models.ChecklistTemplateItem, {
+      as: 'items',
+      foreignKey: 'template_id'
     });
     
-    this.hasMany(models.ChecklistInstance, {
-      foreignKey: 'template_id',
-      as: 'instances'
-    });
-  }
-}
+    // ChecklistTemplate 1 : N ChecklistInstance
+    if (models.ChecklistInstance) {
+      ChecklistTemplate.hasMany(models.ChecklistInstance, {
+        as: 'instances',
+        foreignKey: 'template_id'
+      });
+    }
+  };
 
-module.exports = ChecklistTemplate;
+  return ChecklistTemplate;
+};

@@ -21,16 +21,11 @@ db.MoldIssue = require('./MoldIssue')(sequelize, Sequelize.DataTypes);
 db.Alert = require('./Alert')(sequelize, Sequelize.DataTypes);
 db.MoldLocationLog = require('./MoldLocationLog')(sequelize, Sequelize.DataTypes);
 
-// New checklist models (Class-based)
-const ChecklistTemplate = require('./ChecklistTemplate');
-const ChecklistTemplateItem = require('./ChecklistTemplateItem');
-const ChecklistInstance = require('./ChecklistInstance');
-const ChecklistAnswer = require('./ChecklistAnswer');
-
-db.ChecklistTemplate = ChecklistTemplate.init(sequelize);
-db.ChecklistTemplateItem = ChecklistTemplateItem.init(sequelize);
-db.ChecklistInstance = ChecklistInstance.init(sequelize);
-db.ChecklistAnswer = ChecklistAnswer.init(sequelize);
+// New checklist models (Function-based - consistent with other models)
+db.ChecklistTemplate = require('./ChecklistTemplate')(sequelize, Sequelize.DataTypes);
+db.ChecklistTemplateItem = require('./ChecklistTemplateItem')(sequelize, Sequelize.DataTypes);
+db.ChecklistInstance = require('./ChecklistInstance')(sequelize, Sequelize.DataTypes);
+db.ChecklistAnswer = require('./ChecklistAnswer')(sequelize, Sequelize.DataTypes);
 
 // Master data models
 db.CarModel = require('./CarModel')(sequelize, Sequelize.DataTypes);

@@ -1,88 +1,88 @@
-const { Model, DataTypes } = require('sequelize');
-
-class ChecklistInstance extends Model {
-  static init(sequelize) {
-    return super.init(
-      {
-        id: {
-          type: DataTypes.BIGINT,
-          primaryKey: true,
-          autoIncrement: true
-        },
-        template_id: {
-          type: DataTypes.BIGINT,
-          allowNull: false
-        },
-        mold_id: {
-          type: DataTypes.BIGINT,
-          allowNull: false
-        },
-        plant_id: {
-          type: DataTypes.BIGINT
-        },
-        site_type: {
-          type: DataTypes.STRING(20),
-          allowNull: false,
-          comment: 'production | maker'
-        },
-        category: {
-          type: DataTypes.STRING(20),
-          allowNull: false,
-          comment: 'daily | regular'
-        },
-        shot_counter: {
-          type: DataTypes.INTEGER
-        },
-        status: {
-          type: DataTypes.STRING(20),
-          allowNull: false,
-          defaultValue: 'draft',
-          comment: 'draft | submitted'
-        },
-        inspected_by: {
-          type: DataTypes.BIGINT
-        },
-        inspected_at: {
-          type: DataTypes.DATE
-        },
-        created_at: {
-          type: DataTypes.DATE,
-          defaultValue: DataTypes.NOW
-        }
+module.exports = (sequelize, DataTypes) => {
+  const ChecklistInstance = sequelize.define(
+    'ChecklistInstance',
+    {
+      template_id: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
-      {
-        sequelize,
-        modelName: 'ChecklistInstance',
-        tableName: 'checklist_instances',
-        timestamps: false,
-        underscored: true
+      mold_id: {
+        type: DataTypes.BIGINT,
+        allowNull: false
+      },
+      plant_id: {
+        type: DataTypes.BIGINT,
+        allowNull: true
+      },
+      site_type: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'production | maker'
+      },
+      category: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        comment: 'daily | regular'
+      },
+      shot_counter: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+      },
+      status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'draft',
+        comment: 'draft | submitted'
+      },
+      inspected_by: {
+        type: DataTypes.BIGINT,
+        allowNull: true
+      },
+      inspected_at: {
+        type: DataTypes.DATE,
+        allowNull: true
       }
-    );
-  }
+    },
+    {
+      tableName: 'checklist_instances',
+      underscored: true,
+      timestamps: false
+    }
+  );
 
-  static associate(models) {
-    this.belongsTo(models.ChecklistTemplate, {
-      foreignKey: 'template_id',
-      as: 'template'
-    });
-    
-    this.belongsTo(models.Mold, {
-      foreignKey: 'mold_id',
-      as: 'mold'
-    });
-    
-    if (models.Plant) {
-      this.belongsTo(models.Plant, {
-        foreignKey: 'plant_id',
-        as: 'plant'
+  ChecklistInstance.associate = (models) => {
+    // N : 1 ChecklistTemplate
+    if (models.ChecklistTemplate) {
+      ChecklistInstance.belongsTo(models.ChecklistTemplate, {
+        as: 'template',
+        foreignKey: 'template_id'
       });
     }
     
-    this.hasMany(models.ChecklistAnswer, {
-      foreignKey: 'instance_id',
-      as: 'answers'
-    });
-  }
-}
+    // N : 1 Mold
+    if (models.Mold) {
+      ChecklistInstance.belongsTo(models.Mold, {
+        as: 'mold',
+        foreignKey: 'mold_id'
+      });
+    }
+    
+    // N : 1 Plant
+    if (models.Plant) {
+      ChecklistInstance.belongsTo(models.Plant, {
+        as: 'plant',
+        foreignKey: 'plant_id'
+      });
+    }
+    
+    // 1 : N ChecklistAnswer
+    if (models.ChecklistAnswer) {
+      ChecklistInstance.hasMany(models.ChecklistAnswer, {
+        as: 'answers',
+        foreignKey: 'instance_id'
+      });
+    }
+  };
 
-module.exports = ChecklistInstance;
+  return ChecklistInstance;
+};

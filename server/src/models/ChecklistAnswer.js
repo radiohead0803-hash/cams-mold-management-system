@@ -1,57 +1,56 @@
-const { Model, DataTypes } = require('sequelize');
-
-class ChecklistAnswer extends Model {
-  static init(sequelize) {
-    return super.init(
-      {
-        id: {
-          type: DataTypes.BIGINT,
-          primaryKey: true,
-          autoIncrement: true
-        },
-        instance_id: {
-          type: DataTypes.BIGINT,
-          allowNull: false
-        },
-        item_id: {
-          type: DataTypes.BIGINT,
-          allowNull: false
-        },
-        value_bool: {
-          type: DataTypes.BOOLEAN
-        },
-        value_number: {
-          type: DataTypes.DECIMAL
-        },
-        value_text: {
-          type: DataTypes.TEXT
-        },
-        is_ng: {
-          type: DataTypes.BOOLEAN,
-          defaultValue: false
-        }
+module.exports = (sequelize, DataTypes) => {
+  const ChecklistAnswer = sequelize.define(
+    'ChecklistAnswer',
+    {
+      instance_id: {
+        type: DataTypes.BIGINT,
+        allowNull: false
       },
-      {
-        sequelize,
-        modelName: 'ChecklistAnswer',
-        tableName: 'checklist_answers',
-        timestamps: false,
-        underscored: true
+      item_id: {
+        type: DataTypes.BIGINT,
+        allowNull: false
+      },
+      value_bool: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true
+      },
+      value_number: {
+        type: DataTypes.DECIMAL,
+        allowNull: true
+      },
+      value_text: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
+      is_ng: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
       }
-    );
-  }
+    },
+    {
+      tableName: 'checklist_answers',
+      underscored: true,
+      timestamps: false
+    }
+  );
 
-  static associate(models) {
-    this.belongsTo(models.ChecklistInstance, {
-      foreignKey: 'instance_id',
-      as: 'instance'
-    });
+  ChecklistAnswer.associate = (models) => {
+    // N : 1 ChecklistInstance
+    if (models.ChecklistInstance) {
+      ChecklistAnswer.belongsTo(models.ChecklistInstance, {
+        as: 'instance',
+        foreignKey: 'instance_id'
+      });
+    }
     
-    this.belongsTo(models.ChecklistTemplateItem, {
-      foreignKey: 'item_id',
-      as: 'item'
-    });
-  }
-}
+    // N : 1 ChecklistTemplateItem
+    if (models.ChecklistTemplateItem) {
+      ChecklistAnswer.belongsTo(models.ChecklistTemplateItem, {
+        as: 'item',
+        foreignKey: 'item_id'
+      });
+    }
+  };
 
-module.exports = ChecklistAnswer;
+  return ChecklistAnswer;
+};
