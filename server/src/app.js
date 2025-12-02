@@ -89,10 +89,12 @@ const repairRequestsRouter = require('./routes/repairRequests');
 const notificationsRouter = require('./routes/notifications');
 const dashboardRouter = require('./routes/dashboard');
 const moldsRouter = require('./routes/molds');
+const inspectionsRouter = require('./routes/inspections');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/molds', moldsRouter);
+app.use('/api/v1/inspections', inspectionsRouter);
 app.use('/api/v1/mobile', mobileMoldsRouter);
 app.use('/api/v1/mobile', mobileQrRouter);
 app.use('/api/v1', repairRequestsRouter);
