@@ -1,4 +1,12 @@
-const { Mold, ChecklistTemplate, ChecklistTemplateItem, ChecklistInstance, ChecklistAnswer } = require('../models/newIndex');
+const { 
+  Mold, 
+  ChecklistTemplate, 
+  ChecklistTemplateItem, 
+  ChecklistInstance, 
+  ChecklistAnswer,
+  RepairRequest,
+  RepairRequestItem
+} = require('../models/newIndex');
 
 /**
  * 점검 세션 시작 - 템플릿으로 폼 생성
@@ -101,7 +109,9 @@ async function startChecklist(req, res) {
 async function submitChecklist(req, res) {
   try {
     const { instanceId } = req.params;
-    const { answers, comment } = req.body;
+    const { answers } = req.body;
+    const userId = req.user?.id || null;
+    const userRole = req.user?.role || 'production';
 
     // 입력 검증
     if (!answers || !Array.isArray(answers)) {
@@ -111,8 +121,11 @@ async function submitChecklist(req, res) {
       });
     }
 
-    // 인스턴스 조회
-    const instance = await ChecklistInstance.findByPk(instanceId);
+    // 인스턴스 조회 (Mold 포함)
+    const instance = await ChecklistInstance.findByPk(instanceId, {
+      include: [{ model: Mold, as: 'mold' }]
+    });
+    
     if (!instance) {
       return res.status(404).json({
         success: false,
@@ -120,16 +133,22 @@ async function submitChecklist(req, res) {
       });
     }
 
-    // 실제 DB에 답변 저장
+    // 기존 답변 삭제
+    await ChecklistAnswer.destroy({ where: { instance_id: instance.id } });
+
+    // 새 답변 저장
+    const savedAnswers = [];
+    
     for (const answer of answers) {
       const answerData = {
         instance_id: instance.id,
-        item_id: answer.itemId
+        item_id: answer.itemId,
+        is_ng: false
       };
 
       // 필드 타입에 따라 적절한 컬럼에 저장
       if (answer.fieldType === 'boolean') {
-        answerData.value_bool = answer.value;
+        answerData.value_bool = !!answer.value;
         answerData.is_ng = answer.value === false; // false면 NG
       } else if (answer.fieldType === 'number') {
         answerData.value_number = answer.value;
@@ -137,7 +156,8 @@ async function submitChecklist(req, res) {
         answerData.value_text = answer.value;
       }
 
-      await ChecklistAnswer.create(answerData);
+      const created = await ChecklistAnswer.create(answerData);
+      savedAnswers.push(created);
     }
 
     // 인스턴스 상태 업데이트
@@ -146,22 +166,81 @@ async function submitChecklist(req, res) {
       inspected_at: new Date()
     });
 
-    // NG 항목 카운트
-    const ngCount = answers.filter(a => 
-      a.fieldType === 'boolean' && a.value === false
-    ).length;
+    // NG 항목 확인 및 자동 수리요청 생성
+    const ngAnswers = savedAnswers.filter(a => a.is_ng);
+    let repairRequestId = null;
+
+    if (ngAnswers.length > 0) {
+      // NG 항목의 라벨/섹션 가져오기
+      const itemIds = ngAnswers.map(a => a.item_id);
+      const items = await ChecklistTemplateItem.findAll({
+        where: { id: itemIds }
+      });
+      
+      const itemById = {};
+      items.forEach(item => {
+        itemById[item.id] = item;
+      });
+
+      // 수리요청 헤더 생성
+      const mold = instance.mold;
+      const title = `[NG] 금형 ${mold.mold_code} 점검 결과 수리요청`;
+      const description = `체크리스트(ID: ${instance.id})에서 NG 항목 ${ngAnswers.length}건 발생\n\nNG 항목:\n${
+        ngAnswers.map(a => {
+          const item = itemById[a.item_id];
+          return `- ${item?.section || '기타'}: ${item?.label || '항목'}`;
+        }).join('\n')
+      }`;
+
+      const repairRequest = await RepairRequest.create({
+        mold_id: instance.mold_id,
+        plant_id: instance.plant_id,
+        checklist_instance_id: instance.id,
+        status: 'requested',
+        priority: 'normal',
+        request_type: 'ng_repair',
+        requested_by: userId,
+        requested_role: userRole,
+        title,
+        description
+      });
+
+      repairRequestId = repairRequest.id;
+
+      // 수리요청 항목 상세 생성
+      for (const ans of ngAnswers) {
+        const item = itemById[ans.item_id];
+        await RepairRequestItem.create({
+          repair_request_id: repairRequest.id,
+          checklist_answer_id: ans.id,
+          item_label: item?.label || '',
+          item_section: item?.section || null,
+          value_text: ans.value_text ?? null,
+          value_bool: ans.value_bool ?? null,
+          is_ng: true
+        });
+      }
+
+      console.log('[submitChecklist] Auto repair request created:', {
+        repairRequestId: repairRequest.id,
+        ngCount: ngAnswers.length
+      });
+    }
 
     console.log('[submitChecklist] Saved:', {
       instanceId: instance.id,
       answersCount: answers.length,
-      ngCount
+      ngCount: ngAnswers.length,
+      repairRequestCreated: !!repairRequestId
     });
 
     return res.json({
       success: true,
       data: {
         instanceId: instance.id,
-        ngCount,
+        hasNg: ngAnswers.length > 0,
+        ngCount: ngAnswers.length,
+        repairRequestId,
         message: '점검 결과가 저장되었습니다.'
       }
     });
