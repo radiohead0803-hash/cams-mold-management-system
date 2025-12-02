@@ -1,4 +1,4 @@
-const { Mold, Plant, ChecklistTemplate } = require('../models');
+const { Mold, ChecklistTemplate } = require('../models/newIndex');
 
 /**
  * QR 코드 스캔 - 금형 정보 조회
@@ -15,16 +15,9 @@ exports.scanQr = async (req, res) => {
       });
     }
 
-    // 금형 조회
+    // 금형 조회 (Plant 모델 없이)
     const mold = await Mold.findOne({
-      where: { mold_code: code },
-      include: [
-        {
-          model: Plant,
-          as: 'plant',
-          attributes: ['id', 'name', 'location']
-        }
-      ]
+      where: { mold_code: code }
     });
 
     if (!mold) {
@@ -49,12 +42,7 @@ exports.scanQr = async (req, res) => {
           code: mold.mold_code,
           name: mold.mold_name,
           currentShot: mold.shot_counter || 0,
-          status: mold.status,
-          plant: mold.plant ? {
-            id: mold.plant.id,
-            name: mold.plant.name,
-            location: mold.plant.location
-          } : null
+          status: mold.status
         },
         templates
       }

@@ -30,6 +30,9 @@ const ChecklistMasterTemplate = require('./ChecklistMasterTemplate');
 const ChecklistTemplateItem = require('./ChecklistTemplateItem');
 const ChecklistTemplateDeployment = require('./ChecklistTemplateDeployment');
 const ChecklistTemplateHistory = require('./ChecklistTemplateHistory');
+const ChecklistTemplate = require('./ChecklistTemplate');
+const ChecklistInstance = require('./ChecklistInstance');
+const ChecklistAnswer = require('./ChecklistAnswer');
 const QRSession = require('./QRSession');
 const ProductionQuantity = require('./ProductionQuantity');
 const MoldDevelopmentPlan = require('./MoldDevelopmentPlan');
@@ -77,6 +80,9 @@ const models = {
   ChecklistTemplateItem: initModel(ChecklistTemplateItem, sequelize),
   ChecklistTemplateDeployment: initModel(ChecklistTemplateDeployment, sequelize),
   ChecklistTemplateHistory: initModel(ChecklistTemplateHistory, sequelize),
+  ChecklistTemplate: initModel(ChecklistTemplate, sequelize),
+  ChecklistInstance: initModel(ChecklistInstance, sequelize),
+  ChecklistAnswer: initModel(ChecklistAnswer, sequelize),
   QRSession: initModel(QRSession, sequelize),
   ProductionQuantity: initModel(ProductionQuantity, sequelize),
   MoldDevelopmentPlan: initModel(MoldDevelopmentPlan, sequelize),

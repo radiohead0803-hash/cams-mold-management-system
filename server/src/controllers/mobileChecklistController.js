@@ -1,4 +1,4 @@
-const { Mold, ChecklistTemplate, ChecklistTemplateItem, ChecklistInstance } = require('../models');
+const { Mold, ChecklistTemplate, ChecklistTemplateItem, ChecklistInstance, ChecklistAnswer } = require('../models/newIndex');
 
 /**
  * 점검 세션 시작 - 템플릿으로 폼 생성
@@ -121,8 +121,6 @@ async function submitChecklist(req, res) {
     }
 
     // 실제 DB에 답변 저장
-    const { ChecklistAnswer } = require('../models');
-    
     for (const answer of answers) {
       const answerData = {
         instance_id: instance.id,
