@@ -42,11 +42,12 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
-  qrLogin: (data) => api.post('/auth/qr-login', data),
+  // 모바일 QR 로그인 및 스캔 엔드포인트는 서버의 /mobile/qr 라우트에 맞춤
+  qrLogin: (data) => api.post('/mobile/qr/login', data),
   logout: () => api.post('/auth/logout'),
   refreshToken: (token) => api.post('/auth/refresh', { token }),
   me: () => api.get('/auth/me'),
-  scanQR: (data) => api.post('/qr/scan', data),
+  scanQR: (data) => api.post('/mobile/qr/scan', data),
 }
 
 // Mold API
@@ -71,12 +72,12 @@ export const checklistAPI = {
   }),
 }
 
-// Alert API
+// Alert/Notification API - 서버의 /notifications 라우트에 맞춤
 export const alertAPI = {
-  getAll: (params) => api.get('/alerts', { params }),
-  getById: (id) => api.get(`/alerts/${id}`),
-  markAsRead: (id) => api.patch(`/alerts/${id}/read`),
-  trigger: (data) => api.post('/alerts/trigger', data),
+  getAll: (params) => api.get('/notifications', { params }),
+  getById: (id) => api.get(`/notifications/${id}`),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  trigger: (data) => api.post('/notifications/trigger', data),
 }
 
 // Transfer API
