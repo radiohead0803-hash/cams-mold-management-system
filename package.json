@@ -1,0 +1,19 @@
+{
+  "name": "cams-mold-management-system",
+  "version": "1.0.0",
+  "description": "CAMS Mold Management System",
+  "main": "server/src/server.js",
+  "scripts": {
+    "start": "node server/src/server.js",
+    "server": "cd server && npm start",
+    "client": "cd client && npm start",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
