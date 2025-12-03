@@ -6,14 +6,20 @@
   "scripts": {
     "start": "node server/src/server.js",
     "server": "cd server && npm start",
-    "client": "cd client && npm start",
+    "client": "cd client && npm install && npm start",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "install-all": "npm install && cd client && npm install && cd ../server && npm install"
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install",
+    "build": "cd server && npm install && cd ../client && npm install && npm run build",
+    "heroku-postbuild": "npm run build"
   },
   "dependencies": {
     "concurrently": "^8.2.0"
   },
   "engines": {
     "node": "18.x"
-  }
+  },
+  "cacheDirectories": [
+    "node_modules",
+    "client/node_modules"
+  ]
 }
