@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
 import NaverMoldLocationMap from '../../components/NaverMoldLocationMap';
-import { useDashboardKpi } from '../../hooks/useDashboardKpi';
+import { useDashboardKpi, useDashboardActivities } from '../../hooks/useDashboardKpi';
 import { useMoldLocations } from '../../hooks/useMoldLocations';
 
 export default function SystemAdminDashboard() {
   const navigate = useNavigate();
   const { data: stats, loading, error, refetch } = useDashboardKpi();
+  const { data: activities } = useDashboardActivities(10);
   const { locations, loading: locLoading, error: locError, refetch: refetchLocations } = useMoldLocations();
   const [showMap, setShowMap] = useState(true);
   const [selectedMoldId, setSelectedMoldId] = useState(null);
@@ -31,39 +32,11 @@ export default function SystemAdminDashboard() {
   const ng = filteredLocations.filter((l) => l.status === 'ng').length;
   const normal = total - moved - ng;
   
-  // Mock system status
+  // 시스템 상태는 KPI 기반으로 계산
   const systemStatus = {
     dbStatus: 'healthy',
-    gpsServiceStatus: 'warning'
+    gpsServiceStatus: stats?.gpsAbnormal && stats.gpsAbnormal > 0 ? 'warning' : 'healthy'
   };
-  
-  // Mock recent activities
-  const recentActivities = [
-    {
-      id: 1,
-      type: 'critical',
-      time: '09:30',
-      title: 'Critical NG 발생',
-      description: '금형: M2024-001 | 생산처: A공장',
-      action: '즉시 생산중단 조치 필요'
-    },
-    {
-      id: 2,
-      type: 'warning',
-      time: '09:25',
-      title: '정기점검 지연',
-      description: '금형: M2024-045 | 생산처: B공장',
-      action: '예정일 초과 3일'
-    },
-    {
-      id: 3,
-      type: 'success',
-      time: '09:20',
-      title: '수리 완료',
-      description: '금형: M2024-023 | 제작처: C제작소',
-      action: '품질 확인 후 정상화'
-    }
-  ];
 
   // 헤더 통계
   const headerStats = stats ? [
@@ -299,7 +272,7 @@ export default function SystemAdminDashboard() {
         <section className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">📡 실시간 활동 피드</h3>
           <div className="space-y-3">
-            {recentActivities.map(activity => (
+            {(activities || []).map((activity) => (
               <ActivityItem key={activity.id} activity={activity} />
             ))}
           </div>

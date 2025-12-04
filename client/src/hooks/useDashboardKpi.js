@@ -15,31 +15,6 @@ export function useDashboardKpi() {
       setLoading(true);
       setError(null);
       
-      // 🔥 임시: Mock 데이터 사용 (API 에러 시 폴백)
-      const USE_MOCK_DATA = true;
-      
-      if (USE_MOCK_DATA) {
-        console.log('[useDashboardKpi] Using MOCK data');
-        setData({
-          totalMolds: 150,
-          activeMolds: 120,
-          openRepairs: 12,
-          todayScans: 89,
-          overShotCount: 8,
-          inspectionDueCount: 15,
-          ngMolds: 3,
-          criticalAlerts: 5,
-          majorAlerts: 12,
-          minorAlerts: 23,
-          gpsRegistered: 145,
-          gpsAbnormal: 5,
-          totalUsers: 45,
-          todayQRScans: 89
-        });
-        setLoading(false);
-        return;
-      }
-      
       const response = await api.get('/hq/dashboard/summary');
       
       if (response.data.success) {
@@ -49,26 +24,7 @@ export function useDashboardKpi() {
       }
     } catch (err) {
       console.error('Dashboard KPI load error:', err);
-      
-      // API 실패 시 Mock 데이터 폴백
-      console.log('[useDashboardKpi] API failed, using MOCK data as fallback');
-      setData({
-        totalMolds: 150,
-        activeMolds: 120,
-        openRepairs: 12,
-        todayScans: 89,
-        overShotCount: 8,
-        inspectionDueCount: 15,
-        ngMolds: 3,
-        criticalAlerts: 5,
-        majorAlerts: 12,
-        minorAlerts: 23,
-        gpsRegistered: 145,
-        gpsAbnormal: 5,
-        totalUsers: 45,
-        todayQRScans: 89
-      });
-      setError(null); // 에러 무시
+      setError(err.response?.data?.error?.message || err.message || 'KPI 데이터를 불러올 수 없습니다.');
     } finally {
       setLoading(false);
     }
@@ -140,10 +96,33 @@ export function useDashboardActivities(limit = 10) {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/dash/recent-activities?limit=${limit}`);
+      const response = await api.get(`/hq/dashboard/recent-activities?limit=${limit}`);
       
       if (response.data.success) {
-        setData(response.data.data);
+        const raw = response.data.data || {};
+        const recentScans = raw.recentScans || [];
+        const recentRepairs = raw.recentRepairs || [];
+
+        const normalized = [
+          ...recentScans.map((item) => ({
+            id: `scan-${item.id}`,
+            type: 'scan',
+            time: item.created_at,
+            title: 'QR 스캔',
+            description: `${item.mold?.mold_name || '금형'} - ${item.user?.name || item.user?.username || '사용자'}`,
+            action: '스캔 내역 확인'
+          })),
+          ...recentRepairs.map((item) => ({
+            id: `repair-${item.id}`,
+            type: 'repair',
+            time: item.created_at,
+            title: '수리 요청',
+            description: `${item.issue_type || '수리요청'} (${item.severity || 'normal'})`,
+            action: '수리 요청 상세 보기'
+          }))
+        ].slice(0, limit);
+
+        setData(normalized);
       } else {
         throw new Error(response.data.error?.message || '활동 데이터 조회 실패');
       }
