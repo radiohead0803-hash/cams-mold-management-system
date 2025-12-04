@@ -37,6 +37,7 @@ export default function MoldSpecificationDetail() {
     estimated_cost: '',
     notes: ''
   });
+  const [activeTab, setActiveTab] = useState('info'); // info | usage | inspection | repair | history
 
   useEffect(() => {
     loadSpecification();
@@ -288,9 +289,6 @@ export default function MoldSpecificationDetail() {
                   </>
                 )}
               </button>
-            </>
-          )}
-        </div>
       </div>
 
       {/* Success/Error Messages */}
@@ -308,224 +306,255 @@ export default function MoldSpecificationDetail() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* 기본 정보 */}
-          <div className="card">
-            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">기본 정보</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">부품번호</label>
-                {editMode ? (
-                  <input
-                    type="text"
-                    name="part_number"
-                    value={formData.part_number}
-                    onChange={handleChange}
-                    className="input"
-                  />
-                ) : (
-                  <p className="font-medium">{specification.part_number}</p>
-                )}
+      {activeTab === 'info' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* 기본 정보 */}
+            <div className="card">
+              <h2 className="text-lg font-semibold mb-4 pb-2 border-b">기본 정보</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">부품번호</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      name="part_number"
+                      value={formData.part_number}
+                      onChange={handleChange}
+                      className="input"
+                    />
+                  ) : (
+                    <p className="font-medium">{specification.part_number}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">부품명</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      name="part_name"
+                      value={formData.part_name}
+                      onChange={handleChange}
+                      className="input"
+                    />
+                  ) : (
+                    <p className="font-medium">{specification.part_name}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">차종</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      name="car_model"
+                      value={formData.car_model}
+                      onChange={handleChange}
+                      className="input"
+                    />
+                  ) : (
+                    <p className="font-medium">{specification.car_model}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">연식</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      name="car_year"
+                      value={formData.car_year}
+                      onChange={handleChange}
+                      className="input"
+                    />
+                  ) : (
+                    <p className="font-medium">{specification.car_year}</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">부품명</label>
-                {editMode ? (
-                  <input
-                    type="text"
-                    name="part_name"
-                    value={formData.part_name}
-                    onChange={handleChange}
-                    className="input"
-                  />
-                ) : (
-                  <p className="font-medium">{specification.part_name}</p>
-                )}
+            </div>
+
+            {/* 금형 사양 */}
+            <div className="card">
+              <h2 className="text-lg font-semibold mb-4 pb-2 border-b">금형 사양</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">금형 타입</label>
+                  {editMode ? (
+                    <select
+                      name="mold_type"
+                      value={formData.mold_type}
+                      onChange={handleChange}
+                      className="input"
+                    >
+                      <option value="사출금형">사출금형</option>
+                      <option value="프레스금형">프레스금형</option>
+                      <option value="다이캐스팅">다이캐스팅</option>
+                      <option value="기타">기타</option>
+                    </select>
+                  ) : (
+                    <p className="font-medium">{specification.mold_type}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">캐비티 수</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      name="cavity_count"
+                      value={formData.cavity_count}
+                      onChange={handleChange}
+                      className="input"
+                    />
+                  ) : (
+                    <p className="font-medium">{specification.cavity_count}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">재질</label>
+                  {editMode ? (
+                    <input
+                      type="text"
+                      name="material"
+                      value={formData.material}
+                      onChange={handleChange}
+                      className="input"
+                    />
+                  ) : (
+                    <p className="font-medium">{specification.material}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">톤수</label>
+                  {editMode ? (
+                    <input
+                      type="number"
+                      name="tonnage"
+                      value={formData.tonnage}
+                      onChange={handleChange}
+                      className="input"
+                    />
+                  ) : (
+                    <p className="font-medium">{specification.tonnage}</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">차종</label>
-                {editMode ? (
-                  <input
-                    type="text"
-                    name="car_model"
-                    value={formData.car_model}
-                    onChange={handleChange}
-                    className="input"
-                  />
-                ) : (
-                  <p className="font-medium">{specification.car_model}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">연식</label>
-                {editMode ? (
-                  <input
-                    type="text"
-                    name="car_year"
-                    value={formData.car_year}
-                    onChange={handleChange}
-                    className="input"
-                  />
-                ) : (
-                  <p className="font-medium">{specification.car_year}</p>
-                )}
-              </div>
+            </div>
+
+            {/* 비고 */}
+            <div className="card">
+              <h2 className="text-lg font-semibold mb-4 pb-2 border-b">비고</h2>
+              {editMode ? (
+                <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  rows="4"
+                  className="input"
+                />
+              ) : (
+                <p className="text-gray-700">{specification.notes || '-'}</p>
+              )}
             </div>
           </div>
 
-          {/* 금형 사양 */}
-          <div className="card">
-            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">금형 사양</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">금형 타입</label>
-                {editMode ? (
-                  <select
-                    name="mold_type"
-                    value={formData.mold_type}
-                    onChange={handleChange}
-                    className="input"
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* 부품 사진 */}
+            <div className="card">
+              <h3 className="text-sm font-semibold mb-4 flex items-center">
+                <ImageIcon className="mr-2 text-purple-600" size={18} />
+                부품 사진
+              </h3>
+              
+              {specification.part_images && specification.part_images.url ? (
+                <div className="mb-4">
+                  <img
+                    src={`${API_URL}${specification.part_images.url}`}
+                    alt="부품 사진"
+                    className="w-full rounded-lg border"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">{specification.part_images.filename}</p>
+                </div>
+              ) : (
+                <div className="mb-4 p-8 border-2 border-dashed border-gray-300 rounded-lg text-center">
+                  <ImageIcon className="mx-auto mb-2 text-gray-400" size={32} />
+                  <p className="text-sm text-gray-500">등록된 사진이 없습니다</p>
+                </div>
+              )}
+
+              {/* 사진 업로드 */}
+              {partImage ? (
+                <div className="relative mb-4">
+                  <img
+                    src={partImage.preview}
+                    alt="미리보기"
+                    className="w-full rounded-lg border"
+                  />
+                  <button
+                    onClick={removeImage}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                   >
-                    <option value="사출금형">사출금형</option>
-                    <option value="프레스금형">프레스금형</option>
-                    <option value="다이캐스팅">다이캐스팅</option>
-                    <option value="기타">기타</option>
-                  </select>
-                ) : (
-                  <p className="font-medium">{specification.mold_type}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">캐비티 수</label>
-                {editMode ? (
-                  <input
-                    type="number"
-                    name="cavity_count"
-                    value={formData.cavity_count}
-                    onChange={handleChange}
-                    className="input"
-                  />
-                ) : (
-                  <p className="font-medium">{specification.cavity_count}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">재질</label>
-                {editMode ? (
-                  <input
-                    type="text"
-                    name="material"
-                    value={formData.material}
-                    onChange={handleChange}
-                    className="input"
-                  />
-                ) : (
-                  <p className="font-medium">{specification.material}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">톤수</label>
-                {editMode ? (
-                  <input
-                    type="number"
-                    name="tonnage"
-                    value={formData.tonnage}
-                    onChange={handleChange}
-                    className="input"
-                  />
-                ) : (
-                  <p className="font-medium">{specification.tonnage}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* 비고 */}
-          <div className="card">
-            <h2 className="text-lg font-semibold mb-4 pb-2 border-b">비고</h2>
-            {editMode ? (
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                rows="4"
-                className="input"
-              />
-            ) : (
-              <p className="text-gray-700">{specification.notes || '-'}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* 부품 사진 */}
-          <div className="card">
-            <h3 className="text-sm font-semibold mb-4 flex items-center">
-              <ImageIcon className="mr-2 text-purple-600" size={18} />
-              부품 사진
-            </h3>
-            
-            {specification.part_images && specification.part_images.url ? (
-              <div className="mb-4">
-                <img
-                  src={`${API_URL}${specification.part_images.url}`}
-                  alt="부품 사진"
-                  className="w-full rounded-lg border"
-                />
-                <p className="text-xs text-gray-500 mt-2">{specification.part_images.filename}</p>
-              </div>
-            ) : (
-              <div className="mb-4 p-8 border-2 border-dashed border-gray-300 rounded-lg text-center">
-                <ImageIcon className="mx-auto mb-2 text-gray-400" size={32} />
-                <p className="text-sm text-gray-500">등록된 사진이 없습니다</p>
-              </div>
-            )}
-
-            {/* 사진 업로드 */}
-            {partImage ? (
-              <div className="relative mb-4">
-                <img
-                  src={partImage.preview}
-                  alt="미리보기"
-                  className="w-full rounded-lg border"
-                />
-                <button
-                  onClick={removeImage}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    <X size={16} />
+                  </button>
+                  <p className="text-xs text-gray-600 mt-2">{partImage.name}</p>
+                  <p className="text-xs text-gray-500">{formatFileSize(partImage.size)}</p>
+                </div>
+              ) : (
+                <div
+                  className="mb-4 p-6 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-primary-400 transition-colors cursor-pointer"
+                  onPaste={handlePaste}
+                  tabIndex={0}
                 >
-                  <X size={16} />
-                </button>
-                <p className="text-xs text-gray-600 mt-2">{partImage.name}</p>
-                <p className="text-xs text-gray-500">{formatFileSize(partImage.size)}</p>
-              </div>
-            ) : (
-              <div
-                className="mb-4 p-6 border-2 border-dashed border-gray-300 rounded-lg text-center hover:border-primary-400 transition-colors cursor-pointer"
-                onPaste={handlePaste}
-                tabIndex={0}
-              >
-                <p className="text-sm text-gray-600 mb-2">사진 업로드</p>
-                <p className="text-xs text-gray-500 mb-2">Ctrl+V로 붙여넣기</p>
-                <label className="btn-secondary text-sm cursor-pointer inline-flex items-center gap-2">
-                  <Upload size={16} />
-                  파일 선택
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            )}
+                  <p className="text-sm text-gray-600 mb-2">사진 업로드</p>
+                  <p className="text-xs text-gray-500 mb-2">Ctrl+V로 붙여넣기</p>
+                  <label className="btn-secondary text-sm cursor-pointer inline-flex items-center gap-2">
+                    <Upload size={16} />
+                    파일 선택
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              )}
 
-            {partImage && (
-              <button
-                onClick={uploadPartImage}
-                disabled={uploadingImage}
-                className="w-full btn-primary text-sm"
+              {partImage && (
+                <button
+                  onClick={uploadPartImage}
+                  disabled={uploadingImage}
+                  className="w-full btn-primary text-sm"
+                >
+                  {uploadingImage ? '업로드 중...' : '사진 업로드'}
+                </button>
+              )}
+            </div>
+
+            {/* 상태 정보 */}
+            <div className="card">
+              <h3 className="text-sm font-semibold mb-4">상태 정보</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">상태</span>
+                  <span className="font-medium">{specification.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">개발 단계</span>
+                  <span className="font-medium">{specification.development_stage}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">생산 단계</span>
+                  <span className="font-medium">{specification.production_stage}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">제작처</span>
+                  <span className="font-medium">{specification.makerCompany?.company_name || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">생산처</span>
+                  <span className="font-medium">{specification.plantCompany?.company_name || '-'}</span>
+                </div>
               >
                 {uploadingImage ? '업로드 중...' : '사진 업로드'}
               </button>
@@ -559,7 +588,43 @@ export default function MoldSpecificationDetail() {
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'usage' && (
+        <div className="space-y-4">
+          <div className="card">
+            <h2 className="text-lg font-semibold mb-2">사용 정보</h2>
+            <p className="text-sm text-gray-600">현재 위치, 상태, 알람 등 사용 관련 정보를 이 영역에 확장할 수 있습니다.</p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'inspection' && (
+        <div className="space-y-4">
+          <div className="card">
+            <h2 className="text-lg font-semibold mb-2">점검 현황</h2>
+            <p className="text-sm text-gray-600">일상/정기 점검 이력과 예정 정보를 이 영역에 표시할 수 있습니다.</p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'repair' && (
+        <div className="space-y-4">
+          <div className="card">
+            <h2 className="text-lg font-semibold mb-2">수리 이력</h2>
+            <p className="text-sm text-gray-600">이 금형과 연결된 수리요청 및 처리 이력을 이 영역에 확장할 수 있습니다.</p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'history' && (
+        <div className="space-y-4">
+          <div className="card">
+            <h2 className="text-lg font-semibold mb-2">전체 이력</h2>
+            <p className="text-sm text-gray-600">알람, NG, 생산 실적 등 금형 전반의 이력을 이 영역에 모아서 보여줄 수 있습니다.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

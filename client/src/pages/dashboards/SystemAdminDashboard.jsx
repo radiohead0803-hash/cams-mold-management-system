@@ -257,12 +257,19 @@ export default function SystemAdminDashboard() {
                     selectedMoldId === loc.id ? 'bg-blue-50' : ''
                   }`}
                 >
-                  <div>
-                    <p className="font-medium text-gray-900">{loc.moldCode}</p>
-                    <p className="text-xs text-gray-500">{loc.moldName || '-'} · {loc.plantName}</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">
-                      기본: {loc.registeredLocation || '미등록'} / 현재: {loc.plantName}
-                    </p>
+                  <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-3">
+                    <div className="sm:w-1/3">
+                      <p className="font-medium text-gray-900">{loc.moldCode}</p>
+                      <p className="text-xs text-gray-500 truncate">{loc.moldName || '-'}</p>
+                    </div>
+                    <div className="sm:w-1/3 text-xs text-gray-500">
+                      <span className="font-medium text-gray-700">현재</span>
+                      <span className="ml-1">{loc.plantName}</span>
+                    </div>
+                    <div className="sm:w-1/3 text-[11px] text-gray-400">
+                      <span className="font-medium text-gray-600">기본</span>
+                      <span className="ml-1">{loc.registeredLocation || '미등록'}</span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <span
@@ -274,7 +281,16 @@ export default function SystemAdminDashboard() {
                     >
                       {loc.hasDrift || loc.status === 'moved' ? '이탈' : '정상'}
                     </span>
-                    <Eye className="w-4 h-4 text-gray-400" />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/molds/specifications/${loc.id}`);
+                      }}
+                      className="p-1 rounded-full hover:bg-gray-100"
+                    >
+                      <Eye className="w-4 h-4 text-gray-500" />
+                    </button>
                   </div>
                 </button>
               ))}
