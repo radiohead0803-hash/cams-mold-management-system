@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp, Eye } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
 import NaverMoldLocationMap from '../../components/NaverMoldLocationMap';
 import { useDashboardKpi, useDashboardActivities } from '../../hooks/useDashboardKpi';
@@ -260,16 +260,22 @@ export default function SystemAdminDashboard() {
                   <div>
                     <p className="font-medium text-gray-900">{loc.moldCode}</p>
                     <p className="text-xs text-gray-500">{loc.moldName || '-'} · {loc.plantName}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">
+                      기본: {loc.registeredLocation || '미등록'} / 현재: {loc.plantName}
+                    </p>
                   </div>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                      loc.hasDrift || loc.status === 'moved'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-green-100 text-green-700'
-                    }`}
-                  >
-                    {loc.hasDrift || loc.status === 'moved' ? '이탈' : '정상'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        loc.hasDrift || loc.status === 'moved'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}
+                    >
+                      {loc.hasDrift || loc.status === 'moved' ? '이탈' : '정상'}
+                    </span>
+                    <Eye className="w-4 h-4 text-gray-400" />
+                  </div>
                 </button>
               ))}
               {statusFilteredLocations.length === 0 && (
