@@ -21,11 +21,13 @@ export default function NaverMoldLocationMap({ locations, selectedMoldId }) {
         ? "#f97316"
         : "#22c55e";
 
-    const size = selected ? 24 : 18;
+    // 더 크게, 배경 링을 추가해서 어떤 줌에서도 잘 보이도록
+    const size = selected ? 36 : 28;
 
     const svg = `
       <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="${selected ? 9 : 7}" fill="${color}" />
+        <circle cx="12" cy="12" r="11" fill="white" stroke="${color}" stroke-width="2" />
+        <circle cx="12" cy="12" r="${selected ? 8 : 6}" fill="${color}" />
         <circle cx="12" cy="12" r="${selected ? 4 : 3}" fill="white" />
       </svg>
     `;
