@@ -178,6 +178,19 @@ export default function NaverMoldLocationMap({ locations, selectedMoldId }) {
       if (infoWindow) {
         infoWindow.open(map, marker);
       }
+
+      // 간단한 깜박임 효과: 짧은 시간 동안 마커 표시/숨기기 토글
+      let count = 0;
+      const interval = setInterval(() => {
+        if (!marker) return;
+        const visible = marker.getVisible();
+        marker.setVisible(!visible);
+        count++;
+        if (count >= 6) { // 약 3회 깜박임 후 원래대로
+          clearInterval(interval);
+          marker.setVisible(true);
+        }
+      }, 250);
     }
   }, [selectedMoldId]);
 

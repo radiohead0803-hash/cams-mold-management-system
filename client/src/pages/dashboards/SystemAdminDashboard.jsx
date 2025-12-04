@@ -14,6 +14,7 @@ export default function SystemAdminDashboard() {
   const [showMap, setShowMap] = useState(true);
   const [selectedMoldId, setSelectedMoldId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [locationFilter, setLocationFilter] = useState('all'); // all | normal | moved
   
   // 검색 필터링
   const filteredLocations = locations.filter((loc) => {
@@ -31,6 +32,13 @@ export default function SystemAdminDashboard() {
   const moved = filteredLocations.filter((l) => l.hasDrift || l.status === 'moved').length;
   const ng = filteredLocations.filter((l) => l.status === 'ng').length;
   const normal = total - moved - ng;
+
+  // 카드 클릭용 필터링
+  const statusFilteredLocations = filteredLocations.filter((l) => {
+    if (locationFilter === 'normal') return !l.hasDrift && l.status !== 'moved' && l.status !== 'ng';
+    if (locationFilter === 'moved') return l.hasDrift || l.status === 'moved';
+    return true;
+  });
   
   // 시스템 상태는 KPI 기반으로 계산
   const systemStatus = {
@@ -175,21 +183,39 @@ export default function SystemAdminDashboard() {
         <section>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">📍 금형 위치 현황</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-5">
+            <button
+              type="button"
+              onClick={() => setLocationFilter('all')}
+              className={`rounded-xl bg-white border shadow-sm p-5 text-left w-full transition ${
+                locationFilter === 'all' ? 'border-blue-400 shadow-md' : 'border-gray-200'
+              }`}
+            >
               <p className="text-xs text-gray-500 font-medium">총 금형 수</p>
               <p className="mt-2 text-3xl font-bold text-gray-900">{locations.length}</p>
               <p className="mt-1 text-xs text-gray-400">Total Locations</p>
-            </div>
-            <div className="rounded-xl bg-white border border-green-200 shadow-sm p-5">
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocationFilter('normal')}
+              className={`rounded-xl bg-white border shadow-sm p-5 text-left w-full transition ${
+                locationFilter === 'normal' ? 'border-green-400 shadow-md' : 'border-green-200'
+              }`}
+            >
               <p className="text-xs text-green-600 font-medium">정상 위치</p>
               <p className="mt-2 text-3xl font-bold text-green-600">{locations.filter(l => !l.hasDrift).length}</p>
               <p className="mt-1 text-xs text-gray-400">Normal</p>
-            </div>
-            <div className="rounded-xl bg-white border border-red-200 shadow-sm p-5">
+            </button>
+            <button
+              type="button"
+              onClick={() => setLocationFilter('moved')}
+              className={`rounded-xl bg-white border shadow-sm p-5 text-left w-full transition ${
+                locationFilter === 'moved' ? 'border-red-400 shadow-md' : 'border-red-200'
+              }`}
+            >
               <p className="text-xs text-red-600 font-medium">위치 이탈</p>
               <p className="mt-2 text-3xl font-bold text-red-600">{locations.filter(l => l.hasDrift).length}</p>
               <p className="mt-1 text-xs text-gray-400">Moved</p>
-            </div>
+            </button>
             <div className="rounded-xl bg-white border border-blue-200 shadow-sm p-5">
               <button
                 onClick={() => setShowMap(!showMap)}
@@ -199,6 +225,52 @@ export default function SystemAdminDashboard() {
                 <p className="mt-2 text-lg font-bold text-blue-600">{showMap ? '열림' : '닫힘'}</p>
                 <p className="mt-1 text-xs text-gray-400">Toggle Map</p>
               </button>
+            </div>
+          </div>
+          {/* 선택된 필터에 따른 금형 목록 */}
+          <div className="mt-4 bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-gray-800">
+                {locationFilter === 'all' && '전체 금형 목록'}
+                {locationFilter === 'normal' && '정상 위치 금형 목록'}
+                {locationFilter === 'moved' && '위치 이탈 금형 목록'} ({statusFilteredLocations.length}개)
+              </p>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="금형코드 / 이름 / 공장 검색..."
+                className="text-xs border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+            <div className="max-h-56 overflow-y-auto divide-y divide-gray-100 text-sm">
+              {statusFilteredLocations.map((loc) => (
+                <button
+                  key={loc.id}
+                  type="button"
+                  onClick={() => setSelectedMoldId(loc.id)}
+                  className={`w-full flex items-center justify-between px-2 py-1.5 text-left hover:bg-blue-50 ${
+                    selectedMoldId === loc.id ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">{loc.moldCode}</p>
+                    <p className="text-xs text-gray-500">{loc.moldName || '-'} · {loc.plantName}</p>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                      loc.hasDrift || loc.status === 'moved'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-green-100 text-green-700'
+                    }`}
+                  >
+                    {loc.hasDrift || loc.status === 'moved' ? '이탈' : '정상'}
+                  </span>
+                </button>
+              ))}
+              {statusFilteredLocations.length === 0 && (
+                <p className="text-xs text-gray-400 py-3 text-center">해당 조건의 금형 위치가 없습니다.</p>
+              )}
             </div>
           </div>
         </section>
