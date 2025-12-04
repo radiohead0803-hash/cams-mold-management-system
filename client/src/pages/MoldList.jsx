@@ -350,7 +350,11 @@ export default function MoldList() {
         </div>
       ) : (
         <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
+          <div
+            className={`overflow-x-auto ${
+              filteredMolds.length > 10 ? 'max-h-[560px] overflow-y-auto' : ''
+            }`}
+          >
             <table className="min-w-max w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
