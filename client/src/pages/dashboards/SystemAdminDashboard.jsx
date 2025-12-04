@@ -243,7 +243,11 @@ export default function SystemAdminDashboard() {
                 className="text-xs border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
-            <div className="max-h-56 overflow-y-auto divide-y divide-gray-100 text-sm">
+            <div
+              className={`divide-y divide-gray-100 text-sm ${
+                statusFilteredLocations.length > 5 ? 'max-h-56 overflow-y-auto' : ''
+              }`}
+            >
               {statusFilteredLocations.map((loc) => (
                 <button
                   key={loc.id}

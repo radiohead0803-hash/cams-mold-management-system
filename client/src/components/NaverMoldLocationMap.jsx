@@ -67,6 +67,10 @@ export default function NaverMoldLocationMap({ locations, selectedMoldId }) {
         mapInstanceRef.current = new window.naver.maps.Map(mapRef.current, {
           center,
           zoom: 10,
+          zoomControl: true,
+          zoomControlOptions: {
+            position: window.naver.maps.Position.LEFT_CENTER,
+          },
         });
 
         console.log("[NaverMap] 지도 초기화 완료");
