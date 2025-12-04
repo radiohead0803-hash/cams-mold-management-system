@@ -180,7 +180,7 @@ export default function NaverMoldLocationMap({ locations, selectedMoldId }) {
   }, [selectedMoldId]);
 
   return (
-    <div className="w-full h-80 rounded-xl border border-slate-200 overflow-hidden">
+    <div className="w-full h-[480px] rounded-xl border border-slate-200 overflow-hidden">
       <div ref={mapRef} className="w-full h-full" />
     </div>
   );

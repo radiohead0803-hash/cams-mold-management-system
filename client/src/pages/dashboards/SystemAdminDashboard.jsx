@@ -254,68 +254,6 @@ export default function SystemAdminDashboard() {
         )}
 
 
-        {/* 실시간 알람 및 시스템 상태 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 실시간 알람 */}
-          <section className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">🔔 실시간 알람 (최근 24시간)</h3>
-            <div className="space-y-3">
-              <AlertItem 
-                level="critical" 
-                count={stats.criticalAlerts || 0} 
-                label="Critical" 
-                description="즉시 조치 필요"
-              />
-              <AlertItem 
-                level="major" 
-                count={stats.majorAlerts || 0} 
-                label="Major" 
-                description="빠른 대응 필요"
-              />
-              <AlertItem 
-                level="minor" 
-                count={stats.minorAlerts || 0} 
-                label="Minor" 
-                description="모니터링 필요"
-              />
-            </div>
-            <Link 
-              to="/alerts" 
-              className="mt-4 block text-center text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              전체 알람 보기 →
-            </Link>
-          </section>
-
-          {/* GPS 위치 추적 */}
-          <section className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">📍 GPS 위치 추적</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">정상 위치</p>
-                  <p className="text-2xl font-bold text-green-600">{normal}개</p>
-                </div>
-                <div className="text-3xl">✅</div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">위치 이탈</p>
-                  <p className="text-2xl font-bold text-red-600">{moved}개</p>
-                </div>
-                <div className="text-3xl">⚠️</div>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">총 금형</p>
-                  <p className="text-2xl font-bold text-gray-600">{total}개</p>
-                </div>
-                <div className="text-3xl">📦</div>
-              </div>
-            </div>
-          </section>
-        </div>
-
         {/* 금형 위치 지도 */}
         {showMap && (
           <section>
