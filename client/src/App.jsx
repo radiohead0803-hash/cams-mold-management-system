@@ -51,6 +51,11 @@ function PeriodicAlias() {
   return <Navigate to={`/inspection/periodic${location.search || ''}`} replace />
 }
 
+function DailyAlias() {
+  const location = useLocation()
+  return <Navigate to={`/checklist/daily${location.search || ''}`} replace />
+}
+
 function App() {
   const { isAuthenticated, initialize } = useAuthStore()
 
@@ -65,6 +70,7 @@ function App() {
       <Route path="/scan-info" element={<ScanInfoPage />} />
       <Route path="/repair-request" element={<RepairRequestPage />} />
       <Route path="/periodic-inspection" element={<PeriodicAlias />} />
+      <Route path="/daily-checklist" element={<DailyAlias />} />
       
       {/* Mobile Routes */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
