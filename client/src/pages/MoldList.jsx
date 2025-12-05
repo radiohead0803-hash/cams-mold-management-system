@@ -10,6 +10,8 @@ export default function MoldList() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedMolds, setSelectedMolds] = useState([])
   const [bulkEditMode, setBulkEditMode] = useState(false)
+  const [sortKey, setSortKey] = useState('') // '', 'mold_code', 'part_number', 'status'
+  const [sortDirection, setSortDirection] = useState('asc') // 'asc' | 'desc'
 
   useEffect(() => {
     loadMolds()
@@ -19,17 +21,10 @@ export default function MoldList() {
     try {
       setLoading(true)
       const response = await moldSpecificationAPI.getAll({ limit: 100 })
-      
+
       // API 응답 데이터를 화면 표시 형식으로 변환
       const specifications = response.data.data.items || []
-      
-      // 디버깅: 첫 번째 항목의 구조 확인
-      if (specifications.length > 0) {
-        console.log('First specification:', specifications[0]);
-        console.log('makerCompany:', specifications[0].makerCompany);
-        console.log('plantCompany:', specifications[0].plantCompany);
-      }
-      
+
       const transformedMolds = specifications.map(spec => {
         // part_images JSONB에서 첫 번째 이미지 URL 추출
         let imageUrl = null;
@@ -83,106 +78,6 @@ export default function MoldList() {
     }
   }
 
-  // 테스트 데이터 추가
-  const addTestMolds = () => {
-    const testMolds = [
-      {
-        id: Date.now() + 1,
-        mold_code: 'M-2024-TEST-001',
-        part_number: 'P-2024-001',
-        part_name: '도어 트림 LH',
-        car_model: 'K5',
-        car_year: '2024',
-        mold_type: '사출금형',
-        cavity_count: 2,
-        material: 'NAK80',
-        tonnage: 350,
-        target_maker: 'A제작소',
-        development_stage: '개발',
-        production_stage: '시제',
-        status: 'design',
-        order_date: '2024-01-15',
-        target_delivery_date: '2024-06-30',
-        estimated_cost: 50000000,
-        notes: '테스트 금형 1',
-        image_url: 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=200&h=200&fit=crop'
-      },
-      {
-        id: Date.now() + 2,
-        mold_code: 'M-2024-TEST-002',
-        part_number: 'P-TEST-002',
-        part_name: '도어 트림 RH',
-        car_model: 'K8',
-        car_year: '2024',
-        mold_type: '사출금형',
-        cavity_count: 2,
-        material: 'P20',
-        tonnage: 420,
-        status: 'manufacturing',
-        target_maker: 'A제작소',
-        qr_token: 'CAMS-TEST002-EFGH',
-        development_stage: '개발',
-        production_stage: '시제',
-        image_url: 'https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=200&h=200&fit=crop'
-      },
-      {
-        id: Date.now() + 3,
-        mold_code: 'M-2024-TEST-003',
-        part_number: 'P-TEST-003',
-        part_name: '대시보드 패널',
-        car_model: 'Sportage',
-        car_year: '2024',
-        mold_type: '사출금형',
-        cavity_count: 1,
-        material: 'HPM38',
-        tonnage: 650,
-        status: 'trial',
-        target_maker: 'B제작소',
-        qr_token: 'CAMS-TEST003-IJKL',
-        development_stage: '개발',
-        production_stage: '시제',
-        image_url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=200&h=200&fit=crop'
-      },
-      {
-        id: Date.now() + 4,
-        mold_code: 'M-2024-TEST-004',
-        part_number: 'P-TEST-004',
-        part_name: '콘솔 박스',
-        car_model: 'Sorento',
-        car_year: '2024',
-        mold_type: '사출금형',
-        cavity: 1,
-        material: 'NAK80',
-        tonnage: 280,
-        status: 'production',
-        location: 'A공장',
-        qr_token: 'CAMS-TEST004-MNOP',
-        development_stage: '양산',
-        production_stage: '양산중'
-      },
-      {
-        id: Date.now() + 5,
-        mold_code: 'M-2024-TEST-005',
-        part_number: 'P-TEST-005',
-        part_name: '사이드 미러 커버',
-        car_model: 'K5',
-        car_year: '2024',
-        mold_type: '사출금형',
-        cavity: 2,
-        material: 'S50C',
-        tonnage: 180,
-        status: 'planning',
-        location: '본사',
-        qr_token: 'CAMS-TEST005-QRST',
-        development_stage: '개발',
-        production_stage: '시제'
-      }
-    ]
-
-    setMolds(prev => [...testMolds, ...prev])
-    alert('테스트 금형 5건이 추가되었습니다!')
-  }
-
   const filteredMolds = molds.filter(mold => {
     const matchesSearch = 
       mold.mold_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -194,6 +89,29 @@ export default function MoldList() {
     
     return matchesSearch && matchesStatus
   })
+
+  // 정렬 적용
+  const sortedMolds = [...filteredMolds].sort((a, b) => {
+    if (!sortKey) return 0
+
+    const aVal = (a[sortKey] || '').toString().toLowerCase()
+    const bVal = (b[sortKey] || '').toString().toLowerCase()
+
+    if (aVal === bVal) return 0
+    if (sortDirection === 'asc') {
+      return aVal < bVal ? -1 : 1
+    }
+    return aVal > bVal ? -1 : 1
+  })
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDirection('asc')
+    }
+  }
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -293,13 +211,6 @@ export default function MoldList() {
                 <Edit size={18} />
                 <span>일괄 편집</span>
               </button>
-              <button
-                onClick={addTestMolds}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center space-x-2"
-              >
-                <span>🧪</span>
-                <span>테스트 데이터 추가</span>
-              </button>
             </>
           )}
         </div>
@@ -371,10 +282,16 @@ export default function MoldList() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     이미지
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() => handleSort('mold_code')}
+                  >
                     금형코드
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() => handleSort('part_number')}
+                  >
                     부품번호
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -386,7 +303,10 @@ export default function MoldList() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     금형타입
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() => handleSort('status')}
+                  >
                     상태
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -416,7 +336,7 @@ export default function MoldList() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredMolds.map((mold) => (
+                {sortedMolds.map((mold) => (
                   <tr key={mold.id} className={`hover:bg-gray-50 transition-colors ${selectedMolds.includes(mold.id) ? 'bg-blue-50' : ''}`}>
                     {bulkEditMode && (
                       <td className="px-6 py-4 whitespace-nowrap">

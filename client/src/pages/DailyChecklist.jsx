@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { moldAPI, checklistAPI } from '../lib/api'
+import { moldAPI, checklistAPI, moldSpecificationAPI } from '../lib/api'
 import { MapPin, Camera, CheckCircle, XCircle, AlertCircle, Save, Upload, X, Image } from 'lucide-react'
 
 export default function DailyChecklist() {
@@ -10,6 +10,8 @@ export default function DailyChecklist() {
   
   const [step, setStep] = useState(1) // 1: 기본정보, 2: 체크리스트, 3: 완료
   const [mold, setMold] = useState(null)
+  const [spec, setSpec] = useState(null)
+  const [realMoldId, setRealMoldId] = useState(null)
   const [checklistId, setChecklistId] = useState(null)
   const [loading, setLoading] = useState(false)
   
@@ -30,13 +32,26 @@ export default function DailyChecklist() {
 
   useEffect(() => {
     if (moldId) {
-      loadMold()
+      loadMoldFromSpecOrMold()
     }
   }, [moldId])
 
-  const loadMold = async () => {
+  const loadMoldFromSpecOrMold = async () => {
     try {
-      const response = await moldAPI.getById(moldId)
+      let targetMoldId = null
+      try {
+        const specRes = await moldSpecificationAPI.getById(moldId)
+        const s = specRes.data?.data
+        setSpec(s)
+        targetMoldId = s?.mold_id || s?.Mold?.id || null
+      } catch (_) {
+        targetMoldId = null
+      }
+      if (!targetMoldId) {
+        targetMoldId = moldId
+      }
+      setRealMoldId(targetMoldId)
+      const response = await moldAPI.getById(targetMoldId)
       setMold(response.data.data)
       setShotCount(response.data.data.total_shots?.toString() || '')
     } catch (error) {
@@ -76,7 +91,7 @@ export default function DailyChecklist() {
     try {
       setLoading(true)
       const response = await checklistAPI.startDaily({
-        mold_id: moldId,
+        mold_id: realMoldId || mold?.id || moldId,
         shot_count: parseInt(shotCount),
         location: location.lat ? location : null,
         check_type: 'daily'

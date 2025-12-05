@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from './stores/authStore'
 import Layout from './components/Layout'
@@ -46,6 +46,11 @@ import DailyInspectionPage from './pages/inspections/DailyInspectionPage'
 import PeriodicInspectionPage from './pages/inspections/PeriodicInspectionPage'
 import ProtectedRoute from './components/ProtectedRoute'
 
+function PeriodicAlias() {
+  const location = useLocation()
+  return <Navigate to={`/inspection/periodic${location.search || ''}`} replace />
+}
+
 function App() {
   const { isAuthenticated, initialize } = useAuthStore()
 
@@ -59,6 +64,7 @@ function App() {
       <Route path="/qr-login" element={<QRLogin />} />
       <Route path="/scan-info" element={<ScanInfoPage />} />
       <Route path="/repair-request" element={<RepairRequestPage />} />
+      <Route path="/periodic-inspection" element={<PeriodicAlias />} />
       
       {/* Mobile Routes */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />

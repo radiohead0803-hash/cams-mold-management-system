@@ -13,6 +13,9 @@ module.exports = {
     // ============================================
     
     // 1.1 users (사용자)
+    const [usersReg] = await queryInterface.sequelize.query("SELECT to_regclass('public.users') as t");
+    const usersExists = !!usersReg[0].t;
+    if (!usersExists) {
     await queryInterface.createTable('users', {
       id: {
         type: Sequelize.INTEGER,
@@ -68,22 +71,29 @@ module.exports = {
         defaultValue: Sequelize.literal('NOW()')
       }
     });
+    }
 
-    await queryInterface.addIndex('users', ['role_group'], {
-      name: 'idx_users_role_group'
-    });
-    await queryInterface.addIndex('users', ['plant_id'], {
-      name: 'idx_users_plant_id'
-    });
-    await queryInterface.addIndex('users', ['maker_id'], {
-      name: 'idx_users_maker_id'
-    });
+    // Add indexes for users if not already present
+    const usersIndexes = await queryInterface.showIndex('users');
+    const hasUserIdx = (n) => usersIndexes?.some((idx) => idx.name === n);
+    if (!hasUserIdx('idx_users_role_group')) {
+      await queryInterface.addIndex('users', ['role_group'], { name: 'idx_users_role_group' });
+    }
+    if (!hasUserIdx('idx_users_plant_id')) {
+      await queryInterface.addIndex('users', ['plant_id'], { name: 'idx_users_plant_id' });
+    }
+    if (!hasUserIdx('idx_users_maker_id')) {
+      await queryInterface.addIndex('users', ['maker_id'], { name: 'idx_users_maker_id' });
+    }
 
     // ============================================
     // 3. 금형정보 관리 - 금형 마스터
     // ============================================
     
     // 3.1 molds (금형 마스터)
+    const [moldsReg] = await queryInterface.sequelize.query("SELECT to_regclass('public.molds') as t");
+    const moldsExists = !!moldsReg[0].t;
+    if (!moldsExists) {
     await queryInterface.createTable('molds', {
       id: {
         type: Sequelize.INTEGER,
@@ -146,26 +156,34 @@ module.exports = {
         defaultValue: Sequelize.literal('NOW()')
       }
     });
+    }
 
-    await queryInterface.addIndex('molds', ['plant_id'], {
-      name: 'idx_molds_plant'
-    });
-    await queryInterface.addIndex('molds', ['maker_id'], {
-      name: 'idx_molds_maker'
-    });
-    await queryInterface.addIndex('molds', ['qr_token'], {
-      name: 'idx_molds_qr_token'
-    });
-    await queryInterface.addIndex('molds', ['status'], {
-      name: 'idx_molds_status'
-    });
+    // Add indexes for molds if they do not already exist
+    const moldsIndexes = await queryInterface.showIndex('molds');
+    const hasIdx = (n) => moldsIndexes?.some((idx) => idx.name === n);
+    if (!hasIdx('idx_molds_plant')) {
+      await queryInterface.addIndex('molds', ['plant_id'], { name: 'idx_molds_plant' });
+    }
+    if (!hasIdx('idx_molds_maker')) {
+      await queryInterface.addIndex('molds', ['maker_id'], { name: 'idx_molds_maker' });
+    }
+    if (!hasIdx('idx_molds_qr_token')) {
+      await queryInterface.addIndex('molds', ['qr_token'], { name: 'idx_molds_qr_token' });
+    }
+    if (!hasIdx('idx_molds_status')) {
+      await queryInterface.addIndex('molds', ['status'], { name: 'idx_molds_status' });
+    }
 
     // ============================================
     // 2. 데이터 흐름 및 자동 연동 (4개)
     // ============================================
     
     // 2.1 mold_specifications (본사 금형제작사양 - 1차 입력)
-    await queryInterface.createTable('mold_specifications', {
+    // Create table only if it does not exist
+    const [msReg] = await queryInterface.sequelize.query("SELECT to_regclass('public.mold_specifications') as t");
+    const msExists = !!msReg[0].t;
+    if (!msExists) {
+      await queryInterface.createTable('mold_specifications', {
       id: {
         type: Sequelize.INTEGER,
         primaryKey: true,
@@ -272,21 +290,29 @@ module.exports = {
         defaultValue: Sequelize.literal('NOW()')
       }
     });
+    }
 
-    await queryInterface.addIndex('mold_specifications', ['part_number'], {
-      name: 'idx_mold_specifications_part'
-    });
-    await queryInterface.addIndex('mold_specifications', ['target_maker_id'], {
-      name: 'idx_mold_specifications_maker'
-    });
-    await queryInterface.addIndex('mold_specifications', ['external_system_id'], {
-      name: 'idx_mold_specifications_external'
-    });
-    await queryInterface.addIndex('mold_specifications', ['status'], {
-      name: 'idx_mold_specifications_status'
-    });
+    // Add indexes for mold_specifications if columns exist and index missing
+    const msIndexes = await queryInterface.showIndex('mold_specifications');
+    const hasMsIdx = (n) => msIndexes?.some((idx) => idx.name === n);
+    const msCols = await queryInterface.describeTable('mold_specifications');
+    if (msCols.part_number && !hasMsIdx('idx_mold_specifications_part')) {
+      await queryInterface.addIndex('mold_specifications', ['part_number'], { name: 'idx_mold_specifications_part' });
+    }
+    if (msCols.target_maker_id && !hasMsIdx('idx_mold_specifications_maker')) {
+      await queryInterface.addIndex('mold_specifications', ['target_maker_id'], { name: 'idx_mold_specifications_maker' });
+    }
+    if (msCols.external_system_id && !hasMsIdx('idx_mold_specifications_external')) {
+      await queryInterface.addIndex('mold_specifications', ['external_system_id'], { name: 'idx_mold_specifications_external' });
+    }
+    if (msCols.status && !hasMsIdx('idx_mold_specifications_status')) {
+      await queryInterface.addIndex('mold_specifications', ['status'], { name: 'idx_mold_specifications_status' });
+    }
 
     // 2.2 maker_specifications (제작처 사양 - 자동 연동 + 추가 입력)
+    const [mkReg] = await queryInterface.sequelize.query("SELECT to_regclass('public.maker_specifications') as t");
+    const mkExists = !!mkReg[0].t;
+    if (!mkExists) {
     await queryInterface.createTable('maker_specifications', {
       id: {
         type: Sequelize.INTEGER,
@@ -437,18 +463,24 @@ module.exports = {
         defaultValue: Sequelize.literal('NOW()')
       }
     });
+    }
 
-    await queryInterface.addIndex('maker_specifications', ['specification_id'], {
-      name: 'idx_maker_specifications_spec'
-    });
-    await queryInterface.addIndex('maker_specifications', ['maker_id'], {
-      name: 'idx_maker_specifications_maker'
-    });
-    await queryInterface.addIndex('maker_specifications', ['status'], {
-      name: 'idx_maker_specifications_status'
-    });
+    const mkIndexes = await queryInterface.showIndex('maker_specifications');
+    const hasMkIdx = (n) => mkIndexes?.some((idx) => idx.name === n);
+    if (!hasMkIdx('idx_maker_specifications_spec')) {
+      await queryInterface.addIndex('maker_specifications', ['specification_id'], { name: 'idx_maker_specifications_spec' });
+    }
+    if (!hasMkIdx('idx_maker_specifications_maker')) {
+      await queryInterface.addIndex('maker_specifications', ['maker_id'], { name: 'idx_maker_specifications_maker' });
+    }
+    if (!hasMkIdx('idx_maker_specifications_status')) {
+      await queryInterface.addIndex('maker_specifications', ['status'], { name: 'idx_maker_specifications_status' });
+    }
 
     // 2.3 plant_molds (생산처 금형 - 자동 연동)
+    const [pmReg] = await queryInterface.sequelize.query("SELECT to_regclass('public.plant_molds') as t");
+    const pmExists = !!pmReg[0].t;
+    if (!pmExists) {
     await queryInterface.createTable('plant_molds', {
       id: {
         type: Sequelize.INTEGER,
@@ -547,18 +579,24 @@ module.exports = {
         defaultValue: Sequelize.literal('NOW()')
       }
     });
+    }
 
-    await queryInterface.addIndex('plant_molds', ['mold_id'], {
-      name: 'idx_plant_molds_mold'
-    });
-    await queryInterface.addIndex('plant_molds', ['plant_id'], {
-      name: 'idx_plant_molds_plant'
-    });
-    await queryInterface.addIndex('plant_molds', ['status'], {
-      name: 'idx_plant_molds_status'
-    });
+    const pmIndexes = await queryInterface.showIndex('plant_molds');
+    const hasPmIdx = (n) => pmIndexes?.some((idx) => idx.name === n);
+    if (!hasPmIdx('idx_plant_molds_mold')) {
+      await queryInterface.addIndex('plant_molds', ['mold_id'], { name: 'idx_plant_molds_mold' });
+    }
+    if (!hasPmIdx('idx_plant_molds_plant')) {
+      await queryInterface.addIndex('plant_molds', ['plant_id'], { name: 'idx_plant_molds_plant' });
+    }
+    if (!hasPmIdx('idx_plant_molds_status')) {
+      await queryInterface.addIndex('plant_molds', ['status'], { name: 'idx_plant_molds_status' });
+    }
 
     // 2.4 stage_change_history (단계 변경 이력)
+    const [stReg] = await queryInterface.sequelize.query("SELECT to_regclass('public.stage_change_history') as t");
+    const stExists = !!stReg[0].t;
+    if (!stExists) {
     await queryInterface.createTable('stage_change_history', {
       id: {
         type: Sequelize.INTEGER,
@@ -598,15 +636,21 @@ module.exports = {
         defaultValue: Sequelize.literal('NOW()')
       }
     });
+    }
 
-    await queryInterface.addIndex('stage_change_history', ['mold_id'], {
-      name: 'idx_stage_change_mold'
-    });
-    await queryInterface.addIndex('stage_change_history', ['changed_at'], {
-      name: 'idx_stage_change_date'
-    });
+    const stIndexes = await queryInterface.showIndex('stage_change_history');
+    const hasStIdx = (n) => stIndexes?.some((idx) => idx.name === n);
+    if (!hasStIdx('idx_stage_change_mold')) {
+      await queryInterface.addIndex('stage_change_history', ['mold_id'], { name: 'idx_stage_change_mold' });
+    }
+    if (!hasStIdx('idx_stage_change_date')) {
+      await queryInterface.addIndex('stage_change_history', ['changed_at'], { name: 'idx_stage_change_date' });
+    }
 
     // 1.2 qr_sessions (QR 세션)
+    const [qrReg] = await queryInterface.sequelize.query("SELECT to_regclass('public.qr_sessions') as t");
+    const qrExists = !!qrReg[0].t;
+    if (!qrExists) {
     await queryInterface.createTable('qr_sessions', {
       id: {
         type: Sequelize.INTEGER,
@@ -647,13 +691,16 @@ module.exports = {
         defaultValue: Sequelize.literal('NOW()')
       }
     });
+    }
 
-    await queryInterface.addIndex('qr_sessions', ['session_token'], {
-      name: 'idx_qr_sessions_token'
-    });
-    await queryInterface.addIndex('qr_sessions', ['user_id'], {
-      name: 'idx_qr_sessions_user'
-    });
+    const qrIndexes = await queryInterface.showIndex('qr_sessions');
+    const hasQrIdx = (n) => qrIndexes?.some((idx) => idx.name === n);
+    if (!hasQrIdx('idx_qr_sessions_token')) {
+      await queryInterface.addIndex('qr_sessions', ['session_token'], { name: 'idx_qr_sessions_token' });
+    }
+    if (!hasQrIdx('idx_qr_sessions_user')) {
+      await queryInterface.addIndex('qr_sessions', ['user_id'], { name: 'idx_qr_sessions_user' });
+    }
   },
 
   async down(queryInterface, Sequelize) {
