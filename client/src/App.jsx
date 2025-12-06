@@ -20,6 +20,7 @@ import MoldBulkUpload from './pages/MoldBulkUpload'
 import MoldMaster from './pages/MoldMaster'
 import MoldLifecycle from './pages/MoldLifecycle'
 import MoldSpecificationDetail from './pages/MoldSpecificationDetail'
+import MoldDetailNew from './pages/MoldDetailNew'
 import DailyChecklist from './pages/DailyChecklistNew'
 import PeriodicInspection from './pages/PeriodicInspectionNew'
 import TransferManagement from './pages/TransferManagement'
@@ -113,7 +114,8 @@ function App() {
         <Route path="molds/bulk-upload" element={<MoldBulkUpload />} />
         <Route path="molds/master" element={<MoldMaster />} />
         <Route path="molds/lifecycle" element={<MoldLifecycle />} />
-        <Route path="molds/specifications/:id" element={<MoldSpecificationDetail />} />
+        <Route path="molds/specifications/:id" element={<MoldDetailNew />} />
+        <Route path="molds/detail/:id" element={<MoldDetailNew />} />
         <Route path="molds/:id" element={<MoldDetail />} />
         <Route path="checklist/daily" element={<DailyChecklist />} />
         <Route path="inspection/periodic" element={<PeriodicInspection />} />
