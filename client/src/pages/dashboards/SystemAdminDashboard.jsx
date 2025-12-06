@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp, Eye } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
@@ -15,6 +15,12 @@ export default function SystemAdminDashboard() {
   const [selectedMoldId, setSelectedMoldId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [locationFilter, setLocationFilter] = useState('all'); // all | normal | moved
+  const [moldPopup, setMoldPopup] = useState(null); // 더블클릭 시 표시할 금형 정보
+
+  // 지도에서 마커 더블클릭 시 금형 정보 팝업 열기
+  const handleMoldDoubleClick = useCallback((mold) => {
+    setMoldPopup(mold);
+  }, []);
   
   // 검색 필터링
   const filteredLocations = locations.filter((loc) => {
@@ -350,6 +356,7 @@ export default function SystemAdminDashboard() {
               <NaverMoldLocationMap 
                 locations={filteredLocations} 
                 selectedMoldId={selectedMoldId}
+                onMoldDoubleClick={handleMoldDoubleClick}
               />
             )}
           </section>
@@ -406,6 +413,107 @@ export default function SystemAdminDashboard() {
             />
           </div>
         </section>
+
+        {/* 금형 정보 팝업 모달 */}
+        {moldPopup && (
+          <MoldInfoPopup 
+            mold={moldPopup} 
+            onClose={() => setMoldPopup(null)}
+            onViewDetail={() => {
+              navigate(`/molds/specifications/${moldPopup.id}`);
+              setMoldPopup(null);
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 금형 정보 팝업 컴포넌트
+function MoldInfoPopup({ mold, onClose, onViewDetail }) {
+  const statusColor = mold.status === 'ng' ? 'red' : mold.status === 'moved' ? 'orange' : 'green';
+  const statusText = mold.status === 'ng' ? 'NG' : mold.status === 'moved' ? '이탈' : '정상';
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div 
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">{mold.moldCode}</h2>
+              <p className="text-blue-100 text-sm mt-1">{mold.moldName || '금형'}</p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* 본문 */}
+        <div className="p-6 space-y-4">
+          {/* 상태 배지 */}
+          <div className="flex items-center gap-3">
+            <span className={`px-3 py-1 rounded-full text-sm font-medium bg-${statusColor}-100 text-${statusColor}-700`}>
+              상태: {statusText}
+            </span>
+            {mold.hasDrift && (
+              <span className="px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700">
+                ⚠️ 위치 이탈
+              </span>
+            )}
+          </div>
+
+          {/* 정보 그리드 */}
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-gray-500 text-xs mb-1">현재 위치</p>
+              <p className="font-semibold text-gray-900">{mold.plantName || '-'}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-gray-500 text-xs mb-1">기본 위치</p>
+              <p className="font-semibold text-gray-900">{mold.registeredLocation || '-'}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-gray-500 text-xs mb-1">위도</p>
+              <p className="font-semibold text-gray-900">{mold.lat?.toFixed(6) || '-'}</p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-gray-500 text-xs mb-1">경도</p>
+              <p className="font-semibold text-gray-900">{mold.lng?.toFixed(6) || '-'}</p>
+            </div>
+          </div>
+
+          {/* 추가 정보 */}
+          {mold.lastUpdated && (
+            <div className="text-xs text-gray-500 text-center">
+              마지막 업데이트: {new Date(mold.lastUpdated).toLocaleString('ko-KR')}
+            </div>
+          )}
+        </div>
+
+        {/* 푸터 버튼 */}
+        <div className="border-t p-4 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+          >
+            닫기
+          </button>
+          <button
+            onClick={onViewDetail}
+            className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+          >
+            상세보기
+          </button>
+        </div>
       </div>
     </div>
   );

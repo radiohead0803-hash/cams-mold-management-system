@@ -7,7 +7,7 @@ window.navermap_authFailure = function () {
   console.error("[NaverMap] Open API 인증 실패 - ncpKeyId 또는 Web 서비스 URL 설정을 다시 확인하세요.");
 };
 
-export default function NaverMoldLocationMap({ locations, selectedMoldId }) {
+export default function NaverMoldLocationMap({ locations, selectedMoldId, onMoldDoubleClick }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef({});
@@ -124,6 +124,13 @@ export default function NaverMoldLocationMap({ locations, selectedMoldId }) {
         window.naver.maps.Event.addListener(marker, "mouseout", () =>
           infoWindow.close()
         );
+
+        // 더블클릭 시 금형 정보 팝업 열기
+        window.naver.maps.Event.addListener(marker, "dblclick", () => {
+          if (onMoldDoubleClick) {
+            onMoldDoubleClick(loc);
+          }
+        });
 
         markersRef.current[loc.id] = marker;
         infoWindowsRef.current[loc.id] = infoWindow;
