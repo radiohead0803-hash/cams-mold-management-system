@@ -58,18 +58,37 @@ export default function MoldDetailNew() {
   const loadMoldData = async () => {
     try {
       setLoading(true);
-      // mold_specifications에서 데이터 로드
-      const response = await moldSpecificationAPI.getById(id);
-      setMold(response.data.data);
+      let moldData = null;
+
+      // 1. mold_specifications에서 먼저 시도
+      try {
+        const response = await moldSpecificationAPI.getById(id);
+        if (response.data?.data) {
+          moldData = response.data.data;
+        }
+      } catch (err) {
+        console.log('Not found in mold_specifications, trying molds table...');
+      }
+
+      // 2. mold_specifications에서 못 찾으면 molds 테이블에서 시도
+      if (!moldData) {
+        try {
+          const moldResponse = await moldAPI.getById(id);
+          if (moldResponse.data?.data) {
+            moldData = moldResponse.data.data;
+          }
+        } catch (err2) {
+          console.log('Not found in molds table either');
+        }
+      }
+
+      if (moldData) {
+        setMold(moldData);
+      } else {
+        console.error('Mold not found in any table');
+      }
     } catch (err) {
       console.error('Failed to load mold:', err);
-      // molds 테이블에서 시도
-      try {
-        const moldResponse = await moldAPI.getById(id);
-        setMold(moldResponse.data.data);
-      } catch (err2) {
-        console.error('Failed to load from molds:', err2);
-      }
     } finally {
       setLoading(false);
     }
