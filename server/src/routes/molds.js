@@ -6,9 +6,6 @@ const { authenticate } = require('../middleware/auth');
 // GET /api/v1/molds
 router.get('/', authenticate, moldController.getMolds);
 
-// GET /api/v1/molds/:id
-router.get('/:id', authenticate, moldController.getMoldById);
-
 // GET /api/v1/mold/:id (단수형 - 호환성)
 router.get('/mold/:id', authenticate, moldController.getMoldById);
 
@@ -33,5 +30,8 @@ router.get('/:id/location', authenticate, moldController.getMoldLocation);
 
 // POST /api/v1/molds/:id/location - 금형 위치 업데이트
 router.post('/:id/location', authenticate, moldController.updateMoldLocation);
+
+// GET /api/v1/molds/:id (must be last to avoid shadowing static paths)
+router.get('/:id', authenticate, moldController.getMoldById);
 
 module.exports = router;
