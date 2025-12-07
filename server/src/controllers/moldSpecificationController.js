@@ -201,6 +201,7 @@ const getMoldSpecifications = async (req, res) => {
 const getMoldSpecificationById = async (req, res) => {
   try {
     const { id } = req.params;
+    const { sequelize } = require('../models');
     
     const specification = await MoldSpecification.findByPk(id, {
       include: [
@@ -233,9 +234,50 @@ const getMoldSpecificationById = async (req, res) => {
       });
     }
 
+    // 추가 데이터 조회 (plant_info, maker_info, repair_progress)
+    let plantInfo = null;
+    let makerInfo = null;
+    let repairProgress = null;
+    let activeRepair = null;
+
+    if (specification.mold_id) {
+      // plant_info 조회
+      const [plantInfoResult] = await sequelize.query(
+        'SELECT * FROM plant_info WHERE mold_id = :moldId ORDER BY created_at DESC LIMIT 1',
+        { replacements: { moldId: specification.mold_id } }
+      );
+      plantInfo = plantInfoResult[0] || null;
+
+      // maker_info 조회
+      const [makerInfoResult] = await sequelize.query(
+        'SELECT * FROM maker_info WHERE mold_id = :moldId ORDER BY created_at DESC LIMIT 1',
+        { replacements: { moldId: specification.mold_id } }
+      );
+      makerInfo = makerInfoResult[0] || null;
+
+      // 활성 수리 및 진행현황 조회
+      const [repairResult] = await sequelize.query(
+        `SELECT r.*, rp.progress_percentage, rp.current_stage, rp.work_details
+         FROM repairs r
+         LEFT JOIN repair_progress rp ON r.id = rp.repair_id
+         WHERE r.mold_id = :moldId AND r.status NOT IN ('completed', 'cancelled')
+         ORDER BY r.created_at DESC LIMIT 1`,
+        { replacements: { moldId: specification.mold_id } }
+      );
+      activeRepair = repairResult[0] || null;
+    }
+
+    // 응답 데이터 구성
+    const responseData = {
+      ...specification.toJSON(),
+      plant_info: plantInfo,
+      maker_info: makerInfo,
+      active_repair: activeRepair
+    };
+
     res.json({
       success: true,
-      data: specification
+      data: responseData
     });
   } catch (error) {
     logger.error('Get mold specification by ID error:', error);

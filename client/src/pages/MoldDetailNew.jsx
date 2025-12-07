@@ -277,7 +277,11 @@ export default function MoldDetailNew() {
                 <span className="text-sm text-gray-500">현재 상태</span>
               </div>
               <p className="text-lg font-bold text-green-600">
-                {mold.status === 'active' ? '사용중' : mold.status || '대기'}
+                {mold.status === 'active' ? '사용중' : 
+                 mold.status === 'draft' ? '초안' :
+                 mold.status === 'planning' ? '계획중' :
+                 mold.status === 'in_production' ? '생산중' :
+                 mold.status || '대기'}
               </p>
             </div>
 
@@ -407,19 +411,19 @@ export default function MoldDetailNew() {
             <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">사출온도</p>
-                <p className="text-xl font-bold text-red-600">{mold.injection_temp || '220'}°C</p>
+                <p className="text-xl font-bold text-red-600">{mold.plant_info?.injection_temp || mold.injection_temp || '-'}°C</p>
               </div>
               <div className="bg-gradient-to-br from-orange-50 to-yellow-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">사출압력</p>
-                <p className="text-xl font-bold text-orange-600">{mold.injection_pressure || '80'} MPa</p>
+                <p className="text-xl font-bold text-orange-600">{mold.plant_info?.injection_pressure || mold.injection_pressure || '-'} MPa</p>
               </div>
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">사출속도</p>
-                <p className="text-xl font-bold text-blue-600">{mold.injection_speed || '50'} mm/s</p>
+                <p className="text-xl font-bold text-blue-600">{mold.plant_info?.injection_speed || mold.injection_speed || '-'} mm/s</p>
               </div>
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">사이클타임</p>
-                <p className="text-xl font-bold text-green-600">{mold.cycle_time || '35'} sec</p>
+                <p className="text-xl font-bold text-green-600">{mold.plant_info?.cycle_time || mold.cycle_time || '-'} sec</p>
               </div>
             </div>
           </div>
@@ -440,19 +444,19 @@ export default function MoldDetailNew() {
             <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">재질</p>
-                <p className="text-lg font-bold text-gray-700">{mold.material || 'SKD61'}</p>
+                <p className="text-lg font-bold text-gray-700">{mold.maker_info?.material || mold.material || '-'}</p>
               </div>
               <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">중량</p>
-                <p className="text-lg font-bold text-gray-700">{mold.weight || '2.5'}kg</p>
+                <p className="text-lg font-bold text-gray-700">{mold.maker_info?.weight || mold.weight || '-'}kg</p>
               </div>
               <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">치수</p>
-                <p className="text-lg font-bold text-gray-700">{mold.dimensions || '300x200x150'}mm</p>
+                <p className="text-lg font-bold text-gray-700">{mold.maker_info?.dimensions || mold.dimensions || '-'}mm</p>
               </div>
               <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">캐비티</p>
-                <p className="text-lg font-bold text-gray-700">{mold.cavity_count || mold.cavity || '4'}개</p>
+                <p className="text-lg font-bold text-gray-700">{mold.maker_info?.cavity_count || mold.cavity_count || mold.cavity || '-'}개</p>
               </div>
             </div>
           </div>
