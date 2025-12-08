@@ -101,38 +101,66 @@ const uploadMoldImage = async (req, res) => {
       `, [mold_id, mold_spec_id, image_type]);
     }
 
-    // DB에 이미지 정보 저장 (연계 항목 포함)
-    const insertQuery = `
-      INSERT INTO mold_images (
-        mold_id, mold_spec_id, image_type, image_url, 
-        original_filename, file_size, mime_type,
-        description, is_primary, uploaded_by,
-        reference_type, reference_id, checklist_id, checklist_item_id,
-        repair_id, transfer_id, maker_spec_id,
-        created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
-      RETURNING *
-    `;
-
-    const result = await pool.query(insertQuery, [
-      mold_id || null,
-      mold_spec_id || null,
-      image_type,
-      imageUrl,
-      file.originalname,
-      file.size,
-      file.mimetype,
-      description || null,
-      is_primary === 'true' || is_primary === true,
-      uploaded_by,
-      reference_type || null,
-      reference_id || null,
-      checklist_id || null,
-      checklist_item_id || null,
-      repair_id || null,
-      transfer_id || null,
-      maker_spec_id || null
-    ]);
+    // DB에 이미지 정보 저장
+    let result;
+    
+    // 먼저 확장 컬럼으로 시도, 실패하면 기본 컬럼으로 재시도
+    try {
+      const insertQuery = `
+        INSERT INTO mold_images (
+          mold_id, mold_spec_id, image_type, image_url, 
+          original_filename, file_size, mime_type,
+          description, is_primary, uploaded_by,
+          reference_type, reference_id, checklist_id, checklist_item_id,
+          repair_id, transfer_id, maker_spec_id,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
+        RETURNING *
+      `;
+      result = await pool.query(insertQuery, [
+        mold_id || null,
+        mold_spec_id || null,
+        image_type,
+        imageUrl,
+        file.originalname,
+        file.size,
+        file.mimetype,
+        description || null,
+        is_primary === 'true' || is_primary === true,
+        uploaded_by,
+        reference_type || null,
+        reference_id || null,
+        checklist_id || null,
+        checklist_item_id || null,
+        repair_id || null,
+        transfer_id || null,
+        maker_spec_id || null
+      ]);
+    } catch (extendedError) {
+      // 확장 컬럼이 없으면 기본 컬럼만 사용
+      logger.warn('Extended columns not available, using basic columns:', extendedError.message);
+      const basicInsertQuery = `
+        INSERT INTO mold_images (
+          mold_id, mold_spec_id, image_type, image_url, 
+          original_filename, file_size, mime_type,
+          description, is_primary, uploaded_by,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        RETURNING *
+      `;
+      result = await pool.query(basicInsertQuery, [
+        mold_id || null,
+        mold_spec_id || null,
+        image_type,
+        imageUrl,
+        file.originalname,
+        file.size,
+        file.mimetype,
+        description || null,
+        is_primary === 'true' || is_primary === true,
+        uploaded_by
+      ]);
+    }
 
     const savedImage = result.rows[0];
 
