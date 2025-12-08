@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, AlertCircle, CheckCircle, Factory, Building2, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { masterDataAPI } from '../lib/api';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -18,10 +19,11 @@ export default function MoldNew() {
   
   const [formData, setFormData] = useState({
     part_number: '',
+    representative_part_number: '',
     part_name: '',
     car_model: '',
     car_year: new Date().getFullYear().toString(),
-    mold_type: '사출금형',
+    mold_type: '',
     cavity_count: 1,
     material: '',
     tonnage: '',
@@ -36,9 +38,37 @@ export default function MoldNew() {
     part_images: []
   });
 
+  // 기초정보 (마스터 데이터)
+  const [carModels, setCarModels] = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [moldTypes, setMoldTypes] = useState([]);
+  const [tonnages, setTonnages] = useState([]);
+  const [masterDataLoading, setMasterDataLoading] = useState(true);
+
   useEffect(() => {
     loadCompanies();
+    loadMasterData();
   }, []);
+
+  const loadMasterData = async () => {
+    try {
+      setMasterDataLoading(true);
+      const [carModelsRes, materialsRes, moldTypesRes, tonnagesRes] = await Promise.all([
+        masterDataAPI.getCarModels(),
+        masterDataAPI.getMaterials(),
+        masterDataAPI.getMoldTypes(),
+        masterDataAPI.getTonnages()
+      ]);
+      setCarModels(carModelsRes.data.data || []);
+      setMaterials(materialsRes.data.data || []);
+      setMoldTypes(moldTypesRes.data.data || []);
+      setTonnages(tonnagesRes.data.data || []);
+    } catch (error) {
+      console.error('Failed to load master data:', error);
+    } finally {
+      setMasterDataLoading(false);
+    }
+  };
 
   const loadCompanies = async () => {
     try {
@@ -340,6 +370,19 @@ export default function MoldNew() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                대표품번
+              </label>
+              <input
+                type="text"
+                name="representative_part_number"
+                value={formData.representative_part_number}
+                onChange={handleChange}
+                className="input"
+                placeholder="대표품번 입력"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 부품명 <span className="text-red-500">*</span>
               </label>
               <input
@@ -356,15 +399,19 @@ export default function MoldNew() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 차종 <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="car_model"
                 value={formData.car_model}
                 onChange={handleChange}
                 required
                 className="input"
-                placeholder="K5"
-              />
+                disabled={masterDataLoading}
+              >
+                <option value="">{masterDataLoading ? '로딩 중...' : '차종 선택'}</option>
+                {carModels.map(item => (
+                  <option key={item.id} value={item.name}>{item.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -397,11 +444,12 @@ export default function MoldNew() {
                 value={formData.mold_type}
                 onChange={handleChange}
                 className="input"
+                disabled={masterDataLoading}
               >
-                <option value="사출금형">사출금형</option>
-                <option value="프레스금형">프레스금형</option>
-                <option value="다이캐스팅">다이캐스팅</option>
-                <option value="기타">기타</option>
+                <option value="">{masterDataLoading ? '로딩 중...' : '금형 타입 선택'}</option>
+                {moldTypes.map(item => (
+                  <option key={item.id} value={item.name}>{item.name}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -421,27 +469,35 @@ export default function MoldNew() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 재질
               </label>
-              <input
-                type="text"
+              <select
                 name="material"
                 value={formData.material}
                 onChange={handleChange}
                 className="input"
-                placeholder="NAK80"
-              />
+                disabled={masterDataLoading}
+              >
+                <option value="">{masterDataLoading ? '로딩 중...' : '재질 선택'}</option>
+                {materials.map(item => (
+                  <option key={item.id} value={item.name}>{item.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 톤수 (ton)
               </label>
-              <input
-                type="number"
+              <select
                 name="tonnage"
                 value={formData.tonnage}
                 onChange={handleChange}
                 className="input"
-                placeholder="350"
-              />
+                disabled={masterDataLoading}
+              >
+                <option value="">{masterDataLoading ? '로딩 중...' : '톤수 선택'}</option>
+                {tonnages.map(item => (
+                  <option key={item.id} value={item.value}>{item.value} ton</option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
