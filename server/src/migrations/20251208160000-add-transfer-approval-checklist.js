@@ -10,11 +10,15 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     // transfers 테이블 존재 여부 확인
-    const [tables] = await queryInterface.sequelize.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transfers'"
-    );
-    
-    const transfersExists = tables.length > 0;
+    let transfersExists = false;
+    try {
+      const result = await queryInterface.sequelize.query(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transfers'"
+      );
+      transfersExists = result && result[0] && result[0].length > 0;
+    } catch (e) {
+      console.log('transfers 테이블 확인 실패:', e.message);
+    }
     
     // 1. transfer_approvals (이관 승인 - 3단계 승인 시스템)
     // transfers 테이블이 없으면 FK 없이 생성
@@ -330,10 +334,15 @@ module.exports = {
 
   down: async (queryInterface, Sequelize) => {
     // transfers 테이블 존재 여부 확인
-    const [tables] = await queryInterface.sequelize.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transfers'"
-    );
-    const transfersExists = tables.length > 0;
+    let transfersExists = false;
+    try {
+      const result = await queryInterface.sequelize.query(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transfers'"
+      );
+      transfersExists = result && result[0] && result[0].length > 0;
+    } catch (e) {
+      console.log('transfers 테이블 확인 실패:', e.message);
+    }
 
     // 컬럼 제거 (테이블이 존재할 때만)
     if (transfersExists) {
