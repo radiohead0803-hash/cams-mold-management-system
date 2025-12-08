@@ -498,26 +498,30 @@ export default function MoldDetailNew() {
                 {/* QR 코드 */}
                 <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4 flex flex-col items-center justify-center">
                   <p className="text-xs text-gray-500 mb-2 font-medium">금형 QR 코드</p>
-                  {mold?.mold?.qr_token ? (
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(mold.mold.qr_token)}`}
-                      alt="QR Code"
-                      className="w-24 h-24 rounded-lg shadow-sm"
-                    />
-                  ) : mold?.qr_token ? (
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(mold.qr_token)}`}
-                      alt="QR Code"
-                      className="w-24 h-24 rounded-lg shadow-sm"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <span className="text-xs text-gray-400">QR 없음</span>
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-400 mt-2 text-center break-all max-w-full">
-                    {mold?.mold?.qr_token || mold?.qr_token || '-'}
-                  </p>
+                  {(() => {
+                    // QR 토큰 찾기 (여러 경로 시도)
+                    const qrToken = mold?.mold?.qr_token || mold?.qr_token || mold?.mold_code || `MOLD-${id}`;
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrToken)}`;
+                    return (
+                      <>
+                        <img 
+                          src={qrUrl}
+                          alt="QR Code"
+                          className="w-24 h-24 rounded-lg shadow-sm"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="w-24 h-24 bg-gray-200 rounded-lg items-center justify-center hidden">
+                          <span className="text-xs text-gray-400">QR 오류</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-2 text-center break-all max-w-full">
+                          {qrToken}
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
