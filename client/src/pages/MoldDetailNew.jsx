@@ -6,7 +6,7 @@ import {
   Thermometer, Gauge, Clock, Box, Wrench, FileText,
   ClipboardCheck, Calendar, Activity, Camera, Shield, X
 } from 'lucide-react';
-import { moldSpecificationAPI, moldAPI } from '../lib/api';
+import { moldSpecificationAPI, moldAPI, moldImageAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import NaverMoldLocationMap from '../components/NaverMoldLocationMap';
 
@@ -26,6 +26,8 @@ export default function MoldDetailNew() {
   const [locationClickCount, setLocationClickCount] = useState(0);
   const [locationClickTimer, setLocationClickTimer] = useState(null);
   const [moldLocationPopup, setMoldLocationPopup] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(null); // 'mold' | 'product' | null
+  const [moldImages, setMoldImages] = useState({ mold: null, product: null });
 
   // 드롭다운 메뉴 정의 (계층형 구조 지원)
   const menuItems = {
@@ -132,6 +134,78 @@ export default function MoldDetailNew() {
   };
 
   const visibleSections = getVisibleSections();
+
+  // 이미지 로드
+  const loadMoldImages = useCallback(async () => {
+    try {
+      const response = await moldImageAPI.getAll({ mold_spec_id: id });
+      if (response.data.success) {
+        const images = response.data.data;
+        const moldImg = images.find(img => img.image_type === 'mold' && img.is_primary);
+        const productImg = images.find(img => img.image_type === 'product' && img.is_primary);
+        setMoldImages({
+          mold: moldImg?.image_url || mold?.mold_image_url,
+          product: productImg?.image_url || mold?.product_image_url
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load images:', error);
+      // 기존 이미지 URL 사용
+      setMoldImages({
+        mold: mold?.mold_image_url,
+        product: mold?.product_image_url
+      });
+    }
+  }, [id, mold]);
+
+  useEffect(() => {
+    if (mold) {
+      loadMoldImages();
+    }
+  }, [mold, loadMoldImages]);
+
+  // 이미지 업로드 핸들러
+  const handleImageUpload = async (e, imageType) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 파일 크기 체크 (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('파일 크기는 10MB 이하여야 합니다.');
+      return;
+    }
+
+    // 파일 타입 체크
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('지원하지 않는 이미지 형식입니다. (JPEG, PNG, GIF, WEBP만 허용)');
+      return;
+    }
+
+    setUploadingImage(imageType);
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('mold_spec_id', id);
+      formData.append('image_type', imageType);
+      formData.append('is_primary', 'true');
+
+      const response = await moldImageAPI.upload(formData);
+      
+      if (response.data.success) {
+        // 이미지 새로고침
+        await loadMoldImages();
+        alert('이미지가 업로드되었습니다.');
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error);
+      alert('이미지 업로드에 실패했습니다: ' + (error.response?.data?.error?.message || error.message));
+    } finally {
+      setUploadingImage(null);
+      e.target.value = ''; // 파일 입력 초기화
+    }
+  };
 
   // 위치 클릭 핸들러 (더블클릭 시 상세 정보 표시)
   const handleLocationClick = useCallback(() => {
@@ -332,21 +406,40 @@ export default function MoldDetailNew() {
                 <Camera className="text-purple-600" size={20} />
                 <h3 className="font-semibold text-gray-800">금형 이미지</h3>
               </div>
-              <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                {mold.part_images?.url ? (
-                  <img src={mold.part_images.url} alt="금형" className="w-full h-full object-cover" />
+              <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
+                {moldImages.mold || mold.part_images?.url || mold.mold_image_url ? (
+                  <img 
+                    src={moldImages.mold || mold.part_images?.url || mold.mold_image_url} 
+                    alt="금형" 
+                    className="w-full h-full object-cover" 
+                  />
                 ) : (
                   <div className="text-center text-gray-400">
                     <Camera size={48} className="mx-auto mb-2 opacity-50" />
                     <p className="text-sm">이미지 없음</p>
                   </div>
                 )}
+                {uploadingImage === 'mold' && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="text-white text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                      <p className="text-sm">업로드 중...</p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <button className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+              <label className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity cursor-pointer">
                 <Upload size={16} />
                 이미지 업로드
                 <Eye size={16} className="ml-4 opacity-70" />
-              </button>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={(e) => handleImageUpload(e, 'mold')}
+                  disabled={uploadingImage !== null}
+                />
+              </label>
             </div>
 
             {/* 제품 이미지 */}
@@ -355,17 +448,40 @@ export default function MoldDetailNew() {
                 <Box className="text-blue-600" size={20} />
                 <h3 className="font-semibold text-gray-800">제품 이미지</h3>
               </div>
-              <div className="aspect-video bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center">
-                <div className="text-center text-gray-400">
-                  <Box size={48} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">제품 이미지</p>
-                </div>
+              <div className="aspect-video bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center relative">
+                {moldImages.product || mold.product_image_url ? (
+                  <img 
+                    src={moldImages.product || mold.product_image_url} 
+                    alt="제품" 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <div className="text-center text-gray-400">
+                    <Box size={48} className="mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">제품 이미지</p>
+                  </div>
+                )}
+                {uploadingImage === 'product' && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="text-white text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                      <p className="text-sm">업로드 중...</p>
+                    </div>
+                  </div>
+                )}
               </div>
-              <button className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+              <label className="w-full py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity cursor-pointer">
                 <Upload size={16} />
                 이미지 업로드
                 <Eye size={16} className="ml-4 opacity-70" />
-              </button>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={(e) => handleImageUpload(e, 'product')}
+                  disabled={uploadingImage !== null}
+                />
+              </label>
             </div>
           </div>
         )}

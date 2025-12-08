@@ -106,6 +106,16 @@ export const moldSpecificationAPI = {
   delete: (id) => api.delete(`/mold-specifications/${id}`),
 }
 
+// Mold Image API
+export const moldImageAPI = {
+  upload: (formData) => api.post('/mold-images', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  getAll: (params) => api.get('/mold-images', { params }),
+  setPrimary: (id) => api.patch(`/mold-images/${id}/primary`),
+  delete: (id) => api.delete(`/mold-images/${id}`),
+}
+
 // Maker Specification API
 export const makerSpecificationAPI = {
   getAll: (params) => api.get('/maker-specifications', { params }),

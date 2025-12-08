@@ -90,6 +90,7 @@ const notificationsRouter = require('./routes/notifications');
 const dashboardRouter = require('./routes/dashboard');
 const moldsRouter = require('./routes/molds');
 const inspectionsRouter = require('./routes/inspections');
+const moldImagesRouter = require('./routes/moldImages');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -130,6 +131,8 @@ app.use('/api/v1/admin/car-models', carModelsRouter);
 app.use('/api/v1/checklists', checklistFormsRouter);
 // Development plans
 app.use('/api/v1/dev', devPlansRouter);
+// Mold images
+app.use('/api/v1/mold-images', moldImagesRouter);
 
 // Health check
 app.get('/health', (req, res) => {
