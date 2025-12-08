@@ -32,8 +32,7 @@ export default function MoldDetailNew() {
           label: '금형개발', 
           subItems: ['개발계획', '금형체크리스트', '금형육성', '경도측정'] 
         },
-        '금형사양', 
-        '러너관리', 
+        '금형사양',
         '변경이력 현황표'
       ]
     },
@@ -236,7 +235,17 @@ export default function MoldDetailNew() {
                             <button
                               key={idx}
                               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
-                              onClick={() => setActiveMenu(null)}
+                              onClick={() => {
+                                setActiveMenu(null);
+                                // 금형사양 페이지 이동
+                                if (item === '금형사양') {
+                                  navigate(`/mold-specification/${id}`);
+                                } else if (item === '일상점검') {
+                                  navigate(`/checklist/daily?mold=${id}`);
+                                } else if (item === '정기점검') {
+                                  navigate(`/inspection/periodic?mold=${id}`);
+                                }
+                              }}
                             >
                               {item}
                             </button>

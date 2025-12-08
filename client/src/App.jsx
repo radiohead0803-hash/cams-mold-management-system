@@ -39,6 +39,7 @@ import MakerRepairListPage from './pages/MakerRepairListPage'
 import MoldDevelopmentPlan from './pages/MoldDevelopmentPlan'
 import MoldChecklist from './pages/MoldChecklist'
 import HardnessMeasurement from './pages/HardnessMeasurement'
+import MoldSpecification from './pages/MoldSpecification'
 import MoldOverviewPage from './pages/mobile/MoldOverviewPage'
 import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
 import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
@@ -138,6 +139,8 @@ function App() {
         <Route path="mold-development/hardness" element={<HardnessMeasurement />} />
         <Route path="checklist/master" element={<MoldChecklist />} />
         <Route path="mold-checklist" element={<MoldChecklist />} />
+        <Route path="mold-specification" element={<MoldSpecification />} />
+        <Route path="mold-specification/:id" element={<MoldSpecification />} />
       </Route>
     </Routes>
   )
