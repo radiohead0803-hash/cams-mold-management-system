@@ -50,9 +50,16 @@ export default function MasterData() {
     }
   };
 
+  // 다음 정렬 순서 계산
+  const getNextSortOrder = () => {
+    if (data.length === 0) return 1;
+    const maxOrder = Math.max(...data.map(item => item.sort_order || 0));
+    return maxOrder + 1;
+  };
+
   const handleAdd = () => {
     setIsAdding(true);
-    setFormData({});
+    setFormData({ sort_order: getNextSortOrder() });
   };
 
   const handleEdit = (item) => {
@@ -164,13 +171,6 @@ export default function MasterData() {
               onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
               className="input"
             />
-            <input
-              type="number"
-              placeholder="정렬순서"
-              value={formData.sort_order || 0}
-              onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) })}
-              className="input"
-            />
           </div>
         );
       
@@ -212,13 +212,6 @@ export default function MasterData() {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="input col-span-2"
             />
-            <input
-              type="number"
-              placeholder="정렬순서"
-              value={formData.sort_order || 0}
-              onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) })}
-              className="input"
-            />
           </div>
         );
       
@@ -246,13 +239,6 @@ export default function MasterData() {
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="input col-span-2"
             />
-            <input
-              type="number"
-              placeholder="정렬순서"
-              value={formData.sort_order || 0}
-              onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) })}
-              className="input"
-            />
           </div>
         );
       
@@ -271,13 +257,6 @@ export default function MasterData() {
               placeholder="설명"
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="input"
-            />
-            <input
-              type="number"
-              placeholder="정렬순서"
-              value={formData.sort_order || 0}
-              onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) })}
               className="input"
             />
           </div>
@@ -300,20 +279,20 @@ export default function MasterData() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">순서</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종명</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종코드</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제조사</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">정렬</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item) => (
+              {data.map((item, index) => (
                 <tr key={item.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.model_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.model_code || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.manufacturer || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.sort_order}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
                       <Edit2 size={16} />
@@ -333,6 +312,7 @@ export default function MasterData() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">순서</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">재질명</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">코드</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">분류</th>
@@ -341,8 +321,9 @@ export default function MasterData() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item) => (
+              {data.map((item, index) => (
                 <tr key={item.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.material_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.material_code || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.category || '-'}</td>
@@ -366,6 +347,7 @@ export default function MasterData() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">순서</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">금형타입명</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">타입코드</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">설명</th>
@@ -373,8 +355,9 @@ export default function MasterData() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item) => (
+              {data.map((item, index) => (
                 <tr key={item.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.type_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.type_code || '-'}</td>
                   <td className="px-6 py-4">{item.description || '-'}</td>
@@ -397,18 +380,18 @@ export default function MasterData() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">순서</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">톤수</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">설명</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">정렬</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item) => (
+              {data.map((item, index) => (
                 <tr key={item.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.tonnage_value}T</td>
                   <td className="px-6 py-4">{item.description || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.sort_order}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
                       <Edit2 size={16} />
