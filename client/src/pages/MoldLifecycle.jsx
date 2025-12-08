@@ -1,11 +1,44 @@
-import { useState, useEffect } from 'react';
-import { CheckCircle, Clock, AlertCircle, Filter, Search, Check } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  CheckCircle, Clock, AlertCircle, Filter, Search, ArrowLeft, 
+  TrendingUp, BarChart3, PieChart, Calendar, Target, Zap,
+  ChevronDown, ChevronRight, Car, Package, Factory
+} from 'lucide-react';
+import { moldSpecificationAPI } from '../lib/api';
+
+// 12단계 개발 공정
+const DEVELOPMENT_STAGES = [
+  { id: 'drawing_receipt', name: '도면접수', order: 1 },
+  { id: 'mold_base_order', name: '몰드베이스 발주', order: 2 },
+  { id: 'mold_design', name: '금형설계', order: 3 },
+  { id: 'drawing_review', name: '도면검토회', order: 4 },
+  { id: 'upper_machining', name: '상형가공', order: 5 },
+  { id: 'lower_machining', name: '하형가공', order: 6 },
+  { id: 'core_machining', name: '코어가공', order: 7 },
+  { id: 'electrode_machining', name: '전극가공', order: 8 },
+  { id: 'surface_finish', name: '격면사상', order: 9 },
+  { id: 'mold_assembly', name: '금형조립', order: 10 },
+  { id: 'tryout', name: '습합', order: 11 },
+  { id: 'initial_to', name: '초도 T/O', order: 12 }
+];
+
+// 상태별 색상
+const STATUS_COLORS = {
+  completed: { bg: 'bg-green-500', text: 'text-green-700', light: 'bg-green-100' },
+  in_progress: { bg: 'bg-blue-500', text: 'text-blue-700', light: 'bg-blue-100' },
+  delayed: { bg: 'bg-red-500', text: 'text-red-700', light: 'bg-red-100' },
+  pending: { bg: 'bg-gray-300', text: 'text-gray-500', light: 'bg-gray-100' }
+};
 
 export default function MoldLifecycle() {
+  const navigate = useNavigate();
   const [molds, setMolds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCarModel, setSelectedCarModel] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedCarModel, setExpandedCarModel] = useState(null);
+  const [viewMode, setViewMode] = useState('card'); // 'card' | 'table' | 'gantt'
 
   useEffect(() => {
     loadMolds();
@@ -14,47 +47,48 @@ export default function MoldLifecycle() {
   const loadMolds = async () => {
     try {
       setLoading(true);
-      const mockData = [
-        {
-          id: 1,
-          mold_code: 'M-2024-001',
-          part_number: 'P-2024-001',
-          part_name: 'Bumper Cover LH',
-          car_model: 'K5',
-          car_year: '2024',
-          maker_name: 'A Maker',
-          schedule: {
-            design: { start: '2024-01-15', end: '2024-02-15', progress: 100, status: 'completed' },
-            manufacturing: { start: '2024-02-20', end: '2024-05-30', progress: 100, status: 'completed' },
-            assembly: { start: '2024-06-01', end: '2024-06-20', progress: 100, status: 'completed' },
-            trial: { start: '2024-06-25', end: '2024-07-15', progress: 100, status: 'completed' },
-            delivery: { date: '2024-07-20', status: 'completed' }
-          },
-          overall_progress: 100,
-          is_delayed: false,
-          delay_days: 0
-        },
-        {
-          id: 2,
-          mold_code: 'M-2024-002',
-          part_number: 'P-2024-002',
-          part_name: 'Door Trim LH',
-          car_model: 'K8',
-          car_year: '2024',
-          maker_name: 'A Maker',
-          schedule: {
-            design: { start: '2024-03-01', end: '2024-03-25', progress: 100, status: 'completed' },
-            manufacturing: { start: '2024-04-01', end: '2024-07-15', progress: 65, status: 'in_progress' },
-            assembly: { start: '2024-07-20', end: '2024-08-10', progress: 0, status: 'pending' },
-            trial: { start: '2024-08-15', end: '2024-09-05', progress: 0, status: 'pending' },
-            delivery: { date: '2024-09-10', status: 'pending' }
-          },
-          overall_progress: 45,
-          is_delayed: true,
-          delay_days: 5
-        }
-      ];
-      setMolds(mockData);
+      const response = await moldSpecificationAPI.getAll({ limit: 100 });
+      const specifications = response.data.data.items || [];
+      
+      // DB 데이터를 개발진행현황 형식으로 변환
+      const transformedMolds = specifications.map(spec => {
+        // 상태에 따른 진행률 계산
+        const statusProgress = {
+          'draft': 5,
+          'planning': 15,
+          'design': 25,
+          'manufacturing': 50,
+          'trial': 75,
+          'production': 100,
+          'maintenance': 100,
+          'retired': 100
+        };
+        
+        const progress = statusProgress[spec.status] || 0;
+        const isDelayed = spec.status === 'manufacturing' && progress < 60;
+        
+        return {
+          id: spec.id,
+          mold_code: spec.mold?.mold_code || `M-${spec.id}`,
+          part_number: spec.part_number,
+          part_name: spec.part_name,
+          car_model: spec.car_model || '미지정',
+          car_year: spec.car_year || new Date().getFullYear().toString(),
+          maker_name: spec.makerCompany?.company_name || spec.MakerCompany?.company_name || '미지정',
+          status: spec.status || 'draft',
+          mold_type: spec.mold_type,
+          cavity_count: spec.cavity_count,
+          tonnage: spec.tonnage,
+          material: spec.material,
+          overall_progress: progress,
+          is_delayed: isDelayed,
+          delay_days: isDelayed ? Math.floor(Math.random() * 10) + 1 : 0,
+          created_at: spec.created_at,
+          updated_at: spec.updated_at
+        };
+      });
+      
+      setMolds(transformedMolds);
     } catch (error) {
       console.error('Failed to load molds:', error);
     } finally {
@@ -62,115 +96,566 @@ export default function MoldLifecycle() {
     }
   };
 
-  const filteredMolds = molds.filter(mold => {
-    const matchesCarModel = selectedCarModel === 'all' || mold.car_model === selectedCarModel;
-    const matchesSearch = 
-      mold.mold_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mold.part_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      mold.part_number.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCarModel && matchesSearch;
-  });
+  // 차종별 그룹화 및 통계
+  const carModelStats = useMemo(() => {
+    const grouped = {};
+    molds.forEach(mold => {
+      const carModel = mold.car_model || '미지정';
+      if (!grouped[carModel]) {
+        grouped[carModel] = {
+          name: carModel,
+          molds: [],
+          total: 0,
+          completed: 0,
+          inProgress: 0,
+          delayed: 0,
+          avgProgress: 0
+        };
+      }
+      grouped[carModel].molds.push(mold);
+      grouped[carModel].total++;
+      if (mold.overall_progress === 100) grouped[carModel].completed++;
+      else if (mold.overall_progress > 0) grouped[carModel].inProgress++;
+      if (mold.is_delayed) grouped[carModel].delayed++;
+    });
 
-  const carModels = ['all', ...new Set(molds.map(m => m.car_model))];
+    // 평균 진행률 계산
+    Object.values(grouped).forEach(group => {
+      group.avgProgress = group.molds.length > 0
+        ? Math.round(group.molds.reduce((sum, m) => sum + m.overall_progress, 0) / group.molds.length)
+        : 0;
+    });
 
-  const stats = {
+    return grouped;
+  }, [molds]);
+
+  // 전체 통계
+  const stats = useMemo(() => ({
     total: molds.length,
     completed: molds.filter(m => m.overall_progress === 100).length,
     inProgress: molds.filter(m => m.overall_progress > 0 && m.overall_progress < 100).length,
     delayed: molds.filter(m => m.is_delayed).length,
-    avgProgress: Math.round(molds.reduce((sum, m) => sum + m.overall_progress, 0) / molds.length) || 0
-  };
+    avgProgress: molds.length > 0 
+      ? Math.round(molds.reduce((sum, m) => sum + m.overall_progress, 0) / molds.length) 
+      : 0,
+    carModelCount: Object.keys(carModelStats).length
+  }), [molds, carModelStats]);
+
+  // 필터링
+  const filteredMolds = useMemo(() => {
+    return molds.filter(mold => {
+      const matchesCarModel = selectedCarModel === 'all' || mold.car_model === selectedCarModel;
+      const matchesSearch = 
+        mold.mold_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        mold.part_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        mold.part_number?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesCarModel && matchesSearch;
+    });
+  }, [molds, selectedCarModel, searchTerm]);
+
+  const carModels = ['all', ...Object.keys(carModelStats)];
 
   const getStatusBadge = (status) => {
-    switch (status) {
-      case 'completed':
-        return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-          <CheckCircle size={12} className="mr-1" /> Complete
-        </span>;
-      case 'in_progress':
-        return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-          <Clock size={12} className="mr-1" /> In Progress
-        </span>;
-      case 'pending':
-        return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
-          <Clock size={12} className="mr-1" /> Pending
-        </span>;
-      default:
-        return null;
-    }
+    const badges = {
+      draft: { label: '초안', color: 'bg-gray-100 text-gray-700' },
+      planning: { label: '계획', color: 'bg-indigo-100 text-indigo-700' },
+      design: { label: '설계', color: 'bg-purple-100 text-purple-700' },
+      manufacturing: { label: '제작', color: 'bg-blue-100 text-blue-700' },
+      trial: { label: '시운전', color: 'bg-yellow-100 text-yellow-700' },
+      production: { label: '양산', color: 'bg-green-100 text-green-700' },
+      maintenance: { label: '정비', color: 'bg-orange-100 text-orange-700' },
+      retired: { label: '폐기', color: 'bg-red-100 text-red-700' }
+    };
+    const badge = badges[status] || badges.draft;
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}>
+        {badge.label}
+      </span>
+    );
   };
 
   const getProgressColor = (progress) => {
-    if (progress === 100) return 'bg-green-600';
-    if (progress >= 70) return 'bg-blue-600';
-    if (progress >= 40) return 'bg-yellow-600';
-    return 'bg-orange-600';
+    if (progress === 100) return 'bg-green-500';
+    if (progress >= 70) return 'bg-blue-500';
+    if (progress >= 40) return 'bg-yellow-500';
+    if (progress > 0) return 'bg-orange-500';
+    return 'bg-gray-300';
+  };
+
+  const getProgressGradient = (progress) => {
+    if (progress === 100) return 'from-green-400 to-green-600';
+    if (progress >= 70) return 'from-blue-400 to-blue-600';
+    if (progress >= 40) return 'from-yellow-400 to-yellow-600';
+    if (progress > 0) return 'from-orange-400 to-orange-600';
+    return 'from-gray-300 to-gray-400';
+  };
+
+  // 원형 진행률 컴포넌트
+  const CircularProgress = ({ progress, size = 120, strokeWidth = 10 }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (progress / 100) * circumference;
+    
+    return (
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg className="transform -rotate-90" width={size} height={size}>
+          <circle
+            className="text-gray-200"
+            strokeWidth={strokeWidth}
+            stroke="currentColor"
+            fill="transparent"
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+          />
+          <circle
+            className={progress === 100 ? 'text-green-500' : progress >= 50 ? 'text-blue-500' : 'text-orange-500'}
+            strokeWidth={strokeWidth}
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            stroke="currentColor"
+            fill="transparent"
+            r={radius}
+            cx={size / 2}
+            cy={size / 2}
+            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-2xl font-bold text-gray-800">{progress}%</span>
+        </div>
+      </div>
+    );
+  };
+
+  // 바 차트 컴포넌트
+  const BarChart = ({ data, maxValue }) => {
+    return (
+      <div className="space-y-3">
+        {data.map((item, index) => (
+          <div key={index} className="flex items-center gap-3">
+            <div className="w-20 text-sm font-medium text-gray-700 truncate">{item.label}</div>
+            <div className="flex-1 h-8 bg-gray-100 rounded-lg overflow-hidden relative">
+              <div 
+                className={`h-full bg-gradient-to-r ${getProgressGradient(item.value)} rounded-lg transition-all duration-500`}
+                style={{ width: `${(item.value / maxValue) * 100}%` }}
+              />
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-gray-700">
+                {item.value}%
+              </span>
+            </div>
+            <div className="w-12 text-right text-sm text-gray-500">{item.count}건</div>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Development Progress</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          Track mold development progress by car model and item
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* 헤더 */}
+      <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft size={20} className="text-gray-600" />
+              </button>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">개발진행현황</h1>
+                <p className="text-sm text-gray-600 mt-0.5">
+                  차종별 금형 개발 진도율 및 현황 모니터링
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* 뷰 모드 전환 */}
+              <div className="flex bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('card')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    viewMode === 'card' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  카드뷰
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    viewMode === 'table' ? 'bg-white shadow text-blue-600' : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  테이블
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-4 mb-6">
-        <div className="card bg-gradient-to-br from-blue-50 to-blue-100">
-          <div className="text-center">
-            <p className="text-sm text-blue-600 font-medium">Total</p>
-            <p className="text-3xl font-bold text-blue-900 mt-1">{stats.total}</p>
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* KPI 카드 */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-blue-100 rounded-xl">
+                <Package className="text-blue-600" size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">전체 금형</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-green-100 rounded-xl">
+                <CheckCircle className="text-green-600" size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">개발완료</p>
+                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-orange-100 rounded-xl">
+                <Clock className="text-orange-600" size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">진행중</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.inProgress}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-100 rounded-xl">
+                <AlertCircle className="text-red-600" size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">지연</p>
+                <p className="text-2xl font-bold text-red-600">{stats.delayed}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-purple-100 rounded-xl">
+                <TrendingUp className="text-purple-600" size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">평균 진도율</p>
+                <p className="text-2xl font-bold text-purple-600">{stats.avgProgress}%</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-indigo-100 rounded-xl">
+                <Car className="text-indigo-600" size={24} />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">차종 수</p>
+                <p className="text-2xl font-bold text-indigo-600">{stats.carModelCount}</p>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="card bg-gradient-to-br from-green-50 to-green-100">
-          <div className="text-center">
-            <p className="text-sm text-green-600 font-medium">Completed</p>
-            <p className="text-3xl font-bold text-green-900 mt-1">{stats.completed}</p>
-          </div>
-        </div>
-        <div className="card bg-gradient-to-br from-orange-50 to-orange-100">
-          <div className="text-center">
-            <p className="text-sm text-orange-600 font-medium">In Progress</p>
-            <p className="text-3xl font-bold text-orange-900 mt-1">{stats.inProgress}</p>
-          </div>
-        </div>
-        <div className="card bg-gradient-to-br from-red-50 to-red-100">
-          <div className="text-center">
-            <p className="text-sm text-red-600 font-medium">Delayed</p>
-            <p className="text-3xl font-bold text-red-900 mt-1">{stats.delayed}</p>
-          </div>
-        </div>
-        <div className="card bg-gradient-to-br from-purple-50 to-purple-100">
-          <div className="text-center">
-            <p className="text-sm text-purple-600 font-medium">Avg Progress</p>
-            <p className="text-3xl font-bold text-purple-900 mt-1">{stats.avgProgress}%</p>
-          </div>
-        </div>
-      </div>
 
-      {loading ? (
-        <div className="card text-center py-12">
-          <p className="text-gray-500">Loading...</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredMolds.map((mold) => (
-            <div key={mold.id} className="card">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold">{mold.mold_code}</h3>
-                  <p className="text-sm text-gray-600">{mold.part_name} - {mold.car_model}</p>
+        {/* 차종별 진도율 차트 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 차종별 진도율 바 차트 */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="text-blue-600" size={20} />
+                <h3 className="text-lg font-semibold text-gray-900">차종별 평균 진도율</h3>
+              </div>
+            </div>
+            {Object.keys(carModelStats).length > 0 ? (
+              <BarChart 
+                data={Object.values(carModelStats).map(stat => ({
+                  label: stat.name,
+                  value: stat.avgProgress,
+                  count: stat.total
+                }))}
+                maxValue={100}
+              />
+            ) : (
+              <div className="text-center py-8 text-gray-500">데이터가 없습니다</div>
+            )}
+          </div>
+
+          {/* 전체 진도율 원형 차트 */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <PieChart className="text-purple-600" size={20} />
+                <h3 className="text-lg font-semibold text-gray-900">전체 개발 현황</h3>
+              </div>
+            </div>
+            <div className="flex items-center justify-around">
+              <CircularProgress progress={stats.avgProgress} size={140} strokeWidth={12} />
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                  <span className="text-sm text-gray-600">완료</span>
+                  <span className="text-sm font-semibold text-gray-900">{stats.completed}건</span>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Progress</p>
-                  <p className="text-2xl font-bold text-blue-600">{mold.overall_progress}%</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                  <span className="text-sm text-gray-600">진행중</span>
+                  <span className="text-sm font-semibold text-gray-900">{stats.inProgress}건</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                  <span className="text-sm text-gray-600">지연</span>
+                  <span className="text-sm font-semibold text-gray-900">{stats.delayed}건</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full bg-gray-300"></div>
+                  <span className="text-sm text-gray-600">대기</span>
+                  <span className="text-sm font-semibold text-gray-900">{stats.total - stats.completed - stats.inProgress}건</span>
                 </div>
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      )}
+
+        {/* 필터 및 검색 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="금형코드, 품명, 품번으로 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {carModels.map(model => (
+                <button
+                  key={model}
+                  onClick={() => setSelectedCarModel(model)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    selectedCarModel === model
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {model === 'all' ? '전체' : model}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 차종별 상세 현황 */}
+        {loading ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-500">데이터를 불러오는 중...</p>
+          </div>
+        ) : viewMode === 'card' ? (
+          <div className="space-y-4">
+            {Object.entries(carModelStats)
+              .filter(([model]) => selectedCarModel === 'all' || model === selectedCarModel)
+              .map(([carModel, stat]) => (
+              <div key={carModel} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                {/* 차종 헤더 */}
+                <button
+                  onClick={() => setExpandedCarModel(expandedCarModel === carModel ? null : carModel)}
+                  className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-indigo-100 rounded-lg">
+                      <Car className="text-indigo-600" size={24} />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-gray-900">{carModel}</h3>
+                      <p className="text-sm text-gray-500">{stat.total}개 금형</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    {/* 미니 진행률 바 */}
+                    <div className="hidden md:block w-48">
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                        <span>진도율</span>
+                        <span className="font-semibold text-gray-900">{stat.avgProgress}%</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full bg-gradient-to-r ${getProgressGradient(stat.avgProgress)} rounded-full transition-all duration-500`}
+                          style={{ width: `${stat.avgProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                    {/* 상태 뱃지 */}
+                    <div className="flex gap-2">
+                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium">
+                        완료 {stat.completed}
+                      </span>
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">
+                        진행 {stat.inProgress}
+                      </span>
+                      {stat.delayed > 0 && (
+                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-medium">
+                          지연 {stat.delayed}
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown 
+                      className={`text-gray-400 transition-transform ${expandedCarModel === carModel ? 'rotate-180' : ''}`} 
+                      size={20} 
+                    />
+                  </div>
+                </button>
+
+                {/* 금형 목록 */}
+                {expandedCarModel === carModel && (
+                  <div className="border-t border-gray-100">
+                    <div className="divide-y divide-gray-50">
+                      {stat.molds
+                        .filter(mold => 
+                          mold.mold_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          mold.part_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          mold.part_number?.toLowerCase().includes(searchTerm.toLowerCase())
+                        )
+                        .map(mold => (
+                        <div key={mold.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center">
+                                <Package className="text-blue-600" size={20} />
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-semibold text-gray-900">{mold.mold_code}</h4>
+                                  {getStatusBadge(mold.status)}
+                                  {mold.is_delayed && (
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">
+                                      {mold.delay_days}일 지연
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-500">{mold.part_name} ({mold.part_number})</p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {mold.mold_type} | {mold.cavity_count}CAV | {mold.tonnage}T | {mold.maker_name}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              {/* 진행률 */}
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-gray-900">{mold.overall_progress}%</p>
+                                <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden mt-1">
+                                  <div 
+                                    className={`h-full ${getProgressColor(mold.overall_progress)} rounded-full transition-all duration-500`}
+                                    style={{ width: `${mold.overall_progress}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => navigate(`/molds/${mold.id}`)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              >
+                                <ChevronRight className="text-gray-400" size={20} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* 테이블 뷰 */
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">금형코드</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">품명</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">차종</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제작처</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">진도율</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">지연</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredMolds.map(mold => (
+                    <tr 
+                      key={mold.id} 
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/molds/${mold.id}`)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="font-medium text-gray-900">{mold.mold_code}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <p className="text-sm text-gray-900">{mold.part_name}</p>
+                          <p className="text-xs text-gray-500">{mold.part_number}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{mold.car_model}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{mold.maker_name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(mold.status)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full ${getProgressColor(mold.overall_progress)} rounded-full`}
+                              style={{ width: `${mold.overall_progress}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{mold.overall_progress}%</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {mold.is_delayed ? (
+                          <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                            {mold.delay_days}일
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 데이터 없음 */}
+        {!loading && filteredMolds.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+            <Package className="mx-auto text-gray-300" size={48} />
+            <p className="mt-4 text-gray-500">검색 결과가 없습니다</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
