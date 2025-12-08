@@ -448,19 +448,67 @@ const rejectTransfer = async (req, res) => {
   }
 };
 
-// 체크리스트 항목 조회
+// 체크리스트 항목 조회 (마스터 템플릿 연동)
 const getChecklistItems = async (req, res) => {
   try {
-    const query = `
+    // 1. 먼저 체크리스트 마스터 템플릿에서 이관 타입 조회
+    const masterQuery = `
+      SELECT cmt.id as template_id, cmt.template_name, cmt.version,
+             cti.id, cti.category, cti.item_name, cti.item_description,
+             cti.check_method, cti.pass_criteria, cti.is_required, cti.display_order
+      FROM checklist_master_templates cmt
+      LEFT JOIN checklist_template_items cti ON cmt.id = cti.template_id
+      WHERE cmt.template_type = 'transfer' AND cmt.is_active = true
+      ORDER BY cti.display_order, cti.id
+    `;
+    const masterResult = await pool.query(masterQuery);
+    
+    if (masterResult.rows.length > 0 && masterResult.rows[0].id) {
+      // 마스터 템플릿에서 항목 반환
+      const items = masterResult.rows.map((row, idx) => ({
+        id: row.id,
+        template_id: row.template_id,
+        template_name: row.template_name,
+        version: row.version,
+        category: row.category || 'general',
+        category_name: getCategoryName(row.category),
+        item_name: row.item_name,
+        item_description: row.item_description || row.check_method,
+        pass_criteria: row.pass_criteria,
+        is_required: row.is_required,
+        requires_photo: false,
+        item_order: row.display_order || idx + 1
+      }));
+      
+      return res.json({
+        success: true,
+        data: items,
+        source: 'master_template'
+      });
+    }
+    
+    // 2. 마스터 템플릿이 없으면 transfer_checklist_items 테이블에서 조회
+    const fallbackQuery = `
       SELECT * FROM transfer_checklist_items 
       WHERE is_active = true 
       ORDER BY category_order, item_order
     `;
-    const result = await pool.query(query);
+    const fallbackResult = await pool.query(fallbackQuery);
     
+    if (fallbackResult.rows.length > 0) {
+      return res.json({
+        success: true,
+        data: fallbackResult.rows,
+        source: 'transfer_checklist_items'
+      });
+    }
+    
+    // 3. 둘 다 없으면 기본 항목 반환
+    const defaultItems = getDefaultTransferChecklistItems();
     res.json({
       success: true,
-      data: result.rows
+      data: defaultItems,
+      source: 'default'
     });
   } catch (error) {
     logger.error('Get checklist items error:', error);
@@ -470,6 +518,38 @@ const getChecklistItems = async (req, res) => {
     });
   }
 };
+
+// 카테고리명 변환
+const getCategoryName = (category) => {
+  const names = {
+    'fitting': '습합',
+    'appearance': '외관',
+    'cavity': '캐비티',
+    'core': '코어',
+    'hydraulic': '유압장치',
+    'heater': '히터',
+    'general': '일반'
+  };
+  return names[category] || category || '일반';
+};
+
+// 기본 이관 체크리스트 항목
+const getDefaultTransferChecklistItems = () => [
+  { id: 1, category: 'fitting', category_name: '습합', item_name: '제품 BURR', item_description: 'BURR 발생부 습합개소 확인', requires_photo: false, item_order: 1 },
+  { id: 2, category: 'appearance', category_name: '외관', item_name: 'EYE BOLT 체결부', item_description: '피치 마모 및 밀착상태 확인', requires_photo: false, item_order: 2 },
+  { id: 3, category: 'appearance', category_name: '외관', item_name: '상,하 고정판 확인', item_description: '이물 및 녹 오염상태 확인', requires_photo: false, item_order: 3 },
+  { id: 4, category: 'appearance', category_name: '외관', item_name: '냉각상태', item_description: '냉각호스 정리 및 오염상태 확인', requires_photo: false, item_order: 4 },
+  { id: 5, category: 'cavity', category_name: '캐비티', item_name: '표면 흠집,녹', item_description: '표면 흠 및 녹 발생상태 확인', requires_photo: true, item_order: 5 },
+  { id: 6, category: 'cavity', category_name: '캐비티', item_name: '파팅면 오염,탄화', item_description: '파팅면 오염 및 탄화수지 확인', requires_photo: true, item_order: 6 },
+  { id: 7, category: 'cavity', category_name: '캐비티', item_name: '파팅면 BURR', item_description: '파팅면 끝단 손으로 접촉 확인', requires_photo: false, item_order: 7 },
+  { id: 8, category: 'core', category_name: '코어', item_name: '코어류 분해청소', item_description: '긁힘 상태확인 및 이물확인', requires_photo: true, item_order: 8 },
+  { id: 9, category: 'core', category_name: '코어', item_name: '마모', item_description: '작동부 마모상태 점검', requires_photo: false, item_order: 9 },
+  { id: 10, category: 'core', category_name: '코어', item_name: '작동유 윤활유', item_description: '작동유 윤활상태 확인', requires_photo: false, item_order: 10 },
+  { id: 11, category: 'hydraulic', category_name: '유압장치', item_name: '작동유 누유', item_description: '유압 배관 파손 확인', requires_photo: false, item_order: 11 },
+  { id: 12, category: 'hydraulic', category_name: '유압장치', item_name: '호스 및 배선정리', item_description: '호스,배선 정돈상태 확인', requires_photo: false, item_order: 12 },
+  { id: 13, category: 'heater', category_name: '히터', item_name: '히터단선 누전', item_description: '히터단선,누전확인[테스터기]', requires_photo: false, item_order: 13 },
+  { id: 14, category: 'heater', category_name: '히터', item_name: '수지 누출', item_description: '수지 넘침 확인', requires_photo: false, item_order: 14 }
+];
 
 module.exports = {
   getTransfers,

@@ -69,8 +69,22 @@ export default function TransferRequest() {
         setCompanies(companiesData.data.items || []);
       }
       
-      // 체크리스트 항목 로드 (기본값 사용)
-      setChecklistItems(getDefaultChecklistItems());
+      // 체크리스트 항목 로드 (마스터 템플릿에서 가져오기)
+      try {
+        const checklistRes = await fetch(`${API_URL}/api/v1/transfers/checklist/items`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const checklistData = await checklistRes.json();
+        if (checklistData.success && checklistData.data?.length > 0) {
+          setChecklistItems(checklistData.data);
+          console.log('Checklist loaded from:', checklistData.source);
+        } else {
+          setChecklistItems(getDefaultChecklistItems());
+        }
+      } catch (checklistError) {
+        console.error('Failed to load checklist from API, using defaults:', checklistError);
+        setChecklistItems(getDefaultChecklistItems());
+      }
       
     } catch (error) {
       console.error('Failed to load data:', error);
