@@ -22,12 +22,20 @@ export default function MoldDetailNew() {
   const [loading, setLoading] = useState(true);
   const [activeMenu, setActiveMenu] = useState(null);
 
-  // 드롭다운 메뉴 정의
+  // 드롭다운 메뉴 정의 (계층형 구조 지원)
   const menuItems = {
     moldInfo: { 
       label: '금형정보', 
       color: 'bg-purple-500',
-      items: ['금형개발', '금형사양', '러너관리', '변경이력 현황표']
+      items: [
+        { 
+          label: '금형개발', 
+          subItems: ['개발계획', '금형체크리스트', '금형육성', '경도측정'] 
+        },
+        '금형사양', 
+        '러너관리', 
+        '변경이력 현황표'
+      ]
     },
     injection: { 
       label: '사출정보', 
@@ -187,15 +195,52 @@ export default function MoldDetailNew() {
                       <ChevronDown size={14} />
                     </button>
                     {activeMenu === key && (
-                      <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border py-2 min-w-[160px] z-50">
+                      <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border py-2 min-w-[180px] z-50">
                         {menu.items.map((item, idx) => (
-                          <button
-                            key={idx}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
-                            onClick={() => setActiveMenu(null)}
-                          >
-                            {item}
-                          </button>
+                          typeof item === 'object' ? (
+                            // 계층형 메뉴 (하위 항목 있음)
+                            <div key={idx} className="group relative">
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700 font-medium flex items-center justify-between"
+                              >
+                                {item.label}
+                                <ChevronDown size={12} className="transform -rotate-90" />
+                              </button>
+                              {/* 하위 메뉴 */}
+                              <div className="hidden group-hover:block absolute left-full top-0 ml-1 bg-white rounded-lg shadow-lg border py-2 min-w-[140px]">
+                                {item.subItems.map((subItem, subIdx) => (
+                                  <button
+                                    key={subIdx}
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-purple-50 text-gray-600"
+                                    onClick={() => {
+                                      setActiveMenu(null);
+                                      // 체크리스트 마스터 연동
+                                      if (subItem === '금형체크리스트') {
+                                        navigate(`/checklist/master?moldId=${id}`);
+                                      } else if (subItem === '개발계획') {
+                                        navigate(`/mold-development/plan?moldId=${id}`);
+                                      } else if (subItem === '금형육성') {
+                                        navigate(`/mold-development/nurturing?moldId=${id}`);
+                                      } else if (subItem === '경도측정') {
+                                        navigate(`/mold-development/hardness?moldId=${id}`);
+                                      }
+                                    }}
+                                  >
+                                    {subItem}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            // 일반 메뉴
+                            <button
+                              key={idx}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                              onClick={() => setActiveMenu(null)}
+                            >
+                              {item}
+                            </button>
+                          )
                         ))}
                       </div>
                     )}
