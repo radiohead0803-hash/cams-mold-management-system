@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Copy, CheckCircle, Clock, FileText, X, GripVertical, Save } from 'lucide-react'
+import { Plus, Edit, Trash2, Copy, CheckCircle, Clock, FileText, X, GripVertical, Save, ChevronDown, ChevronRight } from 'lucide-react'
 
 // 12단계 공정 기본값
 const DEFAULT_DEVELOPMENT_STAGES = [
@@ -24,6 +24,7 @@ export default function ChecklistMaster() {
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [editingStages, setEditingStages] = useState([])
   const [editingCategories, setEditingCategories] = useState([])
+  const [expandedCategory, setExpandedCategory] = useState(null)
   const [templateForm, setTemplateForm] = useState({
     name: '',
     version: '1.0',
@@ -31,17 +32,107 @@ export default function ChecklistMaster() {
     deployedTo: []
   })
 
-  // 금형체크리스트 기본 카테고리
+  // 금형체크리스트 기본 카테고리 (items 포함)
   const DEFAULT_MOLD_CHECKLIST_CATEGORIES = [
-    { id: 'material', name: 'Ⅰ. 원재료 (Material)', itemCount: 3 },
-    { id: 'mold', name: 'Ⅱ. 금형 (Mold)', itemCount: 34 },
-    { id: 'gas_vent', name: 'Ⅲ. 가스 빼기 (Gas Vent)', itemCount: 6 },
-    { id: 'moldflow', name: 'Ⅳ. 성형 해석 (Moldflow 등)', itemCount: 6 },
-    { id: 'sink_mark', name: 'Ⅴ. 싱크마크 (Sink Mark)', itemCount: 3 },
-    { id: 'ejection', name: 'Ⅵ. 취출 (Ejection)', itemCount: 7 },
-    { id: 'mic', name: 'Ⅶ. MIC 제품 (MICA 스펙클 등)', itemCount: 4 },
-    { id: 'coating', name: 'Ⅷ. 도금 (Coating)', itemCount: 12 },
-    { id: 'rear_back_beam', name: 'Ⅸ. 리어 백빔 (Rear Back Beam)', itemCount: 6 }
+    { id: 'material', name: 'Ⅰ. 원재료 (Material)', items: [
+      { id: 1, name: '수축률' },
+      { id: 2, name: '소재 (MS SPEC)' },
+      { id: 3, name: '공급 업체' }
+    ]},
+    { id: 'mold', name: 'Ⅱ. 금형 (Mold)', items: [
+      { id: 1, name: '금형 발주 품번·품목 아이템 사양 일치' },
+      { id: 2, name: '양산차 조건 제작 사양 반영' },
+      { id: 3, name: '수축률' },
+      { id: 4, name: '금형 중량' },
+      { id: 5, name: '범퍼 히트파팅 적용' },
+      { id: 6, name: '캐비티 재질' },
+      { id: 7, name: '코어 재질' },
+      { id: 8, name: '캐비티 수' },
+      { id: 9, name: '게이트 형식' },
+      { id: 10, name: '게이트 수' },
+      { id: 11, name: '게이트 위치 적정성' },
+      { id: 12, name: '게이트 사이즈 확인' },
+      { id: 13, name: '게이트 컷팅 형상 적정성' },
+      { id: 14, name: '이젝핀' },
+      { id: 15, name: '노즐·게이트 금형 각인' },
+      { id: 16, name: '냉각라인 위치·스케일 20mm 반영' },
+      { id: 17, name: '온도센서 반영' },
+      { id: 18, name: '온도센서 수(캐비티/코어)' },
+      { id: 19, name: '금형 스페어 리스트 접수(소급부 아이템)' },
+      { id: 20, name: '금형 인자표 초도 T/O일정 접수' },
+      { id: 21, name: '금형 정보 접수(사이즈·톤수·캐비티 수·형체력)' },
+      { id: 22, name: '금형 정보 전산 등록' },
+      { id: 23, name: '금형 외관 도색 상태' },
+      { id: 24, name: '금형 명판 부착' },
+      { id: 25, name: '금형 캘린더 및 재질 각인' },
+      { id: 26, name: '파팅 구조 적정성(찍힘/손상/버 발생 가능)' },
+      { id: 27, name: '내구성 확인(측면 습합 등 금형 크랙 여부)' },
+      { id: 28, name: '소프트 게이트 적용' },
+      { id: 29, name: '콜드 슬러그 반영' },
+      { id: 30, name: '기타 특이사항 1' },
+      { id: 31, name: '기타 특이사항 2' },
+      { id: 32, name: '기타 특이사항 3' },
+      { id: 33, name: '기타 특이사항 4' },
+      { id: 34, name: '기타 특이사항 5' }
+    ]},
+    { id: 'gas_vent', name: 'Ⅲ. 가스 빼기 (Gas Vent)', items: [
+      { id: 1, name: '가스 빼기 금형 전반 반영' },
+      { id: 2, name: '가스 빼기 2/100 또는 3/100 반영' },
+      { id: 3, name: '가스 빼기 피치간 거리 30mm 간격 유지' },
+      { id: 4, name: '가스 빼기 폭 7mm 반영' },
+      { id: 5, name: '가스 빼기 위치 적절성' },
+      { id: 6, name: '가스 발생 예상 구간 추가 벤트 여부' }
+    ]},
+    { id: 'moldflow', name: 'Ⅳ. 성형 해석 (Moldflow 등)', items: [
+      { id: 1, name: '중 대물류 및 도금 아이템 성형 해석 실행' },
+      { id: 2, name: '성형성 확인(미성형 발생부 확인)' },
+      { id: 3, name: '변형발생 구조 확인(제품두께/날반구조 확인)' },
+      { id: 4, name: '웰드라인 위치 확인' },
+      { id: 5, name: '웰드라인 구조 형상 삭제 검토' },
+      { id: 6, name: '가스 발생 부위 확인' }
+    ]},
+    { id: 'sink_mark', name: 'Ⅴ. 싱크마크 (Sink Mark)', items: [
+      { id: 1, name: '전체 리브 0.6t 반영' },
+      { id: 2, name: '싱크 발생 구조(제품 두께 편차)' },
+      { id: 3, name: '예각 부위 구조 확인(제품 살빼기 반영)' }
+    ]},
+    { id: 'ejection', name: 'Ⅵ. 취출 (Ejection)', items: [
+      { id: 1, name: '제품 취출 구조(범퍼 하단 매칭부)' },
+      { id: 2, name: '제품 취출구조(범퍼 밀어치)' },
+      { id: 3, name: '언더컷 구조 확인' },
+      { id: 4, name: '빼기 구배 3~5도' },
+      { id: 5, name: '제품 취출 구조(보스 구배)' },
+      { id: 6, name: '제품 취출 구조(도그하우스 취출)' },
+      { id: 7, name: '제품 취출 언더컷 위치 및 영보 확인' }
+    ]},
+    { id: 'mic', name: 'Ⅶ. MIC 제품 (MICA 스펙클 등)', items: [
+      { id: 1, name: 'MIC 사양 게이트 형상 반영(고객사 제안 게이트)' },
+      { id: 2, name: '성형해석 통한 제품 두께 반영' },
+      { id: 3, name: '웰드라인 확인 및 도장 사양' },
+      { id: 4, name: 'A,B면 외관 플레이크 확인' }
+    ]},
+    { id: 'coating', name: 'Ⅷ. 도금 (Coating)', items: [
+      { id: 1, name: '게이트 위치/개수 최적화(ABS:250mm·PC+ABS:200m)' },
+      { id: 2, name: '수축률' },
+      { id: 3, name: '보스 조립부 엣지 1R 반영' },
+      { id: 4, name: '보스 십자리브 R값 반영' },
+      { id: 5, name: '보스 내경(M4=3.6, M5=4.6 등)' },
+      { id: 6, name: '액고임 방지구조' },
+      { id: 7, name: '제품 두께 3.0t' },
+      { id: 8, name: '도금성확보를 위한 제품각도 적절성' },
+      { id: 9, name: '차폐막 형상 도면 반영' },
+      { id: 10, name: '차폐막 컷팅 외곽 미노출' },
+      { id: 11, name: '게이트 컷팅 외곽 미노출' },
+      { id: 12, name: 'TPO와 도금 스크류 조립홀 금형 도면 이원화' }
+    ]},
+    { id: 'rear_back_beam', name: 'Ⅸ. 리어 백빔 (Rear Back Beam)', items: [
+      { id: 1, name: '리어 백빔 금형구배 5도 이상' },
+      { id: 2, name: '리어 백빔 제품 끝단부 두께 5.0t 이상' },
+      { id: 3, name: '후가공 홀 각인 금형 반영' },
+      { id: 4, name: '후가공 홀 판: 탭 타입' },
+      { id: 5, name: '가이드핀 용접부 음각형상' },
+      { id: 6, name: '가이드핀 위치 및 유동' }
+    ]}
   ]
 
   // 임시 데이터
@@ -253,12 +344,53 @@ export default function ChecklistMaster() {
   const handleAddCategory = () => {
     setEditingCategories(prev => [
       ...prev,
-      { id: `cat_${Date.now()}`, name: '새 카테고리', itemCount: 0 }
+      { id: `cat_${Date.now()}`, name: '새 카테고리', items: [] }
     ])
   }
 
   const handleRemoveCategory = (index) => {
     setEditingCategories(prev => prev.filter((_, i) => i !== index))
+    setExpandedCategory(null)
+  }
+
+  // 카테고리 내 항목 추가
+  const handleAddItem = (categoryIndex) => {
+    setEditingCategories(prev => {
+      const updated = [...prev]
+      const category = updated[categoryIndex]
+      const newId = category.items ? Math.max(0, ...category.items.map(i => i.id)) + 1 : 1
+      updated[categoryIndex] = {
+        ...category,
+        items: [...(category.items || []), { id: newId, name: '새 점검항목' }]
+      }
+      return updated
+    })
+  }
+
+  // 카테고리 내 항목 수정
+  const handleItemChange = (categoryIndex, itemIndex, value) => {
+    setEditingCategories(prev => {
+      const updated = [...prev]
+      const items = [...updated[categoryIndex].items]
+      items[itemIndex] = { ...items[itemIndex], name: value }
+      updated[categoryIndex] = { ...updated[categoryIndex], items }
+      return updated
+    })
+  }
+
+  // 카테고리 내 항목 삭제
+  const handleRemoveItem = (categoryIndex, itemIndex) => {
+    setEditingCategories(prev => {
+      const updated = [...prev]
+      const items = updated[categoryIndex].items.filter((_, i) => i !== itemIndex)
+      updated[categoryIndex] = { ...updated[categoryIndex], items }
+      return updated
+    })
+  }
+
+  // 카테고리 확장/축소 토글
+  const toggleCategory = (categoryId) => {
+    setExpandedCategory(prev => prev === categoryId ? null : categoryId)
   }
 
   const handleSaveTemplate = () => {
@@ -267,7 +399,7 @@ export default function ChecklistMaster() {
     if (templateForm.type === 'development') {
       itemCount = editingStages.length
     } else if (templateForm.type === 'mold_checklist') {
-      itemCount = editingCategories.reduce((sum, cat) => sum + (cat.itemCount || 0), 0)
+      itemCount = editingCategories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0)
     }
 
     if (editingTemplate) {
@@ -607,7 +739,9 @@ export default function ChecklistMaster() {
               {(templateForm.type === 'mold_checklist' || editingCategories.length > 0) && (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">체크리스트 카테고리 관리 (9개 카테고리, 81개 항목)</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      체크리스트 카테고리 관리 ({editingCategories.length}개 카테고리, {editingCategories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0)}개 항목)
+                    </h3>
                     <button
                       onClick={handleAddCategory}
                       className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm flex items-center gap-1 hover:bg-green-200"
@@ -616,61 +750,97 @@ export default function ChecklistMaster() {
                     </button>
                   </div>
                   
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-gray-50 sticky top-0">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-12">순서</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">카테고리명</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-32">항목 수</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-24">항목 수</th>
                           <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">삭제</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {editingCategories.map((category, index) => (
-                          <tr key={category.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-2">
-                              <div className="flex items-center gap-2 text-gray-400">
-                                <GripVertical size={16} />
-                                <span className="text-sm font-medium">{index + 1}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-2">
-                              <input
-                                type="text"
-                                value={category.name}
-                                onChange={(e) => handleCategoryChange(index, 'name', e.target.value)}
-                                className="w-full border rounded px-2 py-1 text-sm"
-                              />
-                            </td>
-                            <td className="px-4 py-2">
-                              <div className="flex items-center gap-1">
+                        {editingCategories.map((category, catIndex) => (
+                          <>
+                            <tr key={category.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleCategory(category.id)}>
+                              <td className="px-4 py-2">
+                                <div className="flex items-center gap-2 text-gray-400">
+                                  {expandedCategory === category.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                  <span className="text-sm font-medium">{catIndex + 1}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-2">
                                 <input
-                                  type="number"
-                                  value={category.itemCount}
-                                  onChange={(e) => handleCategoryChange(index, 'itemCount', parseInt(e.target.value) || 0)}
-                                  className="w-20 border rounded px-2 py-1 text-sm text-center"
+                                  type="text"
+                                  value={category.name}
+                                  onChange={(e) => handleCategoryChange(catIndex, 'name', e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-full border rounded px-2 py-1 text-sm"
                                 />
-                                <span className="text-sm text-gray-500">개</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-2 text-center">
-                              <button
-                                onClick={() => handleRemoveCategory(index)}
-                                className="p-1 text-red-500 hover:bg-red-50 rounded"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </tr>
+                              </td>
+                              <td className="px-4 py-2">
+                                <span className="text-sm font-medium text-blue-600">{category.items?.length || 0}개</span>
+                              </td>
+                              <td className="px-4 py-2 text-center">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleRemoveCategory(catIndex); }}
+                                  className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                            {/* 확장된 카테고리의 항목 목록 */}
+                            {expandedCategory === category.id && (
+                              <tr key={`${category.id}_items`}>
+                                <td colSpan={4} className="bg-gray-50 px-4 py-3">
+                                  <div className="ml-6 space-y-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-sm font-medium text-gray-700">점검 항목 목록</span>
+                                      <button
+                                        onClick={() => handleAddItem(catIndex)}
+                                        className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs flex items-center gap-1 hover:bg-blue-200"
+                                      >
+                                        <Plus size={12} /> 항목 추가
+                                      </button>
+                                    </div>
+                                    {category.items?.length > 0 ? (
+                                      <div className="space-y-1 max-h-48 overflow-y-auto">
+                                        {category.items.map((item, itemIndex) => (
+                                          <div key={item.id} className="flex items-center gap-2 bg-white p-2 rounded border">
+                                            <span className="text-xs text-gray-400 w-6">{itemIndex + 1}</span>
+                                            <input
+                                              type="text"
+                                              value={item.name}
+                                              onChange={(e) => handleItemChange(catIndex, itemIndex, e.target.value)}
+                                              className="flex-1 border rounded px-2 py-1 text-sm"
+                                            />
+                                            <button
+                                              onClick={() => handleRemoveItem(catIndex, itemIndex)}
+                                              className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                            >
+                                              <Trash2 size={14} />
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-400 text-center py-4">항목이 없습니다. 항목을 추가해주세요.</p>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </>
                         ))}
                       </tbody>
                     </table>
                   </div>
                   
                   <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-800 font-medium">총 항목 수: {editingCategories.reduce((sum, cat) => sum + (cat.itemCount || 0), 0)}개</p>
-                    <p className="text-xs text-blue-600 mt-1">* 각 카테고리의 세부 항목은 금형체크리스트 페이지에서 관리됩니다.</p>
+                    <p className="text-sm text-blue-800 font-medium">총 항목 수: {editingCategories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0)}개</p>
+                    <p className="text-xs text-blue-600 mt-1">* 카테고리를 클릭하면 세부 항목을 추가/수정/삭제할 수 있습니다.</p>
                   </div>
                 </div>
               )}
