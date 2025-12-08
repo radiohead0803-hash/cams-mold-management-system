@@ -42,7 +42,7 @@ export default function MoldDetailNew() {
     inspection: { 
       label: '금형점검', 
       color: 'bg-green-500',
-      items: ['일상점검', '정기점검', '숏팅점검', '세척점검', '승인']
+      items: ['일상점검', '정기점검', '승인']
     },
     transfer: { 
       label: '금형이관', 
@@ -369,28 +369,47 @@ export default function MoldDetailNew() {
                 <h3 className="font-semibold text-gray-800">금형점검 바로가기</h3>
               </div>
               <div className="p-4 grid grid-cols-2 gap-3">
-                <button 
-                  onClick={() => navigate(`/checklist/daily?moldId=${id}`)}
-                  className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl hover:shadow-md transition-shadow text-center"
-                >
-                  <CheckCircle className="mx-auto mb-2 text-green-600" size={24} />
-                  <span className="text-sm font-medium text-gray-700">일상점검</span>
-                </button>
-                <button 
-                  onClick={() => navigate(`/inspection/periodic?moldId=${id}`)}
-                  className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl hover:shadow-md transition-shadow text-center"
-                >
-                  <Calendar className="mx-auto mb-2 text-blue-600" size={24} />
-                  <span className="text-sm font-medium text-gray-700">정기점검</span>
-                </button>
-                <button className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl hover:shadow-md transition-shadow text-center">
-                  <Activity className="mx-auto mb-2 text-purple-600" size={24} />
-                  <span className="text-sm font-medium text-gray-700">숏팅점검</span>
-                </button>
-                <button className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl hover:shadow-md transition-shadow text-center">
-                  <Shield className="mx-auto mb-2 text-cyan-600" size={24} />
-                  <span className="text-sm font-medium text-gray-700">세척점검</span>
-                </button>
+                {/* 점검 버튼 (상하 배치) */}
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => navigate(`/checklist/daily?moldId=${id}`)}
+                    className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl hover:shadow-md transition-shadow text-center flex-1"
+                  >
+                    <CheckCircle className="mx-auto mb-2 text-green-600" size={24} />
+                    <span className="text-sm font-medium text-gray-700">일상점검</span>
+                  </button>
+                  <button 
+                    onClick={() => navigate(`/inspection/periodic?moldId=${id}`)}
+                    className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl hover:shadow-md transition-shadow text-center flex-1"
+                  >
+                    <Calendar className="mx-auto mb-2 text-blue-600" size={24} />
+                    <span className="text-sm font-medium text-gray-700">정기점검</span>
+                  </button>
+                </div>
+                {/* QR 코드 */}
+                <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4 flex flex-col items-center justify-center">
+                  <p className="text-xs text-gray-500 mb-2 font-medium">금형 QR 코드</p>
+                  {mold?.mold?.qr_token ? (
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(mold.mold.qr_token)}`}
+                      alt="QR Code"
+                      className="w-24 h-24 rounded-lg shadow-sm"
+                    />
+                  ) : mold?.qr_token ? (
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(mold.qr_token)}`}
+                      alt="QR Code"
+                      className="w-24 h-24 rounded-lg shadow-sm"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <span className="text-xs text-gray-400">QR 없음</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-2 text-center break-all max-w-full">
+                    {mold?.mold?.qr_token || mold?.qr_token || '-'}
+                  </p>
+                </div>
               </div>
             </div>
           )}
