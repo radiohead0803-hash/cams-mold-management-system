@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { moldSpecificationAPI } from '../lib/api';
+import { moldSpecificationAPI, masterDataAPI } from '../lib/api';
 import { Upload, X, Image as ImageIcon, Sparkles } from 'lucide-react';
 
 export default function MoldRegistration() {
@@ -11,15 +11,16 @@ export default function MoldRegistration() {
   const [formData, setFormData] = useState({
     // 기본 정보
     part_number: '',
+    representative_part_number: '', // 대표품번 추가
     part_name: '',
     car_model: '',
     car_year: new Date().getFullYear().toString(),
     
     // 금형 사양
-    mold_type: '사출금형',
+    mold_type: '',
     cavity_count: 1,
-    material: 'NAK80',
-    tonnage: 350,
+    material: '',
+    tonnage: '',
     
     // 제작 정보
     target_maker_id: '3', // 기본값으로 maker1 설정
@@ -47,6 +48,39 @@ export default function MoldRegistration() {
     { id: 3, name: 'A제작소', company_name: 'A제작소' },
     { id: 5, name: 'B제작소', company_name: 'B제작소' }
   ]);
+
+  // 기초정보 (마스터 데이터)
+  const [carModels, setCarModels] = useState([]);
+  const [materials, setMaterials] = useState([]);
+  const [moldTypes, setMoldTypes] = useState([]);
+  const [tonnages, setTonnages] = useState([]);
+  const [masterDataLoading, setMasterDataLoading] = useState(true);
+
+  // 기초정보 로드
+  useEffect(() => {
+    loadMasterData();
+  }, []);
+
+  const loadMasterData = async () => {
+    try {
+      setMasterDataLoading(true);
+      const [carModelsRes, materialsRes, moldTypesRes, tonnagesRes] = await Promise.all([
+        masterDataAPI.getCarModels(),
+        masterDataAPI.getMaterials(),
+        masterDataAPI.getMoldTypes(),
+        masterDataAPI.getTonnages()
+      ]);
+
+      setCarModels(carModelsRes.data.data || []);
+      setMaterials(materialsRes.data.data || []);
+      setMoldTypes(moldTypesRes.data.data || []);
+      setTonnages(tonnagesRes.data.data || []);
+    } catch (error) {
+      console.error('Failed to load master data:', error);
+    } finally {
+      setMasterDataLoading(false);
+    }
+  };
 
   // 입력 변경 핸들러
   const handleChange = (e) => {
@@ -101,15 +135,22 @@ export default function MoldRegistration() {
     const futureDate = new Date(today);
     futureDate.setMonth(futureDate.getMonth() + 6);
 
+    // 마스터 데이터에서 첫 번째 값 사용
+    const firstCarModel = carModels[0]?.model_name || 'K5';
+    const firstMoldType = moldTypes[0]?.type_name || '사출금형';
+    const firstMaterial = materials[0]?.material_name || 'NAK80';
+    const firstTonnage = tonnages[0]?.tonnage_value || 350;
+
     setFormData({
       part_number: `P-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`,
+      representative_part_number: `RP-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
       part_name: '도어 트림 LH',
-      car_model: 'K5',
+      car_model: firstCarModel,
       car_year: today.getFullYear().toString(),
-      mold_type: '사출금형',
+      mold_type: firstMoldType,
       cavity_count: 2,
-      material: 'NAK80',
-      tonnage: 350,
+      material: firstMaterial,
+      tonnage: firstTonnage,
       target_maker_id: '3',
       development_stage: '개발',
       production_stage: '시제',
@@ -220,6 +261,21 @@ export default function MoldRegistration() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                대표품번
+              </label>
+              <input
+                type="text"
+                name="representative_part_number"
+                value={formData.representative_part_number}
+                onChange={handleChange}
+                className="input"
+                placeholder="대표품번 입력 (예: RP-2024-001)"
+              />
+              <p className="text-xs text-gray-500 mt-1">동일 금형으로 생산되는 부품들의 대표 품번</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 부품번호 <span className="text-red-500">*</span>
               </label>
               <input
@@ -256,14 +312,20 @@ export default function MoldRegistration() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 차종 <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="car_model"
                 value={formData.car_model}
                 onChange={handleChange}
                 className={`input ${errors.car_model ? 'border-red-500' : ''}`}
-                placeholder="K5"
-              />
+                disabled={masterDataLoading}
+              >
+                <option value="">차종 선택</option>
+                {carModels.map(model => (
+                  <option key={model.id} value={model.model_name}>
+                    {model.model_name} {model.model_code ? `(${model.model_code})` : ''}
+                  </option>
+                ))}
+              </select>
               {errors.car_model && (
                 <p className="text-sm text-red-500 mt-1">{errors.car_model}</p>
               )}
@@ -273,14 +335,16 @@ export default function MoldRegistration() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 연식
               </label>
-              <input
-                type="text"
+              <select
                 name="car_year"
                 value={formData.car_year}
                 onChange={handleChange}
                 className="input"
-                placeholder="2024"
-              />
+              >
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + 2 - i).map(year => (
+                  <option key={year} value={year.toString()}>{year}</option>
+                ))}
+              </select>
             </div>
           </div>
         </section>
@@ -291,19 +355,25 @@ export default function MoldRegistration() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                금형 타입
+                금형 타입 <span className="text-red-500">*</span>
               </label>
               <select
                 name="mold_type"
                 value={formData.mold_type}
                 onChange={handleChange}
-                className="input"
+                className={`input ${errors.mold_type ? 'border-red-500' : ''}`}
+                disabled={masterDataLoading}
               >
-                <option value="사출금형">사출금형</option>
-                <option value="프레스금형">프레스금형</option>
-                <option value="다이캐스팅금형">다이캐스팅금형</option>
-                <option value="블로우금형">블로우금형</option>
+                <option value="">금형 타입 선택</option>
+                {moldTypes.map(type => (
+                  <option key={type.id} value={type.type_name}>
+                    {type.type_name} {type.type_code ? `(${type.type_code})` : ''}
+                  </option>
+                ))}
               </select>
+              {errors.mold_type && (
+                <p className="text-sm text-red-500 mt-1">{errors.mold_type}</p>
+              )}
             </div>
 
             <div>
@@ -325,34 +395,45 @@ export default function MoldRegistration() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                재질
+                재질 <span className="text-red-500">*</span>
               </label>
               <select
                 name="material"
                 value={formData.material}
                 onChange={handleChange}
-                className="input"
+                className={`input ${errors.material ? 'border-red-500' : ''}`}
+                disabled={masterDataLoading}
               >
-                <option value="NAK80">NAK80</option>
-                <option value="P20">P20</option>
-                <option value="S50C">S50C</option>
-                <option value="SKD11">SKD11</option>
-                <option value="HPM38">HPM38</option>
+                <option value="">재질 선택</option>
+                {materials.map(mat => (
+                  <option key={mat.id} value={mat.material_name}>
+                    {mat.material_name} {mat.material_code ? `(${mat.material_code})` : ''}
+                  </option>
+                ))}
               </select>
+              {errors.material && (
+                <p className="text-sm text-red-500 mt-1">{errors.material}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 톤수 (ton) <span className="text-red-500">*</span>
               </label>
-              <input
-                type="number"
+              <select
                 name="tonnage"
                 value={formData.tonnage}
                 onChange={handleChange}
                 className={`input ${errors.tonnage ? 'border-red-500' : ''}`}
-                min="1"
-              />
+                disabled={masterDataLoading}
+              >
+                <option value="">톤수 선택</option>
+                {tonnages.map(ton => (
+                  <option key={ton.id} value={ton.tonnage_value}>
+                    {ton.tonnage_value}T {ton.description ? `- ${ton.description}` : ''}
+                  </option>
+                ))}
+              </select>
               {errors.tonnage && (
                 <p className="text-sm text-red-500 mt-1">{errors.tonnage}</p>
               )}
