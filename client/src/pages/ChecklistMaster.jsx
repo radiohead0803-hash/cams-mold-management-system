@@ -16,6 +16,7 @@ export default function ChecklistMaster() {
         name: '일상점검 체크리스트 v1.0',
         version: '1.0',
         status: 'active',
+        type: 'daily',
         itemCount: 6,
         deployedTo: ['제작처', '생산처'],
         lastModified: '2025-11-20',
@@ -26,6 +27,7 @@ export default function ChecklistMaster() {
         name: '정기점검 체크리스트 v2.1',
         version: '2.1',
         status: 'active',
+        type: 'periodic',
         itemCount: 12,
         deployedTo: ['생산처'],
         lastModified: '2025-11-15',
@@ -36,9 +38,59 @@ export default function ChecklistMaster() {
         name: '이관 체크리스트 v1.5',
         version: '1.5',
         status: 'draft',
+        type: 'transfer',
         itemCount: 8,
         deployedTo: [],
         lastModified: '2025-11-18',
+        createdBy: 'admin'
+      },
+      {
+        id: 4,
+        name: '개발계획 템플릿 v1.0',
+        version: '1.0',
+        status: 'active',
+        type: 'development',
+        itemCount: 12,
+        deployedTo: ['제작처'],
+        lastModified: '2025-12-08',
+        createdBy: 'admin',
+        stages: [
+          '도면접수', '몰드베이스 발주', '금형설계', '도면검토회',
+          '상형가공', '하형가공', '코어가공', '방전',
+          '겉면사상', '금형조립', '습합', '초도 T/O'
+        ]
+      },
+      {
+        id: 5,
+        name: '금형체크리스트 v1.0',
+        version: '1.0',
+        status: 'active',
+        type: 'mold_checklist',
+        itemCount: 15,
+        deployedTo: ['제작처', '생산처'],
+        lastModified: '2025-12-08',
+        createdBy: 'admin'
+      },
+      {
+        id: 6,
+        name: '금형육성 체크리스트 v1.0',
+        version: '1.0',
+        status: 'draft',
+        type: 'nurturing',
+        itemCount: 10,
+        deployedTo: [],
+        lastModified: '2025-12-08',
+        createdBy: 'admin'
+      },
+      {
+        id: 7,
+        name: '경도측정 기록표 v1.0',
+        version: '1.0',
+        status: 'active',
+        type: 'hardness',
+        itemCount: 5,
+        deployedTo: ['제작처'],
+        lastModified: '2025-12-08',
         createdBy: 'admin'
       }
     ])
@@ -57,6 +109,24 @@ export default function ChecklistMaster() {
       <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${style.bg} ${style.text}`}>
         <Icon size={12} />
         {style.label}
+      </span>
+    )
+  }
+
+  const getTypeBadge = (type) => {
+    const types = {
+      daily: { label: '일상점검', color: 'bg-blue-100 text-blue-700' },
+      periodic: { label: '정기점검', color: 'bg-purple-100 text-purple-700' },
+      transfer: { label: '이관', color: 'bg-cyan-100 text-cyan-700' },
+      development: { label: '개발계획', color: 'bg-orange-100 text-orange-700' },
+      mold_checklist: { label: '금형체크', color: 'bg-green-100 text-green-700' },
+      nurturing: { label: '금형육성', color: 'bg-pink-100 text-pink-700' },
+      hardness: { label: '경도측정', color: 'bg-red-100 text-red-700' }
+    }
+    const typeInfo = types[type] || { label: type, color: 'bg-gray-100 text-gray-700' }
+    return (
+      <span className={`px-2 py-0.5 text-xs font-medium rounded ${typeInfo.color}`}>
+        {typeInfo.label}
       </span>
     )
   }
@@ -118,9 +188,10 @@ export default function ChecklistMaster() {
             <div key={template.id} className="card hover:shadow-lg transition-shadow">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <h3 className="font-semibold text-gray-900">{template.name}</h3>
                     {getStatusBadge(template.status)}
+                    {getTypeBadge(template.type)}
                   </div>
                   <p className="text-sm text-gray-600">버전 {template.version}</p>
                 </div>
