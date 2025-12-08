@@ -17,10 +17,25 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'cams-mold-images';
 
 /**
  * 금형/제품 이미지 업로드
+ * 다양한 연계 항목 지원: 금형정보, 체크리스트, 점검, 수리, 이관 등
  */
 const uploadMoldImage = async (req, res) => {
   try {
-    const { mold_id, mold_spec_id, image_type = 'mold', description, is_primary } = req.body;
+    const { 
+      mold_id, 
+      mold_spec_id, 
+      image_type = 'mold', 
+      description, 
+      is_primary,
+      // 연계 항목들
+      reference_type,  // mold_info, daily_check, periodic_check, repair, transfer, maker_checklist, development
+      reference_id,
+      checklist_id,
+      checklist_item_id,
+      repair_id,
+      transfer_id,
+      maker_spec_id
+    } = req.body;
     const file = req.file;
     const uploaded_by = req.user.id;
 
@@ -31,10 +46,11 @@ const uploadMoldImage = async (req, res) => {
       });
     }
 
-    if (!mold_id && !mold_spec_id) {
+    // 최소한 하나의 연계 ID가 필요
+    if (!mold_id && !mold_spec_id && !checklist_id && !repair_id && !transfer_id && !maker_spec_id && !reference_id) {
       return res.status(400).json({
         success: false,
-        error: { message: 'mold_id 또는 mold_spec_id가 필요합니다.' }
+        error: { message: '연계할 항목 ID가 필요합니다. (mold_id, mold_spec_id, checklist_id, repair_id, transfer_id, maker_spec_id, reference_id 중 하나)' }
       });
     }
 
@@ -85,13 +101,16 @@ const uploadMoldImage = async (req, res) => {
       `, [mold_id, mold_spec_id, image_type]);
     }
 
-    // DB에 이미지 정보 저장
+    // DB에 이미지 정보 저장 (연계 항목 포함)
     const insertQuery = `
       INSERT INTO mold_images (
         mold_id, mold_spec_id, image_type, image_url, 
         original_filename, file_size, mime_type,
-        description, is_primary, uploaded_by, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        description, is_primary, uploaded_by,
+        reference_type, reference_id, checklist_id, checklist_item_id,
+        repair_id, transfer_id, maker_spec_id,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
       RETURNING *
     `;
 
@@ -105,7 +124,14 @@ const uploadMoldImage = async (req, res) => {
       file.mimetype,
       description || null,
       is_primary === 'true' || is_primary === true,
-      uploaded_by
+      uploaded_by,
+      reference_type || null,
+      reference_id || null,
+      checklist_id || null,
+      checklist_item_id || null,
+      repair_id || null,
+      transfer_id || null,
+      maker_spec_id || null
     ]);
 
     const savedImage = result.rows[0];
@@ -135,10 +161,21 @@ const uploadMoldImage = async (req, res) => {
 
 /**
  * 금형/제품 이미지 목록 조회
+ * 다양한 연계 항목으로 필터링 가능
  */
 const getMoldImages = async (req, res) => {
   try {
-    const { mold_id, mold_spec_id, image_type } = req.query;
+    const { 
+      mold_id, 
+      mold_spec_id, 
+      image_type,
+      reference_type,
+      reference_id,
+      checklist_id,
+      repair_id,
+      transfer_id,
+      maker_spec_id
+    } = req.query;
 
     let query = `
       SELECT mi.*, u.name as uploader_name
@@ -161,6 +198,36 @@ const getMoldImages = async (req, res) => {
     if (image_type) {
       params.push(image_type);
       query += ` AND mi.image_type = $${params.length}`;
+    }
+
+    if (reference_type) {
+      params.push(reference_type);
+      query += ` AND mi.reference_type = $${params.length}`;
+    }
+
+    if (reference_id) {
+      params.push(reference_id);
+      query += ` AND mi.reference_id = $${params.length}`;
+    }
+
+    if (checklist_id) {
+      params.push(checklist_id);
+      query += ` AND mi.checklist_id = $${params.length}`;
+    }
+
+    if (repair_id) {
+      params.push(repair_id);
+      query += ` AND mi.repair_id = $${params.length}`;
+    }
+
+    if (transfer_id) {
+      params.push(transfer_id);
+      query += ` AND mi.transfer_id = $${params.length}`;
+    }
+
+    if (maker_spec_id) {
+      params.push(maker_spec_id);
+      query += ` AND mi.maker_spec_id = $${params.length}`;
     }
 
     query += ` ORDER BY mi.is_primary DESC, mi.display_order, mi.created_at DESC`;

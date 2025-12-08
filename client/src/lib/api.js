@@ -107,11 +107,20 @@ export const moldSpecificationAPI = {
 }
 
 // Mold Image API
+// 다양한 연계 항목 지원: 금형정보, 체크리스트, 점검, 수리, 이관 등
 export const moldImageAPI = {
   upload: (formData) => api.post('/mold-images', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
+  // params: mold_id, mold_spec_id, image_type, reference_type, reference_id, checklist_id, repair_id, transfer_id, maker_spec_id
   getAll: (params) => api.get('/mold-images', { params }),
+  // 특정 연계 항목의 이미지 조회
+  getByReference: (referenceType, referenceId) => api.get('/mold-images', { 
+    params: { reference_type: referenceType, reference_id: referenceId } 
+  }),
+  getByChecklist: (checklistId) => api.get('/mold-images', { params: { checklist_id: checklistId } }),
+  getByRepair: (repairId) => api.get('/mold-images', { params: { repair_id: repairId } }),
+  getByTransfer: (transferId) => api.get('/mold-images', { params: { transfer_id: transferId } }),
   setPrimary: (id) => api.patch(`/mold-images/${id}/primary`),
   delete: (id) => api.delete(`/mold-images/${id}`),
 }

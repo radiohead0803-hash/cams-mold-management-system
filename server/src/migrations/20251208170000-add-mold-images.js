@@ -2,6 +2,7 @@
 
 /**
  * 금형 이미지 및 제품 이미지 테이블 추가
+ * 금형정보, 체크리스트, 점검, 수리 등 다양한 항목과 연계
  */
 
 module.exports = {
@@ -31,10 +32,40 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
+      // 연계 항목 ID들
+      checklist_id: {
+        type: Sequelize.INTEGER,
+        comment: '체크리스트 ID (daily_checks, inspections 등)'
+      },
+      checklist_item_id: {
+        type: Sequelize.INTEGER,
+        comment: '체크리스트 항목 ID'
+      },
+      repair_id: {
+        type: Sequelize.INTEGER,
+        comment: '수리 요청 ID'
+      },
+      transfer_id: {
+        type: Sequelize.INTEGER,
+        comment: '이관 ID'
+      },
+      maker_spec_id: {
+        type: Sequelize.INTEGER,
+        comment: '제작처 사양 ID'
+      },
+      // 연계 타입 (어떤 기능에서 사용되는지)
+      reference_type: {
+        type: Sequelize.STRING(50),
+        comment: 'mold_info (금형정보), daily_check (일상점검), periodic_check (정기점검), repair (수리), transfer (이관), maker_checklist (제작처 체크리스트), development (금형개발)'
+      },
+      reference_id: {
+        type: Sequelize.INTEGER,
+        comment: '연계 항목의 ID (범용)'
+      },
       image_type: {
         type: Sequelize.STRING(50),
         allowNull: false,
-        comment: 'mold (금형 이미지), product (제품 이미지), drawing (도면), other (기타)'
+        comment: 'mold (금형), product (제품), drawing (도면), defect (불량), repair_before (수리전), repair_after (수리후), inspection (점검), checklist (체크리스트), other (기타)'
       },
       image_url: {
         type: Sequelize.STRING(500),
@@ -101,6 +132,11 @@ module.exports = {
     await queryInterface.addIndex('mold_images', ['mold_spec_id']);
     await queryInterface.addIndex('mold_images', ['image_type']);
     await queryInterface.addIndex('mold_images', ['is_primary']);
+    await queryInterface.addIndex('mold_images', ['reference_type']);
+    await queryInterface.addIndex('mold_images', ['reference_id']);
+    await queryInterface.addIndex('mold_images', ['checklist_id']);
+    await queryInterface.addIndex('mold_images', ['repair_id']);
+    await queryInterface.addIndex('mold_images', ['transfer_id']);
 
     // 2. mold_specifications 테이블에 이미지 URL 컬럼 추가
     await queryInterface.addColumn('mold_specifications', 'mold_image_url', {
