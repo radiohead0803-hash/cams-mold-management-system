@@ -66,6 +66,7 @@ export default function MoldRegistration() {
   const loadMasterData = async () => {
     try {
       setMasterDataLoading(true);
+      console.log('Loading master data...');
       const [carModelsRes, materialsRes, moldTypesRes, tonnagesRes] = await Promise.all([
         masterDataAPI.getCarModels(),
         masterDataAPI.getMaterials(),
@@ -73,12 +74,20 @@ export default function MoldRegistration() {
         masterDataAPI.getTonnages()
       ]);
 
+      console.log('Master data loaded:', {
+        carModels: carModelsRes.data.data,
+        materials: materialsRes.data.data,
+        moldTypes: moldTypesRes.data.data,
+        tonnages: tonnagesRes.data.data
+      });
+
       setCarModels(carModelsRes.data.data || []);
       setMaterials(materialsRes.data.data || []);
       setMoldTypes(moldTypesRes.data.data || []);
       setTonnages(tonnagesRes.data.data || []);
     } catch (error) {
       console.error('Failed to load master data:', error);
+      alert('기초정보 로드 실패: ' + error.message);
     } finally {
       setMasterDataLoading(false);
     }
