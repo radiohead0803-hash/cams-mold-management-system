@@ -24,8 +24,10 @@ export default function MoldRegistration() {
     
     // 제작 정보
     target_maker_id: '3', // 기본값으로 maker1 설정
-    development_stage: '개발',
-    production_stage: '시제',
+    
+    // 개발사양 및 단계
+    mold_spec_type: '시작금형', // 개발사양: 시작금형, 양산금형
+    development_stage: '개발', // 단계: 개발, 양산
     
     // 제작 일정
     order_date: new Date().toISOString().split('T')[0],
@@ -152,8 +154,8 @@ export default function MoldRegistration() {
       material: firstMaterial,
       tonnage: firstTonnage,
       target_maker_id: '3',
+      mold_spec_type: '시작금형',
       development_stage: '개발',
-      production_stage: '시제',
       order_date: today.toISOString().split('T')[0],
       target_delivery_date: futureDate.toISOString().split('T')[0],
       estimated_cost: '50000000',
@@ -467,9 +469,32 @@ export default function MoldRegistration() {
               )}
             </div>
 
+          </div>
+        </section>
+
+        {/* 개발사양 및 단계 */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 개발사양 및 단계</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                개발 단계
+                개발사양 <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="mold_spec_type"
+                value={formData.mold_spec_type}
+                onChange={handleChange}
+                className="input"
+              >
+                <option value="시작금형">시작금형</option>
+                <option value="양산금형">양산금형</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">시작금형: 개발/시제용, 양산금형: 양산용</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                단계 <span className="text-red-500">*</span>
               </label>
               <select
                 name="development_stage"
@@ -480,22 +505,7 @@ export default function MoldRegistration() {
                 <option value="개발">개발</option>
                 <option value="양산">양산</option>
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                생산 단계
-              </label>
-              <select
-                name="production_stage"
-                value={formData.production_stage}
-                onChange={handleChange}
-                className="input"
-              >
-                <option value="시제">시제</option>
-                <option value="양산중">양산중</option>
-                <option value="양산완료">양산완료</option>
-              </select>
+              <p className="text-xs text-gray-500 mt-1">현재 금형의 진행 단계</p>
             </div>
 
             <div>
