@@ -164,11 +164,16 @@ export default function MoldDetailNew() {
     }
   }, [mold, loadMoldImages]);
 
-  // 이미지 업로드 핸들러
+  // 이미지 업로드 핸들러 (파일 선택)
   const handleImageUpload = async (e, imageType) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    await uploadImageFile(file, imageType);
+    e.target.value = ''; // 파일 입력 초기화
+  };
 
+  // 공통 이미지 업로드 함수
+  const uploadImageFile = async (file, imageType) => {
     // 파일 크기 체크 (10MB)
     if (file.size > 10 * 1024 * 1024) {
       alert('파일 크기는 10MB 이하여야 합니다.');
@@ -203,8 +208,48 @@ export default function MoldDetailNew() {
       alert('이미지 업로드에 실패했습니다: ' + (error.response?.data?.error?.message || error.message));
     } finally {
       setUploadingImage(null);
-      e.target.value = ''; // 파일 입력 초기화
     }
+  };
+
+  // 클립보드 붙여넣기 핸들러 (Ctrl+V로 캡쳐 이미지 업로드)
+  const handlePaste = useCallback(async (e, imageType) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          // 파일명이 없으면 생성
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const newFile = new File([file], `capture_${timestamp}.png`, { type: file.type });
+          await uploadImageFile(newFile, imageType);
+        }
+        break;
+      }
+    }
+  }, [id, loadMoldImages]);
+
+  // 드래그 앤 드롭 핸들러
+  const handleDrop = useCallback(async (e, imageType) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type.startsWith('image/')) {
+        await uploadImageFile(file, imageType);
+      } else {
+        alert('이미지 파일만 업로드할 수 있습니다.');
+      }
+    }
+  }, [id, loadMoldImages]);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
   };
 
   // 위치 클릭 핸들러 (더블클릭 시 상세 정보 표시)
@@ -401,12 +446,21 @@ export default function MoldDetailNew() {
         {visibleSections.includes('images') && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* 금형 이미지 */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="p-4 border-b flex items-center gap-2">
-                <Camera className="text-purple-600" size={20} />
-                <h3 className="font-semibold text-gray-800">금형 이미지</h3>
+            <div 
+              className="bg-white rounded-2xl shadow-sm overflow-hidden"
+              onPaste={(e) => handlePaste(e, 'mold')}
+              onDrop={(e) => handleDrop(e, 'mold')}
+              onDragOver={handleDragOver}
+              tabIndex={0}
+            >
+              <div className="p-4 border-b flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Camera className="text-purple-600" size={20} />
+                  <h3 className="font-semibold text-gray-800">금형 이미지</h3>
+                </div>
+                <span className="text-xs text-gray-400">Ctrl+V 또는 드래그</span>
               </div>
-              <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative">
+              <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative cursor-pointer hover:bg-gray-150 transition-colors">
                 {moldImages.mold || mold.part_images?.url || mold.mold_image_url ? (
                   <img 
                     src={moldImages.mold || mold.part_images?.url || mold.mold_image_url} 
@@ -417,6 +471,7 @@ export default function MoldDetailNew() {
                   <div className="text-center text-gray-400">
                     <Camera size={48} className="mx-auto mb-2 opacity-50" />
                     <p className="text-sm">이미지 없음</p>
+                    <p className="text-xs mt-1 text-gray-300">클릭하여 선택, Ctrl+V로 붙여넣기, 또는 드래그</p>
                   </div>
                 )}
                 {uploadingImage === 'mold' && (
@@ -443,12 +498,21 @@ export default function MoldDetailNew() {
             </div>
 
             {/* 제품 이미지 */}
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="p-4 border-b flex items-center gap-2">
-                <Box className="text-blue-600" size={20} />
-                <h3 className="font-semibold text-gray-800">제품 이미지</h3>
+            <div 
+              className="bg-white rounded-2xl shadow-sm overflow-hidden"
+              onPaste={(e) => handlePaste(e, 'product')}
+              onDrop={(e) => handleDrop(e, 'product')}
+              onDragOver={handleDragOver}
+              tabIndex={0}
+            >
+              <div className="p-4 border-b flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Box className="text-blue-600" size={20} />
+                  <h3 className="font-semibold text-gray-800">제품 이미지</h3>
+                </div>
+                <span className="text-xs text-gray-400">Ctrl+V 또는 드래그</span>
               </div>
-              <div className="aspect-video bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center relative">
+              <div className="aspect-video bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center relative cursor-pointer hover:bg-blue-100/50 transition-colors">
                 {moldImages.product || mold.product_image_url ? (
                   <img 
                     src={moldImages.product || mold.product_image_url} 
@@ -459,6 +523,7 @@ export default function MoldDetailNew() {
                   <div className="text-center text-gray-400">
                     <Box size={48} className="mx-auto mb-2 opacity-50" />
                     <p className="text-sm">제품 이미지</p>
+                    <p className="text-xs mt-1 text-gray-300">클릭하여 선택, Ctrl+V로 붙여넣기, 또는 드래그</p>
                   </div>
                 )}
                 {uploadingImage === 'product' && (
