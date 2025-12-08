@@ -1,17 +1,38 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState, useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { moldSpecificationAPI } from '../lib/api'
-import { Package, Search, Filter, Edit, Image as ImageIcon } from 'lucide-react'
+import { Package, Search, Filter, Edit, Image as ImageIcon, X } from 'lucide-react'
+
+// KPI 필터 타입 정의
+const KPI_FILTERS = {
+  all: { label: '전체 금형', color: 'gray' },
+  active: { label: '양산 중 금형', color: 'green' },
+  repair: { label: '수리 중 금형', color: 'orange' },
+  overshot: { label: '타수 초과 금형', color: 'red' },
+  inspection: { label: '정기검사 필요', color: 'blue' },
+  draft: { label: '초안 금형', color: 'purple' },
+  planning: { label: '계획 중 금형', color: 'indigo' }
+}
 
 export default function MoldList() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [molds, setMolds] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  
+  // URL에서 필터 파라미터 읽기
+  const kpiFilter = searchParams.get('filter') || searchParams.get('status') || 'all'
+  const [statusFilter, setStatusFilter] = useState(kpiFilter)
   const [selectedMolds, setSelectedMolds] = useState([])
   const [bulkEditMode, setBulkEditMode] = useState(false)
   const [sortKey, setSortKey] = useState('') // '', 'mold_code', 'part_number', 'status'
   const [sortDirection, setSortDirection] = useState('asc') // 'asc' | 'desc'
+
+  // URL 파라미터 변경 시 필터 업데이트
+  useEffect(() => {
+    const filter = searchParams.get('filter') || searchParams.get('status') || 'all'
+    setStatusFilter(filter)
+  }, [searchParams])
 
   useEffect(() => {
     loadMolds()
@@ -216,6 +237,36 @@ export default function MoldList() {
         </div>
       </div>
 
+      {/* KPI 필터 배지 */}
+      {statusFilter !== 'all' && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-sm text-gray-600">적용된 필터:</span>
+          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium
+            ${statusFilter === 'active' ? 'bg-green-100 text-green-800' : ''}
+            ${statusFilter === 'repair' ? 'bg-orange-100 text-orange-800' : ''}
+            ${statusFilter === 'overshot' ? 'bg-red-100 text-red-800' : ''}
+            ${statusFilter === 'inspection' ? 'bg-blue-100 text-blue-800' : ''}
+            ${statusFilter === 'draft' ? 'bg-purple-100 text-purple-800' : ''}
+            ${statusFilter === 'planning' ? 'bg-indigo-100 text-indigo-800' : ''}
+            ${!['active', 'repair', 'overshot', 'inspection', 'draft', 'planning'].includes(statusFilter) ? 'bg-gray-100 text-gray-800' : ''}
+          `}>
+            {KPI_FILTERS[statusFilter]?.label || statusFilter}
+            <button
+              onClick={() => {
+                setStatusFilter('all')
+                setSearchParams({})
+              }}
+              className="ml-1 hover:bg-black/10 rounded-full p-0.5"
+            >
+              <X size={14} />
+            </button>
+          </span>
+          <span className="text-sm text-gray-500">
+            ({filteredMolds.length}개)
+          </span>
+        </div>
+      )}
+
       {/* 검색 및 필터 */}
       <div className="card mb-6">
         <div className="flex flex-col md:flex-row gap-4">
@@ -233,16 +284,28 @@ export default function MoldList() {
             <Filter size={20} className="text-gray-400" />
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value)
+                if (e.target.value === 'all') {
+                  setSearchParams({})
+                } else {
+                  setSearchParams({ filter: e.target.value })
+                }
+              }}
               className="input w-40"
             >
               <option value="all">전체 상태</option>
+              <option value="active">양산 중</option>
+              <option value="draft">초안</option>
               <option value="planning">계획</option>
               <option value="design">설계</option>
               <option value="manufacturing">제작</option>
               <option value="trial">시운전</option>
               <option value="production">양산</option>
               <option value="maintenance">정비</option>
+              <option value="repair">수리 중</option>
+              <option value="overshot">타수 초과</option>
+              <option value="inspection">정기검사 필요</option>
               <option value="retired">폐기</option>
             </select>
           </div>

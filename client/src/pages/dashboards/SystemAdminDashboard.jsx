@@ -108,7 +108,7 @@ export default function SystemAdminDashboard() {
             {/* 전체 금형 수 */}
             <button
               onClick={() => navigate('/molds')}
-              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-blue-300 transition-all"
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
             >
               <div>
                 <p className="text-xs text-gray-500 font-medium">전체 금형 수</p>
@@ -120,8 +120,8 @@ export default function SystemAdminDashboard() {
 
             {/* 양산 중 금형 */}
             <button
-              onClick={() => navigate('/molds?status=active')}
-              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-green-300 transition-all"
+              onClick={() => navigate('/molds?filter=active')}
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-green-300 transition-all cursor-pointer"
             >
               <div>
                 <p className="text-xs text-green-600 font-medium">양산 중 금형</p>
@@ -133,8 +133,8 @@ export default function SystemAdminDashboard() {
 
             {/* 진행 중 수리요청 */}
             <button
-              onClick={() => navigate('/hq/repair-requests')}
-              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-orange-300 transition-all"
+              onClick={() => navigate('/molds?filter=repair')}
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-orange-300 transition-all cursor-pointer"
             >
               <div>
                 <p className="text-xs text-orange-600 font-medium">진행 중 수리</p>
@@ -147,7 +147,7 @@ export default function SystemAdminDashboard() {
             {/* 오늘 QR 스캔 */}
             <button
               onClick={() => navigate('/qr-sessions')}
-              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-purple-300 transition-all"
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-purple-300 transition-all cursor-pointer"
             >
               <div>
                 <p className="text-xs text-purple-600 font-medium">오늘 QR 스캔</p>
@@ -159,8 +159,8 @@ export default function SystemAdminDashboard() {
 
             {/* 타수 초과 금형 */}
             <button
-              onClick={() => navigate('/hq/molds/over-shot')}
-              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-red-300 transition-all"
+              onClick={() => navigate('/molds?filter=overshot')}
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-red-300 transition-all cursor-pointer"
             >
               <div>
                 <p className="text-xs text-red-600 font-medium">타수 초과 금형</p>
@@ -172,8 +172,8 @@ export default function SystemAdminDashboard() {
 
             {/* 정기검사 필요 */}
             <button
-              onClick={() => navigate('/hq/molds/inspection-due')}
-              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-blue-300 transition-all"
+              onClick={() => navigate('/molds?filter=inspection')}
+              className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
             >
               <div>
                 <p className="text-xs text-blue-600 font-medium">정기검사 필요</p>
