@@ -390,10 +390,10 @@ export default function DailyChecklistNew() {
         </p>
       </div>
 
-      {/* 카테고리 진행 상황 - 3열 그리드 */}
+      {/* 카테고리 진행 상황 - 5열 그리드 */}
       <div className="card mb-6">
         <h3 className="text-sm font-semibold mb-3">카테고리별 진행 현황</h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-5 gap-3">
           {CHECK_CATEGORIES.map((category, index) => {
             const { completed, total, percentage } = getCategoryProgress(category)
             const isActive = index === currentCategoryIndex
