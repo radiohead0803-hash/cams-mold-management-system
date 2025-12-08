@@ -154,8 +154,13 @@ export default function MoldChecklist() {
   const [categoryEnabled, setCategoryEnabled] = useState({});
   const [approvalStatus, setApprovalStatus] = useState('draft');
   
-  // 통계
+  // 통계 - 점검대상 카테고리만 계산
   const [stats, setStats] = useState({ total: 81, completed: 0, progress: 0 });
+
+  // 점검대상 카테고리 변경 시 통계 업데이트
+  useEffect(() => {
+    updateStats();
+  }, [categoryEnabled, checklistData]);
 
   useEffect(() => {
     initializeChecklist();
@@ -231,15 +236,28 @@ export default function MoldChecklist() {
   };
 
   const updateStats = () => {
+    // 점검대상으로 체크된 카테고리의 항목만 계산
+    let total = 0;
     let completed = 0;
-    Object.values(checklistData).forEach(item => {
-      if (item.checked || item.value) completed++;
+    
+    CHECKLIST_CATEGORIES.forEach(category => {
+      if (categoryEnabled[category.id]) {
+        total += category.items.length;
+        category.items.forEach(item => {
+          const key = `${category.id}_${item.id}`;
+          const data = checklistData[key];
+          if (data && (data.checked || data.value)) {
+            completed++;
+          }
+        });
+      }
     });
-    setStats(prev => ({
-      ...prev,
+    
+    setStats({
+      total,
       completed,
-      progress: Math.round((completed / prev.total) * 100)
-    }));
+      progress: total > 0 ? Math.round((completed / total) * 100) : 0
+    });
   };
 
   const handleSave = async () => {
@@ -615,51 +633,61 @@ export default function MoldChecklist() {
               </label>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-12">No.</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">점검 항목</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-64">규격/사양</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">확인</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {category.items.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm text-blue-600 font-medium">{item.id}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {item.linkedField ? (
-                          <span className="text-blue-600 underline cursor-pointer">{item.name}</span>
-                        ) : (
-                          item.name
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {renderInputField(category, item)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={checklistData[`${category.id}_${item.id}`]?.checked || false}
-                          onChange={(e) => handleItemChange(category.id, item.id, 'checked', e.target.checked)}
-                          className="w-5 h-5 rounded border-gray-300"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            {/* 관련 자료 첨부 */}
-            <div className="px-6 py-3 border-t bg-gray-50 flex items-center justify-between">
-              <span className="text-sm text-gray-600">관련 자료 첨부</span>
-              <button className="px-4 py-2 bg-gray-700 text-white rounded text-sm flex items-center gap-1 hover:bg-gray-800">
-                <Upload size={14} /> 파일 첨부
-              </button>
-            </div>
+            {/* 점검대상이 체크된 경우에만 테이블 표시 */}
+            {categoryEnabled[category.id] ? (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-12">No.</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">점검 항목</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-64">규격/사양</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">확인</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {category.items.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-blue-600 font-medium">{item.id}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {item.linkedField ? (
+                              <span className="text-blue-600 underline cursor-pointer">{item.name}</span>
+                            ) : (
+                              item.name
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {renderInputField(category, item)}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={checklistData[`${category.id}_${item.id}`]?.checked || false}
+                              onChange={(e) => handleItemChange(category.id, item.id, 'checked', e.target.checked)}
+                              className="w-5 h-5 rounded border-gray-300"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* 관련 자료 첨부 */}
+                <div className="px-6 py-3 border-t bg-gray-50 flex items-center justify-between">
+                  <span className="text-sm text-gray-600">관련 자료 첨부</span>
+                  <button className="px-4 py-2 bg-gray-700 text-white rounded text-sm flex items-center gap-1 hover:bg-gray-800">
+                    <Upload size={14} /> 파일 첨부
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="px-6 py-8 text-center text-gray-400">
+                <p className="text-sm">점검대상에서 제외되었습니다.</p>
+                <p className="text-xs mt-1">점검대상을 체크하면 항목이 표시됩니다.</p>
+              </div>
+            )}
           </div>
         ))}
       </div>
