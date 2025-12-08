@@ -50,6 +50,29 @@ export default function MoldNew() {
     loadMasterData();
   }, []);
 
+  // 기본 마스터 데이터 (API 실패 시 사용)
+  const defaultMoldTypes = [
+    { id: 1, name: '사출금형' },
+    { id: 2, name: '프레스금형' },
+    { id: 3, name: '다이캐스팅' },
+    { id: 4, name: '기타' }
+  ];
+  const defaultMaterials = [
+    { id: 1, name: 'NAK80' },
+    { id: 2, name: 'SKD61' },
+    { id: 3, name: 'S45C' },
+    { id: 4, name: 'P20' }
+  ];
+  const defaultTonnages = [
+    { id: 1, value: 150 },
+    { id: 2, value: 250 },
+    { id: 3, value: 350 },
+    { id: 4, value: 450 },
+    { id: 5, value: 650 },
+    { id: 6, value: 850 },
+    { id: 7, value: 1300 }
+  ];
+
   const loadMasterData = async () => {
     try {
       setMasterDataLoading(true);
@@ -59,12 +82,16 @@ export default function MoldNew() {
         masterDataAPI.getMoldTypes(),
         masterDataAPI.getTonnages()
       ]);
-      setCarModels(carModelsRes.data.data || []);
-      setMaterials(materialsRes.data.data || []);
-      setMoldTypes(moldTypesRes.data.data || []);
-      setTonnages(tonnagesRes.data.data || []);
+      setCarModels(carModelsRes.data.data?.length > 0 ? carModelsRes.data.data : []);
+      setMaterials(materialsRes.data.data?.length > 0 ? materialsRes.data.data : defaultMaterials);
+      setMoldTypes(moldTypesRes.data.data?.length > 0 ? moldTypesRes.data.data : defaultMoldTypes);
+      setTonnages(tonnagesRes.data.data?.length > 0 ? tonnagesRes.data.data : defaultTonnages);
     } catch (error) {
       console.error('Failed to load master data:', error);
+      // API 실패 시 기본값 사용
+      setMoldTypes(defaultMoldTypes);
+      setMaterials(defaultMaterials);
+      setTonnages(defaultTonnages);
     } finally {
       setMasterDataLoading(false);
     }
