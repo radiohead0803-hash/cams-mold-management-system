@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen } from 'lucide-react'
+import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, ArrowLeft } from 'lucide-react'
 
 // DAILY_CHECK_ITEMS.md 기준 10개 카테고리, 17개 항목
 const CHECK_CATEGORIES = [
@@ -363,14 +363,22 @@ export default function DailyChecklistNew() {
   return (
     <div className="max-w-4xl mx-auto">
       {/* 헤더 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">일상점검</h1>
+      <div className="mb-6 flex items-center gap-4">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <ArrowLeft size={20} className="text-gray-600" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">일상점검</h1>
         <p className="text-sm text-gray-600 mt-1">
           {mold.mold_code} - {mold.mold_name} ({mold.car_model})
         </p>
-        <p className="text-xs text-gray-500 mt-1">
-          누적 타수: {mold.current_shots?.toLocaleString()} / {mold.target_shots?.toLocaleString()} Shot
-        </p>
+          <p className="text-xs text-gray-500 mt-1">
+            누적 타수: {mold.current_shots?.toLocaleString()} / {mold.target_shots?.toLocaleString()} Shot
+          </p>
+        </div>
       </div>
 
       {/* 전체 진행률 */}

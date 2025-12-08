@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { moldSpecificationAPI, masterDataAPI } from '../lib/api';
-import { Upload, X, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Sparkles, ArrowLeft } from 'lucide-react';
 
 export default function MoldRegistration() {
   const navigate = useNavigate();
@@ -240,11 +240,19 @@ export default function MoldRegistration() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">금형 신규 등록</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            금형 기본정보를 입력하면 QR 코드가 자동으로 생성됩니다
-          </p>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft size={20} className="text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">금형 신규 등록</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              금형 기본정보를 입력하면 QR 코드가 자동으로 생성됩니다
+            </p>
+          </div>
         </div>
         <button
           type="button"

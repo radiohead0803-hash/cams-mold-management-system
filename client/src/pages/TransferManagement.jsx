@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { transferAPI } from '../lib/api'
-import { ArrowRight, CheckCircle, Clock, XCircle, FileText } from 'lucide-react'
+import { ArrowRight, CheckCircle, Clock, XCircle, FileText, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function TransferManagement() {
+  const navigate = useNavigate()
   const [transfers, setTransfers] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // all, pending, approved, rejected
@@ -58,11 +60,19 @@ export default function TransferManagement() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">이관 관리</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          금형 이관 요청 및 승인 관리
-        </p>
+      <div className="mb-6 flex items-center gap-4">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <ArrowLeft size={20} className="text-gray-600" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">이관 관리</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            금형 이관 요청 및 승인 관리
+          </p>
+        </div>
       </div>
 
       {/* 필터 */}

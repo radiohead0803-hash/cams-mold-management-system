@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { alertAPI } from '../lib/api'
-import { Bell, AlertCircle, CheckCircle, Info, X } from 'lucide-react'
+import { Bell, AlertCircle, CheckCircle, Info, X, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function Alerts() {
+  const navigate = useNavigate()
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all') // all, unread, read
@@ -71,11 +73,19 @@ export default function Alerts() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">알림</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          전체 {alerts.length}개의 알림
-        </p>
+      <div className="mb-6 flex items-center gap-4">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <ArrowLeft size={20} className="text-gray-600" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">알림</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            전체 {alerts.length}개의 알림
+          </p>
+        </div>
       </div>
 
       {/* 필터 */}

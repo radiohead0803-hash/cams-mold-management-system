@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { moldSpecificationAPI } from '../lib/api'
-import { Package, Search, Filter, Edit, Image as ImageIcon, X } from 'lucide-react'
+import { Package, Search, Filter, Edit, Image as ImageIcon, X, ArrowLeft } from 'lucide-react'
 
 // KPI 필터 타입 정의
 const KPI_FILTERS = {
@@ -15,6 +15,7 @@ const KPI_FILTERS = {
 }
 
 export default function MoldList() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [molds, setMolds] = useState([])
   const [loading, setLoading] = useState(true)
@@ -194,16 +195,24 @@ export default function MoldList() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">개발금형 목록</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            전체 {molds.length}개의 금형
-            {bulkEditMode && selectedMolds.length > 0 && (
-              <span className="ml-2 text-blue-600 font-medium">
-                ({selectedMolds.length}개 선택됨)
-              </span>
-            )}
-          </p>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft size={20} className="text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">개발금형 목록</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              전체 {molds.length}개의 금형
+              {bulkEditMode && selectedMolds.length > 0 && (
+                <span className="ml-2 text-blue-600 font-medium">
+                  ({selectedMolds.length}개 선택됨)
+                </span>
+              )}
+            </p>
+          </div>
         </div>
         <div className="flex items-center space-x-3">
           {bulkEditMode ? (

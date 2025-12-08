@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit, Trash2, Copy, CheckCircle, Clock, FileText, X, GripVertical, Save, ChevronDown, ChevronRight } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Plus, Edit, Trash2, Copy, CheckCircle, Clock, FileText, X, GripVertical, Save, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react'
 
 // 12단계 공정 기본값
 const DEFAULT_DEVELOPMENT_STAGES = [
@@ -18,6 +19,7 @@ const DEFAULT_DEVELOPMENT_STAGES = [
 ]
 
 export default function ChecklistMaster() {
+  const navigate = useNavigate()
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -495,8 +497,16 @@ export default function ChecklistMaster() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft size={20} className="text-gray-600" />
+          </button>
           <h1 className="text-2xl font-bold text-gray-900">체크리스트 마스터 관리</h1>
+        </div>
+        <div>
           <p className="text-sm text-gray-600 mt-1">
             체크리스트 템플릿 생성, 수정 및 배포 관리
           </p>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin } from 'lucide-react'
+import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin, ArrowLeft } from 'lucide-react'
 
 // PERIODIC_INSPECTION_CHECKLIST.md 기준 주기별 점검 항목
 const INSPECTION_TYPES = [
@@ -363,11 +363,19 @@ export default function PeriodicInspectionNew() {
     
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">정기점검</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            {mold.mold_code} - {mold.mold_name} ({mold.car_model})
-          </p>
+        <div className="mb-6 flex items-center gap-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft size={20} className="text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">정기점검</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              {mold.mold_code} - {mold.mold_name} ({mold.car_model})
+            </p>
+          </div>
         </div>
 
         {/* 금형 정보 카드 */}

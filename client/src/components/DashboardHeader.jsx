@@ -1,8 +1,10 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Settings, RefreshCw } from 'lucide-react';
+import { Settings, RefreshCw, ArrowLeft } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 
-export default function DashboardHeader({ title, subtitle, actions, stats }) {
+export default function DashboardHeader({ title, subtitle, actions, stats, showBackButton = true }) {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
 
   // 현재 시간 표시
@@ -52,11 +54,21 @@ export default function DashboardHeader({ title, subtitle, actions, stats }) {
 
         {/* 제목 영역 */}
         <div className="flex items-end justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-1">{title}</h1>
-            {subtitle && (
-              <p className="text-blue-100 text-sm">{subtitle}</p>
+          <div className="flex items-center gap-4">
+            {showBackButton && (
+              <button 
+                onClick={() => navigate(-1)}
+                className="p-2 hover:bg-blue-500 rounded-full transition-colors"
+              >
+                <ArrowLeft size={24} />
+              </button>
             )}
+            <div>
+              <h1 className="text-3xl font-bold mb-1">{title}</h1>
+              {subtitle && (
+                <p className="text-blue-100 text-sm">{subtitle}</p>
+              )}
+            </div>
           </div>
 
           {/* 빠른 통계 (선택적) */}

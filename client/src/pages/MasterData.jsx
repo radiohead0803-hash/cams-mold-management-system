@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { masterDataAPI } from '../lib/api';
-import { Plus, Edit2, Trash2, Save, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, ArrowLeft } from 'lucide-react';
 
 export default function MasterData() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('car-models');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -410,9 +412,17 @@ export default function MasterData() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">기초정보 관리</h1>
-        <p className="text-sm text-gray-600 mt-1">금형 등록 시 사용할 기초 데이터를 관리합니다</p>
+      <div className="mb-6 flex items-center gap-4">
+        <button 
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <ArrowLeft size={20} className="text-gray-600" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">기초정보 관리</h1>
+          <p className="text-sm text-gray-600 mt-1">금형 등록 시 사용할 기초 데이터를 관리합니다</p>
+        </div>
       </div>
 
       {/* 탭 */}
