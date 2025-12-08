@@ -24,6 +24,7 @@ export default function ChecklistMaster() {
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [editingStages, setEditingStages] = useState([])
   const [editingCategories, setEditingCategories] = useState([])
+  const [editingHardnessStandards, setEditingHardnessStandards] = useState([])
   const [expandedCategory, setExpandedCategory] = useState(null)
   const [templateForm, setTemplateForm] = useState({
     name: '',
@@ -227,10 +228,18 @@ export default function ChecklistMaster() {
         version: '1.0',
         status: 'active',
         type: 'hardness',
-        itemCount: 5,
+        itemCount: 6,
         deployedTo: ['제작처'],
         lastModified: '2025-12-08',
-        createdBy: 'admin'
+        createdBy: 'admin',
+        hardnessStandards: [
+          { id: 1, grade: 'S45C, HP1A (HP1)', hardness: 'HRC 10 ~ 18', characteristics: '-' },
+          { id: 2, grade: 'HP4A (HP4), HS-PA', hardness: 'HRC 28 ~ 32', characteristics: '-' },
+          { id: 3, grade: 'HP4MA (HP4M)', hardness: 'HRC 31 ~ 34', characteristics: '-' },
+          { id: 4, grade: 'CENA G', hardness: 'HRC 35 ~ 41', characteristics: '핫스탬핑 부품에 적용' },
+          { id: 5, grade: 'NAK-80', hardness: 'HRC 37 ~ 41', characteristics: '투명 제품 등 고광택을 중시하는 제품에 적용' },
+          { id: 6, grade: 'SKD61', hardness: 'HRC 48 ~ 52', characteristics: '-' }
+        ]
       }
     ])
     setLoading(false)
@@ -306,9 +315,23 @@ export default function ChecklistMaster() {
       // 금형체크리스트인 경우 카테고리 로드
       setEditingCategories(template.categories || [...DEFAULT_MOLD_CHECKLIST_CATEGORIES])
       setEditingStages([])
+      setEditingHardnessStandards([])
+    } else if (template.type === 'hardness') {
+      // 경도측정인 경우 기준 로드
+      setEditingHardnessStandards(template.hardnessStandards || [
+        { id: 1, grade: 'S45C, HP1A (HP1)', hardness: 'HRC 10 ~ 18', characteristics: '-' },
+        { id: 2, grade: 'HP4A (HP4), HS-PA', hardness: 'HRC 28 ~ 32', characteristics: '-' },
+        { id: 3, grade: 'HP4MA (HP4M)', hardness: 'HRC 31 ~ 34', characteristics: '-' },
+        { id: 4, grade: 'CENA G', hardness: 'HRC 35 ~ 41', characteristics: '핫스탬핑 부품에 적용' },
+        { id: 5, grade: 'NAK-80', hardness: 'HRC 37 ~ 41', characteristics: '투명 제품 등 고광택을 중시하는 제품에 적용' },
+        { id: 6, grade: 'SKD61', hardness: 'HRC 48 ~ 52', characteristics: '-' }
+      ])
+      setEditingStages([])
+      setEditingCategories([])
     } else {
       setEditingStages([])
       setEditingCategories([])
+      setEditingHardnessStandards([])
     }
     setShowModal(true)
   }
@@ -393,6 +416,26 @@ export default function ChecklistMaster() {
     setExpandedCategory(prev => prev === categoryId ? null : categoryId)
   }
 
+  // 경도측정 기준 핸들러
+  const handleHardnessChange = (index, field, value) => {
+    setEditingHardnessStandards(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
+  }
+
+  const handleAddHardnessStandard = () => {
+    setEditingHardnessStandards(prev => [
+      ...prev,
+      { id: Date.now(), grade: '새 강종', hardness: 'HRC - ~ -', characteristics: '-' }
+    ])
+  }
+
+  const handleRemoveHardnessStandard = (index) => {
+    setEditingHardnessStandards(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSaveTemplate = () => {
     // 타입에 따라 itemCount 계산
     let itemCount = 0
@@ -400,6 +443,8 @@ export default function ChecklistMaster() {
       itemCount = editingStages.length
     } else if (templateForm.type === 'mold_checklist') {
       itemCount = editingCategories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0)
+    } else if (templateForm.type === 'hardness') {
+      itemCount = editingHardnessStandards.length
     }
 
     if (editingTemplate) {
@@ -411,6 +456,7 @@ export default function ChecklistMaster() {
               ...templateForm,
               stages: templateForm.type === 'development' ? editingStages.map(s => s.name) : undefined,
               categories: templateForm.type === 'mold_checklist' ? editingCategories : undefined,
+              hardnessStandards: templateForm.type === 'hardness' ? editingHardnessStandards : undefined,
               itemCount: itemCount || t.itemCount,
               lastModified: new Date().toISOString().split('T')[0]
             } 
@@ -424,6 +470,7 @@ export default function ChecklistMaster() {
         status: 'draft',
         stages: templateForm.type === 'development' ? editingStages.map(s => s.name) : undefined,
         categories: templateForm.type === 'mold_checklist' ? editingCategories : undefined,
+        hardnessStandards: templateForm.type === 'hardness' ? editingHardnessStandards : undefined,
         itemCount: itemCount || 0,
         lastModified: new Date().toISOString().split('T')[0],
         createdBy: 'admin'
@@ -606,12 +653,26 @@ export default function ChecklistMaster() {
                       if (e.target.value === 'development') {
                         setEditingStages([...DEFAULT_DEVELOPMENT_STAGES])
                         setEditingCategories([])
+                        setEditingHardnessStandards([])
                       } else if (e.target.value === 'mold_checklist') {
                         setEditingCategories([...DEFAULT_MOLD_CHECKLIST_CATEGORIES])
                         setEditingStages([])
+                        setEditingHardnessStandards([])
+                      } else if (e.target.value === 'hardness') {
+                        setEditingHardnessStandards([
+                          { id: 1, grade: 'S45C, HP1A (HP1)', hardness: 'HRC 10 ~ 18', characteristics: '-' },
+                          { id: 2, grade: 'HP4A (HP4), HS-PA', hardness: 'HRC 28 ~ 32', characteristics: '-' },
+                          { id: 3, grade: 'HP4MA (HP4M)', hardness: 'HRC 31 ~ 34', characteristics: '-' },
+                          { id: 4, grade: 'CENA G', hardness: 'HRC 35 ~ 41', characteristics: '핫스탬핑 부품에 적용' },
+                          { id: 5, grade: 'NAK-80', hardness: 'HRC 37 ~ 41', characteristics: '투명 제품 등 고광택을 중시하는 제품에 적용' },
+                          { id: 6, grade: 'SKD61', hardness: 'HRC 48 ~ 52', characteristics: '-' }
+                        ])
+                        setEditingStages([])
+                        setEditingCategories([])
                       } else {
                         setEditingStages([])
                         setEditingCategories([])
+                        setEditingHardnessStandards([])
                       }
                     }}
                     className="w-full border rounded-lg px-3 py-2"
@@ -841,6 +902,83 @@ export default function ChecklistMaster() {
                   <div className="mt-3 p-3 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-800 font-medium">총 항목 수: {editingCategories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0)}개</p>
                     <p className="text-xs text-blue-600 mt-1">* 카테고리를 클릭하면 세부 항목을 추가/수정/삭제할 수 있습니다.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* 경도측정 기준 편집 */}
+              {(templateForm.type === 'hardness' || editingHardnessStandards.length > 0) && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">
+                      경도 기준 관리 ({editingHardnessStandards.length}개 강종)
+                    </h3>
+                    <button
+                      onClick={handleAddHardnessStandard}
+                      className="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm flex items-center gap-1 hover:bg-purple-200"
+                    >
+                      <Plus size={14} /> 강종 추가
+                    </button>
+                  </div>
+                  
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-12">No.</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">강종</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-40">경도 (HRC)</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">특성</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {editingHardnessStandards.map((standard, index) => (
+                          <tr key={standard.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 text-center">
+                              <span className="text-sm font-medium text-gray-500">{String(index + 1).padStart(2, '0')}</span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                value={standard.grade}
+                                onChange={(e) => handleHardnessChange(index, 'grade', e.target.value)}
+                                className="w-full border rounded px-2 py-1 text-sm"
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                value={standard.hardness}
+                                onChange={(e) => handleHardnessChange(index, 'hardness', e.target.value)}
+                                className="w-full border rounded px-2 py-1 text-sm text-center text-blue-600 font-medium"
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                value={standard.characteristics}
+                                onChange={(e) => handleHardnessChange(index, 'characteristics', e.target.value)}
+                                className="w-full border rounded px-2 py-1 text-sm"
+                              />
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              <button
+                                onClick={() => handleRemoveHardnessStandard(index)}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="mt-3 p-3 bg-purple-50 rounded-lg">
+                    <p className="text-sm text-purple-800 font-medium">총 강종 수: {editingHardnessStandards.length}개</p>
+                    <p className="text-xs text-purple-600 mt-1">* 경도 기준은 경도측정 페이지에서 참조됩니다.</p>
                   </div>
                 </div>
               )}
