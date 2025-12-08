@@ -50,7 +50,7 @@ export default function MoldSpecification() {
   const getSourceBadge = (source) => {
     const badges = { headquarters: { label: '본사', color: 'bg-blue-100 text-blue-700' }, maker: { label: '제작처', color: 'bg-orange-100 text-orange-700' }, plant: { label: '생산처', color: 'bg-green-100 text-green-700' } };
     const badge = badges[source] || badges.headquarters;
-    return <span className={px-2 py-0.5 rounded-full text-xs font-medium +badge.color}>{badge.label} 입력</span>;
+    return <span className={"px-2 py-0.5 rounded-full text-xs font-medium " + badge.color}>{badge.label} 입력</span>;
   };
 
   const renderField = (label, field, type = 'text', options = null, source = 'headquarters') => {
@@ -60,7 +60,7 @@ export default function MoldSpecification() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-600 w-32">{label}</label>
-            {source !== 'headquarters' && <span className={px-1.5 py-0.5 rounded text-xs +(source === 'maker' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600')}>{source === 'maker' ? '제작처' : '생산처'}</span>}
+            {source !== 'headquarters' && <span className={"px-1.5 py-0.5 rounded text-xs " + (source === 'maker' ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600')}>{source === 'maker' ? '제작처' : '생산처'}</span>}
           </div>
           {editMode ? (
             type === 'select' && options ? <select value={editedData[field] || ''} onChange={(e) => handleChange(field, e.target.value)} className="flex-1 ml-4 px-3 py-1.5 border border-gray-200 rounded-lg text-sm"><option value="">선택</option>{options.map(opt => <option key={opt} value={opt}>{opt}</option>)}</select>
@@ -102,28 +102,28 @@ export default function MoldSpecification() {
         <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
           <button onClick={() => toggleSection('basic')} className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50">
             <div className="flex items-center gap-3"><div className="p-2 bg-blue-100 rounded-lg"><Package className="text-blue-600" size={20} /></div><div className="text-left"><h3 className="font-semibold">기본 정보</h3><p className="text-xs text-gray-500">본사 개발담당 입력 항목</p></div></div>
-            <div className="flex items-center gap-2">{getSourceBadge('headquarters')}<ChevronDown className={'text-gray-400 transition-transform '+(expandedSections.includes('basic') ? 'rotate-180' : '')} size={20} /></div>
+            <div className="flex items-center gap-2">{getSourceBadge('headquarters')}<ChevronDown className={"text-gray-400 transition-transform " + (expandedSections.includes('basic') ? 'rotate-180' : '')} size={20} /></div>
           </button>
           {expandedSections.includes('basic') && <div className="px-6 pb-4 border-t">{renderField('품번', 'part_number')}{renderField('대표품번', 'representative_part_number')}{renderField('품명', 'part_name')}{renderField('차종', 'car_model')}{renderField('연식', 'car_year')}{renderField('개발사양', 'mold_spec_type', 'select', ['시작금형', '양산금형'])}{renderField('단계', 'development_stage', 'select', ['개발', '양산'])}{renderField('발주일', 'order_date', 'date')}{renderField('납기예정일', 'target_delivery_date', 'date')}{renderField('비고', 'notes', 'textarea')}</div>}
         </div>
         <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
           <button onClick={() => toggleSection('mold')} className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50">
             <div className="flex items-center gap-3"><div className="p-2 bg-purple-100 rounded-lg"><Box className="text-purple-600" size={20} /></div><div className="text-left"><h3 className="font-semibold">금형 사양</h3><p className="text-xs text-gray-500">금형 규격 및 사양 정보</p></div></div>
-            <div className="flex items-center gap-2">{getSourceBadge('headquarters')}<ChevronDown className={'text-gray-400 transition-transform '+(expandedSections.includes('mold') ? 'rotate-180' : '')} size={20} /></div>
+            <div className="flex items-center gap-2">{getSourceBadge('headquarters')}<ChevronDown className={"text-gray-400 transition-transform " + (expandedSections.includes('mold') ? 'rotate-180' : '')} size={20} /></div>
           </button>
           {expandedSections.includes('mold') && <div className="px-6 pb-4 border-t">{renderField('금형타입', 'mold_type', 'select', ['사출금형', '프레스금형', '다이캐스팅', '기타'])}{renderField('Cavity 수', 'cavity_count', 'number')}{renderField('재질', 'material')}{renderField('톤수', 'tonnage', 'number')}{renderField('금형 크기 (L)', 'mold_size_l', 'number')}{renderField('금형 크기 (W)', 'mold_size_w', 'number')}{renderField('금형 크기 (H)', 'mold_size_h', 'number')}{renderField('금형 중량', 'weight', 'number')}{renderField('수축률', 'shrinkage_rate')}{renderField('캐비티 재질', 'cavity_material')}{renderField('코어 재질', 'core_material')}</div>}
         </div>
         <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
           <button onClick={() => toggleSection('maker')} className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50">
             <div className="flex items-center gap-3"><div className="p-2 bg-orange-100 rounded-lg"><Factory className="text-orange-600" size={20} /></div><div className="text-left"><h3 className="font-semibold">제작처 정보</h3><p className="text-xs text-gray-500">금형 제작처에서 입력한 정보</p></div></div>
-            <div className="flex items-center gap-2">{getSourceBadge('maker')}<ChevronDown className={'text-gray-400 transition-transform '+(expandedSections.includes('maker') ? 'rotate-180' : '')} size={20} /></div>
+            <div className="flex items-center gap-2">{getSourceBadge('maker')}<ChevronDown className={"text-gray-400 transition-transform " + (expandedSections.includes('maker') ? 'rotate-180' : '')} size={20} /></div>
           </button>
           {expandedSections.includes('maker') && <div className="px-6 pb-4 border-t">{renderField('제작 담당자', 'maker_manager', 'text', null, 'maker')}{renderField('제작 시작일', 'manufacturing_start_date', 'date', null, 'maker')}{renderField('제작 완료일', 'manufacturing_end_date', 'date', null, 'maker')}{renderField('실제 금형 중량', 'actual_weight', 'number', null, 'maker')}{renderField('게이트 타입', 'gate_type', 'select', ['핫러너', '콜드러너', '밸브게이트'], 'maker')}{renderField('게이트 수', 'gate_count', 'number', null, 'maker')}{renderField('냉각채널 수', 'cooling_channel_count', 'number', null, 'maker')}{renderField('제작 비고', 'maker_notes', 'textarea', null, 'maker')}</div>}
         </div>
         <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
           <button onClick={() => toggleSection('plant')} className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50">
             <div className="flex items-center gap-3"><div className="p-2 bg-green-100 rounded-lg"><Building2 className="text-green-600" size={20} /></div><div className="text-left"><h3 className="font-semibold">생산처 정보</h3><p className="text-xs text-gray-500">생산처에서 입력한 운영 정보</p></div></div>
-            <div className="flex items-center gap-2">{getSourceBadge('plant')}<ChevronDown className={'text-gray-400 transition-transform '+(expandedSections.includes('plant') ? 'rotate-180' : '')} size={20} /></div>
+            <div className="flex items-center gap-2">{getSourceBadge('plant')}<ChevronDown className={"text-gray-400 transition-transform " + (expandedSections.includes('plant') ? 'rotate-180' : '')} size={20} /></div>
           </button>
           {expandedSections.includes('plant') && <div className="px-6 pb-4 border-t">{renderField('설치 위치', 'installation_location', 'text', null, 'plant')}{renderField('설치일', 'installation_date', 'date', null, 'plant')}{renderField('사출기 번호', 'machine_number', 'text', null, 'plant')}{renderField('사출기 톤수', 'machine_tonnage', 'number', null, 'plant')}{renderField('현재 타수', 'current_shots', 'number', null, 'plant')}{renderField('목표 타수', 'target_shots', 'number', null, 'plant')}{renderField('사이클 타임', 'cycle_time', 'number', null, 'plant')}{renderField('운영 상태', 'operation_status', 'select', ['가동중', '정지', '정비중', '대기'], 'plant')}{renderField('생산 비고', 'plant_notes', 'textarea', null, 'plant')}</div>}
         </div>
