@@ -529,10 +529,10 @@ export default function PeriodicInspectionNew() {
         </div>
       )}
 
-      {/* 카테고리 진행 상황 */}
+      {/* 카테고리 진행 상황 - 3열 그리드 */}
       <div className="card mb-6">
         <h3 className="text-sm font-semibold mb-3">카테고리별 진행 현황</h3>
-        <div className="space-y-2">
+        <div className="grid grid-cols-3 gap-3">
           {selectedType.categories.map((category, index) => {
             const { completed, total, percentage } = getCategoryProgress(category)
             const isActive = index === currentCategoryIndex
@@ -540,26 +540,33 @@ export default function PeriodicInspectionNew() {
             return (
               <div 
                 key={category.id}
-                className={`p-2 rounded cursor-pointer transition-colors ${
-                  isActive ? 'bg-primary-50 border-l-4 border-primary-600' : 'hover:bg-gray-50'
+                className={`p-3 rounded-lg cursor-pointer transition-colors border ${
+                  isActive 
+                    ? 'bg-primary-50 border-primary-400 shadow-sm' 
+                    : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
                 }`}
                 onClick={() => setCurrentCategoryIndex(index)}
               >
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-sm font-medium ${isActive ? 'text-primary-900' : 'text-gray-700'}`}>
-                    {completed === total ? '✅' : percentage > 0 ? '🔄' : '⏸️'} {category.name}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">
+                    {completed === total ? '✅' : percentage > 0 ? '🔄' : '⏸️'}
                   </span>
-                  <span className="text-xs text-gray-600">
-                    {completed}/{total} ({percentage}%)
+                  <span className={`text-sm font-medium truncate ${isActive ? 'text-primary-900' : 'text-gray-700'}`}>
+                    {category.name}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                   <div 
-                    className={`h-1.5 rounded-full transition-all ${
+                    className={`h-2 rounded-full transition-all ${
                       completed === total ? 'bg-green-500' : 'bg-primary-600'
                     }`}
                     style={{ width: `${percentage}%` }}
                   />
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-gray-600">
+                    {completed}/{total} ({percentage}%)
+                  </span>
                 </div>
               </div>
             )
