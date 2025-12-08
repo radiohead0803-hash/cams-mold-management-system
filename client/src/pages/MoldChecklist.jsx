@@ -337,23 +337,27 @@ export default function MoldChecklist() {
         return (
           <div className="space-y-1">
             <div className="flex gap-3 flex-wrap">
-              {item.options?.map(opt => (
-                <label key={opt} className="flex items-center gap-1 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={data.value?.includes(opt)}
-                    onChange={(e) => {
-                      const current = data.value ? data.value.split(',') : [];
-                      const updated = e.target.checked 
-                        ? [...current, opt]
-                        : current.filter(v => v !== opt);
-                      handleItemChange(category.id, item.id, 'value', updated.join(','));
-                    }}
-                    className="rounded"
-                  />
-                  {opt}
-                </label>
-              ))}
+              {item.options?.map(opt => {
+                const valueStr = String(data.value || '');
+                const valueArr = valueStr ? valueStr.split(',') : [];
+                return (
+                  <label key={opt} className="flex items-center gap-1 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={valueArr.includes(opt)}
+                      onChange={(e) => {
+                        const current = valueStr ? valueStr.split(',').filter(v => v) : [];
+                        const updated = e.target.checked 
+                          ? [...current, opt]
+                          : current.filter(v => v !== opt);
+                        handleItemChange(category.id, item.id, 'value', updated.join(','));
+                      }}
+                      className="rounded"
+                    />
+                    {opt}
+                  </label>
+                );
+              })}
             </div>
             <input
               type="text"
