@@ -199,17 +199,10 @@ export default function ChecklistMaster() {
         deployedTo: ['제작처', '생산처'],
         lastModified: '2025-12-08',
         createdBy: 'admin',
-        categories: [
-          { id: 'material', name: 'Ⅰ. 원재료 (Material)', itemCount: 3 },
-          { id: 'mold', name: 'Ⅱ. 금형 (Mold)', itemCount: 34 },
-          { id: 'gas_vent', name: 'Ⅲ. 가스 빼기 (Gas Vent)', itemCount: 6 },
-          { id: 'moldflow', name: 'Ⅳ. 성형 해석 (Moldflow 등)', itemCount: 6 },
-          { id: 'sink_mark', name: 'Ⅴ. 싱크마크 (Sink Mark)', itemCount: 3 },
-          { id: 'ejection', name: 'Ⅵ. 취출 (Ejection)', itemCount: 7 },
-          { id: 'mic', name: 'Ⅶ. MIC 제품 (MICA 스펙클 등)', itemCount: 4 },
-          { id: 'coating', name: 'Ⅷ. 도금 (Coating)', itemCount: 12 },
-          { id: 'rear_back_beam', name: 'Ⅸ. 리어 백빔 (Rear Back Beam)', itemCount: 6 }
-        ]
+        categories: DEFAULT_MOLD_CHECKLIST_CATEGORIES.map(cat => ({
+          ...cat,
+          items: cat.items ? [...cat.items] : []
+        }))
       },
       {
         id: 6,

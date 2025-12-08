@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Upload, Camera } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Camera, Send, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
 import { moldSpecificationAPI } from '../lib/api';
 
-// 금형 재질별 경도 기준
+// 금형 재질별 경도 기준 (min, max 값 포함)
 const HARDNESS_STANDARDS = [
-  { id: 1, grade: 'S45C, HP1A (HP1)', hardness: 'HRC 10 ~ 18', characteristics: '-' },
-  { id: 2, grade: 'HP4A (HP4), HS-PA', hardness: 'HRC 28 ~ 32', characteristics: '-' },
-  { id: 3, grade: 'HP4MA (HP4M)', hardness: 'HRC 31 ~ 34', characteristics: '-' },
-  { id: 4, grade: 'CENA G', hardness: 'HRC 35 ~ 41', characteristics: '핫스탬핑 부품에 적용' },
-  { id: 5, grade: 'NAK-80', hardness: 'HRC 37 ~ 41', characteristics: '투명 제품 등 고광택을 중시하는 제품에 적용' },
-  { id: 6, grade: 'SKD61', hardness: 'HRC 48 ~ 52', characteristics: '-' }
+  { id: 1, grade: 'S45C', hardness: 'HRC 10 ~ 18', min: 10, max: 18, characteristics: '-' },
+  { id: 2, grade: 'HP1A (HP1)', hardness: 'HRC 10 ~ 18', min: 10, max: 18, characteristics: '-' },
+  { id: 3, grade: 'HP4A (HP4)', hardness: 'HRC 28 ~ 32', min: 28, max: 32, characteristics: '-' },
+  { id: 4, grade: 'HS-PA', hardness: 'HRC 28 ~ 32', min: 28, max: 32, characteristics: '-' },
+  { id: 5, grade: 'HP4MA (HP4M)', hardness: 'HRC 31 ~ 34', min: 31, max: 34, characteristics: '-' },
+  { id: 6, grade: 'CENA G', hardness: 'HRC 35 ~ 41', min: 35, max: 41, characteristics: '핫스탬핑 부품에 적용' },
+  { id: 7, grade: 'NAK-80', hardness: 'HRC 37 ~ 41', min: 37, max: 41, characteristics: '투명 제품 등 고광택을 중시하는 제품에 적용' },
+  { id: 8, grade: 'SKD61', hardness: 'HRC 48 ~ 52', min: 48, max: 52, characteristics: '-' },
+  { id: 9, grade: 'P20', hardness: 'HRC 28 ~ 32', min: 28, max: 32, characteristics: '-' },
+  { id: 10, grade: 'H13', hardness: 'HRC 48 ~ 52', min: 48, max: 52, characteristics: '-' }
 ];
 
 // 재질 옵션
@@ -43,6 +47,13 @@ export default function HardnessMeasurement() {
   
   // 측정 이력
   const [measurementHistory, setMeasurementHistory] = useState([]);
+  
+  // 승인 관련 상태
+  const [approvalStatus, setApprovalStatus] = useState('draft'); // draft, pending, approved, rejected
+  const [approvalRequestDate, setApprovalRequestDate] = useState(null);
+  const [approver, setApprover] = useState('');
+  const [approvalDate, setApprovalDate] = useState(null);
+  const [approvalComment, setApprovalComment] = useState('');
 
   useEffect(() => {
     if (moldId) {
@@ -79,6 +90,57 @@ export default function HardnessMeasurement() {
 
   const cavityAverage = calculateAverage(cavityMeasurements);
   const coreAverage = calculateAverage(coreMeasurements);
+
+  // 재질별 경도 기준 가져오기
+  const getHardnessStandard = (material) => {
+    return HARDNESS_STANDARDS.find(s => s.grade === material);
+  };
+
+  // NG 판정 함수
+  const checkNG = (material, average) => {
+    if (!material || !average) return null;
+    const standard = getHardnessStandard(material);
+    if (!standard) return null;
+    
+    const value = parseFloat(average);
+    if (value < standard.min) return { status: 'NG', reason: `기준 미달 (최소 ${standard.min} HRC)` };
+    if (value > standard.max) return { status: 'NG', reason: `기준 초과 (최대 ${standard.max} HRC)` };
+    return { status: 'OK', reason: `기준 범위 내 (${standard.min}~${standard.max} HRC)` };
+  };
+
+  const cavityNGResult = checkNG(cavityMaterial, cavityAverage);
+  const coreNGResult = checkNG(coreMaterial, coreAverage);
+
+  // 승인 요청
+  const handleRequestApproval = () => {
+    if (!cavityAverage && !coreAverage) {
+      alert('측정값을 먼저 입력해주세요.');
+      return;
+    }
+    setApprovalStatus('pending');
+    setApprovalRequestDate(new Date().toISOString());
+    alert('승인 요청이 완료되었습니다.');
+  };
+
+  // 승인 처리
+  const handleApprove = () => {
+    setApprovalStatus('approved');
+    setApprovalDate(new Date().toISOString());
+    setApprover('관리자');
+    alert('승인 처리되었습니다.');
+  };
+
+  // 반려 처리
+  const handleReject = () => {
+    const comment = prompt('반려 사유를 입력해주세요:');
+    if (comment) {
+      setApprovalStatus('rejected');
+      setApprovalDate(new Date().toISOString());
+      setApprover('관리자');
+      setApprovalComment(comment);
+      alert('반려 처리되었습니다.');
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -146,19 +208,132 @@ export default function HardnessMeasurement() {
               </div>
             </div>
             
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            >
-              <Save size={16} />
-              저장
-            </button>
+            <div className="flex items-center gap-3">
+              {/* 승인 상태 배지 */}
+              {approvalStatus === 'draft' && (
+                <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm flex items-center gap-1">
+                  <Clock size={14} /> 작성중
+                </span>
+              )}
+              {approvalStatus === 'pending' && (
+                <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm flex items-center gap-1">
+                  <AlertTriangle size={14} /> 승인대기
+                </span>
+              )}
+              {approvalStatus === 'approved' && (
+                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm flex items-center gap-1">
+                  <CheckCircle size={14} /> 승인완료
+                </span>
+              )}
+              {approvalStatus === 'rejected' && (
+                <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm flex items-center gap-1">
+                  <XCircle size={14} /> 반려
+                </span>
+              )}
+
+              {/* 버튼들 */}
+              {approvalStatus === 'draft' && (
+                <>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Save size={16} />
+                    저장
+                  </button>
+                  <button
+                    onClick={handleRequestApproval}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <Send size={16} />
+                    승인요청
+                  </button>
+                </>
+              )}
+              {approvalStatus === 'pending' && (
+                <>
+                  <button
+                    onClick={handleApprove}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                  >
+                    <CheckCircle size={16} />
+                    승인
+                  </button>
+                  <button
+                    onClick={handleReject}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center gap-2"
+                  >
+                    <XCircle size={16} />
+                    반려
+                  </button>
+                </>
+              )}
+              {(approvalStatus === 'approved' || approvalStatus === 'rejected') && (
+                <button
+                  onClick={() => setApprovalStatus('draft')}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2"
+                >
+                  재작성
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        {/* 승인 정보 */}
+        {(approvalStatus !== 'draft') && (
+          <div className={`rounded-xl shadow-sm border overflow-hidden ${
+            approvalStatus === 'approved' ? 'bg-green-50 border-green-200' :
+            approvalStatus === 'rejected' ? 'bg-red-50 border-red-200' :
+            'bg-yellow-50 border-yellow-200'
+          }`}>
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  {approvalStatus === 'pending' && (
+                    <>
+                      <AlertTriangle className="text-yellow-600" size={24} />
+                      <div>
+                        <p className="font-semibold text-yellow-800">승인 대기중</p>
+                        <p className="text-sm text-yellow-600">
+                          요청일시: {approvalRequestDate ? new Date(approvalRequestDate).toLocaleString('ko-KR') : '-'}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  {approvalStatus === 'approved' && (
+                    <>
+                      <CheckCircle className="text-green-600" size={24} />
+                      <div>
+                        <p className="font-semibold text-green-800">승인 완료</p>
+                        <p className="text-sm text-green-600">
+                          승인자: {approver} | 승인일시: {approvalDate ? new Date(approvalDate).toLocaleString('ko-KR') : '-'}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  {approvalStatus === 'rejected' && (
+                    <>
+                      <XCircle className="text-red-600" size={24} />
+                      <div>
+                        <p className="font-semibold text-red-800">반려됨</p>
+                        <p className="text-sm text-red-600">
+                          반려자: {approver} | 반려일시: {approvalDate ? new Date(approvalDate).toLocaleString('ko-KR') : '-'}
+                        </p>
+                        {approvalComment && (
+                          <p className="text-sm text-red-700 mt-1">사유: {approvalComment}</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* 기본 정보 */}
         <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3">
@@ -478,36 +653,107 @@ export default function HardnessMeasurement() {
           </div>
         </div>
 
-        {/* 측정 결과 요약 */}
+        {/* 측정 결과 요약 및 NG 판정 */}
         <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl shadow-sm overflow-hidden">
           <div className="px-6 py-3 border-b border-gray-700">
             <h2 className="font-semibold text-white flex items-center gap-2">
-              📈 측정 결과 요약
+              📈 측정 결과 요약 및 NG 판정
             </h2>
           </div>
           
           <div className="p-6">
             <div className="grid grid-cols-2 gap-6">
-              <div className="bg-blue-900/50 rounded-lg p-4">
-                <h3 className="text-blue-300 text-sm mb-2">상측 (Cavity)</h3>
+              {/* Cavity 결과 */}
+              <div className={`rounded-lg p-4 ${
+                cavityNGResult?.status === 'NG' ? 'bg-red-900/50 border-2 border-red-500' : 
+                cavityNGResult?.status === 'OK' ? 'bg-green-900/50 border-2 border-green-500' : 
+                'bg-blue-900/50'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-blue-300 text-sm">상측 (Cavity) - {cavityMaterial || '재질 미선택'}</h3>
+                  {cavityNGResult && (
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                      cavityNGResult.status === 'OK' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                    }`}>
+                      {cavityNGResult.status}
+                    </span>
+                  )}
+                </div>
                 <div className="text-3xl font-bold text-white">
                   {cavityAverage ? `${cavityAverage} HRC` : '- HRC'}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
                   측정값: {cavityMeasurements.filter(v => v).join(', ') || '-'}
                 </p>
+                {cavityNGResult && (
+                  <p className={`text-xs mt-2 ${cavityNGResult.status === 'OK' ? 'text-green-400' : 'text-red-400'}`}>
+                    {cavityNGResult.reason}
+                  </p>
+                )}
+                {cavityMaterial && getHardnessStandard(cavityMaterial) && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    기준: {getHardnessStandard(cavityMaterial).hardness}
+                  </p>
+                )}
               </div>
               
-              <div className="bg-orange-900/50 rounded-lg p-4">
-                <h3 className="text-orange-300 text-sm mb-2">하측 (Core)</h3>
+              {/* Core 결과 */}
+              <div className={`rounded-lg p-4 ${
+                coreNGResult?.status === 'NG' ? 'bg-red-900/50 border-2 border-red-500' : 
+                coreNGResult?.status === 'OK' ? 'bg-green-900/50 border-2 border-green-500' : 
+                'bg-orange-900/50'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-orange-300 text-sm">하측 (Core) - {coreMaterial || '재질 미선택'}</h3>
+                  {coreNGResult && (
+                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                      coreNGResult.status === 'OK' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+                    }`}>
+                      {coreNGResult.status}
+                    </span>
+                  )}
+                </div>
                 <div className="text-3xl font-bold text-white">
                   {coreAverage ? `${coreAverage} HRC` : '- HRC'}
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
                   측정값: {coreMeasurements.filter(v => v).join(', ') || '-'}
                 </p>
+                {coreNGResult && (
+                  <p className={`text-xs mt-2 ${coreNGResult.status === 'OK' ? 'text-green-400' : 'text-red-400'}`}>
+                    {coreNGResult.reason}
+                  </p>
+                )}
+                {coreMaterial && getHardnessStandard(coreMaterial) && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    기준: {getHardnessStandard(coreMaterial).hardness}
+                  </p>
+                )}
               </div>
             </div>
+
+            {/* 종합 판정 */}
+            {(cavityNGResult || coreNGResult) && (
+              <div className={`mt-4 p-4 rounded-lg text-center ${
+                (cavityNGResult?.status === 'NG' || coreNGResult?.status === 'NG') 
+                  ? 'bg-red-600' 
+                  : 'bg-green-600'
+              }`}>
+                <div className="flex items-center justify-center gap-2">
+                  {(cavityNGResult?.status === 'NG' || coreNGResult?.status === 'NG') ? (
+                    <>
+                      <XCircle className="text-white" size={24} />
+                      <span className="text-xl font-bold text-white">종합 판정: NG</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="text-white" size={24} />
+                      <span className="text-xl font-bold text-white">종합 판정: OK</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
