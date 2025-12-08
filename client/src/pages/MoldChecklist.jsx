@@ -158,10 +158,12 @@ export default function MoldChecklist() {
   const [stats, setStats] = useState({ total: 81, completed: 0, progress: 0 });
 
   useEffect(() => {
+    initializeChecklist();
     if (moldId) {
       loadMoldData();
+    } else {
+      setLoading(false);
     }
-    initializeChecklist();
   }, [moldId]);
 
   const initializeChecklist = () => {
