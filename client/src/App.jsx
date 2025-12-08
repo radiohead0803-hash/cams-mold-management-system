@@ -23,6 +23,7 @@ import MoldDetailNew from './pages/MoldDetailNew'
 import DailyChecklist from './pages/DailyChecklistNew'
 import PeriodicInspection from './pages/PeriodicInspectionNew'
 import TransferManagement from './pages/TransferManagement'
+import TransferRequest from './pages/TransferRequest'
 import Alerts from './pages/Alerts'
 import ChecklistMaster from './pages/ChecklistMaster'
 import RepairManagement from './pages/RepairManagement'
@@ -123,6 +124,7 @@ function App() {
         <Route path="checklist/daily" element={<DailyChecklist />} />
         <Route path="inspection/periodic" element={<PeriodicInspection />} />
         <Route path="transfers" element={<TransferManagement />} />
+        <Route path="transfers/new" element={<TransferRequest />} />
         <Route path="alerts" element={<Alerts />} />
         <Route path="checklist-master" element={<ChecklistMaster />} />
         <Route path="repairs" element={<RepairManagement />} />

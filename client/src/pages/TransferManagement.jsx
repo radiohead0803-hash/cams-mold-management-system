@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { transferAPI } from '../lib/api'
-import { ArrowRight, CheckCircle, Clock, XCircle, FileText, ArrowLeft } from 'lucide-react'
+import { ArrowRight, CheckCircle, Clock, XCircle, FileText, ArrowLeft, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function TransferManagement() {
@@ -60,19 +60,28 @@ export default function TransferManagement() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center gap-4">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20} className="text-gray-600" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">이관 관리</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            금형 이관 요청 및 승인 관리
-          </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft size={20} className="text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">이관 관리</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              금형 이관 요청 및 승인 관리
+            </p>
+          </div>
         </div>
+        <button
+          onClick={() => navigate('/transfers/new')}
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          <Plus size={18} />
+          이관 요청
+        </button>
       </div>
 
       {/* 필터 */}

@@ -18,4 +18,7 @@ router.patch('/:id/approve', authenticate, transferController.approveTransfer);
 // PATCH /api/v1/transfers/:id/reject
 router.patch('/:id/reject', authenticate, transferController.rejectTransfer);
 
+// GET /api/v1/transfers/checklist/items - 체크리스트 항목 조회
+router.get('/checklist/items', authenticate, transferController.getChecklistItems);
+
 module.exports = router;
