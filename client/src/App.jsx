@@ -127,7 +127,7 @@ function App() {
         <Route path="companies" element={<CompanyManagement />} />
         <Route path="companies/:id" element={<CompanyDetail />} />
         <Route path="user-requests" element={<UserRequests />} />
-        <Route path="master-data" element={<MasterData />} />
+        <Route path="master-data" element={<ProtectedRoute allowedRoles={['system_admin']}><MasterData /></ProtectedRoute>} />
         <Route path="hq/repair-requests" element={<HqRepairListPage />} />
         <Route path="maker/repair-requests" element={<MakerRepairListPage />} />
       </Route>

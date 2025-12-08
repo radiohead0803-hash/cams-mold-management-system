@@ -34,7 +34,8 @@ export default function Layout() {
             { to: '/molds', label: '개발금형현황' },
             { to: '/molds/new', label: '금형 등록' },
             { to: '/molds/bulk-upload', label: '금형 일괄등록' },
-            { to: '/molds/lifecycle', label: '개발진행현황' }
+            { to: '/molds/lifecycle', label: '개발진행현황' },
+            { to: '/master-data', label: '기초정보 관리' }
           ]
         },
         { 
@@ -116,8 +117,7 @@ export default function Layout() {
           icon: Settings, 
           label: '금형관리',
           subMenus: [
-            { to: '/molds/master', label: '금형관리 마스터' },
-            { to: '/master-data', label: '기초정보 관리' }
+            { to: '/molds/master', label: '금형관리 마스터' }
           ]
         },
         { 
