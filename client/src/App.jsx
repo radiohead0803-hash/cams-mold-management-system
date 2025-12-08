@@ -37,6 +37,7 @@ import RepairRequestPage from './pages/RepairRequestPage'
 import HqRepairListPage from './pages/HqRepairListPage'
 import MakerRepairListPage from './pages/MakerRepairListPage'
 import MoldDevelopmentPlan from './pages/MoldDevelopmentPlan'
+import MoldChecklist from './pages/MoldChecklist'
 import MoldOverviewPage from './pages/mobile/MoldOverviewPage'
 import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
 import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
@@ -134,7 +135,8 @@ function App() {
         <Route path="mold-development/plan" element={<MoldDevelopmentPlan />} />
         <Route path="mold-development/nurturing" element={<MoldDevelopmentPlan />} />
         <Route path="mold-development/hardness" element={<MoldDevelopmentPlan />} />
-        <Route path="checklist/master" element={<ChecklistMaster />} />
+        <Route path="checklist/master" element={<MoldChecklist />} />
+        <Route path="mold-checklist" element={<MoldChecklist />} />
       </Route>
     </Routes>
   )
