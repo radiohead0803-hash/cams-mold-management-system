@@ -23,12 +23,26 @@ export default function ChecklistMaster() {
   const [showModal, setShowModal] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [editingStages, setEditingStages] = useState([])
+  const [editingCategories, setEditingCategories] = useState([])
   const [templateForm, setTemplateForm] = useState({
     name: '',
     version: '1.0',
     type: 'daily',
     deployedTo: []
   })
+
+  // 금형체크리스트 기본 카테고리
+  const DEFAULT_MOLD_CHECKLIST_CATEGORIES = [
+    { id: 'material', name: 'Ⅰ. 원재료 (Material)', itemCount: 3 },
+    { id: 'mold', name: 'Ⅱ. 금형 (Mold)', itemCount: 34 },
+    { id: 'gas_vent', name: 'Ⅲ. 가스 빼기 (Gas Vent)', itemCount: 6 },
+    { id: 'moldflow', name: 'Ⅳ. 성형 해석 (Moldflow 등)', itemCount: 6 },
+    { id: 'sink_mark', name: 'Ⅴ. 싱크마크 (Sink Mark)', itemCount: 3 },
+    { id: 'ejection', name: 'Ⅵ. 취출 (Ejection)', itemCount: 7 },
+    { id: 'mic', name: 'Ⅶ. MIC 제품 (MICA 스펙클 등)', itemCount: 4 },
+    { id: 'coating', name: 'Ⅷ. 도금 (Coating)', itemCount: 12 },
+    { id: 'rear_back_beam', name: 'Ⅸ. 리어 백빔 (Rear Back Beam)', itemCount: 6 }
+  ]
 
   // 임시 데이터
   useEffect(() => {
@@ -89,10 +103,21 @@ export default function ChecklistMaster() {
         version: '1.0',
         status: 'active',
         type: 'mold_checklist',
-        itemCount: 15,
+        itemCount: 81,
         deployedTo: ['제작처', '생산처'],
         lastModified: '2025-12-08',
-        createdBy: 'admin'
+        createdBy: 'admin',
+        categories: [
+          { id: 'material', name: 'Ⅰ. 원재료 (Material)', itemCount: 3 },
+          { id: 'mold', name: 'Ⅱ. 금형 (Mold)', itemCount: 34 },
+          { id: 'gas_vent', name: 'Ⅲ. 가스 빼기 (Gas Vent)', itemCount: 6 },
+          { id: 'moldflow', name: 'Ⅳ. 성형 해석 (Moldflow 등)', itemCount: 6 },
+          { id: 'sink_mark', name: 'Ⅴ. 싱크마크 (Sink Mark)', itemCount: 3 },
+          { id: 'ejection', name: 'Ⅵ. 취출 (Ejection)', itemCount: 7 },
+          { id: 'mic', name: 'Ⅶ. MIC 제품 (MICA 스펙클 등)', itemCount: 4 },
+          { id: 'coating', name: 'Ⅷ. 도금 (Coating)', itemCount: 12 },
+          { id: 'rear_back_beam', name: 'Ⅸ. 리어 백빔 (Rear Back Beam)', itemCount: 6 }
+        ]
       },
       {
         id: 6,
@@ -185,8 +210,14 @@ export default function ChecklistMaster() {
         })) : 
         [...DEFAULT_DEVELOPMENT_STAGES]
       )
+      setEditingCategories([])
+    } else if (template.type === 'mold_checklist') {
+      // 금형체크리스트인 경우 카테고리 로드
+      setEditingCategories(template.categories || [...DEFAULT_MOLD_CHECKLIST_CATEGORIES])
+      setEditingStages([])
     } else {
       setEditingStages([])
+      setEditingCategories([])
     }
     setShowModal(true)
   }
@@ -210,7 +241,35 @@ export default function ChecklistMaster() {
     setEditingStages(prev => prev.filter((_, i) => i !== index))
   }
 
+  // 금형체크리스트 카테고리 핸들러
+  const handleCategoryChange = (index, field, value) => {
+    setEditingCategories(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
+  }
+
+  const handleAddCategory = () => {
+    setEditingCategories(prev => [
+      ...prev,
+      { id: `cat_${Date.now()}`, name: '새 카테고리', itemCount: 0 }
+    ])
+  }
+
+  const handleRemoveCategory = (index) => {
+    setEditingCategories(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSaveTemplate = () => {
+    // 타입에 따라 itemCount 계산
+    let itemCount = 0
+    if (templateForm.type === 'development') {
+      itemCount = editingStages.length
+    } else if (templateForm.type === 'mold_checklist') {
+      itemCount = editingCategories.reduce((sum, cat) => sum + (cat.itemCount || 0), 0)
+    }
+
     if (editingTemplate) {
       // 수정
       setTemplates(prev => prev.map(t => 
@@ -218,8 +277,9 @@ export default function ChecklistMaster() {
           ? { 
               ...t, 
               ...templateForm,
-              stages: editingStages.map(s => s.name),
-              itemCount: editingStages.length,
+              stages: templateForm.type === 'development' ? editingStages.map(s => s.name) : undefined,
+              categories: templateForm.type === 'mold_checklist' ? editingCategories : undefined,
+              itemCount: itemCount || t.itemCount,
               lastModified: new Date().toISOString().split('T')[0]
             } 
           : t
@@ -230,8 +290,9 @@ export default function ChecklistMaster() {
         id: Date.now(),
         ...templateForm,
         status: 'draft',
-        stages: editingStages.map(s => s.name),
-        itemCount: editingStages.length || 0,
+        stages: templateForm.type === 'development' ? editingStages.map(s => s.name) : undefined,
+        categories: templateForm.type === 'mold_checklist' ? editingCategories : undefined,
+        itemCount: itemCount || 0,
         lastModified: new Date().toISOString().split('T')[0],
         createdBy: 'admin'
       }
@@ -412,8 +473,13 @@ export default function ChecklistMaster() {
                       setTemplateForm(prev => ({ ...prev, type: e.target.value }))
                       if (e.target.value === 'development') {
                         setEditingStages([...DEFAULT_DEVELOPMENT_STAGES])
+                        setEditingCategories([])
+                      } else if (e.target.value === 'mold_checklist') {
+                        setEditingCategories([...DEFAULT_MOLD_CHECKLIST_CATEGORIES])
+                        setEditingStages([])
                       } else {
                         setEditingStages([])
+                        setEditingCategories([])
                       }
                     }}
                     className="w-full border rounded-lg px-3 py-2"
@@ -534,6 +600,78 @@ export default function ChecklistMaster() {
                   <p className="text-xs text-gray-500 mt-2">
                     * 단계를 드래그하여 순서를 변경할 수 있습니다. 기본 소요일은 개발계획 생성 시 자동으로 적용됩니다.
                   </p>
+                </div>
+              )}
+
+              {/* 금형체크리스트 카테고리 편집 */}
+              {(templateForm.type === 'mold_checklist' || editingCategories.length > 0) && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">체크리스트 카테고리 관리 (9개 카테고리, 81개 항목)</h3>
+                    <button
+                      onClick={handleAddCategory}
+                      className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm flex items-center gap-1 hover:bg-green-200"
+                    >
+                      <Plus size={14} /> 카테고리 추가
+                    </button>
+                  </div>
+                  
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-12">순서</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">카테고리명</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-32">항목 수</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {editingCategories.map((category, index) => (
+                          <tr key={category.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-2 text-gray-400">
+                                <GripVertical size={16} />
+                                <span className="text-sm font-medium">{index + 1}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                value={category.name}
+                                onChange={(e) => handleCategoryChange(index, 'name', e.target.value)}
+                                className="w-full border rounded px-2 py-1 text-sm"
+                              />
+                            </td>
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={category.itemCount}
+                                  onChange={(e) => handleCategoryChange(index, 'itemCount', parseInt(e.target.value) || 0)}
+                                  className="w-20 border rounded px-2 py-1 text-sm text-center"
+                                />
+                                <span className="text-sm text-gray-500">개</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              <button
+                                onClick={() => handleRemoveCategory(index)}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800 font-medium">총 항목 수: {editingCategories.reduce((sum, cat) => sum + (cat.itemCount || 0), 0)}개</p>
+                    <p className="text-xs text-blue-600 mt-1">* 각 카테고리의 세부 항목은 금형체크리스트 페이지에서 관리됩니다.</p>
+                  </div>
                 </div>
               )}
             </div>
