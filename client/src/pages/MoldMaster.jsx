@@ -14,6 +14,8 @@ export default function MoldMaster() {
   const [showStats, setShowStats] = useState(true);
   const [selectedMold, setSelectedMold] = useState(null);
   const [detailTab, setDetailTab] = useState('hq'); // hq, maker, plant, history
+  const [detailData, setDetailData] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     loadMolds();
@@ -143,13 +145,24 @@ export default function MoldMaster() {
     return labels[status] || status;
   };
 
-  const openDetail = (mold) => {
+  const openDetail = async (mold) => {
     setSelectedMold(mold);
     setDetailTab('hq');
+    setDetailLoading(true);
+    try {
+      const response = await moldSpecificationAPI.getById(mold.id);
+      setDetailData(response.data.data);
+    } catch (error) {
+      console.error('Failed to load detail:', error);
+      setDetailData(null);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const closeDetail = () => {
     setSelectedMold(null);
+    setDetailData(null);
   };
 
   // 상세보기 모달
@@ -309,37 +322,66 @@ export default function MoldMaster() {
                     <Factory className="mr-2" size={20} />
                     제작처 입력 정보 (maker_specifications)
                   </h3>
-                  <div className="text-center py-8 text-gray-500">
-                    <Wrench size={48} className="mx-auto mb-4 text-orange-300" />
-                    <p className="text-lg font-medium">제작처 정보가 아직 입력되지 않았습니다.</p>
-                    <p className="text-sm mt-2">제작처에서 설계, 가공, 조립 등의 진행 상황을 입력하면 여기에 표시됩니다.</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 opacity-50">
-                    <div className="bg-white rounded p-3 border border-orange-100">
-                      <p className="text-xs text-orange-600 font-medium">설계시작일</p>
-                      <p className="text-sm text-gray-400">-</p>
+                  {detailLoading ? (
+                    <div className="text-center py-8 text-gray-500">로딩 중...</div>
+                  ) : detailData?.maker_specification ? (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="text-xs text-orange-600 font-medium">설계시작일</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.maker_specification.design_start_date || '-'}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="text-xs text-orange-600 font-medium">설계완료일</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.maker_specification.design_end_date || '-'}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="text-xs text-orange-600 font-medium">제작시작일</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.maker_specification.manufacturing_start_date || '-'}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="text-xs text-orange-600 font-medium">제작완료일</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.maker_specification.manufacturing_end_date || '-'}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="text-xs text-orange-600 font-medium">제작진행률</p>
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-orange-600 h-2 rounded-full"
+                              style={{ width: `${detailData.maker_specification.production_progress || 0}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900">{detailData.maker_specification.production_progress || 0}%</span>
+                        </div>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="text-xs text-orange-600 font-medium">현재단계</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.maker_specification.current_stage || '-'}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-orange-100">
+                        <p className="text-xs text-orange-600 font-medium">품질검사</p>
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                          detailData.maker_specification.quality_check === '합격' ? 'bg-green-100 text-green-800' :
+                          detailData.maker_specification.quality_check === '불합격' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {detailData.maker_specification.quality_check || '-'}
+                        </span>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-orange-100 col-span-2">
+                        <p className="text-xs text-orange-600 font-medium">기술노트</p>
+                        <p className="text-sm text-gray-700">{detailData.maker_specification.technical_notes || '-'}</p>
+                      </div>
                     </div>
-                    <div className="bg-white rounded p-3 border border-orange-100">
-                      <p className="text-xs text-orange-600 font-medium">설계완료일</p>
-                      <p className="text-sm text-gray-400">-</p>
-                    </div>
-                    <div className="bg-white rounded p-3 border border-orange-100">
-                      <p className="text-xs text-orange-600 font-medium">제작시작일</p>
-                      <p className="text-sm text-gray-400">-</p>
-                    </div>
-                    <div className="bg-white rounded p-3 border border-orange-100">
-                      <p className="text-xs text-orange-600 font-medium">제작완료일</p>
-                      <p className="text-sm text-gray-400">-</p>
-                    </div>
-                    <div className="bg-white rounded p-3 border border-orange-100">
-                      <p className="text-xs text-orange-600 font-medium">제작진행률</p>
-                      <p className="text-sm text-gray-400">0%</p>
-                    </div>
-                    <div className="bg-white rounded p-3 border border-orange-100">
-                      <p className="text-xs text-orange-600 font-medium">현재단계</p>
-                      <p className="text-sm text-gray-400">-</p>
-                    </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="text-center py-8 text-gray-500">
+                        <Wrench size={48} className="mx-auto mb-4 text-orange-300" />
+                        <p className="text-lg font-medium">제작처 정보가 아직 입력되지 않았습니다.</p>
+                        <p className="text-sm mt-2">제작처에서 설계, 가공, 조립 등의 진행 상황을 입력하면 여기에 표시됩니다.</p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -351,37 +393,67 @@ export default function MoldMaster() {
                     <Package className="mr-2" size={20} />
                     생산처 입력 정보 (plant_molds)
                   </h3>
-                  <div className="text-center py-8 text-gray-500">
-                    <Factory size={48} className="mx-auto mb-4 text-green-300" />
-                    <p className="text-lg font-medium">생산처 정보가 아직 입력되지 않았습니다.</p>
-                    <p className="text-sm mt-2">생산처에서 설치, 생산, 점검 등의 정보를 입력하면 여기에 표시됩니다.</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 opacity-50">
-                    <div className="bg-white rounded p-3 border border-green-100">
-                      <p className="text-xs text-green-600 font-medium">설치일</p>
-                      <p className="text-sm text-gray-400">-</p>
+                  {detailLoading ? (
+                    <div className="text-center py-8 text-gray-500">로딩 중...</div>
+                  ) : detailData?.plant_mold ? (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-white rounded p-3 border border-green-100">
+                        <p className="text-xs text-green-600 font-medium">설치일</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.plant_mold.installation_date || '-'}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-green-100">
+                        <p className="text-xs text-green-600 font-medium">누적타수</p>
+                        <p className="text-sm font-semibold text-blue-600">{detailData.plant_mold.total_shots?.toLocaleString() || 0}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-green-100">
+                        <p className="text-xs text-green-600 font-medium">목표타수</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.plant_mold.target_shots?.toLocaleString() || '-'}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-green-100">
+                        <p className="text-xs text-green-600 font-medium">최근정비일</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.plant_mold.last_maintenance_date || '-'}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-green-100">
+                        <p className="text-xs text-green-600 font-medium">다음정비일</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.plant_mold.next_maintenance_date || '-'}</p>
+                      </div>
+                      <div className="bg-white rounded p-3 border border-green-100">
+                        <p className="text-xs text-green-600 font-medium">현재위치</p>
+                        <p className="text-sm font-semibold text-gray-900">{detailData.plant_mold.current_location || '-'}</p>
+                      </div>
+                      {/* 타수 진행률 */}
+                      <div className="bg-white rounded p-3 border border-green-100 col-span-3">
+                        <p className="text-xs text-green-600 font-medium mb-2">타수 진행률</p>
+                        <div className="flex items-center space-x-3">
+                          <div className="flex-1 bg-gray-200 rounded-full h-3">
+                            <div 
+                              className={`h-3 rounded-full ${
+                                (detailData.plant_mold.total_shots / detailData.plant_mold.target_shots * 100) > 90 
+                                  ? 'bg-red-500' 
+                                  : 'bg-green-500'
+                              }`}
+                              style={{ width: `${Math.min((detailData.plant_mold.total_shots / detailData.plant_mold.target_shots * 100) || 0, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {((detailData.plant_mold.total_shots / detailData.plant_mold.target_shots * 100) || 0).toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                      {detailData.plant_mold.plant_notes && (
+                        <div className="bg-white rounded p-3 border border-green-100 col-span-3">
+                          <p className="text-xs text-green-600 font-medium">비고</p>
+                          <p className="text-sm text-gray-700">{detailData.plant_mold.plant_notes}</p>
+                        </div>
+                      )}
                     </div>
-                    <div className="bg-white rounded p-3 border border-green-100">
-                      <p className="text-xs text-green-600 font-medium">누적타수</p>
-                      <p className="text-sm text-gray-400">0</p>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Factory size={48} className="mx-auto mb-4 text-green-300" />
+                      <p className="text-lg font-medium">생산처 정보가 아직 입력되지 않았습니다.</p>
+                      <p className="text-sm mt-2">생산처에서 설치, 생산, 점검 등의 정보를 입력하면 여기에 표시됩니다.</p>
                     </div>
-                    <div className="bg-white rounded p-3 border border-green-100">
-                      <p className="text-xs text-green-600 font-medium">목표타수</p>
-                      <p className="text-sm text-gray-400">-</p>
-                    </div>
-                    <div className="bg-white rounded p-3 border border-green-100">
-                      <p className="text-xs text-green-600 font-medium">최근정비일</p>
-                      <p className="text-sm text-gray-400">-</p>
-                    </div>
-                    <div className="bg-white rounded p-3 border border-green-100">
-                      <p className="text-xs text-green-600 font-medium">다음정비일</p>
-                      <p className="text-sm text-gray-400">-</p>
-                    </div>
-                    <div className="bg-white rounded p-3 border border-green-100">
-                      <p className="text-xs text-green-600 font-medium">현재위치</p>
-                      <p className="text-sm text-gray-400">{selectedMold.current_location}</p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
