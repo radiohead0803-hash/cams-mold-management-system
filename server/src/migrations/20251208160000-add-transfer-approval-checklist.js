@@ -9,7 +9,15 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    // transfers 테이블 존재 여부 확인
+    const [tables] = await queryInterface.sequelize.query(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transfers'"
+    );
+    
+    const transfersExists = tables.length > 0;
+    
     // 1. transfer_approvals (이관 승인 - 3단계 승인 시스템)
+    // transfers 테이블이 없으면 FK 없이 생성
     await queryInterface.createTable('transfer_approvals', {
       id: {
         type: Sequelize.INTEGER,
@@ -18,13 +26,8 @@ module.exports = {
       },
       transfer_id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'transfers',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        allowNull: false
+        // FK는 transfers 테이블이 있을 때만 나중에 추가
       },
       // 승인 단계
       approval_stage: {
@@ -188,13 +191,8 @@ module.exports = {
       },
       transfer_id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
-        references: {
-          model: 'transfers',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        allowNull: false
+        // FK는 transfers 테이블이 있을 때만 나중에 추가
       },
       checklist_item_id: {
         type: Sequelize.INTEGER,
@@ -249,50 +247,56 @@ module.exports = {
     await queryInterface.addIndex('transfer_inspection_results', ['transfer_id']);
     await queryInterface.addIndex('transfer_inspection_results', ['checklist_item_id']);
 
-    // 4. transfers 테이블에 추가 컬럼
-    await queryInterface.addColumn('transfers', 'from_company_id', {
-      type: Sequelize.INTEGER,
-      references: {
-        model: 'companies',
-        key: 'id'
-      },
-      comment: '인계 업체 ID'
-    });
+    // 4. transfers 테이블에 추가 컬럼 (테이블이 존재할 때만)
+    if (transfersExists) {
+      try {
+        await queryInterface.addColumn('transfers', 'from_company_id', {
+          type: Sequelize.INTEGER,
+          references: {
+            model: 'companies',
+            key: 'id'
+          },
+          comment: '인계 업체 ID'
+        });
 
-    await queryInterface.addColumn('transfers', 'to_company_id', {
-      type: Sequelize.INTEGER,
-      references: {
-        model: 'companies',
-        key: 'id'
-      },
-      comment: '인수 업체 ID'
-    });
+        await queryInterface.addColumn('transfers', 'to_company_id', {
+          type: Sequelize.INTEGER,
+          references: {
+            model: 'companies',
+            key: 'id'
+          },
+          comment: '인수 업체 ID'
+        });
 
-    await queryInterface.addColumn('transfers', 'developer_id', {
-      type: Sequelize.INTEGER,
-      references: {
-        model: 'users',
-        key: 'id'
-      },
-      comment: '개발담당자 ID'
-    });
+        await queryInterface.addColumn('transfers', 'developer_id', {
+          type: Sequelize.INTEGER,
+          references: {
+            model: 'users',
+            key: 'id'
+          },
+          comment: '개발담당자 ID'
+        });
 
-    await queryInterface.addColumn('transfers', 'mold_info_snapshot', {
-      type: Sequelize.JSONB,
-      comment: '이관 시점 금형 정보 스냅샷'
-    });
+        await queryInterface.addColumn('transfers', 'mold_info_snapshot', {
+          type: Sequelize.JSONB,
+          comment: '이관 시점 금형 정보 스냅샷'
+        });
 
-    await queryInterface.addColumn('transfers', 'checklist_completed', {
-      type: Sequelize.BOOLEAN,
-      defaultValue: false,
-      comment: '체크리스트 완료 여부'
-    });
+        await queryInterface.addColumn('transfers', 'checklist_completed', {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          comment: '체크리스트 완료 여부'
+        });
 
-    await queryInterface.addColumn('transfers', 'all_approvals_completed', {
-      type: Sequelize.BOOLEAN,
-      defaultValue: false,
-      comment: '모든 승인 완료 여부'
-    });
+        await queryInterface.addColumn('transfers', 'all_approvals_completed', {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          comment: '모든 승인 완료 여부'
+        });
+      } catch (e) {
+        console.log('transfers 테이블 컬럼 추가 스킵 (이미 존재하거나 테이블 없음):', e.message);
+      }
+    }
 
     // 5. 기본 체크리스트 항목 삽입
     await queryInterface.bulkInsert('transfer_checklist_items', [
@@ -325,13 +329,25 @@ module.exports = {
   },
 
   down: async (queryInterface, Sequelize) => {
-    // 컬럼 제거
-    await queryInterface.removeColumn('transfers', 'from_company_id');
-    await queryInterface.removeColumn('transfers', 'to_company_id');
-    await queryInterface.removeColumn('transfers', 'developer_id');
-    await queryInterface.removeColumn('transfers', 'mold_info_snapshot');
-    await queryInterface.removeColumn('transfers', 'checklist_completed');
-    await queryInterface.removeColumn('transfers', 'all_approvals_completed');
+    // transfers 테이블 존재 여부 확인
+    const [tables] = await queryInterface.sequelize.query(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'transfers'"
+    );
+    const transfersExists = tables.length > 0;
+
+    // 컬럼 제거 (테이블이 존재할 때만)
+    if (transfersExists) {
+      try {
+        await queryInterface.removeColumn('transfers', 'from_company_id');
+        await queryInterface.removeColumn('transfers', 'to_company_id');
+        await queryInterface.removeColumn('transfers', 'developer_id');
+        await queryInterface.removeColumn('transfers', 'mold_info_snapshot');
+        await queryInterface.removeColumn('transfers', 'checklist_completed');
+        await queryInterface.removeColumn('transfers', 'all_approvals_completed');
+      } catch (e) {
+        console.log('transfers 컬럼 제거 스킵:', e.message);
+      }
+    }
 
     // 테이블 제거
     await queryInterface.dropTable('transfer_inspection_results');
