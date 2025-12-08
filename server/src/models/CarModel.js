@@ -20,31 +20,20 @@ module.exports = (sequelize) => {
         primaryKey: true,
         autoIncrement: true
       },
-      code: {
+      model_code: {
         type: DataTypes.STRING(50),
-        allowNull: false,
-        unique: true,
-        comment: '차종 코드 (예: SP2, EV6)'
+        allowNull: true,
+        comment: '차종 코드 (예: DL3, EV6)'
       },
-      name: {
+      model_name: {
         type: DataTypes.STRING(100),
         allowNull: false,
-        comment: '차종 명칭 (예: SP2(쏘울), EV6)'
+        comment: '차종 명칭 (예: K5, EV6)'
       },
-      oem: {
+      manufacturer: {
         type: DataTypes.STRING(50),
         allowNull: true,
-        comment: '제조사 (HYUNDAI, KIA, GENESIS 등)'
-      },
-      segment: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        comment: '차급 (B-SUV, C-SUV, D-SEDAN 등)'
-      },
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: '설명'
+        comment: '제조사 (현대, 기아 등)'
       },
       sort_order: {
         type: DataTypes.INTEGER,
@@ -57,16 +46,6 @@ module.exports = (sequelize) => {
         allowNull: false,
         defaultValue: true,
         comment: '활성화 여부'
-      },
-      created_by: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        comment: '생성자 ID'
-      },
-      updated_by: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        comment: '수정자 ID'
       }
     },
     {
