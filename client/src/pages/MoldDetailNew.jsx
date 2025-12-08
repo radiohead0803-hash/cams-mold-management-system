@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Settings, ChevronDown, Upload, Eye, 
   CheckCircle, MapPin, TrendingUp, User, AlertTriangle,
   Thermometer, Gauge, Clock, Box, Wrench, FileText,
-  ClipboardCheck, Calendar, Activity, Camera, Shield
+  ClipboardCheck, Calendar, Activity, Camera, Shield, X
 } from 'lucide-react';
 import { moldSpecificationAPI, moldAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
+import NaverMoldLocationMap from '../components/NaverMoldLocationMap';
 
 export default function MoldDetailNew() {
   const { id } = useParams();
@@ -21,6 +22,10 @@ export default function MoldDetailNew() {
   const [mold, setMold] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeMenu, setActiveMenu] = useState(null);
+  const [showLocationMap, setShowLocationMap] = useState(false);
+  const [locationClickCount, setLocationClickCount] = useState(0);
+  const [locationClickTimer, setLocationClickTimer] = useState(null);
+  const [moldLocationPopup, setMoldLocationPopup] = useState(null);
 
   // 드롭다운 메뉴 정의 (계층형 구조 지원)
   const menuItems = {
@@ -127,6 +132,52 @@ export default function MoldDetailNew() {
   };
 
   const visibleSections = getVisibleSections();
+
+  // 위치 클릭 핸들러 (더블클릭 시 상세 정보 표시)
+  const handleLocationClick = useCallback(() => {
+    if (locationClickTimer) {
+      // 더블클릭: 상세 정보 팝업 표시
+      clearTimeout(locationClickTimer);
+      setLocationClickTimer(null);
+      setLocationClickCount(0);
+      setMoldLocationPopup({
+        id: mold?.id,
+        moldCode: mold?.mold_code || `MOLD-${id}`,
+        moldName: mold?.part_name || mold?.mold_name,
+        plantName: mold?.plant_company_name || mold?.current_location || 'A구역-01',
+        lat: mold?.gps_lat || 37.5665,
+        lng: mold?.gps_lng || 126.978,
+        status: mold?.status || 'normal',
+        currentShots: mold?.current_shots || 0,
+        maxShots: mold?.max_shots || 100000
+      });
+    } else {
+      // 첫 번째 클릭: 지도 표시
+      setShowLocationMap(true);
+      const timer = setTimeout(() => {
+        setLocationClickTimer(null);
+        setLocationClickCount(0);
+      }, 300);
+      setLocationClickTimer(timer);
+      setLocationClickCount(1);
+    }
+  }, [locationClickTimer, mold, id]);
+
+  // 지도에서 마커 더블클릭 시 금형 정보 팝업 열기
+  const handleMoldDoubleClick = useCallback((moldData) => {
+    setMoldLocationPopup(moldData);
+  }, []);
+
+  // 현재 금형의 위치 데이터
+  const currentMoldLocation = mold ? [{
+    id: mold.id || parseInt(id),
+    moldCode: mold.mold_code || `MOLD-${id}`,
+    moldName: mold.part_name || mold.mold_name,
+    plantName: mold.plant_company_name || mold.current_location || 'A구역-01',
+    lat: mold.gps_lat || 37.5665,
+    lng: mold.gps_lng || 126.978,
+    status: mold.status === 'active' ? 'normal' : mold.status || 'normal'
+  }] : [];
 
   if (loading) {
     return (
@@ -339,13 +390,17 @@ export default function MoldDetailNew() {
               </p>
             </div>
 
-            {/* 위치 */}
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            {/* 위치 - 클릭 시 지도 표시, 더블클릭 시 상세 정보 */}
+            <div 
+              className="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md hover:bg-purple-50 transition-all"
+              onClick={handleLocationClick}
+            >
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
                   <MapPin className="text-purple-600" size={18} />
                 </div>
                 <span className="text-sm text-gray-500">위치</span>
+                <span className="text-xs text-purple-400 ml-auto">클릭: 지도 / 더블클릭: 상세</span>
               </div>
               <p className="text-lg font-bold text-purple-600">
                 {mold.current_location || mold.location || 'A구역-01'}
@@ -585,6 +640,159 @@ export default function MoldDetailNew() {
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 위치 지도 모달 */}
+        {showLocationMap && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowLocationMap(false)}>
+            <div 
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 헤더 */}
+              <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MapPin size={24} />
+                  <div>
+                    <h2 className="text-lg font-bold">금형 위치</h2>
+                    <p className="text-purple-100 text-sm">{mold?.mold_code || `MOLD-${id}`} - {mold?.part_name || '금형'}</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowLocationMap(false)}
+                  className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* 지도 */}
+              <div className="h-[500px]">
+                <NaverMoldLocationMap 
+                  locations={currentMoldLocation}
+                  selectedMoldId={mold?.id || parseInt(id)}
+                  onMoldDoubleClick={handleMoldDoubleClick}
+                />
+              </div>
+
+              {/* 위치 정보 */}
+              <div className="p-4 bg-gray-50 border-t">
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">현재 위치</p>
+                    <p className="font-semibold text-gray-900">{mold?.current_location || mold?.location || 'A구역-01'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">생산처</p>
+                    <p className="font-semibold text-gray-900">{mold?.plant_company_name || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">GPS 좌표</p>
+                    <p className="font-semibold text-gray-900">
+                      {mold?.gps_lat ? `${mold.gps_lat.toFixed(4)}, ${mold.gps_lng?.toFixed(4)}` : '미등록'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 금형 위치 상세 정보 팝업 */}
+        {moldLocationPopup && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setMoldLocationPopup(null)}>
+            <div 
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 헤더 */}
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold">{moldLocationPopup.moldCode}</h2>
+                    <p className="text-blue-100 text-sm mt-1">{moldLocationPopup.moldName || '금형'}</p>
+                  </div>
+                  <button 
+                    onClick={() => setMoldLocationPopup(null)}
+                    className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* 본문 */}
+              <div className="p-6 space-y-4">
+                {/* 상태 배지 */}
+                <div className="flex items-center gap-3">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    moldLocationPopup.status === 'ng' ? 'bg-red-100 text-red-700' :
+                    moldLocationPopup.status === 'moved' ? 'bg-orange-100 text-orange-700' :
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    상태: {moldLocationPopup.status === 'ng' ? 'NG' : moldLocationPopup.status === 'moved' ? '이탈' : '정상'}
+                  </span>
+                </div>
+
+                {/* 정보 그리드 */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-gray-500 text-xs mb-1">현재 위치</p>
+                    <p className="font-semibold text-gray-900">{moldLocationPopup.plantName || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-gray-500 text-xs mb-1">GPS 좌표</p>
+                    <p className="font-semibold text-gray-900">
+                      {moldLocationPopup.lat?.toFixed(4)}, {moldLocationPopup.lng?.toFixed(4)}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-gray-500 text-xs mb-1">현재 샷수</p>
+                    <p className="font-semibold text-gray-900">{moldLocationPopup.currentShots?.toLocaleString() || 0}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-gray-500 text-xs mb-1">최대 샷수</p>
+                    <p className="font-semibold text-gray-900">{moldLocationPopup.maxShots?.toLocaleString() || 100000}</p>
+                  </div>
+                </div>
+
+                {/* 샷수 진행률 */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-500">샷수 진행률</span>
+                    <span className="font-semibold">
+                      {((moldLocationPopup.currentShots / moldLocationPopup.maxShots) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                      style={{ width: `${Math.min((moldLocationPopup.currentShots / moldLocationPopup.maxShots) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* 버튼 */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => {
+                      navigate(`/molds/specifications/${moldLocationPopup.id}`);
+                      setMoldLocationPopup(null);
+                    }}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                  >
+                    상세 보기
+                  </button>
+                  <button
+                    onClick={() => setMoldLocationPopup(null)}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    닫기
+                  </button>
+                </div>
               </div>
             </div>
           </div>
