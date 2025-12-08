@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { moldSpecificationAPI } from '../lib/api';
-import { Search, Filter, Eye, FileText, BarChart3, TrendingUp, CheckCircle, Clock, Image as ImageIcon } from 'lucide-react';
+import { Search, Filter, Eye, FileText, BarChart3, TrendingUp, CheckCircle, Clock, Image as ImageIcon, X, Building2, Factory, Wrench, ClipboardCheck, MapPin, Calendar, DollarSign, Package, AlertTriangle } from 'lucide-react';
 
 export default function MoldMaster() {
   const { user } = useAuthStore();
@@ -12,6 +12,8 @@ export default function MoldMaster() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [stageFilter, setStageFilter] = useState('all');
   const [showStats, setShowStats] = useState(true);
+  const [selectedMold, setSelectedMold] = useState(null);
+  const [detailTab, setDetailTab] = useState('hq'); // hq, maker, plant, history
 
   useEffect(() => {
     loadMolds();
@@ -134,9 +136,320 @@ export default function MoldMaster() {
       design: '설계',
       manufacturing: '제작',
       trial: '시운전',
-      production: '양산'
+      production: '양산',
+      maintenance: '정비',
+      retired: '폐기'
     };
     return labels[status] || status;
+  };
+
+  const openDetail = (mold) => {
+    setSelectedMold(mold);
+    setDetailTab('hq');
+  };
+
+  const closeDetail = () => {
+    setSelectedMold(null);
+  };
+
+  // 상세보기 모달
+  const DetailModal = () => {
+    if (!selectedMold) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+          {/* 헤더 */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">{selectedMold.mold_code}</h2>
+              <p className="text-blue-100 text-sm">{selectedMold.part_name} | {selectedMold.car_model}</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                selectedMold.status === 'production' ? 'bg-green-500 text-white' :
+                selectedMold.status === 'manufacturing' ? 'bg-orange-500 text-white' :
+                'bg-gray-200 text-gray-800'
+              }`}>
+                {getStatusLabel(selectedMold.status)}
+              </span>
+              <button onClick={closeDetail} className="text-white hover:bg-white/20 rounded-full p-1">
+                <X size={24} />
+              </button>
+            </div>
+          </div>
+
+          {/* 탭 */}
+          <div className="border-b border-gray-200 bg-gray-50">
+            <div className="flex">
+              <button
+                onClick={() => setDetailTab('hq')}
+                className={`px-6 py-3 text-sm font-medium flex items-center space-x-2 border-b-2 transition-colors ${
+                  detailTab === 'hq' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Building2 size={18} />
+                <span>본사 정보</span>
+              </button>
+              <button
+                onClick={() => setDetailTab('maker')}
+                className={`px-6 py-3 text-sm font-medium flex items-center space-x-2 border-b-2 transition-colors ${
+                  detailTab === 'maker' ? 'border-orange-600 text-orange-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Factory size={18} />
+                <span>제작처 정보</span>
+              </button>
+              <button
+                onClick={() => setDetailTab('plant')}
+                className={`px-6 py-3 text-sm font-medium flex items-center space-x-2 border-b-2 transition-colors ${
+                  detailTab === 'plant' ? 'border-green-600 text-green-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Package size={18} />
+                <span>생산처 정보</span>
+              </button>
+              <button
+                onClick={() => setDetailTab('history')}
+                className={`px-6 py-3 text-sm font-medium flex items-center space-x-2 border-b-2 transition-colors ${
+                  detailTab === 'history' ? 'border-purple-600 text-purple-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <ClipboardCheck size={18} />
+                <span>이력 정보</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 탭 내용 */}
+          <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+            {detailTab === 'hq' && (
+              <div className="space-y-6">
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
+                    <Building2 className="mr-2" size={20} />
+                    본사 입력 정보 (mold_specifications)
+                  </h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">금형코드</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.mold_code}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">부품번호</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.part_number || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">부품명</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.part_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">차종</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.car_model} ({selectedMold.car_year || '-'})</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">금형타입</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.mold_type || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">Cavity</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.cavity_count || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">재질</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.material || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">톤수</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.tonnage ? `${selectedMold.tonnage}T` : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">개발단계</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.development_stage}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">생산단계</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.production_stage}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">발주일</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.order_date || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">목표납기일</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.target_delivery_date || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">예상비용</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.estimated_cost ? `${selectedMold.estimated_cost.toLocaleString()}원` : '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">제작처</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.maker_company}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-600 font-medium">생산처</p>
+                      <p className="text-sm font-semibold text-gray-900">{selectedMold.plant_company}</p>
+                    </div>
+                  </div>
+                  {selectedMold.notes && (
+                    <div className="mt-4 pt-4 border-t border-blue-200">
+                      <p className="text-xs text-blue-600 font-medium">비고</p>
+                      <p className="text-sm text-gray-700">{selectedMold.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {detailTab === 'maker' && (
+              <div className="space-y-6">
+                <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                  <h3 className="text-lg font-semibold text-orange-800 mb-4 flex items-center">
+                    <Factory className="mr-2" size={20} />
+                    제작처 입력 정보 (maker_specifications)
+                  </h3>
+                  <div className="text-center py-8 text-gray-500">
+                    <Wrench size={48} className="mx-auto mb-4 text-orange-300" />
+                    <p className="text-lg font-medium">제작처 정보가 아직 입력되지 않았습니다.</p>
+                    <p className="text-sm mt-2">제작처에서 설계, 가공, 조립 등의 진행 상황을 입력하면 여기에 표시됩니다.</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 opacity-50">
+                    <div className="bg-white rounded p-3 border border-orange-100">
+                      <p className="text-xs text-orange-600 font-medium">설계시작일</p>
+                      <p className="text-sm text-gray-400">-</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-orange-100">
+                      <p className="text-xs text-orange-600 font-medium">설계완료일</p>
+                      <p className="text-sm text-gray-400">-</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-orange-100">
+                      <p className="text-xs text-orange-600 font-medium">제작시작일</p>
+                      <p className="text-sm text-gray-400">-</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-orange-100">
+                      <p className="text-xs text-orange-600 font-medium">제작완료일</p>
+                      <p className="text-sm text-gray-400">-</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-orange-100">
+                      <p className="text-xs text-orange-600 font-medium">제작진행률</p>
+                      <p className="text-sm text-gray-400">0%</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-orange-100">
+                      <p className="text-xs text-orange-600 font-medium">현재단계</p>
+                      <p className="text-sm text-gray-400">-</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {detailTab === 'plant' && (
+              <div className="space-y-6">
+                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
+                    <Package className="mr-2" size={20} />
+                    생산처 입력 정보 (plant_molds)
+                  </h3>
+                  <div className="text-center py-8 text-gray-500">
+                    <Factory size={48} className="mx-auto mb-4 text-green-300" />
+                    <p className="text-lg font-medium">생산처 정보가 아직 입력되지 않았습니다.</p>
+                    <p className="text-sm mt-2">생산처에서 설치, 생산, 점검 등의 정보를 입력하면 여기에 표시됩니다.</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 opacity-50">
+                    <div className="bg-white rounded p-3 border border-green-100">
+                      <p className="text-xs text-green-600 font-medium">설치일</p>
+                      <p className="text-sm text-gray-400">-</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-green-100">
+                      <p className="text-xs text-green-600 font-medium">누적타수</p>
+                      <p className="text-sm text-gray-400">0</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-green-100">
+                      <p className="text-xs text-green-600 font-medium">목표타수</p>
+                      <p className="text-sm text-gray-400">-</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-green-100">
+                      <p className="text-xs text-green-600 font-medium">최근정비일</p>
+                      <p className="text-sm text-gray-400">-</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-green-100">
+                      <p className="text-xs text-green-600 font-medium">다음정비일</p>
+                      <p className="text-sm text-gray-400">-</p>
+                    </div>
+                    <div className="bg-white rounded p-3 border border-green-100">
+                      <p className="text-xs text-green-600 font-medium">현재위치</p>
+                      <p className="text-sm text-gray-400">{selectedMold.current_location}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {detailTab === 'history' && (
+              <div className="space-y-6">
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <h3 className="text-lg font-semibold text-purple-800 mb-4 flex items-center">
+                    <ClipboardCheck className="mr-2" size={20} />
+                    이력 정보
+                  </h3>
+                  
+                  {/* 수리 이력 */}
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center">
+                      <Wrench size={16} className="mr-2" />
+                      수리 이력
+                    </h4>
+                    <div className="text-center py-4 text-gray-500 bg-white rounded border border-purple-100">
+                      <p className="text-sm">수리 이력이 없습니다.</p>
+                    </div>
+                  </div>
+
+                  {/* 점검 이력 */}
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center">
+                      <ClipboardCheck size={16} className="mr-2" />
+                      점검 이력
+                    </h4>
+                    <div className="text-center py-4 text-gray-500 bg-white rounded border border-purple-100">
+                      <p className="text-sm">점검 이력이 없습니다.</p>
+                    </div>
+                  </div>
+
+                  {/* 이동 이력 */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-purple-700 mb-3 flex items-center">
+                      <MapPin size={16} className="mr-2" />
+                      이동 이력
+                    </h4>
+                    <div className="text-center py-4 text-gray-500 bg-white rounded border border-purple-100">
+                      <p className="text-sm">이동 이력이 없습니다.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 푸터 */}
+          <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex justify-between items-center">
+            <Link
+              to={`/molds/specifications/${selectedMold.id}`}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center space-x-1"
+            >
+              <Eye size={16} />
+              <span>상세 페이지로 이동</span>
+            </Link>
+            <button
+              onClick={closeDetail}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -145,7 +458,7 @@ export default function MoldMaster() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">금형관리 마스터</h1>
           <p className="text-sm text-gray-600 mt-1">
-            전체 {molds.length}개의 금형 (mold_specifications 기준)
+            개발단계부터 양산/폐기까지 전체 금형 라이프사이클 통합 조회 · 전체 {molds.length}개
           </p>
         </div>
         <button
@@ -351,13 +664,13 @@ export default function MoldMaster() {
                       <div className="text-sm text-gray-900">{mold.current_location}</div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <Link
-                        to={`/molds/specifications/${mold.id}`}
+                      <button
+                        onClick={() => openDetail(mold)}
                         className="text-blue-600 hover:text-blue-900 text-sm font-medium flex items-center space-x-1"
                       >
                         <Eye size={16} />
                         <span>상세</span>
-                      </Link>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -378,6 +691,9 @@ export default function MoldMaster() {
           </div>
         </div>
       )}
+
+      {/* 상세보기 모달 */}
+      <DetailModal />
     </div>
   );
 }
