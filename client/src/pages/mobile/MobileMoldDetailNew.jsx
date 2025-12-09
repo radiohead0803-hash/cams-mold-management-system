@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import { moldSpecificationAPI, moldImageAPI } from '../../lib/api'
@@ -8,7 +8,9 @@ import {
   CheckCircle, MapPin, TrendingUp, User, AlertTriangle,
   Thermometer, Gauge, Clock, Box, Wrench, FileText,
   ClipboardCheck, Calendar, Activity, Camera, Shield, X,
-  QrCode, Menu, Home, History, MoreHorizontal, Loader2
+  QrCode, Menu, Home, History, MoreHorizontal, Loader2,
+  Edit, Save, RefreshCw, Image, Package, Truck, BarChart3,
+  PlusCircle, Send, Navigation
 } from 'lucide-react'
 
 /**
@@ -32,6 +34,13 @@ export default function MobileMoldDetailNew() {
   const [showMenu, setShowMenu] = useState(false)
   const [moldImages, setMoldImages] = useState({ mold: null, product: null })
   const [activities, setActivities] = useState([])
+  const [expandedMenu, setExpandedMenu] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(null)
+  const [showLocationMap, setShowLocationMap] = useState(false)
+  const [repairStatus, setRepairStatus] = useState(null)
+  const [inspectionStatus, setInspectionStatus] = useState(null)
+  const moldImageRef = useRef(null)
+  const productImageRef = useRef(null)
 
   // 역할별 색상 설정
   const roleConfig = {
@@ -77,14 +86,16 @@ export default function MobileMoldDetailNew() {
     try {
       setLoading(true)
       
-      // 1. 모바일 API로 시도
+      // 1. 모바일 API로 시도 (baseURL에 /api/v1 포함)
       try {
-        const res = await api.get(`/api/v1/mobile/molds/${moldId}`)
+        const res = await api.get(`/mobile/mold/${moldId}`)
         if (res.data.success && res.data.data) {
           setMold(res.data.data)
           return
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log('Mobile API failed, trying mold-specifications...')
+      }
 
       // 2. mold-specifications API로 시도
       try {
@@ -93,7 +104,9 @@ export default function MobileMoldDetailNew() {
           setMold(res.data.data)
           return
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log('mold-specifications API failed')
+      }
 
     } catch (err) {
       console.error('Failed to load mold:', err)
@@ -154,29 +167,126 @@ export default function MobileMoldDetailNew() {
     }
   }
 
-  // 메뉴 항목
+  // PC 버전과 동일한 메뉴 구조
   const menuItems = {
     moldInfo: {
       label: '금형정보',
       icon: Settings,
-      items: ['금형사양', '변경이력']
+      color: 'bg-purple-500',
+      items: [
+        { label: '금형개발', subItems: ['개발계획', '금형체크리스트', '금형육성', '경도측정'] },
+        { label: '금형사양' },
+        { label: '변경이력 현황표' }
+      ]
     },
     injection: {
       label: '사출정보',
       icon: Thermometer,
-      items: ['사출조건 관리', '러너관리']
+      color: 'bg-red-500',
+      items: [
+        { label: '사출조건 관리' },
+        { label: '사출조건 수정관리' },
+        { label: '러너관리' },
+        { label: '변경이력 현황표' }
+      ]
     },
     repair: {
       label: '금형수리',
       icon: Wrench,
-      items: ['수리요청', '수리현황']
+      color: 'bg-orange-500',
+      items: [
+        { label: '수리요청', action: () => navigate(`/mobile/mold/${moldId}/repair-request`) },
+        { label: '금형수리 현황표' },
+        { label: '금형수리 진행현황' }
+      ]
     },
     inspection: {
       label: '금형점검',
       icon: ClipboardCheck,
-      items: ['일상점검', '정기점검']
+      color: 'bg-green-500',
+      items: [
+        { label: '일상점검', action: () => navigate(`/mobile/mold/${moldId}/daily-check`) },
+        { label: '정기점검', action: () => navigate(`/mobile/mold/${moldId}/periodic-check`) },
+        { label: '승인' }
+      ]
+    },
+    transfer: {
+      label: '금형이관',
+      icon: Truck,
+      color: 'bg-cyan-500',
+      items: [
+        { label: '이관요청' },
+        { label: '이관현황' },
+        { label: '이관 체크리스트' }
+      ]
     }
   }
+
+  // 이미지 업로드 핸들러
+  const handleImageUpload = async (e, imageType) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('파일 크기는 10MB 이하여야 합니다.')
+      return
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (!allowedTypes.includes(file.type)) {
+      alert('지원하지 않는 이미지 형식입니다.')
+      return
+    }
+
+    setUploadingImage(imageType)
+
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+      formData.append('mold_spec_id', moldId)
+      formData.append('image_type', imageType)
+      formData.append('is_primary', 'true')
+
+      const response = await moldImageAPI.upload(formData)
+      
+      if (response.data.success) {
+        await loadMoldImages()
+        alert('이미지가 업로드되었습니다.')
+      }
+    } catch (error) {
+      console.error('Image upload failed:', error)
+      alert('이미지 업로드에 실패했습니다.')
+    } finally {
+      setUploadingImage(null)
+    }
+  }
+
+  // 수리 현황 로드
+  const loadRepairStatus = async () => {
+    try {
+      const res = await api.get(`/repair-requests?mold_id=${moldId}&limit=1`).catch(() => null)
+      if (res?.data?.data?.[0]) {
+        setRepairStatus(res.data.data[0])
+      }
+    } catch (e) {}
+  }
+
+  // 점검 현황 로드
+  const loadInspectionStatus = async () => {
+    try {
+      const res = await api.get(`/daily-checks?mold_id=${moldId}&limit=1`).catch(() => null)
+      if (res?.data?.data?.[0]) {
+        setInspectionStatus(res.data.data[0])
+      }
+    } catch (e) {}
+  }
+
+  useEffect(() => {
+    if (mold) {
+      loadRepairStatus()
+      loadInspectionStatus()
+    }
+  }, [mold])
 
   if (loading) {
     return (
@@ -261,37 +371,91 @@ export default function MobileMoldDetailNew() {
         {/* 정보 탭 */}
         {activeTab === 'info' && (
           <>
-            {/* 이미지 섹션 */}
+            {/* 이미지 섹션 - 업로드 기능 포함 */}
             {visibleSections.includes('images') && (
               <div className="grid grid-cols-2 gap-3">
                 {/* 금형 이미지 */}
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="p-2 border-b flex items-center gap-1">
-                    <Camera size={14} className="text-purple-600" />
-                    <span className="text-xs font-medium">금형</span>
+                  <div className="p-2 border-b flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Camera size={14} className="text-purple-600" />
+                      <span className="text-xs font-medium">금형</span>
+                    </div>
+                    <button
+                      onClick={() => moldImageRef.current?.click()}
+                      className="text-xs text-blue-600 flex items-center gap-1"
+                      disabled={uploadingImage === 'mold'}
+                    >
+                      {uploadingImage === 'mold' ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Upload size={12} />
+                      )}
+                    </button>
                   </div>
-                  <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                  <div 
+                    className="aspect-square bg-gray-100 flex items-center justify-center relative cursor-pointer"
+                    onClick={() => moldImageRef.current?.click()}
+                  >
                     {moldImages.mold ? (
                       <img src={moldImages.mold} alt="금형" className="w-full h-full object-cover" />
                     ) : (
-                      <Camera size={32} className="text-gray-300" />
+                      <div className="text-center">
+                        <Camera size={32} className="text-gray-300 mx-auto" />
+                        <p className="text-xs text-gray-400 mt-1">탭하여 업로드</p>
+                      </div>
                     )}
                   </div>
+                  <input
+                    ref={moldImageRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e, 'mold')}
+                  />
                 </div>
 
                 {/* 제품 이미지 */}
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="p-2 border-b flex items-center gap-1">
-                    <Box size={14} className="text-blue-600" />
-                    <span className="text-xs font-medium">제품</span>
+                  <div className="p-2 border-b flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Box size={14} className="text-blue-600" />
+                      <span className="text-xs font-medium">제품</span>
+                    </div>
+                    <button
+                      onClick={() => productImageRef.current?.click()}
+                      className="text-xs text-blue-600 flex items-center gap-1"
+                      disabled={uploadingImage === 'product'}
+                    >
+                      {uploadingImage === 'product' ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Upload size={12} />
+                      )}
+                    </button>
                   </div>
-                  <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                  <div 
+                    className="aspect-square bg-gray-100 flex items-center justify-center relative cursor-pointer"
+                    onClick={() => productImageRef.current?.click()}
+                  >
                     {moldImages.product ? (
                       <img src={moldImages.product} alt="제품" className="w-full h-full object-cover" />
                     ) : (
-                      <Box size={32} className="text-gray-300" />
+                      <div className="text-center">
+                        <Box size={32} className="text-gray-300 mx-auto" />
+                        <p className="text-xs text-gray-400 mt-1">탭하여 업로드</p>
+                      </div>
                     )}
                   </div>
+                  <input
+                    ref={productImageRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e, 'product')}
+                  />
                 </div>
               </div>
             )}
@@ -557,33 +721,110 @@ export default function MobileMoldDetailNew() {
           </div>
         )}
 
-        {/* 메뉴 탭 */}
+        {/* 메뉴 탭 - PC 버전과 동일한 계층형 구조 */}
         {activeTab === 'menu' && (
           <div className="space-y-3">
             {Object.entries(menuItems).map(([key, menu]) => (
               <div key={key} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div className="p-3 border-b flex items-center gap-2">
-                  <menu.icon size={16} className={roleConfig.bgColor.replace('bg-', 'text-').replace('-600', '-500').replace('-500', '-600')} />
-                  <span className="font-semibold text-sm">{menu.label}</span>
-                </div>
-                <div className="divide-y">
-                  {menu.items.map((item, idx) => (
-                    <button
-                      key={idx}
-                      className="w-full p-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
-                      onClick={() => {
-                        if (item === '일상점검') navigate(`/mobile/mold/${moldId}/daily-check`)
-                        else if (item === '정기점검') navigate(`/mobile/mold/${moldId}/periodic-check`)
-                        else if (item === '수리요청') navigate(`/mobile/mold/${moldId}/repair-request`)
-                      }}
-                    >
-                      {item}
-                      <ChevronRight size={14} className="text-gray-400" />
-                    </button>
-                  ))}
-                </div>
+                <button
+                  onClick={() => setExpandedMenu(expandedMenu === key ? null : key)}
+                  className={`w-full p-3 flex items-center justify-between ${menu.color} text-white`}
+                >
+                  <div className="flex items-center gap-2">
+                    <menu.icon size={18} />
+                    <span className="font-semibold">{menu.label}</span>
+                  </div>
+                  <ChevronDown 
+                    size={18} 
+                    className={`transition-transform ${expandedMenu === key ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {expandedMenu === key && (
+                  <div className="divide-y">
+                    {menu.items.map((item, idx) => (
+                      <div key={idx}>
+                        {item.subItems ? (
+                          // 서브메뉴가 있는 경우
+                          <div>
+                            <div className="p-3 bg-gray-50 text-sm font-medium text-gray-700 flex items-center gap-2">
+                              <ChevronRight size={14} className="text-gray-400" />
+                              {item.label}
+                            </div>
+                            <div className="pl-6 divide-y">
+                              {item.subItems.map((subItem, subIdx) => (
+                                <button
+                                  key={subIdx}
+                                  className="w-full p-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-between"
+                                  onClick={() => {
+                                    // 서브메뉴 액션
+                                    if (subItem === '개발계획') navigate(`/molds/${moldId}?tab=development`)
+                                    else if (subItem === '경도측정') navigate(`/molds/${moldId}/hardness`)
+                                  }}
+                                >
+                                  {subItem}
+                                  <ChevronRight size={12} className="text-gray-300" />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          // 일반 메뉴 항목
+                          <button
+                            className="w-full p-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+                            onClick={() => {
+                              if (item.action) {
+                                item.action()
+                              } else {
+                                // 기본 액션
+                                if (item.label === '금형사양') navigate(`/molds/${moldId}`)
+                              }
+                            }}
+                          >
+                            {item.label}
+                            <ChevronRight size={14} className="text-gray-400" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
+
+            {/* 추가 액션 버튼 */}
+            <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">빠른 액션</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => navigate(`/mobile/mold/${moldId}/daily-check`)}
+                  className="p-3 bg-green-50 rounded-xl text-center"
+                >
+                  <CheckCircle size={24} className="mx-auto mb-1 text-green-600" />
+                  <span className="text-xs font-medium text-gray-700">일상점검</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/mobile/mold/${moldId}/periodic-check`)}
+                  className="p-3 bg-blue-50 rounded-xl text-center"
+                >
+                  <Calendar size={24} className="mx-auto mb-1 text-blue-600" />
+                  <span className="text-xs font-medium text-gray-700">정기점검</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/mobile/mold/${moldId}/repair-request`)}
+                  className="p-3 bg-orange-50 rounded-xl text-center"
+                >
+                  <Wrench size={24} className="mx-auto mb-1 text-orange-600" />
+                  <span className="text-xs font-medium text-gray-700">수리요청</span>
+                </button>
+                <button
+                  onClick={() => setShowLocationMap(true)}
+                  className="p-3 bg-purple-50 rounded-xl text-center"
+                >
+                  <MapPin size={24} className="mx-auto mb-1 text-purple-600" />
+                  <span className="text-xs font-medium text-gray-700">위치확인</span>
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -641,47 +882,175 @@ export default function MobileMoldDetailNew() {
         </div>
       )}
 
-      {/* 사이드 메뉴 */}
+      {/* 사이드 메뉴 - PC 버전과 동일한 구조 */}
       {showMenu && (
         <div
           className="fixed inset-0 bg-black/50 z-50"
           onClick={() => setShowMenu(false)}
         >
           <div
-            className="absolute right-0 top-0 bottom-0 w-72 bg-white shadow-xl"
+            className="absolute right-0 top-0 bottom-0 w-80 bg-white shadow-xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className={`${roleConfig.bgColor} text-white p-4`}>
+            <div className={`${roleConfig.bgColor} text-white p-4 sticky top-0`}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold">메뉴</h2>
+                <h2 className="font-bold text-lg">금형 관리 메뉴</h2>
                 <button onClick={() => setShowMenu(false)}>
-                  <X size={20} />
+                  <X size={22} />
                 </button>
               </div>
-              <div className="text-sm opacity-80">
-                <p>{user?.name || '사용자'}</p>
-                <p>{roleConfig.label}</p>
+              <div className="text-sm opacity-90">
+                <p className="font-medium">{user?.name || '사용자'}</p>
+                <p className="text-xs opacity-80">{roleConfig.label} • {user?.company_name || ''}</p>
               </div>
             </div>
-            <div className="p-4 space-y-2">
+            
+            {/* 금형 정보 요약 */}
+            <div className="p-4 border-b bg-gray-50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                  {moldImages.mold ? (
+                    <img src={moldImages.mold} alt="" className="w-full h-full object-cover rounded-lg" />
+                  ) : (
+                    <Box size={24} className="text-gray-400" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">{moldCode}</p>
+                  <p className="text-sm text-gray-500">{moldName}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 메뉴 목록 */}
+            <div className="p-3 space-y-2">
               {Object.entries(menuItems).map(([key, menu]) => (
-                <div key={key}>
-                  <p className="text-xs text-gray-400 uppercase mb-1">{menu.label}</p>
-                  {menu.items.map((item, idx) => (
-                    <button
-                      key={idx}
-                      className="w-full text-left p-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
-                      onClick={() => {
-                        setShowMenu(false)
-                        if (item === '일상점검') navigate(`/mobile/mold/${moldId}/daily-check`)
-                        else if (item === '정기점검') navigate(`/mobile/mold/${moldId}/periodic-check`)
-                      }}
-                    >
-                      {item}
-                    </button>
-                  ))}
+                <div key={key} className="bg-white rounded-lg border overflow-hidden">
+                  <button
+                    onClick={() => setExpandedMenu(expandedMenu === key ? null : key)}
+                    className={`w-full p-3 flex items-center justify-between ${menu.color} text-white`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <menu.icon size={18} />
+                      <span className="font-medium">{menu.label}</span>
+                    </div>
+                    <ChevronDown 
+                      size={16} 
+                      className={`transition-transform ${expandedMenu === key ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {expandedMenu === key && (
+                    <div className="divide-y">
+                      {menu.items.map((item, idx) => (
+                        <button
+                          key={idx}
+                          className="w-full p-3 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between"
+                          onClick={() => {
+                            setShowMenu(false)
+                            if (item.action) item.action()
+                          }}
+                        >
+                          {item.label || item}
+                          <ChevronRight size={14} className="text-gray-400" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
+            </div>
+
+            {/* 하단 액션 */}
+            <div className="p-4 border-t mt-auto">
+              <button
+                onClick={() => {
+                  setShowMenu(false)
+                  navigate('/mobile/qr-login')
+                }}
+                className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-medium flex items-center justify-center gap-2"
+              >
+                <QrCode size={18} />
+                다른 금형 스캔
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 위치 지도 모달 */}
+      {showLocationMap && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowLocationMap(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin size={20} className="text-purple-600" />
+                <h3 className="font-bold">금형 위치</h3>
+              </div>
+              <button onClick={() => setShowLocationMap(false)}>
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4">
+              {/* 위치 정보 */}
+              <div className="space-y-3 mb-4">
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-500">현재 위치</span>
+                  <span className="font-medium">{mold.current_location || mold.location || '미등록'}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-500">GPS 좌표</span>
+                  <span className="font-medium text-sm">
+                    {mold.gps_lat && mold.gps_lng 
+                      ? `${Number(mold.gps_lat).toFixed(6)}, ${Number(mold.gps_lng).toFixed(6)}`
+                      : '미등록'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-500">마지막 스캔</span>
+                  <span className="font-medium text-sm">
+                    {mold.last_scanned_at 
+                      ? new Date(mold.last_scanned_at).toLocaleString('ko-KR')
+                      : '-'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 지도 (GPS 좌표가 있는 경우) */}
+              {mold.gps_lat && mold.gps_lng && (
+                <div className="h-48 bg-gray-100 rounded-lg overflow-hidden mb-4">
+                  <iframe
+                    title="금형 위치"
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${mold.gps_lat},${mold.gps_lng}&zoom=15`}
+                    allowFullScreen
+                  />
+                </div>
+              )}
+
+              <button
+                onClick={() => {
+                  if (mold.gps_lat && mold.gps_lng) {
+                    window.open(`https://www.google.com/maps?q=${mold.gps_lat},${mold.gps_lng}`, '_blank')
+                  }
+                }}
+                disabled={!mold.gps_lat || !mold.gps_lng}
+                className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 ${
+                  mold.gps_lat && mold.gps_lng
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-400'
+                }`}
+              >
+                <Navigation size={18} />
+                지도 앱에서 열기
+              </button>
             </div>
           </div>
         </div>
