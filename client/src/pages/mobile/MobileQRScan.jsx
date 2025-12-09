@@ -24,8 +24,33 @@ export default function MobileQRScan() {
   const navigate = useNavigate()
   const { login, user, isAuthenticated } = useAuthStore()
 
-  // QR 코드 (URL 파라미터 또는 쿼리스트링)
-  const qrCode = paramCode || searchParams.get('code') || ''
+  // QR 코드 파싱 (URL 파라미터 또는 쿼리스트링)
+  // URL이 인코딩되어 들어올 수 있으므로 디코딩 후 MOLD-{id} 추출
+  const parseQRCode = (code) => {
+    if (!code) return ''
+    
+    // URL 디코딩
+    let decoded = code
+    try {
+      decoded = decodeURIComponent(code)
+    } catch (e) {}
+    
+    // URL 형식인 경우 MOLD-{id} 추출
+    // 예: https://...railway.app/m/qr/MOLD-55 → MOLD-55
+    const urlMatch = decoded.match(/\/m\/qr\/(MOLD-\d+)/i)
+    if (urlMatch) return urlMatch[1]
+    
+    // MOLD-{id} 형식인 경우 그대로 반환
+    const moldMatch = decoded.match(/(MOLD-\d+)/i)
+    if (moldMatch) return moldMatch[1]
+    
+    // 숫자만 있는 경우 MOLD-{id} 형식으로 변환
+    if (/^\d+$/.test(decoded)) return `MOLD-${decoded}`
+    
+    return decoded
+  }
+  
+  const qrCode = parseQRCode(paramCode || searchParams.get('code') || '')
 
   // 상태
   const [mold, setMold] = useState(null)
