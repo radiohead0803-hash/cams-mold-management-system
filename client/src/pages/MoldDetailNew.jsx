@@ -29,11 +29,12 @@ export default function MoldDetailNew() {
   const [uploadingImage, setUploadingImage] = useState(null); // 'mold' | 'product' | null
   const [moldImages, setMoldImages] = useState({ mold: null, product: null });
 
-  // 드롭다운 메뉴 정의 (계층형 구조 지원)
+  // 드롭다운 메뉴 정의 (계층형 구조 지원) - 연한 색상
   const menuItems = {
     moldInfo: { 
       label: '금형정보', 
-      color: 'bg-purple-500',
+      color: 'bg-purple-400',
+      hoverColor: 'hover:bg-purple-500',
       items: [
         { 
           label: '금형개발', 
@@ -45,22 +46,26 @@ export default function MoldDetailNew() {
     },
     injection: { 
       label: '사출정보', 
-      color: 'bg-red-500',
+      color: 'bg-rose-400',
+      hoverColor: 'hover:bg-rose-500',
       items: ['사출조건 관리', '사출조건 수정관리', '러너관리', '변경이력 현황표']
     },
     repair: { 
       label: '금형수리', 
-      color: 'bg-orange-500',
+      color: 'bg-amber-400',
+      hoverColor: 'hover:bg-amber-500',
       items: ['수리요청', '금형수리 현황표', '금형수리 진행현황']
     },
     inspection: { 
       label: '금형점검', 
-      color: 'bg-green-500',
+      color: 'bg-emerald-400',
+      hoverColor: 'hover:bg-emerald-500',
       items: ['일상점검', '정기점검', '승인']
     },
     transfer: { 
       label: '금형이관', 
-      color: 'bg-cyan-500',
+      color: 'bg-sky-400',
+      hoverColor: 'hover:bg-sky-500',
       items: ['이관요청', '이관현황', '이관 체크리스트']
     }
   };

@@ -167,12 +167,12 @@ export default function MobileMoldDetailNew() {
     }
   }
 
-  // PC 버전과 동일한 메뉴 구조
+  // PC 버전과 동일한 메뉴 구조 - 연한 색상
   const menuItems = {
     moldInfo: {
       label: '금형정보',
       icon: Settings,
-      color: 'bg-purple-500',
+      color: 'bg-purple-400',
       items: [
         { label: '금형개발', subItems: ['개발계획', '금형체크리스트', '금형육성', '경도측정'] },
         { label: '금형사양' },
@@ -182,7 +182,7 @@ export default function MobileMoldDetailNew() {
     injection: {
       label: '사출정보',
       icon: Thermometer,
-      color: 'bg-red-500',
+      color: 'bg-rose-400',
       items: [
         { label: '사출조건 관리' },
         { label: '사출조건 수정관리' },
@@ -193,7 +193,7 @@ export default function MobileMoldDetailNew() {
     repair: {
       label: '금형수리',
       icon: Wrench,
-      color: 'bg-orange-500',
+      color: 'bg-amber-400',
       items: [
         { label: '수리요청', action: () => navigate(`/mobile/mold/${moldId}/repair-request`) },
         { label: '금형수리 현황표' },
@@ -203,7 +203,7 @@ export default function MobileMoldDetailNew() {
     inspection: {
       label: '금형점검',
       icon: ClipboardCheck,
-      color: 'bg-green-500',
+      color: 'bg-emerald-400',
       items: [
         { label: '일상점검', action: () => navigate(`/mobile/mold/${moldId}/daily-check`) },
         { label: '정기점검', action: () => navigate(`/mobile/mold/${moldId}/periodic-check`) },
@@ -213,7 +213,7 @@ export default function MobileMoldDetailNew() {
     transfer: {
       label: '금형이관',
       icon: Truck,
-      color: 'bg-cyan-500',
+      color: 'bg-sky-400',
       items: [
         { label: '이관요청' },
         { label: '이관현황' },
