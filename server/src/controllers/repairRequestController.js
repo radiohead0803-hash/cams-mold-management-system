@@ -34,9 +34,19 @@ async function listRepairRequests(req, res) {
 
     console.log('[listRepairRequests] Found:', list.length);
 
+    // 금형 정보를 플랫하게 변환
+    const flattenedList = list.map(item => {
+      const plain = item.get({ plain: true });
+      return {
+        ...plain,
+        mold_number: plain.mold?.mold_code || plain.mold_code,
+        mold_name: plain.mold?.mold_name || plain.mold_name
+      };
+    });
+
     res.json({
       success: true,
-      data: list
+      data: flattenedList
     });
   } catch (err) {
     console.error('[listRepairRequests] error:', err);

@@ -10,21 +10,32 @@ const createRepairRequest = async (req, res) => {
   try {
     const {
       mold_id,
+      mold_spec_id,
       title,
       description,
+      issue_type,           // 클라이언트에서 보내는 필드
+      issue_description,    // 클라이언트에서 보내는 필드
       ng_type,
-      urgency,  // 'low', 'normal', 'high', 'urgent'
+      severity,             // 클라이언트에서 보내는 필드 (low, medium, high, urgent)
+      urgency,              // 'low', 'normal', 'high', 'urgent'
+      estimated_cost,
       session_id
     } = req.body;
     const userId = req.user.id;
     const files = req.files;
 
+    // 필드 매핑 (클라이언트 필드 → 백엔드 필드)
+    const finalTitle = title || issue_type || 'Repair Request';
+    const finalDescription = description || issue_description || '';
+    const finalNgType = ng_type || issue_type;
+    const finalUrgency = urgency || severity || 'normal';
+
     // 1. 필수 필드 검증
-    if (!mold_id || !title) {
+    if (!mold_id) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        error: { message: 'Mold ID and title are required' }
+        error: { message: 'Mold ID is required' }
       });
     }
 
@@ -59,12 +70,17 @@ const createRepairRequest = async (req, res) => {
     const repairRequest = await RepairRequest.create({
       request_number: requestNumber,
       mold_id,
+      mold_spec_id: mold_spec_id || null,
       requester_id: userId,
-      requester_company_id: requester.company_id,
-      title,
-      description,
-      ng_type,
-      urgency: urgency || 'normal',
+      requester_company_id: requester?.company_id,
+      title: finalTitle,
+      description: finalDescription,
+      issue_type: issue_type || null,
+      issue_description: issue_description || finalDescription,
+      ng_type: finalNgType,
+      severity: severity || 'medium',
+      urgency: finalUrgency,
+      estimated_cost: estimated_cost || null,
       status: 'requested',
       requested_at: new Date()
     }, { transaction });
