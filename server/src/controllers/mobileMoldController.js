@@ -12,14 +12,17 @@ const MOVE_THRESHOLD_M = 300; // 300m 이상이면 '이탈'로 간주
 exports.updateMoldLocation = async (req, res) => {
   try {
     const { moldId } = req.params;
-    const { gpsLat, gpsLng, source = 'qr_scan', notes } = req.body;
+    // latitude/longitude 또는 gpsLat/gpsLng 둘 다 지원
+    const gpsLat = req.body.gpsLat || req.body.latitude;
+    const gpsLng = req.body.gpsLng || req.body.longitude;
+    const { source = 'qr_scan', notes, scanned_by, scanned_at, device_info, accuracy } = req.body;
     const user = req.user; // authMiddleware에서 주입
 
     // 입력 검증
     if (!gpsLat || !gpsLng) {
       return res.status(400).json({
         success: false,
-        message: 'gpsLat, gpsLng 값이 필요합니다.'
+        message: 'gpsLat/latitude, gpsLng/longitude 값이 필요합니다.'
       });
     }
 

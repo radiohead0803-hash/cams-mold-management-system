@@ -135,14 +135,79 @@ export default function MobileQRScan() {
     }
   }
 
+  // 위치정보 가져오기
+  const getCurrentLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation not supported'))
+        return
+      }
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          })
+        },
+        (error) => {
+          console.warn('Geolocation error:', error.message)
+          resolve(null) // 위치 정보 실패해도 로그인은 진행
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      )
+    })
+  }
+
+  // 금형 위치 업데이트 API 호출
+  const updateMoldLocation = async (moldId, location, userData, token) => {
+    if (!location) return
+    
+    try {
+      // /mobile/mold/:id/location API 호출 (MoldSpecification용)
+      await api.post(`/mobile/mold/${moldId}/location`, {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy: location.accuracy,
+        scanned_by: userData.id,
+        scanned_at: new Date().toISOString(),
+        device_info: {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform
+        }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      console.log('[MobileQRScan] Location updated successfully:', location)
+    } catch (err) {
+      console.error('[MobileQRScan] Failed to update location:', err.message)
+      // 위치 업데이트 실패해도 로그인 진행
+    }
+  }
+
   const handleLogin = async (e) => {
     e.preventDefault()
     setLoginError('')
     setLoginLoading(true)
 
     try {
+      // 1. 위치정보 가져오기 (병렬로 시작)
+      const locationPromise = getCurrentLocation()
+      
+      // 2. 로그인
       const response = await authAPI.login({ username, password })
       const { token, user: userData } = response.data.data
+      
+      // 3. 위치정보 업데이트 (로그인 성공 후)
+      const location = await locationPromise
+      if (location && mold) {
+        await updateMoldLocation(mold.id, location, userData, token)
+      }
       
       login(userData, token)
       navigateToWorkspace(mold, userData)
@@ -162,8 +227,18 @@ export default function MobileQRScan() {
     setLoginLoading(true)
 
     try {
+      // 1. 위치정보 가져오기 (병렬로 시작)
+      const locationPromise = getCurrentLocation()
+      
+      // 2. 로그인
       const response = await authAPI.login({ username: testUsername, password: testPassword })
       const { token, user: userData } = response.data.data
+      
+      // 3. 위치정보 업데이트 (로그인 성공 후)
+      const location = await locationPromise
+      if (location && mold) {
+        await updateMoldLocation(mold.id, location, userData, token)
+      }
       
       login(userData, token)
       navigateToWorkspace(mold, userData)

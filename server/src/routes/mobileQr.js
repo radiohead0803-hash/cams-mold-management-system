@@ -212,6 +212,81 @@ router.get('/mold/:id', async (req, res) => {
 });
 
 /**
+ * QR 스캔 후 금형 위치 업데이트 (MoldSpecification용)
+ * POST /api/v1/mobile/mold/:id/location
+ */
+router.post('/mold/:id/location', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { latitude, longitude, accuracy, scanned_by, scanned_at, device_info } = req.body;
+
+    console.log(`[Mobile Location Update] Mold ID: ${id}, Lat: ${latitude}, Lng: ${longitude}`);
+
+    // 입력 검증
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: 'latitude, longitude 값이 필요합니다.'
+      });
+    }
+
+    // 금형 조회
+    const mold = await MoldSpecification.findByPk(id);
+    
+    if (!mold) {
+      return res.status(404).json({
+        success: false,
+        message: '금형을 찾을 수 없습니다.'
+      });
+    }
+
+    // 금형 위치 업데이트
+    await mold.update({
+      gps_lat: latitude,
+      gps_lng: longitude,
+      last_scanned_at: scanned_at || new Date(),
+      last_scanned_by: scanned_by
+    });
+
+    // 위치 로그 저장 (GPSLocation 테이블이 있는 경우)
+    try {
+      const { GPSLocation } = require('../models/newIndex');
+      if (GPSLocation) {
+        await GPSLocation.create({
+          mold_spec_id: id,
+          latitude,
+          longitude,
+          accuracy,
+          scanned_by,
+          scanned_at: scanned_at || new Date(),
+          device_info: device_info ? JSON.stringify(device_info) : null,
+          source: 'qr_scan'
+        });
+      }
+    } catch (logError) {
+      console.log('[Mobile Location] GPSLocation log skipped:', logError.message);
+    }
+
+    return res.json({
+      success: true,
+      message: '위치가 업데이트되었습니다.',
+      data: {
+        moldId: id,
+        latitude,
+        longitude,
+        updatedAt: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('[Mobile Location Update] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '위치 업데이트 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+/**
  * 모든 금형의 QR 코드 및 URL 업데이트 (관리자용)
  * POST /api/v1/mobile/molds/update-qr-codes
  */
