@@ -157,49 +157,45 @@ export default function MobileQRLogin() {
     setError('')
     
     try {
-      // 1. QR 스캔 API 시도
+      let moldData = null
+
+      // 1. QR 코드로 금형 검색 (MOLD-21, mold_code, 또는 ID)
       try {
-        const response = await api.post('/api/v1/mobile/qr/scan', { code: qrCode })
-        if (response.data.success && response.data.data?.mold) {
-          const moldData = response.data.data.mold
-          setScannedMold({ ...moldData, qrCode })
-          
-          if (isAuthenticated && user) {
-            navigateToMoldPage(moldData, user)
-          } else {
-            setStep('login')
-          }
-          return
+        const response = await api.get(`/api/v1/mobile/molds/by-qr/${encodeURIComponent(qrCode)}`)
+        if (response.data.success && response.data.data) {
+          moldData = response.data.data
         }
       } catch (e) {
-        console.log('QR scan API failed, trying direct search...')
+        console.log('QR search failed:', e.message)
       }
 
-      // 2. 모바일 공개 API로 직접 검색 (ID)
-      let moldData = null
-      
-      // ID로 검색 시도
-      if (/^\d+$/.test(qrCode)) {
+      // 2. 숫자만 입력된 경우 ID로 검색
+      if (!moldData && /^\d+$/.test(qrCode)) {
         try {
           const specRes = await api.get(`/api/v1/mobile/molds/${qrCode}`)
           if (specRes.data.success && specRes.data.data) {
             moldData = specRes.data.data
           }
         } catch (e) {
-          console.log('Mobile mold API failed:', e.message)
+          console.log('ID search failed:', e.message)
         }
       }
 
       if (moldData) {
+        // QR 코드 설정
+        if (!moldData.qr_code) {
+          moldData.qr_code = `MOLD-${moldData.id}`
+        }
         setScannedMold({ ...moldData, qrCode })
         
+        // 로그인 단계로 이동 (항상 로그인 필요)
         if (isAuthenticated && user) {
           navigateToMoldPage(moldData, user)
         } else {
           setStep('login')
         }
       } else {
-        setError('금형을 찾을 수 없습니다. 코드를 확인해주세요.')
+        setError('금형을 찾을 수 없습니다. QR 코드를 확인해주세요.')
       }
     } catch (err) {
       console.error('QR scan error:', err)
@@ -459,13 +455,15 @@ export default function MobileQRLogin() {
                 {moldList.map((mold) => (
                   <button
                     key={mold.id}
-                    onClick={() => handleManualInput(String(mold.id))}
+                    onClick={() => handleManualInput(mold.qr_code || `MOLD-${mold.id}`)}
                     className="text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors"
                   >
                     <div className="text-sm font-semibold text-gray-900 truncate">
                       {mold.part_name || mold.mold_name || mold.mold_code || `금형 #${mold.id}`}
                     </div>
-                    <div className="text-xs text-primary-600 font-medium">{mold.mold_code || `ID: ${mold.id}`}</div>
+                    <div className="text-xs text-primary-600 font-medium">
+                      QR: {mold.qr_code || `MOLD-${mold.id}`}
+                    </div>
                     <div className="text-xs text-gray-500">{mold.car_model || '-'} | {mold.status || 'active'}</div>
                   </button>
                 ))}

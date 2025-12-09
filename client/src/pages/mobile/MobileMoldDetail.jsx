@@ -703,15 +703,16 @@ export default function MobileMoldDetail() {
             <h3 className="text-lg font-bold text-center mb-4">금형 QR 코드</h3>
             <div className="flex justify-center mb-4">
               <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(mold.qr_token || mold.mold_code || `MOLD-${moldId}`)}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(mold.qr_code || `MOLD-${mold.id || moldId}`)}`}
                 alt="QR Code"
                 className="w-48 h-48 rounded-lg shadow"
               />
             </div>
             <div className="text-center mb-4">
-              <p className="text-sm text-gray-500">금형 코드</p>
-              <p className="font-bold text-lg">{mold.mold_code || mold.qr_token || `MOLD-${moldId}`}</p>
+              <p className="text-sm text-gray-500">QR 코드</p>
+              <p className="font-bold text-lg">{mold.qr_code || `MOLD-${mold.id || moldId}`}</p>
               <p className="text-sm text-gray-600 mt-1">{mold.part_name || mold.mold_name}</p>
+              {mold.mold_code && <p className="text-xs text-gray-400">금형코드: {mold.mold_code}</p>}
             </div>
             <button
               onClick={() => setShowQRCode(false)}

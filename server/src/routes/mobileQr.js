@@ -58,20 +58,87 @@ router.get('/molds/list', async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     
     const molds = await MoldSpecification.findAll({
-      attributes: ['id', 'mold_code', 'part_name', 'car_model', 'status', 'created_at'],
+      attributes: ['id', 'mold_code', 'part_name', 'car_model', 'status', 'qr_code', 'created_at'],
       order: [['created_at', 'DESC']],
       limit
     });
 
+    // QR 코드가 없는 금형에 자동 생성
+    const moldsWithQR = molds.map(m => {
+      const mold = m.toJSON();
+      if (!mold.qr_code) {
+        mold.qr_code = `MOLD-${mold.id}`;
+      }
+      return mold;
+    });
+
     return res.json({
       success: true,
-      data: molds
+      data: moldsWithQR
     });
   } catch (error) {
     console.error('[Mobile Molds List] Error:', error);
     return res.status(500).json({
       success: false,
       message: '금형 목록 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+/**
+ * QR 코드로 금형 검색 (인증 불필요)
+ * GET /api/v1/mobile/molds/by-qr/:qrCode
+ */
+router.get('/molds/by-qr/:qrCode', async (req, res) => {
+  try {
+    const { qrCode } = req.params;
+    
+    // MOLD-{id} 형식인 경우 ID 추출
+    let moldId = null;
+    if (qrCode.startsWith('MOLD-')) {
+      moldId = parseInt(qrCode.replace('MOLD-', ''));
+    }
+    
+    let mold = null;
+    
+    // 1. qr_code 컬럼으로 검색
+    mold = await MoldSpecification.findOne({
+      where: { qr_code: qrCode }
+    });
+    
+    // 2. MOLD-{id} 형식이면 ID로 검색
+    if (!mold && moldId) {
+      mold = await MoldSpecification.findByPk(moldId);
+    }
+    
+    // 3. mold_code로 검색
+    if (!mold) {
+      mold = await MoldSpecification.findOne({
+        where: { mold_code: qrCode }
+      });
+    }
+    
+    if (!mold) {
+      return res.status(404).json({
+        success: false,
+        message: '해당 QR 코드의 금형을 찾을 수 없습니다.'
+      });
+    }
+
+    const moldData = mold.toJSON();
+    if (!moldData.qr_code) {
+      moldData.qr_code = `MOLD-${moldData.id}`;
+    }
+
+    return res.json({
+      success: true,
+      data: moldData
+    });
+  } catch (error) {
+    console.error('[Mobile Mold by QR] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '금형 조회 중 오류가 발생했습니다.'
     });
   }
 });
