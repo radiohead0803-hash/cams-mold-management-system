@@ -85,30 +85,49 @@ export default function MobileQRScan() {
     setLoading(true)
     setError('')
     
+    console.log('[MobileQRScan] QR Code:', qrCode)
+    
+    // MOLD-{id} 형식에서 ID 추출
+    const extractId = (code) => {
+      const match = code.match(/MOLD-(\d+)/i)
+      return match ? match[1] : code
+    }
+    
+    const moldId = extractId(qrCode)
+    console.log('[MobileQRScan] Extracted ID:', moldId)
+    
     try {
-      // QR 코드로 금형 검색
-      const response = await api.get(`/api/v1/mobile/molds/by-qr/${encodeURIComponent(qrCode)}`)
-      
-      if (response.data.success && response.data.data) {
-        setMold(response.data.data)
-      } else {
-        setError('금형을 찾을 수 없습니다.')
-      }
-    } catch (err) {
-      console.error('Mold fetch error:', err)
-      
-      // ID로 재시도
-      if (/^\d+$/.test(qrCode) || qrCode.startsWith('MOLD-')) {
+      // 1. 먼저 ID로 직접 조회 시도 (가장 확실한 방법)
+      if (moldId && /^\d+$/.test(moldId)) {
         try {
-          const id = qrCode.startsWith('MOLD-') ? qrCode.replace('MOLD-', '') : qrCode
-          const retryRes = await api.get(`/api/v1/mobile/molds/${id}`)
-          if (retryRes.data.success && retryRes.data.data) {
-            setMold(retryRes.data.data)
+          console.log('[MobileQRScan] Trying direct ID lookup:', moldId)
+          const idRes = await api.get(`/api/v1/mobile/molds/${moldId}`)
+          if (idRes.data.success && idRes.data.data) {
+            console.log('[MobileQRScan] Found by ID:', idRes.data.data)
+            setMold(idRes.data.data)
             return
           }
-        } catch (e) {}
+        } catch (e) {
+          console.log('[MobileQRScan] ID lookup failed:', e.message)
+        }
       }
       
+      // 2. QR 코드로 검색
+      try {
+        console.log('[MobileQRScan] Trying QR code lookup:', qrCode)
+        const response = await api.get(`/api/v1/mobile/molds/by-qr/${encodeURIComponent(qrCode)}`)
+        if (response.data.success && response.data.data) {
+          console.log('[MobileQRScan] Found by QR:', response.data.data)
+          setMold(response.data.data)
+          return
+        }
+      } catch (e) {
+        console.log('[MobileQRScan] QR lookup failed:', e.message)
+      }
+      
+      setError('금형을 찾을 수 없습니다. QR 코드를 확인해주세요.')
+    } catch (err) {
+      console.error('[MobileQRScan] Error:', err)
       setError('금형을 찾을 수 없습니다. QR 코드를 확인해주세요.')
     } finally {
       setLoading(false)
