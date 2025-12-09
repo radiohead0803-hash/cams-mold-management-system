@@ -29,10 +29,10 @@ export default function CompanyDetail() {
       }
 
       console.log('업체 상세 조회 요청:', id);
-      console.log('API URL:', `${import.meta.env.VITE_API_URL}/api/v1/companies/${id}`);
+      console.log('API URL:', `${import.meta.env.VITE_API_URL}/companies/${id}`);
       console.log('토큰:', token ? '있음' : '없음');
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -74,7 +74,7 @@ export default function CompanyDetail() {
     try {
       setSaving(true);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies/${id}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

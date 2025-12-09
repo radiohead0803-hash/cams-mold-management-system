@@ -23,7 +23,7 @@ export default function UserRequests() {
     try {
       setLoading(true);
       
-      let url = `${import.meta.env.VITE_API_URL}/api/v1/user-requests?limit=100`;
+      let url = `${import.meta.env.VITE_API_URL}/user-requests?limit=100`;
       if (filter !== 'all') {
         url += `&status=${filter}`;
       }
@@ -60,7 +60,7 @@ export default function UserRequests() {
     if (!confirm('이 요청을 삭제하시겠습니까?')) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/user-requests/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-requests/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -327,7 +327,7 @@ function CreateRequestModal({ onClose, onSuccess }) {
 
   const fetchCompanies = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies?limit=100`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies?limit=100`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -363,7 +363,7 @@ function CreateRequestModal({ onClose, onSuccess }) {
     try {
       setSubmitting(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/user-requests`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-requests`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -553,7 +553,7 @@ function ApproveModal({ request, onClose, onSuccess }) {
     try {
       setSubmitting(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/user-requests/${request.id}/approve`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-requests/${request.id}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -646,7 +646,7 @@ function RejectModal({ request, onClose, onSuccess }) {
     try {
       setSubmitting(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/user-requests/${request.id}/reject`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-requests/${request.id}/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

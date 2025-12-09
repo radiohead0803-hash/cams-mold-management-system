@@ -4,7 +4,7 @@ import { ArrowLeft, Save, Camera, CheckCircle, XCircle, Clock, AlertCircle, File
 import { useAuthStore } from '../stores/authStore';
 import { transferAPI, moldSpecificationAPI, masterDataAPI } from '../lib/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 export default function TransferRequest() {
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ export default function TransferRequest() {
       }
       
       // 업체 목록 로드
-      const companiesRes = await fetch(`${API_URL}/api/v1/companies?limit=100`, {
+      const companiesRes = await fetch(`${API_URL}/companies?limit=100`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const companiesData = await companiesRes.json();
@@ -71,7 +71,7 @@ export default function TransferRequest() {
       
       // 체크리스트 항목 로드 (마스터 템플릿에서 가져오기)
       try {
-        const checklistRes = await fetch(`${API_URL}/api/v1/transfers/checklist/items`, {
+        const checklistRes = await fetch(`${API_URL}/transfers/checklist/items`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const checklistData = await checklistRes.json();

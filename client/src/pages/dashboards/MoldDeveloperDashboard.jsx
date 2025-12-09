@@ -37,7 +37,7 @@ export default function MoldDeveloperDashboard() {
 
   const fetchCompanyStats = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies/stats/all`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies/stats/all`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

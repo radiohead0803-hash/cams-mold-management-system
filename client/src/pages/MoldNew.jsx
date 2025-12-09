@@ -4,7 +4,8 @@ import { ArrowLeft, Save, AlertCircle, CheckCircle, Factory, Building2, Upload, 
 import { useAuthStore } from '../stores/authStore';
 import { masterDataAPI } from '../lib/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// VITE_API_URL이 이미 /api/v1을 포함하므로 baseURL로 사용
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 export default function MoldNew() {
   const navigate = useNavigate();
@@ -108,7 +109,7 @@ export default function MoldNew() {
         return;
       }
       
-      const url = `${API_URL}/api/v1/companies?limit=100`;
+      const url = `${API_BASE_URL}/companies?limit=100`;
       console.log('API 요청 URL:', url);
       console.log('토큰:', token ? '있음' : '없음');
 
@@ -241,7 +242,7 @@ export default function MoldNew() {
         order_date: formData.order_date || null
       };
 
-      const response = await fetch(`${API_URL}/api/v1/mold-specifications`, {
+      const response = await fetch(`${API_BASE_URL}/mold-specifications`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -295,7 +296,7 @@ export default function MoldNew() {
       const formData = new FormData();
       formData.append('file', partImage.file);
 
-      const response = await fetch(`${API_URL}/api/v1/mold-specifications/${specificationId}/part-image`, {
+      const response = await fetch(`${API_BASE_URL}/mold-specifications/${specificationId}/part-image`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

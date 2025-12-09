@@ -31,7 +31,7 @@ export default function CompanyManagement() {
         return;
       }
       
-      let url = `${import.meta.env.VITE_API_URL}/api/v1/companies?limit=100`;
+      let url = `${import.meta.env.VITE_API_URL}/companies?limit=100`;
       if (filter !== 'all') {
         url += `&company_type=${filter}`;
       }
@@ -335,7 +335,7 @@ function AddCompanyModal({ onClose, onSuccess }) {
       console.log('업체 등록 요청:', formData);
       console.log('토큰:', token ? '있음' : '없음');
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/companies`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
