@@ -1,5 +1,11 @@
 {
   "name": "cams-root",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "build": "echo 'No build required for server'",
+    "start": "npm start --prefix server",
+    "install:server": "npm install --prefix server",
+    "postinstall": "npm install --prefix server"
+  }
 }
