@@ -174,7 +174,15 @@ export default function MobileMoldDetailNew() {
       icon: Settings,
       color: 'bg-purple-400',
       items: [
-        { label: '금형개발', subItems: ['개발계획', '금형체크리스트', '금형육성', '경도측정'] },
+        { 
+          label: '금형개발', 
+          subItems: [
+            { label: '개발계획', action: () => navigate(`/mobile/mold/${moldId}/development-plan`) },
+            { label: '금형체크리스트' },
+            { label: '금형육성' },
+            { label: '경도측정' }
+          ] 
+        },
         { label: '금형사양' },
         { label: '변경이력 현황표' }
       ]
@@ -751,20 +759,28 @@ export default function MobileMoldDetailNew() {
                               {item.label}
                             </div>
                             <div className="pl-6 divide-y">
-                              {item.subItems.map((subItem, subIdx) => (
-                                <button
-                                  key={subIdx}
-                                  className="w-full p-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-between"
-                                  onClick={() => {
-                                    // 서브메뉴 액션
-                                    if (subItem === '개발계획') navigate(`/molds/${moldId}?tab=development`)
-                                    else if (subItem === '경도측정') navigate(`/molds/${moldId}/hardness`)
-                                  }}
-                                >
-                                  {subItem}
-                                  <ChevronRight size={12} className="text-gray-300" />
-                                </button>
-                              ))}
+                              {item.subItems.map((subItem, subIdx) => {
+                                const label = typeof subItem === 'string' ? subItem : subItem.label
+                                const action = typeof subItem === 'object' ? subItem.action : null
+                                return (
+                                  <button
+                                    key={subIdx}
+                                    className="w-full p-3 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center justify-between"
+                                    onClick={() => {
+                                      if (action) {
+                                        action()
+                                      } else if (label === '개발계획') {
+                                        navigate(`/mobile/mold/${moldId}/development-plan`)
+                                      } else if (label === '경도측정') {
+                                        navigate(`/molds/${moldId}/hardness`)
+                                      }
+                                    }}
+                                  >
+                                    {label}
+                                    <ChevronRight size={12} className="text-gray-300" />
+                                  </button>
+                                )
+                              })}
                             </div>
                           </div>
                         ) : (
