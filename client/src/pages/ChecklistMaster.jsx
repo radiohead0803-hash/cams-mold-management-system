@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit, Trash2, Copy, CheckCircle, Clock, FileText, X, GripVertical, Save, ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react'
+import { Plus, Edit, Trash2, Copy, CheckCircle, Clock, FileText, X, GripVertical, Save, ChevronDown, ChevronRight, ArrowLeft, Loader2, RefreshCw } from 'lucide-react'
+import api from '../lib/api'
 
 // 12단계 공정 기본값
 const DEFAULT_DEVELOPMENT_STAGES = [
@@ -27,13 +28,41 @@ export default function ChecklistMaster() {
   const [editingStages, setEditingStages] = useState([])
   const [editingCategories, setEditingCategories] = useState([])
   const [editingHardnessStandards, setEditingHardnessStandards] = useState([])
+  const [editingCheckItems, setEditingCheckItems] = useState([]) // 일상/정기점검 항목
   const [expandedCategory, setExpandedCategory] = useState(null)
   const [templateForm, setTemplateForm] = useState({
     name: '',
     version: '1.0',
     type: 'daily',
-    deployedTo: []
+    deployedTo: [],
+    description: ''
   })
+
+  // 일상점검 기본 항목
+  const DEFAULT_DAILY_CHECK_ITEMS = [
+    { id: 1, name: '금형 외관 상태', is_required: true },
+    { id: 2, name: '냉각수 연결 상태', is_required: true },
+    { id: 3, name: '이젝터 작동 상태', is_required: true },
+    { id: 4, name: '슬라이드 작동 상태', is_required: false },
+    { id: 5, name: '게이트 상태', is_required: true },
+    { id: 6, name: '파팅라인 상태', is_required: true }
+  ]
+
+  // 정기점검 기본 항목
+  const DEFAULT_PERIODIC_CHECK_ITEMS = [
+    { id: 1, name: '금형 전체 외관 점검', is_required: true },
+    { id: 2, name: '냉각 채널 청소 상태', is_required: true },
+    { id: 3, name: '이젝터 핀 마모 상태', is_required: true },
+    { id: 4, name: '가이드 핀/부시 마모', is_required: true },
+    { id: 5, name: '슬라이드 마모 상태', is_required: false },
+    { id: 6, name: '스프링 상태', is_required: true },
+    { id: 7, name: '히터/온도센서 상태', is_required: false },
+    { id: 8, name: '핫러너 상태', is_required: false },
+    { id: 9, name: '캐비티/코어 손상', is_required: true },
+    { id: 10, name: '게이트 마모 상태', is_required: true },
+    { id: 11, name: '벤트 상태', is_required: true },
+    { id: 12, name: '볼트/너트 체결 상태', is_required: true }
+  ]
 
   // 금형체크리스트 기본 카테고리 (items 포함)
   const DEFAULT_MOLD_CHECKLIST_CATEGORIES = [
@@ -138,9 +167,40 @@ export default function ChecklistMaster() {
     ]}
   ]
 
-  // 임시 데이터
-  useEffect(() => {
-    // 실제로는 API 호출
+  // API에서 템플릿 목록 로드
+  const loadTemplates = async () => {
+    try {
+      setLoading(true)
+      const response = await api.get('/hq/checklist-templates')
+      if (response.data.success && response.data.data.templates) {
+        // API 데이터를 UI 형식으로 변환
+        const apiTemplates = response.data.data.templates.map(t => ({
+          id: t.id,
+          name: t.template_name,
+          version: t.version || '1.0',
+          status: t.is_active ? 'active' : 'draft',
+          type: t.template_type,
+          itemCount: t.item_count || 0,
+          deployedTo: t.deployed_to || [],
+          lastModified: t.updated_at?.split('T')[0] || t.created_at?.split('T')[0],
+          createdBy: t.created_by || 'admin',
+          description: t.description
+        }))
+        setTemplates(apiTemplates)
+      } else {
+        // API 실패 시 기본 데이터 사용
+        loadDefaultTemplates()
+      }
+    } catch (error) {
+      console.error('Failed to load templates:', error)
+      // API 실패 시 기본 데이터 사용
+      loadDefaultTemplates()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadDefaultTemplates = () => {
     setTemplates([
       {
         id: 1,
@@ -238,6 +298,10 @@ export default function ChecklistMaster() {
       }
     ])
     setLoading(false)
+  }
+
+  useEffect(() => {
+    loadTemplates()
   }, [])
 
   const getStatusBadge = (status) => {
@@ -292,10 +356,25 @@ export default function ChecklistMaster() {
       name: template.name,
       version: template.version,
       type: template.type,
-      deployedTo: template.deployedTo || []
+      deployedTo: template.deployedTo || [],
+      description: template.description || ''
     })
-    // 개발계획 템플릿인 경우 단계 로드
-    if (template.type === 'development') {
+    
+    // 타입별 항목 로드
+    if (template.type === 'daily') {
+      // 일상점검 항목 로드
+      setEditingCheckItems(template.checkItems || [...DEFAULT_DAILY_CHECK_ITEMS])
+      setEditingStages([])
+      setEditingCategories([])
+      setEditingHardnessStandards([])
+    } else if (template.type === 'periodic') {
+      // 정기점검 항목 로드
+      setEditingCheckItems(template.checkItems || [...DEFAULT_PERIODIC_CHECK_ITEMS])
+      setEditingStages([])
+      setEditingCategories([])
+      setEditingHardnessStandards([])
+    } else if (template.type === 'development') {
+      // 개발계획 템플릿인 경우 단계 로드
       setEditingStages(template.stages ? 
         template.stages.map((name, idx) => ({
           id: `stage_${idx}`,
@@ -305,10 +384,13 @@ export default function ChecklistMaster() {
         })) : 
         [...DEFAULT_DEVELOPMENT_STAGES]
       )
+      setEditingCheckItems([])
       setEditingCategories([])
+      setEditingHardnessStandards([])
     } else if (template.type === 'mold_checklist') {
       // 금형체크리스트인 경우 카테고리 로드
       setEditingCategories(template.categories || [...DEFAULT_MOLD_CHECKLIST_CATEGORIES])
+      setEditingCheckItems([])
       setEditingStages([])
       setEditingHardnessStandards([])
     } else if (template.type === 'hardness') {
@@ -321,9 +403,11 @@ export default function ChecklistMaster() {
         { id: 5, grade: 'NAK-80', hardness: 'HRC 37 ~ 41', characteristics: '투명 제품 등 고광택을 중시하는 제품에 적용' },
         { id: 6, grade: 'SKD61', hardness: 'HRC 48 ~ 52', characteristics: '-' }
       ])
+      setEditingCheckItems([])
       setEditingStages([])
       setEditingCategories([])
     } else {
+      setEditingCheckItems([])
       setEditingStages([])
       setEditingCategories([])
       setEditingHardnessStandards([])
@@ -348,6 +432,26 @@ export default function ChecklistMaster() {
 
   const handleRemoveStage = (index) => {
     setEditingStages(prev => prev.filter((_, i) => i !== index))
+  }
+
+  // 일상/정기점검 항목 핸들러
+  const handleCheckItemChange = (index, field, value) => {
+    setEditingCheckItems(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
+  }
+
+  const handleAddCheckItem = () => {
+    setEditingCheckItems(prev => [
+      ...prev,
+      { id: Date.now(), name: '새 점검항목', is_required: false }
+    ])
+  }
+
+  const handleRemoveCheckItem = (index) => {
+    setEditingCheckItems(prev => prev.filter((_, i) => i !== index))
   }
 
   // 금형체크리스트 카테고리 핸들러
@@ -431,7 +535,7 @@ export default function ChecklistMaster() {
     setEditingHardnessStandards(prev => prev.filter((_, i) => i !== index))
   }
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
     // 타입에 따라 itemCount 계산
     let itemCount = 0
     if (templateForm.type === 'development') {
@@ -440,40 +544,66 @@ export default function ChecklistMaster() {
       itemCount = editingCategories.reduce((sum, cat) => sum + (cat.items?.length || 0), 0)
     } else if (templateForm.type === 'hardness') {
       itemCount = editingHardnessStandards.length
+    } else if (templateForm.type === 'daily' || templateForm.type === 'periodic') {
+      itemCount = editingCheckItems.length
     }
 
-    if (editingTemplate) {
-      // 수정
-      setTemplates(prev => prev.map(t => 
-        t.id === editingTemplate.id 
-          ? { 
-              ...t, 
-              ...templateForm,
-              stages: templateForm.type === 'development' ? editingStages.map(s => s.name) : undefined,
-              categories: templateForm.type === 'mold_checklist' ? editingCategories : undefined,
-              hardnessStandards: templateForm.type === 'hardness' ? editingHardnessStandards : undefined,
-              itemCount: itemCount || t.itemCount,
-              lastModified: new Date().toISOString().split('T')[0]
-            } 
-          : t
-      ))
-    } else {
-      // 새로 생성
-      const newTemplate = {
-        id: Date.now(),
-        ...templateForm,
-        status: 'draft',
-        stages: templateForm.type === 'development' ? editingStages.map(s => s.name) : undefined,
-        categories: templateForm.type === 'mold_checklist' ? editingCategories : undefined,
-        hardnessStandards: templateForm.type === 'hardness' ? editingHardnessStandards : undefined,
-        itemCount: itemCount || 0,
-        lastModified: new Date().toISOString().split('T')[0],
-        createdBy: 'admin'
+    try {
+      if (editingTemplate) {
+        // API로 수정
+        await api.put(`/hq/checklist-templates/${editingTemplate.id}`, {
+          template_name: templateForm.name,
+          template_type: templateForm.type,
+          description: templateForm.description,
+          is_active: templateForm.status !== 'draft'
+        })
+
+        // 로컬 상태 업데이트
+        setTemplates(prev => prev.map(t => 
+          t.id === editingTemplate.id 
+            ? { 
+                ...t, 
+                ...templateForm,
+                checkItems: (templateForm.type === 'daily' || templateForm.type === 'periodic') ? editingCheckItems : undefined,
+                stages: templateForm.type === 'development' ? editingStages.map(s => s.name) : undefined,
+                categories: templateForm.type === 'mold_checklist' ? editingCategories : undefined,
+                hardnessStandards: templateForm.type === 'hardness' ? editingHardnessStandards : undefined,
+                itemCount: itemCount || t.itemCount,
+                lastModified: new Date().toISOString().split('T')[0]
+              } 
+            : t
+        ))
+      } else {
+        // API로 새로 생성
+        const response = await api.post('/hq/checklist-templates', {
+          template_name: templateForm.name,
+          template_type: templateForm.type,
+          description: templateForm.description
+        })
+
+        if (response.data.success) {
+          const newId = response.data.data.template.id
+          const newTemplate = {
+            id: newId,
+            ...templateForm,
+            status: 'draft',
+            checkItems: (templateForm.type === 'daily' || templateForm.type === 'periodic') ? editingCheckItems : undefined,
+            stages: templateForm.type === 'development' ? editingStages.map(s => s.name) : undefined,
+            categories: templateForm.type === 'mold_checklist' ? editingCategories : undefined,
+            hardnessStandards: templateForm.type === 'hardness' ? editingHardnessStandards : undefined,
+            itemCount: itemCount || 0,
+            lastModified: new Date().toISOString().split('T')[0],
+            createdBy: 'admin'
+          }
+          setTemplates(prev => [...prev, newTemplate])
+        }
       }
-      setTemplates(prev => [...prev, newTemplate])
+      setShowModal(false)
+      alert('저장되었습니다.')
+    } catch (error) {
+      console.error('Save template error:', error)
+      alert('저장 중 오류가 발생했습니다.')
     }
-    setShowModal(false)
-    alert('저장되었습니다.')
   }
 
   const handleDuplicate = (template) => {
@@ -488,9 +618,16 @@ export default function ChecklistMaster() {
     setTemplates([...templates, newTemplate])
   }
 
-  const handleDelete = (templateId) => {
+  const handleDelete = async (templateId) => {
     if (confirm('정말 삭제하시겠습니까?')) {
-      setTemplates(templates.filter(t => t.id !== templateId))
+      try {
+        await api.delete(`/hq/checklist-templates/${templateId}`)
+        setTemplates(templates.filter(t => t.id !== templateId))
+      } catch (error) {
+        console.error('Delete template error:', error)
+        // API 실패해도 로컬에서는 삭제
+        setTemplates(templates.filter(t => t.id !== templateId))
+      }
     }
   }
 
@@ -672,7 +809,18 @@ export default function ChecklistMaster() {
                         ])
                         setEditingStages([])
                         setEditingCategories([])
+                      } else if (e.target.value === 'daily') {
+                        setEditingCheckItems([...DEFAULT_DAILY_CHECK_ITEMS])
+                        setEditingStages([])
+                        setEditingCategories([])
+                        setEditingHardnessStandards([])
+                      } else if (e.target.value === 'periodic') {
+                        setEditingCheckItems([...DEFAULT_PERIODIC_CHECK_ITEMS])
+                        setEditingStages([])
+                        setEditingCategories([])
+                        setEditingHardnessStandards([])
                       } else {
+                        setEditingCheckItems([])
                         setEditingStages([])
                         setEditingCategories([])
                         setEditingHardnessStandards([])
@@ -727,6 +875,75 @@ export default function ChecklistMaster() {
                   </div>
                 </div>
               </div>
+
+              {/* 일상/정기점검 항목 편집 */}
+              {(templateForm.type === 'daily' || templateForm.type === 'periodic') && editingCheckItems.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">
+                      {templateForm.type === 'daily' ? '일상점검' : '정기점검'} 항목 관리
+                    </h3>
+                    <button
+                      onClick={handleAddCheckItem}
+                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm flex items-center gap-1 hover:bg-blue-200"
+                    >
+                      <Plus size={14} /> 항목 추가
+                    </button>
+                  </div>
+                  
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-12">순서</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">점검 항목</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-20">필수</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {editingCheckItems.map((item, index) => (
+                          <tr key={item.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-2 text-gray-400">
+                                <GripVertical size={16} />
+                                <span className="text-sm font-medium">{index + 1}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2">
+                              <input
+                                type="text"
+                                value={item.name}
+                                onChange={(e) => handleCheckItemChange(index, 'name', e.target.value)}
+                                className="w-full border rounded px-2 py-1 text-sm"
+                              />
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={item.is_required}
+                                onChange={(e) => handleCheckItemChange(index, 'is_required', e.target.checked)}
+                                className="rounded"
+                              />
+                            </td>
+                            <td className="px-4 py-2 text-center">
+                              <button
+                                onClick={() => handleRemoveCheckItem(index)}
+                                className="p-1 text-red-500 hover:bg-red-50 rounded"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    총 {editingCheckItems.length}개 항목 (필수: {editingCheckItems.filter(i => i.is_required).length}개)
+                  </p>
+                </div>
+              )}
 
               {/* 개발계획 단계 편집 */}
               {(templateForm.type === 'development' || editingStages.length > 0) && (

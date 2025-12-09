@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { Box, Hash, Calendar, Gauge, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import api from '../../lib/api';
 
 export default function ChecklistFormPage() {
@@ -11,6 +12,11 @@ export default function ChecklistFormPage() {
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // 생산수량 관련 상태
+  const [productionQty, setProductionQty] = useState('');
+  const [currentShots, setCurrentShots] = useState(mold?.current_shots || mold?.shot_count || 0);
+  const [showMoldInfo, setShowMoldInfo] = useState(true);
 
   if (!instanceId || !template) {
     return (
@@ -52,10 +58,24 @@ export default function ChecklistFormPage() {
           fieldType: item.field_type,
           value: answers[item.id] ?? null
         })),
-        comment: comment.trim() || null
+        comment: comment.trim() || null,
+        productionQty: productionQty ? parseInt(productionQty) : null,
+        currentShots: currentShots
       };
 
       await api.post(`/mobile/checklists/${instanceId}/submit`, payload);
+
+      // 생산수량이 입력된 경우 숏수 업데이트
+      if (productionQty && mold?.id) {
+        try {
+          await api.post(`/mold-specifications/${mold.id}/shots`, {
+            quantity: parseInt(productionQty),
+            source: template.type === 'daily' ? 'daily_check' : 'periodic_check'
+          });
+        } catch (shotErr) {
+          console.error('Shot update error:', shotErr);
+        }
+      }
 
       // 완료 페이지로 이동
       navigate('/mobile/checklist-complete', {
@@ -101,7 +121,7 @@ export default function ChecklistFormPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-xs text-slate-500">금형 코드</div>
-                <div className="text-lg font-bold text-slate-800">{mold.code}</div>
+                <div className="text-lg font-bold text-slate-800">{mold.code || mold.mold_code}</div>
               </div>
               <div className="text-right">
                 <div className="text-xs text-slate-500">점검 종류</div>
@@ -109,6 +129,86 @@ export default function ChecklistFormPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 금형 기본정보 섹션 */}
+        <div className="mx-4 mt-4">
+          <button
+            onClick={() => setShowMoldInfo(!showMoldInfo)}
+            className="w-full bg-white rounded-xl p-3 shadow-sm flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <Box size={18} className="text-blue-600" />
+              <span className="font-semibold text-slate-800">금형 기본정보</span>
+            </div>
+            {showMoldInfo ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+          </button>
+
+          {showMoldInfo && (
+            <div className="bg-white rounded-b-xl -mt-2 pt-4 pb-3 px-4 shadow-sm border-t border-slate-100">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="bg-slate-50 rounded-lg p-2">
+                  <div className="text-xs text-slate-500">금형명</div>
+                  <div className="font-medium text-slate-800 truncate">{mold.name || mold.mold_name || '-'}</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-2">
+                  <div className="text-xs text-slate-500">차종</div>
+                  <div className="font-medium text-slate-800 truncate">{mold.car_model || mold.car_model_name || '-'}</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-2">
+                  <div className="text-xs text-slate-500">캐비티</div>
+                  <div className="font-medium text-slate-800">{mold.cavity_count || mold.cavity || '-'}</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-2">
+                  <div className="text-xs text-slate-500">톤수</div>
+                  <div className="font-medium text-slate-800">{mold.tonnage || '-'}T</div>
+                </div>
+                <div className="bg-blue-50 rounded-lg p-2 col-span-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs text-blue-600">현재 숏수</div>
+                      <div className="font-bold text-blue-800 text-lg">{(currentShots || 0).toLocaleString()} shots</div>
+                    </div>
+                    <Gauge size={24} className="text-blue-400" />
+                  </div>
+                </div>
+              </div>
+
+              {/* 보증숏수 경고 */}
+              {mold.warranty_shots && currentShots >= mold.warranty_shots * 0.9 && (
+                <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-amber-600" />
+                  <span className="text-xs text-amber-700">
+                    보증숏수({mold.warranty_shots?.toLocaleString()})의 {Math.round((currentShots / mold.warranty_shots) * 100)}% 도달
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* 생산수량 입력 섹션 */}
+        <div className="mx-4 mt-4 bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Hash size={18} className="text-emerald-600" />
+            <span className="font-semibold text-slate-800">생산수량 입력</span>
+            <span className="text-xs text-slate-400">(선택)</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              value={productionQty}
+              onChange={(e) => setProductionQty(e.target.value)}
+              placeholder="생산수량 입력"
+              className="flex-1 px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-lg font-medium"
+            />
+            <span className="text-slate-500 font-medium">개</span>
+          </div>
+          {productionQty && (
+            <div className="mt-2 text-xs text-emerald-600">
+              → 점검 완료 시 숏수가 {parseInt(productionQty).toLocaleString()}만큼 증가합니다
+            </div>
+          )}
         </div>
 
         {/* 폼 내용 */}
