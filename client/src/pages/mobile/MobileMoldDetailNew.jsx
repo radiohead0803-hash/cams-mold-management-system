@@ -178,12 +178,12 @@ export default function MobileMoldDetailNew() {
           label: '금형개발', 
           subItems: [
             { label: '개발계획', action: () => navigate(`/mobile/mold/${moldId}/development-plan`) },
-            { label: '금형체크리스트' },
-            { label: '금형육성' },
-            { label: '경도측정' }
+            { label: '금형체크리스트', action: () => navigate(`/mobile/mold/${moldId}/mold-checklist`) },
+            { label: '금형육성', action: () => navigate(`/mobile/mold/${moldId}/nurturing`) },
+            { label: '경도측정', action: () => navigate(`/mobile/mold/${moldId}/hardness`) }
           ] 
         },
-        { label: '금형사양' },
+        { label: '금형사양', action: () => navigate(`/mobile/mold/${moldId}/specification`) },
         { label: '변경이력 현황표' }
       ]
     },
@@ -192,8 +192,8 @@ export default function MobileMoldDetailNew() {
       icon: Thermometer,
       color: 'bg-rose-400',
       items: [
-        { label: '사출조건 관리' },
-        { label: '사출조건 수정관리' },
+        { label: '사출조건 관리', action: () => navigate(`/mobile/mold/${moldId}/injection-condition`) },
+        { label: '사출조건 수정관리', action: () => navigate(`/mobile/mold/${moldId}/injection-condition`) },
         { label: '러너관리' },
         { label: '변경이력 현황표' }
       ]

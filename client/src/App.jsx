@@ -48,6 +48,11 @@ import MobileQRLogin from './pages/mobile/MobileQRLogin'
 import MobileMoldDetail from './pages/mobile/MobileMoldDetailNew'
 import MobileQRScan from './pages/mobile/MobileQRScan'
 import MobileDevelopmentPlan from './pages/mobile/MobileDevelopmentPlan'
+import MobileMoldChecklist from './pages/mobile/MobileMoldChecklist'
+import MobileMoldNurturing from './pages/mobile/MobileMoldNurturing'
+import MobileHardnessMeasurement from './pages/mobile/MobileHardnessMeasurement'
+import MobileMoldSpecification from './pages/mobile/MobileMoldSpecification'
+import MobileInjectionCondition from './pages/mobile/MobileInjectionCondition'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -93,6 +98,11 @@ function App() {
       <Route path="/mobile/mold/:moldId/periodic-check" element={<ChecklistStartPage />} />
       <Route path="/mobile/mold/:moldId/repair-request" element={<RepairRequestListPage />} />
       <Route path="/mobile/mold/:moldId/development-plan" element={<MobileDevelopmentPlan />} />
+      <Route path="/mobile/mold/:moldId/mold-checklist" element={<MobileMoldChecklist />} />
+      <Route path="/mobile/mold/:moldId/nurturing" element={<MobileMoldNurturing />} />
+      <Route path="/mobile/mold/:moldId/hardness" element={<MobileHardnessMeasurement />} />
+      <Route path="/mobile/mold/:moldId/specification" element={<MobileMoldSpecification />} />
+      <Route path="/mobile/mold/:moldId/injection-condition" element={<MobileInjectionCondition />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
