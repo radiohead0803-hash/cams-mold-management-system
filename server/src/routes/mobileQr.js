@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const qrController = require('../controllers/mobileQrController');
 const checklistController = require('../controllers/mobileChecklistController');
+const { MoldSpecification, sequelize } = require('../models/newIndex');
 
 /**
  * QR 코드 스캔 (구버전 호환)
@@ -47,5 +48,62 @@ router.post('/molds/:moldId/checklists/start', checklistController.startChecklis
  * POST /api/v1/mobile/checklists/:instanceId/submit
  */
 router.post('/checklists/:instanceId/submit', checklistController.submitChecklist);
+
+/**
+ * 모바일용 금형 목록 조회 (인증 불필요)
+ * GET /api/v1/mobile/molds/list
+ */
+router.get('/molds/list', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    
+    const molds = await MoldSpecification.findAll({
+      attributes: ['id', 'mold_code', 'part_name', 'car_model', 'status', 'created_at'],
+      order: [['created_at', 'DESC']],
+      limit
+    });
+
+    return res.json({
+      success: true,
+      data: molds
+    });
+  } catch (error) {
+    console.error('[Mobile Molds List] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '금형 목록 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+/**
+ * 모바일용 금형 상세 조회 (인증 불필요)
+ * GET /api/v1/mobile/molds/:id
+ */
+router.get('/molds/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const mold = await MoldSpecification.findByPk(id);
+    
+    if (!mold) {
+      return res.status(404).json({
+        success: false,
+        message: '금형을 찾을 수 없습니다.'
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: mold
+    });
+  } catch (error) {
+    console.error('[Mobile Mold Detail] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '금형 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
 
 module.exports = router;

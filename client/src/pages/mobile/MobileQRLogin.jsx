@@ -52,28 +52,16 @@ export default function MobileQRLogin() {
   const fetchMoldList = async () => {
     setLoadingMolds(true)
     try {
-      // mold-specifications API 사용
-      const response = await api.get('/api/v1/mold-specifications?limit=10')
+      // 모바일 전용 공개 API 사용 (인증 불필요)
+      const response = await api.get('/api/v1/mobile/molds/list?limit=10')
       if (response.data.success && response.data.data) {
         const molds = Array.isArray(response.data.data) 
           ? response.data.data 
-          : response.data.data.specifications || response.data.data.molds || []
+          : []
         setMoldList(molds.slice(0, 8))
       }
     } catch (err) {
-      console.log('[MobileQRLogin] Failed to fetch molds from specifications:', err.message)
-      // 폴백: molds API 시도
-      try {
-        const fallbackRes = await api.get('/api/v1/molds?limit=10')
-        if (fallbackRes.data.success && fallbackRes.data.data) {
-          const molds = Array.isArray(fallbackRes.data.data) 
-            ? fallbackRes.data.data 
-            : fallbackRes.data.data.molds || []
-          setMoldList(molds.slice(0, 8))
-        }
-      } catch (e) {
-        console.log('[MobileQRLogin] Fallback also failed:', e.message)
-      }
+      console.log('[MobileQRLogin] Failed to fetch molds:', err.message)
     } finally {
       setLoadingMolds(false)
     }
@@ -187,30 +175,19 @@ export default function MobileQRLogin() {
         console.log('QR scan API failed, trying direct search...')
       }
 
-      // 2. mold-specifications에서 직접 검색 (mold_code 또는 id)
+      // 2. 모바일 공개 API로 직접 검색 (ID)
       let moldData = null
       
       // ID로 검색 시도
       if (/^\d+$/.test(qrCode)) {
         try {
-          const specRes = await api.get(`/api/v1/mold-specifications/${qrCode}`)
+          const specRes = await api.get(`/api/v1/mobile/molds/${qrCode}`)
           if (specRes.data.success && specRes.data.data) {
             moldData = specRes.data.data
           }
-        } catch (e) {}
-      }
-      
-      // mold_code로 검색 시도
-      if (!moldData) {
-        try {
-          const searchRes = await api.get(`/api/v1/mold-specifications?mold_code=${encodeURIComponent(qrCode)}`)
-          if (searchRes.data.success && searchRes.data.data) {
-            const results = Array.isArray(searchRes.data.data) ? searchRes.data.data : [searchRes.data.data]
-            if (results.length > 0) {
-              moldData = results[0]
-            }
-          }
-        } catch (e) {}
+        } catch (e) {
+          console.log('Mobile mold API failed:', e.message)
+        }
       }
 
       if (moldData) {
