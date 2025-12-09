@@ -124,9 +124,10 @@ export default function MobileMoldDetailNew() {
 
   const loadActivities = async () => {
     try {
+      // 인증이 필요한 API는 에러 시 빈 배열 반환 (401 리다이렉트 방지)
       const [checksRes, repairsRes] = await Promise.all([
-        api.get(`/api/v1/daily-checks?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } })),
-        api.get(`/api/v1/repair-requests?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } }))
+        api.get(`/daily-checks?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } })),
+        api.get(`/repair-requests?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } }))
       ])
 
       const checks = (checksRes.data?.data || []).map(c => ({

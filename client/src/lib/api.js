@@ -32,9 +32,31 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('cams-auth')
-      window.location.href = '/login'
+      // 특정 API는 401이어도 리다이렉트하지 않음 (선택적 데이터 로드)
+      const requestUrl = error.config?.url || ''
+      const skipRedirectPaths = [
+        '/daily-checks',
+        '/repair-requests',
+        '/mold-images',
+        '/notifications'
+      ]
+      
+      const shouldSkipRedirect = skipRedirectPaths.some(path => requestUrl.includes(path))
+      
+      if (!shouldSkipRedirect) {
+        // Token expired or invalid
+        localStorage.removeItem('cams-auth')
+        
+        // 현재 경로에 따라 적절한 로그인 페이지로 이동
+        const currentPath = window.location.pathname
+        if (currentPath.startsWith('/mobile') || currentPath.startsWith('/m/')) {
+          // 모바일 페이지에서는 모바일 QR 로그인으로
+          window.location.href = '/mobile/qr-login'
+        } else {
+          // PC 페이지에서는 일반 로그인으로
+          window.location.href = '/login'
+        }
+      }
     }
     return Promise.reject(error)
   }
