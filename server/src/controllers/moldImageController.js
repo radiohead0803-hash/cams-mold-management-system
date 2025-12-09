@@ -1,5 +1,5 @@
 const logger = require('../utils/logger');
-const pool = require('../config/database');
+const { sequelize } = require('../models/newIndex');
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
@@ -94,11 +94,11 @@ const uploadMoldImage = async (req, res) => {
 
     // is_primary가 true이면 기존 대표 이미지 해제
     if (is_primary === 'true' || is_primary === true) {
-      await pool.query(`
+      await sequelize.query(`
         UPDATE mold_images 
         SET is_primary = false, updated_at = NOW()
-        WHERE (mold_id = $1 OR mold_spec_id = $2) AND image_type = $3
-      `, [mold_id, mold_spec_id, image_type]);
+        WHERE (mold_id = :mold_id OR mold_spec_id = :mold_spec_id) AND image_type = :image_type
+      `, { replacements: { mold_id, mold_spec_id, image_type } });
     }
 
     // DB에 이미지 정보 저장
@@ -117,25 +117,28 @@ const uploadMoldImage = async (req, res) => {
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
         RETURNING *
       `;
-      result = await pool.query(insertQuery, [
-        mold_id || null,
-        mold_spec_id || null,
-        image_type,
-        imageUrl,
-        file.originalname,
-        file.size,
-        file.mimetype,
-        description || null,
-        is_primary === 'true' || is_primary === true,
-        uploaded_by,
-        reference_type || null,
-        reference_id || null,
-        checklist_id || null,
-        checklist_item_id || null,
-        repair_id || null,
-        transfer_id || null,
-        maker_spec_id || null
-      ]);
+      const [rows] = await sequelize.query(insertQuery, {
+        replacements: [
+          mold_id || null,
+          mold_spec_id || null,
+          image_type,
+          imageUrl,
+          file.originalname,
+          file.size,
+          file.mimetype,
+          description || null,
+          is_primary === 'true' || is_primary === true,
+          uploaded_by,
+          reference_type || null,
+          reference_id || null,
+          checklist_id || null,
+          checklist_item_id || null,
+          repair_id || null,
+          transfer_id || null,
+          maker_spec_id || null
+        ]
+      });
+      result = { rows };
     } catch (extendedError) {
       // 확장 컬럼이 없으면 기본 컬럼만 사용
       logger.warn('Extended columns not available, using basic columns:', extendedError.message);
@@ -148,18 +151,21 @@ const uploadMoldImage = async (req, res) => {
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
         RETURNING *
       `;
-      result = await pool.query(basicInsertQuery, [
-        mold_id || null,
-        mold_spec_id || null,
-        image_type,
-        imageUrl,
-        file.originalname,
-        file.size,
-        file.mimetype,
-        description || null,
-        is_primary === 'true' || is_primary === true,
-        uploaded_by
-      ]);
+      const [basicRows] = await sequelize.query(basicInsertQuery, {
+        replacements: [
+          mold_id || null,
+          mold_spec_id || null,
+          image_type,
+          imageUrl,
+          file.originalname,
+          file.size,
+          file.mimetype,
+          description || null,
+          is_primary === 'true' || is_primary === true,
+          uploaded_by
+        ]
+      });
+      result = { rows: basicRows };
     }
 
     const savedImage = result.rows[0];
@@ -167,11 +173,11 @@ const uploadMoldImage = async (req, res) => {
     // 대표 이미지인 경우 mold_specifications 테이블도 업데이트
     if ((is_primary === 'true' || is_primary === true) && mold_spec_id) {
       const columnName = image_type === 'product' ? 'product_image_url' : 'mold_image_url';
-      await pool.query(`
+      await sequelize.query(`
         UPDATE mold_specifications 
-        SET ${columnName} = $1, updated_at = NOW()
-        WHERE id = $2
-      `, [imageUrl, mold_spec_id]);
+        SET ${columnName} = :imageUrl, updated_at = NOW()
+        WHERE id = :mold_spec_id
+      `, { replacements: { imageUrl, mold_spec_id } });
     }
 
     res.status(201).json({
@@ -260,11 +266,11 @@ const getMoldImages = async (req, res) => {
 
     query += ` ORDER BY mi.is_primary DESC, mi.display_order, mi.created_at DESC`;
 
-    const result = await pool.query(query, params);
+    const [rows] = await sequelize.query(query, { replacements: params });
 
     res.json({
       success: true,
-      data: result.rows
+      data: rows
     });
   } catch (error) {
     logger.error('Get mold images error:', error);
@@ -283,39 +289,39 @@ const setPrimaryImage = async (req, res) => {
     const { id } = req.params;
 
     // 현재 이미지 정보 조회
-    const imageResult = await pool.query('SELECT * FROM mold_images WHERE id = $1', [id]);
+    const [imageRows] = await sequelize.query('SELECT * FROM mold_images WHERE id = :id', { replacements: { id } });
     
-    if (imageResult.rows.length === 0) {
+    if (imageRows.length === 0) {
       return res.status(404).json({
         success: false,
         error: { message: '이미지를 찾을 수 없습니다.' }
       });
     }
 
-    const image = imageResult.rows[0];
+    const image = imageRows[0];
 
     // 같은 타입의 기존 대표 이미지 해제
-    await pool.query(`
+    await sequelize.query(`
       UPDATE mold_images 
       SET is_primary = false, updated_at = NOW()
-      WHERE (mold_id = $1 OR mold_spec_id = $2) AND image_type = $3
-    `, [image.mold_id, image.mold_spec_id, image.image_type]);
+      WHERE (mold_id = :mold_id OR mold_spec_id = :mold_spec_id) AND image_type = :image_type
+    `, { replacements: { mold_id: image.mold_id, mold_spec_id: image.mold_spec_id, image_type: image.image_type } });
 
     // 새 대표 이미지 설정
-    await pool.query(`
+    await sequelize.query(`
       UPDATE mold_images 
       SET is_primary = true, updated_at = NOW()
-      WHERE id = $1
-    `, [id]);
+      WHERE id = :id
+    `, { replacements: { id } });
 
     // mold_specifications 테이블 업데이트
     if (image.mold_spec_id) {
       const columnName = image.image_type === 'product' ? 'product_image_url' : 'mold_image_url';
-      await pool.query(`
+      await sequelize.query(`
         UPDATE mold_specifications 
-        SET ${columnName} = $1, updated_at = NOW()
-        WHERE id = $2
-      `, [image.image_url, image.mold_spec_id]);
+        SET ${columnName} = :image_url, updated_at = NOW()
+        WHERE id = :mold_spec_id
+      `, { replacements: { image_url: image.image_url, mold_spec_id: image.mold_spec_id } });
     }
 
     res.json({
@@ -339,16 +345,16 @@ const deleteMoldImage = async (req, res) => {
     const { id } = req.params;
 
     // 이미지 정보 조회
-    const imageResult = await pool.query('SELECT * FROM mold_images WHERE id = $1', [id]);
+    const [deleteImageRows] = await sequelize.query('SELECT * FROM mold_images WHERE id = :id', { replacements: { id } });
     
-    if (imageResult.rows.length === 0) {
+    if (deleteImageRows.length === 0) {
       return res.status(404).json({
         success: false,
         error: { message: '이미지를 찾을 수 없습니다.' }
       });
     }
 
-    const image = imageResult.rows[0];
+    const image = deleteImageRows[0];
 
     // S3에서 삭제 시도 (S3 URL인 경우)
     if (image.image_url && image.image_url.includes('s3.') && process.env.AWS_ACCESS_KEY_ID) {
@@ -364,16 +370,16 @@ const deleteMoldImage = async (req, res) => {
     }
 
     // DB에서 삭제
-    await pool.query('DELETE FROM mold_images WHERE id = $1', [id]);
+    await sequelize.query('DELETE FROM mold_images WHERE id = :id', { replacements: { id } });
 
     // 대표 이미지였다면 mold_specifications 업데이트
     if (image.is_primary && image.mold_spec_id) {
       const columnName = image.image_type === 'product' ? 'product_image_url' : 'mold_image_url';
-      await pool.query(`
+      await sequelize.query(`
         UPDATE mold_specifications 
         SET ${columnName} = NULL, updated_at = NOW()
-        WHERE id = $1
-      `, [image.mold_spec_id]);
+        WHERE id = :mold_spec_id
+      `, { replacements: { mold_spec_id: image.mold_spec_id } });
     }
 
     res.json({
