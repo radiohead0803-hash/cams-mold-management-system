@@ -92,6 +92,7 @@ const dashboardRouter = require('./routes/dashboard');
 const moldsRouter = require('./routes/molds');
 const inspectionsRouter = require('./routes/inspections');
 const moldImagesRouter = require('./routes/moldImages');
+const approvalWorkflowRouter = require('./routes/approvalWorkflow');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -134,6 +135,8 @@ app.use('/api/v1/checklists', checklistFormsRouter);
 app.use('/api/v1/dev', devPlansRouter);
 // Mold images
 app.use('/api/v1/mold-images', moldImagesRouter);
+// Approval workflow (수리요청 승인 워크플로우)
+app.use('/api/v1/workflow', approvalWorkflowRouter);
 
 // Health check
 app.get('/health', (req, res) => {
