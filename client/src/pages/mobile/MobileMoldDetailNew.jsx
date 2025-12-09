@@ -39,6 +39,7 @@ export default function MobileMoldDetailNew() {
   const [showLocationMap, setShowLocationMap] = useState(false)
   const [repairStatus, setRepairStatus] = useState(null)
   const [inspectionStatus, setInspectionStatus] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null) // { type: 'mold' | 'product', url: string }
   const moldImageRef = useRef(null)
   const productImageRef = useRef(null)
 
@@ -269,6 +270,21 @@ export default function MobileMoldDetailNew() {
     }
   }
 
+  // 이미지 삭제 핸들러
+  const handleImageDelete = async (imageType) => {
+    if (!confirm(`${imageType === 'mold' ? '금형' : '제품'} 이미지를 삭제하시겠습니까?`)) return
+
+    try {
+      await moldImageAPI.delete(moldId, imageType)
+      await loadMoldImages()
+      setImagePreview(null)
+      alert('이미지가 삭제되었습니다.')
+    } catch (error) {
+      console.error('Image delete failed:', error)
+      alert('이미지 삭제에 실패했습니다.')
+    }
+  }
+
   // 수리 현황 로드
   const loadRepairStatus = async () => {
     try {
@@ -379,7 +395,7 @@ export default function MobileMoldDetailNew() {
         {/* 정보 탭 */}
         {activeTab === 'info' && (
           <>
-            {/* 이미지 섹션 - 업로드 기능 포함 */}
+            {/* 이미지 섹션 - 업로드/확대/삭제 기능 포함 */}
             {visibleSections.includes('images') && (
               <div className="grid grid-cols-2 gap-3">
                 {/* 금형 이미지 */}
@@ -389,21 +405,34 @@ export default function MobileMoldDetailNew() {
                       <Camera size={14} className="text-purple-600" />
                       <span className="text-xs font-medium">금형</span>
                     </div>
-                    <button
-                      onClick={() => moldImageRef.current?.click()}
-                      className="text-xs text-blue-600 flex items-center gap-1"
-                      disabled={uploadingImage === 'mold'}
-                    >
-                      {uploadingImage === 'mold' ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <Upload size={12} />
+                    <div className="flex items-center gap-2">
+                      {moldImages.mold && (
+                        <button
+                          onClick={() => setImagePreview({ type: 'mold', url: moldImages.mold })}
+                          className="text-xs text-gray-500"
+                        >
+                          <Eye size={12} />
+                        </button>
                       )}
-                    </button>
+                      <button
+                        onClick={() => moldImageRef.current?.click()}
+                        className="text-xs text-blue-600"
+                        disabled={uploadingImage === 'mold'}
+                      >
+                        {uploadingImage === 'mold' ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Upload size={12} />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div 
                     className="aspect-square bg-gray-100 flex items-center justify-center relative cursor-pointer"
-                    onClick={() => moldImageRef.current?.click()}
+                    onClick={() => moldImages.mold 
+                      ? setImagePreview({ type: 'mold', url: moldImages.mold })
+                      : moldImageRef.current?.click()
+                    }
                   >
                     {moldImages.mold ? (
                       <img src={moldImages.mold} alt="금형" className="w-full h-full object-cover" />
@@ -431,21 +460,34 @@ export default function MobileMoldDetailNew() {
                       <Box size={14} className="text-blue-600" />
                       <span className="text-xs font-medium">제품</span>
                     </div>
-                    <button
-                      onClick={() => productImageRef.current?.click()}
-                      className="text-xs text-blue-600 flex items-center gap-1"
-                      disabled={uploadingImage === 'product'}
-                    >
-                      {uploadingImage === 'product' ? (
-                        <Loader2 size={12} className="animate-spin" />
-                      ) : (
-                        <Upload size={12} />
+                    <div className="flex items-center gap-2">
+                      {moldImages.product && (
+                        <button
+                          onClick={() => setImagePreview({ type: 'product', url: moldImages.product })}
+                          className="text-xs text-gray-500"
+                        >
+                          <Eye size={12} />
+                        </button>
                       )}
-                    </button>
+                      <button
+                        onClick={() => productImageRef.current?.click()}
+                        className="text-xs text-blue-600"
+                        disabled={uploadingImage === 'product'}
+                      >
+                        {uploadingImage === 'product' ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Upload size={12} />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div 
                     className="aspect-square bg-gray-100 flex items-center justify-center relative cursor-pointer"
-                    onClick={() => productImageRef.current?.click()}
+                    onClick={() => moldImages.product 
+                      ? setImagePreview({ type: 'product', url: moldImages.product })
+                      : productImageRef.current?.click()
+                    }
                   >
                     {moldImages.product ? (
                       <img src={moldImages.product} alt="제품" className="w-full h-full object-cover" />
@@ -1068,6 +1110,93 @@ export default function MobileMoldDetailNew() {
                 지도 앱에서 열기
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 이미지 미리보기 모달 */}
+      {imagePreview && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex flex-col"
+          onClick={() => setImagePreview(null)}
+        >
+          {/* 헤더 */}
+          <div className="flex items-center justify-between p-4 text-white">
+            <span className="font-medium">
+              {imagePreview.type === 'mold' ? '금형 이미지' : '제품 이미지'}
+            </span>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (imagePreview.type === 'mold') {
+                    moldImageRef.current?.click()
+                  } else {
+                    productImageRef.current?.click()
+                  }
+                  setImagePreview(null)
+                }}
+                className="p-2 hover:bg-white/20 rounded-full"
+              >
+                <Upload size={20} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleImageDelete(imagePreview.type)
+                }}
+                className="p-2 hover:bg-red-500/50 rounded-full text-red-400"
+              >
+                <X size={20} />
+              </button>
+              <button
+                onClick={() => setImagePreview(null)}
+                className="p-2 hover:bg-white/20 rounded-full"
+              >
+                <X size={24} />
+              </button>
+            </div>
+          </div>
+          
+          {/* 이미지 */}
+          <div 
+            className="flex-1 flex items-center justify-center p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={imagePreview.url} 
+              alt={imagePreview.type === 'mold' ? '금형' : '제품'}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+          
+          {/* 하단 버튼 */}
+          <div className="p-4 flex gap-3">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                if (imagePreview.type === 'mold') {
+                  moldImageRef.current?.click()
+                } else {
+                  productImageRef.current?.click()
+                }
+                setImagePreview(null)
+              }}
+              className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+            >
+              <Upload size={18} />
+              새 이미지 업로드
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleImageDelete(imagePreview.type)
+              }}
+              className="py-3 px-6 bg-red-600 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+            >
+              <X size={18} />
+              삭제
+            </button>
           </div>
         </div>
       )}
