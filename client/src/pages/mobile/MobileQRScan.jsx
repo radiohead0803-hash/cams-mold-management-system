@@ -101,7 +101,8 @@ export default function MobileQRScan() {
       if (moldId && /^\d+$/.test(moldId)) {
         try {
           console.log('[MobileQRScan] Trying direct ID lookup:', moldId)
-          const idRes = await api.get(`/api/v1/mobile/mold/${moldId}`)
+          // api.js의 baseURL이 이미 /api/v1을 포함하므로 /mobile/mold만 사용
+          const idRes = await api.get(`/mobile/mold/${moldId}`)
           if (idRes.data.success && idRes.data.data) {
             console.log('[MobileQRScan] Found by ID:', idRes.data.data)
             setMold(idRes.data.data)
@@ -115,7 +116,7 @@ export default function MobileQRScan() {
       // 2. QR 코드로 검색
       try {
         console.log('[MobileQRScan] Trying QR code lookup:', qrCode)
-        const response = await api.get(`/api/v1/mobile/molds/by-qr/${encodeURIComponent(qrCode)}`)
+        const response = await api.get(`/mobile/molds/by-qr/${encodeURIComponent(qrCode)}`)
         if (response.data.success && response.data.data) {
           console.log('[MobileQRScan] Found by QR:', response.data.data)
           setMold(response.data.data)
