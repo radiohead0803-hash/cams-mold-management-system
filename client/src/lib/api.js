@@ -1,11 +1,12 @@
 import axios from 'axios'
 
 // Railway 배포 URL (프로덕션)
-const PRODUCTION_API_URL = 'https://cams-mold-management-system-production-b7d0.up.railway.app'
-const API_URL = import.meta.env.VITE_API_URL || PRODUCTION_API_URL || 'http://localhost:3001'
+const PRODUCTION_API_URL = 'https://cams-mold-management-system-production-b7d0.up.railway.app/api/v1'
+// VITE_API_URL이 이미 /api/v1을 포함하면 그대로 사용, 아니면 /api/v1 추가
+const API_URL = import.meta.env.VITE_API_URL || PRODUCTION_API_URL || 'http://localhost:3001/api/v1'
 
 const api = axios.create({
-  baseURL: `${API_URL}/api/v1`,
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
