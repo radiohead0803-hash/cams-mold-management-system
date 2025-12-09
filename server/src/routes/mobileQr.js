@@ -145,9 +145,10 @@ router.get('/molds/by-qr/:qrCode', async (req, res) => {
 
 /**
  * 모바일용 금형 상세 조회 (인증 불필요)
- * GET /api/v1/mobile/molds/:id
+ * GET /api/v1/mobile/molds/detail/:id
+ * GET /api/v1/mobile/mold/:id (별칭)
  */
-router.get('/molds/:id', async (req, res) => {
+router.get('/molds/detail/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -160,9 +161,46 @@ router.get('/molds/:id', async (req, res) => {
       });
     }
 
+    const moldData = mold.toJSON();
+    if (!moldData.qr_code) {
+      moldData.qr_code = `MOLD-${moldData.id}`;
+    }
+
     return res.json({
       success: true,
-      data: mold
+      data: moldData
+    });
+  } catch (error) {
+    console.error('[Mobile Mold Detail] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '금형 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 별칭 라우트
+router.get('/mold/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const mold = await MoldSpecification.findByPk(id);
+    
+    if (!mold) {
+      return res.status(404).json({
+        success: false,
+        message: '금형을 찾을 수 없습니다.'
+      });
+    }
+
+    const moldData = mold.toJSON();
+    if (!moldData.qr_code) {
+      moldData.qr_code = `MOLD-${moldData.id}`;
+    }
+
+    return res.json({
+      success: true,
+      data: moldData
     });
   } catch (error) {
     console.error('[Mobile Mold Detail] Error:', error);

@@ -101,7 +101,7 @@ export default function MobileQRScan() {
       if (moldId && /^\d+$/.test(moldId)) {
         try {
           console.log('[MobileQRScan] Trying direct ID lookup:', moldId)
-          const idRes = await api.get(`/api/v1/mobile/molds/${moldId}`)
+          const idRes = await api.get(`/api/v1/mobile/mold/${moldId}`)
           if (idRes.data.success && idRes.data.data) {
             console.log('[MobileQRScan] Found by ID:', idRes.data.data)
             setMold(idRes.data.data)
