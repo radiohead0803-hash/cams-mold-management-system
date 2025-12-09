@@ -40,29 +40,39 @@ export default function ChecklistMaster() {
 
   // 일상점검 기본 항목
   const DEFAULT_DAILY_CHECK_ITEMS = [
-    { id: 1, name: '금형 외관 상태', is_required: true },
-    { id: 2, name: '냉각수 연결 상태', is_required: true },
-    { id: 3, name: '이젝터 작동 상태', is_required: true },
-    { id: 4, name: '슬라이드 작동 상태', is_required: false },
-    { id: 5, name: '게이트 상태', is_required: true },
-    { id: 6, name: '파팅라인 상태', is_required: true }
+    { id: 1, name: '금형 외관 상태', is_required: true, field_type: 'boolean' },
+    { id: 2, name: '냉각수 연결 상태', is_required: true, field_type: 'boolean' },
+    { id: 3, name: '이젝터 작동 상태', is_required: true, field_type: 'boolean' },
+    { id: 4, name: '슬라이드 작동 상태', is_required: false, field_type: 'boolean' },
+    { id: 5, name: '게이트 상태', is_required: true, field_type: 'boolean' },
+    { id: 6, name: '파팅라인 상태', is_required: true, field_type: 'boolean' },
+    { id: 7, name: '생산수량', is_required: false, field_type: 'number', is_production_qty: true }
   ]
 
   // 정기점검 기본 항목
   const DEFAULT_PERIODIC_CHECK_ITEMS = [
-    { id: 1, name: '금형 전체 외관 점검', is_required: true },
-    { id: 2, name: '냉각 채널 청소 상태', is_required: true },
-    { id: 3, name: '이젝터 핀 마모 상태', is_required: true },
-    { id: 4, name: '가이드 핀/부시 마모', is_required: true },
-    { id: 5, name: '슬라이드 마모 상태', is_required: false },
-    { id: 6, name: '스프링 상태', is_required: true },
-    { id: 7, name: '히터/온도센서 상태', is_required: false },
-    { id: 8, name: '핫러너 상태', is_required: false },
-    { id: 9, name: '캐비티/코어 손상', is_required: true },
-    { id: 10, name: '게이트 마모 상태', is_required: true },
-    { id: 11, name: '벤트 상태', is_required: true },
-    { id: 12, name: '볼트/너트 체결 상태', is_required: true }
+    { id: 1, name: '금형 전체 외관 점검', is_required: true, field_type: 'boolean' },
+    { id: 2, name: '냉각 채널 청소 상태', is_required: true, field_type: 'boolean' },
+    { id: 3, name: '이젝터 핀 마모 상태', is_required: true, field_type: 'boolean' },
+    { id: 4, name: '가이드 핀/부시 마모', is_required: true, field_type: 'boolean' },
+    { id: 5, name: '슬라이드 마모 상태', is_required: false, field_type: 'boolean' },
+    { id: 6, name: '스프링 상태', is_required: true, field_type: 'boolean' },
+    { id: 7, name: '히터/온도센서 상태', is_required: false, field_type: 'boolean' },
+    { id: 8, name: '핫러너 상태', is_required: false, field_type: 'boolean' },
+    { id: 9, name: '캐비티/코어 손상', is_required: true, field_type: 'boolean' },
+    { id: 10, name: '게이트 마모 상태', is_required: true, field_type: 'boolean' },
+    { id: 11, name: '벤트 상태', is_required: true, field_type: 'boolean' },
+    { id: 12, name: '볼트/너트 체결 상태', is_required: true, field_type: 'boolean' },
+    { id: 13, name: '생산수량', is_required: false, field_type: 'number', is_production_qty: true }
   ]
+
+  // 숏수 기반 알림 설정
+  const [shotAlertSettings, setShotAlertSettings] = useState({
+    enableWarning: true,
+    warningPercentage: 90,
+    enableUrgent: true,
+    urgentPercentage: 100
+  })
 
   // 금형체크리스트 기본 카테고리 (items 포함)
   const DEFAULT_MOLD_CHECKLIST_CATEGORIES = [
@@ -76,7 +86,7 @@ export default function ChecklistMaster() {
       { id: 2, name: '양산차 조건 제작 사양 반영' },
       { id: 3, name: '수축률' },
       { id: 4, name: '금형 중량' },
-      { id: 5, name: '범퍼 히트파팅 적용' },
+      { id: 5, name: '범퍼 히든파팅 적용' },
       { id: 6, name: '캐비티 재질' },
       { id: 7, name: '코어 재질' },
       { id: 8, name: '캐비티 수' },
@@ -446,7 +456,7 @@ export default function ChecklistMaster() {
   const handleAddCheckItem = () => {
     setEditingCheckItems(prev => [
       ...prev,
-      { id: Date.now(), name: '새 점검항목', is_required: false }
+      { id: Date.now(), name: '새 점검항목', is_required: false, field_type: 'boolean', is_production_qty: false }
     ])
   }
 
@@ -895,22 +905,24 @@ export default function ChecklistMaster() {
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-12">순서</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">점검 항목</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-20">필수</th>
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">삭제</th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 w-10">순서</th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500">점검 항목</th>
+                          <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 w-24">필드 유형</th>
+                          <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 w-14">필수</th>
+                          <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 w-14">숏수</th>
+                          <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 w-12">삭제</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
                         {editingCheckItems.map((item, index) => (
-                          <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-2">
-                              <div className="flex items-center gap-2 text-gray-400">
-                                <GripVertical size={16} />
-                                <span className="text-sm font-medium">{index + 1}</span>
+                          <tr key={item.id} className={`hover:bg-gray-50 ${item.is_production_qty ? 'bg-emerald-50' : ''}`}>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-1 text-gray-400">
+                                <GripVertical size={14} />
+                                <span className="text-xs font-medium">{index + 1}</span>
                               </div>
                             </td>
-                            <td className="px-4 py-2">
+                            <td className="px-3 py-2">
                               <input
                                 type="text"
                                 value={item.name}
@@ -918,7 +930,18 @@ export default function ChecklistMaster() {
                                 className="w-full border rounded px-2 py-1 text-sm"
                               />
                             </td>
-                            <td className="px-4 py-2 text-center">
+                            <td className="px-3 py-2">
+                              <select
+                                value={item.field_type || 'boolean'}
+                                onChange={(e) => handleCheckItemChange(index, 'field_type', e.target.value)}
+                                className="w-full border rounded px-1 py-1 text-xs"
+                              >
+                                <option value="boolean">예/아니오</option>
+                                <option value="number">숫자</option>
+                                <option value="text">텍스트</option>
+                              </select>
+                            </td>
+                            <td className="px-3 py-2 text-center">
                               <input
                                 type="checkbox"
                                 checked={item.is_required}
@@ -926,7 +949,16 @@ export default function ChecklistMaster() {
                                 className="rounded"
                               />
                             </td>
-                            <td className="px-4 py-2 text-center">
+                            <td className="px-3 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={item.is_production_qty || false}
+                                onChange={(e) => handleCheckItemChange(index, 'is_production_qty', e.target.checked)}
+                                className="rounded accent-emerald-500"
+                                title="생산수량 항목 (숏수 연동)"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-center">
                               <button
                                 onClick={() => handleRemoveCheckItem(index)}
                                 className="p-1 text-red-500 hover:bg-red-50 rounded"
@@ -940,8 +972,56 @@ export default function ChecklistMaster() {
                     </table>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">
-                    총 {editingCheckItems.length}개 항목 (필수: {editingCheckItems.filter(i => i.is_required).length}개)
+                    총 {editingCheckItems.length}개 항목 (필수: {editingCheckItems.filter(i => i.is_required).length}개, 
+                    숏수연동: {editingCheckItems.filter(i => i.is_production_qty).length}개)
                   </p>
+
+                  {/* 숏수 기반 알림 설정 */}
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <h4 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      숏수 기반 알림 설정
+                    </h4>
+                    <div className="space-y-3">
+                      <label className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={shotAlertSettings.enableWarning}
+                          onChange={(e) => setShotAlertSettings(prev => ({ ...prev, enableWarning: e.target.checked }))}
+                          className="rounded accent-amber-500"
+                        />
+                        <span className="text-sm text-amber-800">보증숏수</span>
+                        <input
+                          type="number"
+                          value={shotAlertSettings.warningPercentage}
+                          onChange={(e) => setShotAlertSettings(prev => ({ ...prev, warningPercentage: parseInt(e.target.value) }))}
+                          className="w-16 border rounded px-2 py-1 text-sm text-center"
+                        />
+                        <span className="text-sm text-amber-800">% 도달 시 경고 알림</span>
+                      </label>
+                      <label className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={shotAlertSettings.enableUrgent}
+                          onChange={(e) => setShotAlertSettings(prev => ({ ...prev, enableUrgent: e.target.checked }))}
+                          className="rounded accent-red-500"
+                        />
+                        <span className="text-sm text-amber-800">보증숏수</span>
+                        <input
+                          type="number"
+                          value={shotAlertSettings.urgentPercentage}
+                          onChange={(e) => setShotAlertSettings(prev => ({ ...prev, urgentPercentage: parseInt(e.target.value) }))}
+                          className="w-16 border rounded px-2 py-1 text-sm text-center"
+                        />
+                        <span className="text-sm text-amber-800">% 도달 시 긴급 알림</span>
+                      </label>
+                    </div>
+                    <p className="text-xs text-amber-600 mt-2">
+                      * 생산수량 입력 시 숏수가 자동으로 누적되며, 설정된 비율 도달 시 알림이 발송됩니다.
+                    </p>
+                  </div>
                 </div>
               )}
 
