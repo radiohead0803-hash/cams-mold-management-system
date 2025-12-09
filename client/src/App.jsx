@@ -46,6 +46,7 @@ import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
 import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
 import MobileQRLogin from './pages/mobile/MobileQRLogin'
 import MobileMoldDetail from './pages/mobile/MobileMoldDetail'
+import MobileQRScan from './pages/mobile/MobileQRScan'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -78,6 +79,11 @@ function App() {
       <Route path="/repair-request" element={<RepairRequestPage />} />
       <Route path="/periodic-inspection" element={<PeriodicAlias />} />
       <Route path="/daily-checklist" element={<DailyAlias />} />
+      
+      {/* Mobile Routes - 외부 QR 스캔 앱 (네이버 등) 지원 */}
+      <Route path="/m/qr/:qrCode" element={<MobileQRScan />} />
+      <Route path="/m/qr" element={<MobileQRScan />} />
+      <Route path="/qr/:qrCode" element={<MobileQRScan />} />
       
       {/* Mobile Routes - 새로운 QR 로그인 플로우 */}
       <Route path="/mobile/qr-login" element={<MobileQRLogin />} />
