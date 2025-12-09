@@ -33,6 +33,9 @@ export default function MobileQRLogin() {
   // 공통 상태
   const [error, setError] = useState('')
   const [cameraError, setCameraError] = useState('')
+  const [moldList, setMoldList] = useState([])
+  const [loadingMolds, setLoadingMolds] = useState(false)
+  const [manualCode, setManualCode] = useState('')
 
   // 이미 로그인된 경우 스캔 단계로
   useEffect(() => {
@@ -40,6 +43,28 @@ export default function MobileQRLogin() {
       setStep('scan')
     }
   }, [isAuthenticated, user])
+
+  // DB에서 금형 목록 가져오기
+  useEffect(() => {
+    fetchMoldList()
+  }, [])
+
+  const fetchMoldList = async () => {
+    setLoadingMolds(true)
+    try {
+      const response = await api.get('/api/v1/molds?limit=10')
+      if (response.data.success && response.data.data) {
+        const molds = Array.isArray(response.data.data) 
+          ? response.data.data 
+          : response.data.data.molds || []
+        setMoldList(molds.slice(0, 8))
+      }
+    } catch (err) {
+      console.log('[MobileQRLogin] Failed to fetch molds:', err.message)
+    } finally {
+      setLoadingMolds(false)
+    }
+  }
 
   // Cleanup
   useEffect(() => {
@@ -369,15 +394,59 @@ export default function MobileQRLogin() {
             <div className="flex gap-2">
               <input
                 type="text"
+                value={manualCode}
+                onChange={(e) => setManualCode(e.target.value)}
                 placeholder="금형 코드 입력 (예: M2024-001)"
                 className="flex-1 px-4 py-3 border border-gray-300 rounded-lg"
                 onKeyPress={(e) => {
                   if (e.key === 'Enter') {
-                    handleManualInput(e.target.value)
+                    handleManualInput(manualCode)
                   }
                 }}
               />
+              <button
+                onClick={() => handleManualInput(manualCode)}
+                className="px-4 py-3 bg-primary-600 text-white rounded-lg font-medium"
+              >
+                검색
+              </button>
             </div>
+
+            {/* DB 금형 목록 */}
+            <div className="relative mt-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-50 text-gray-500">등록된 금형 목록 (DB)</span>
+              </div>
+            </div>
+
+            {loadingMolds ? (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                금형 목록 로딩 중...
+              </div>
+            ) : moldList.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                {moldList.map((mold) => (
+                  <button
+                    key={mold.id}
+                    onClick={() => handleManualInput(mold.mold_code || mold.moldCode)}
+                    className="text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors"
+                  >
+                    <div className="text-sm font-semibold text-gray-900 truncate">
+                      {mold.mold_name || mold.moldName || mold.part_name || mold.mold_code}
+                    </div>
+                    <div className="text-xs text-primary-600 font-medium">{mold.mold_code || mold.moldCode}</div>
+                    <div className="text-xs text-gray-500">{mold.car_model || '-'} | {mold.status || 'active'}</div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-400 text-sm">
+                등록된 금형이 없습니다
+              </div>
+            )}
           </div>
         )}
 

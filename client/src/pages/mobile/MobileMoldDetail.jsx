@@ -25,6 +25,8 @@ export default function MobileMoldDetail() {
   const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('info') // 'info' | 'work' | 'history'
   const [showQRCode, setShowQRCode] = useState(false)
+  const [activities, setActivities] = useState([])
+  const [loadingActivities, setLoadingActivities] = useState(false)
   
   // 사용자 역할
   const role = user?.user_type || user?.role || location.state?.role || 'plant'
@@ -34,6 +36,48 @@ export default function MobileMoldDetail() {
       fetchMoldDetail()
     }
   }, [moldId])
+
+  // 활동 이력 가져오기
+  useEffect(() => {
+    if (activeTab === 'history' && moldId) {
+      fetchActivities()
+    }
+  }, [activeTab, moldId])
+
+  const fetchActivities = async () => {
+    setLoadingActivities(true)
+    try {
+      // 점검 이력 조회
+      const checksRes = await api.get(`/api/daily-checks?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } }))
+      // 수리 이력 조회
+      const repairsRes = await api.get(`/api/v1/repair-requests?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } }))
+      
+      const checks = (checksRes.data?.data || []).map(c => ({
+        type: 'check',
+        title: '일상점검 완료',
+        status: c.overall_status || c.status,
+        time: c.created_at || c.check_date
+      }))
+      
+      const repairs = (repairsRes.data?.data || []).map(r => ({
+        type: 'repair',
+        title: r.status === 'completed' ? '수리 완료' : '수리요청 접수',
+        status: r.status,
+        time: r.created_at || r.request_date
+      }))
+      
+      // 시간순 정렬
+      const combined = [...checks, ...repairs].sort((a, b) => 
+        new Date(b.time) - new Date(a.time)
+      ).slice(0, 10)
+      
+      setActivities(combined)
+    } catch (err) {
+      console.error('Failed to fetch activities:', err)
+    } finally {
+      setLoadingActivities(false)
+    }
+  }
 
   const fetchMoldDetail = async () => {
     try {
@@ -567,53 +611,63 @@ export default function MobileMoldDetail() {
         {activeTab === 'history' && (
           <div className="bg-white rounded-lg shadow-sm p-4">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">최근 활동</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+            {loadingActivities ? (
+              <div className="text-center py-8 text-gray-500 text-sm">
+                이력 로딩 중...
+              </div>
+            ) : activities.length > 0 ? (
+              <div className="space-y-3">
+                {activities.map((activity, idx) => (
+                  <div key={idx} className="flex items-center gap-3 text-sm">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      activity.type === 'check' ? 'bg-green-100' :
+                      activity.type === 'repair' ? 'bg-orange-100' :
+                      activity.type === 'transfer' ? 'bg-cyan-100' :
+                      'bg-blue-100'
+                    }`}>
+                      {activity.type === 'check' ? <CheckCircle className="w-4 h-4 text-green-600" /> :
+                       activity.type === 'repair' ? <Wrench className="w-4 h-4 text-orange-600" /> :
+                       activity.type === 'transfer' ? <Truck className="w-4 h-4 text-cyan-600" /> :
+                       <Activity className="w-4 h-4 text-blue-600" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-gray-900">{activity.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {activity.time ? new Date(activity.time).toLocaleDateString('ko-KR', {
+                          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                        }) : '-'}
+                        {activity.status && ` • ${activity.status}`}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* 기본 샘플 데이터 */}
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-900">일상점검 완료</p>
+                    <p className="text-xs text-gray-500">최근 점검 기록 없음</p>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-gray-900">일상점검 완료</p>
-                  <p className="text-xs text-gray-500">2시간 전</p>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <Wrench className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-900">수리 이력</p>
+                    <p className="text-xs text-gray-500">최근 수리 기록 없음</p>
+                  </div>
+                </div>
+                <div className="text-center py-2 text-gray-400 text-xs">
+                  이력 데이터가 없습니다
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <Activity className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-gray-900">생산수량 입력 (500개)</p>
-                  <p className="text-xs text-gray-500">4시간 전</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Wrench className="w-4 h-4 text-orange-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-gray-900">수리요청 접수</p>
-                  <p className="text-xs text-gray-500">1일 전</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-8 h-8 bg-cyan-100 rounded-full flex items-center justify-center">
-                  <Truck className="w-4 h-4 text-cyan-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-gray-900">금형 이관 완료</p>
-                  <p className="text-xs text-gray-500">3일 전 - 생산2공장 → 생산1공장</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 text-sm">
-                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                  <Calendar className="w-4 h-4 text-purple-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-gray-900">정기점검 완료</p>
-                  <p className="text-xs text-gray-500">1주 전</p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>
