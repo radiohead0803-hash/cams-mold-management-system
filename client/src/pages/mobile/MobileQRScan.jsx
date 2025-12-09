@@ -109,6 +109,27 @@ export default function MobileQRScan() {
     }
   }
 
+  // 테스트 계정 자동 로그인
+  const quickLogin = async (testUsername, testPassword) => {
+    setUsername(testUsername)
+    setPassword(testPassword)
+    setLoginError('')
+    setLoginLoading(true)
+
+    try {
+      const response = await authAPI.login({ username: testUsername, password: testPassword })
+      const { token, user: userData } = response.data.data
+      
+      login(userData, token)
+      navigateToWorkspace(mold, userData)
+    } catch (err) {
+      console.error('Quick login error:', err)
+      setLoginError(err.response?.data?.message || '로그인에 실패했습니다.')
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
   const navigateToWorkspace = (moldData, userData) => {
     const role = userData.user_type || userData.role
     
@@ -280,13 +301,34 @@ export default function MobileQRScan() {
             </button>
           </form>
 
-          {/* 테스트 계정 안내 */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500 mb-2">테스트 계정</p>
-            <div className="space-y-1 text-xs">
-              <p><span className="font-medium">금형개발:</span> developer / dev123</p>
-              <p><span className="font-medium">제작처:</span> maker1 / maker123</p>
-              <p><span className="font-medium">생산처:</span> plant1 / plant123</p>
+          {/* 테스트 계정 자동 로그인 */}
+          <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            <p className="text-sm font-semibold text-purple-700 mb-3">🔧 테스트용 빠른 로그인</p>
+            <div className="space-y-2">
+              <button
+                onClick={() => quickLogin('developer', 'dev123')}
+                disabled={loginLoading}
+                className="w-full p-3 bg-white border border-purple-300 rounded-lg text-left hover:bg-purple-50 disabled:opacity-50"
+              >
+                <div className="font-semibold text-purple-900">금형개발 담당자</div>
+                <div className="text-xs text-purple-600">developer / 본사 (파란색)</div>
+              </button>
+              <button
+                onClick={() => quickLogin('maker1', 'maker123')}
+                disabled={loginLoading}
+                className="w-full p-3 bg-white border border-purple-300 rounded-lg text-left hover:bg-purple-50 disabled:opacity-50"
+              >
+                <div className="font-semibold text-purple-900">제작처 담당자</div>
+                <div className="text-xs text-purple-600">maker1 / A제작소 (주황색)</div>
+              </button>
+              <button
+                onClick={() => quickLogin('plant1', 'plant123')}
+                disabled={loginLoading}
+                className="w-full p-3 bg-white border border-purple-300 rounded-lg text-left hover:bg-purple-50 disabled:opacity-50"
+              >
+                <div className="font-semibold text-purple-900">생산처 담당자</div>
+                <div className="text-xs text-purple-600">plant1 / 생산공장1 (초록색)</div>
+              </button>
             </div>
           </div>
         </div>
