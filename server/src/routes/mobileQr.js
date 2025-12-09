@@ -173,4 +173,41 @@ router.get('/molds/:id', async (req, res) => {
   }
 });
 
+/**
+ * 모든 금형의 QR 코드 및 URL 업데이트 (관리자용)
+ * POST /api/v1/mobile/molds/update-qr-codes
+ */
+router.post('/molds/update-qr-codes', async (req, res) => {
+  try {
+    const baseUrl = req.body.baseUrl || 'https://spirited-liberation-production-1a4d.up.railway.app';
+    
+    // 모든 금형 조회
+    const molds = await MoldSpecification.findAll();
+    
+    let updated = 0;
+    for (const mold of molds) {
+      const qrCode = `MOLD-${mold.id}`;
+      const qrUrl = `${baseUrl}/m/qr/${qrCode}`;
+      
+      await mold.update({
+        qr_code: qrCode,
+        qr_url: qrUrl
+      });
+      updated++;
+    }
+
+    return res.json({
+      success: true,
+      message: `${updated}개 금형의 QR 코드가 업데이트되었습니다.`,
+      data: { updated, baseUrl }
+    });
+  } catch (error) {
+    console.error('[Update QR Codes] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'QR 코드 업데이트 중 오류가 발생했습니다.'
+    });
+  }
+});
+
 module.exports = router;

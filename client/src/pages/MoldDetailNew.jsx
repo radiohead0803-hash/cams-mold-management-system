@@ -676,19 +676,23 @@ export default function MoldDetailNew() {
                     <span className="text-sm font-medium text-gray-700">정기점검</span>
                   </button>
                 </div>
-                {/* QR 코드 */}
+                {/* QR 코드 - 스캔 시 모바일 페이지로 이동 */}
                 <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4 flex flex-col items-center justify-center">
                   <p className="text-xs text-gray-500 mb-2 font-medium">금형 QR 코드</p>
                   {(() => {
-                    // QR 토큰 찾기 (여러 경로 시도)
-                    const qrToken = mold?.mold?.qr_token || mold?.qr_token || mold?.mold_code || `MOLD-${id}`;
-                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(qrToken)}`;
+                    // QR 코드: MOLD-{id} 형식
+                    const qrCode = mold?.qr_code || `MOLD-${mold?.id || id}`;
+                    // 모바일 URL로 QR 생성 (네이버 등 외부 앱에서 스캔 시 바로 접속)
+                    const mobileUrl = `https://spirited-liberation-production-1a4d.up.railway.app/m/qr/${qrCode}`;
+                    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(mobileUrl)}`;
                     return (
                       <>
                         <img 
-                          src={qrUrl}
+                          src={qrImageUrl}
                           alt="QR Code"
-                          className="w-24 h-24 rounded-lg shadow-sm"
+                          className="w-24 h-24 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => window.open(mobileUrl, '_blank')}
+                          title="클릭하여 모바일 페이지 열기"
                           onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'flex';
@@ -697,9 +701,10 @@ export default function MoldDetailNew() {
                         <div className="w-24 h-24 bg-gray-200 rounded-lg items-center justify-center hidden">
                           <span className="text-xs text-gray-400">QR 오류</span>
                         </div>
-                        <p className="text-xs text-gray-400 mt-2 text-center break-all max-w-full">
-                          {qrToken}
+                        <p className="text-xs text-gray-400 mt-2 text-center">
+                          {qrCode}
                         </p>
+                        <p className="text-xs text-blue-500 mt-1">스캔 시 모바일 페이지 이동</p>
                       </>
                     );
                   })()}
