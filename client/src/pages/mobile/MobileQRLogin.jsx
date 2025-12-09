@@ -52,15 +52,28 @@ export default function MobileQRLogin() {
   const fetchMoldList = async () => {
     setLoadingMolds(true)
     try {
-      const response = await api.get('/api/v1/molds?limit=10')
+      // mold-specifications API 사용
+      const response = await api.get('/api/v1/mold-specifications?limit=10')
       if (response.data.success && response.data.data) {
         const molds = Array.isArray(response.data.data) 
           ? response.data.data 
-          : response.data.data.molds || []
+          : response.data.data.specifications || response.data.data.molds || []
         setMoldList(molds.slice(0, 8))
       }
     } catch (err) {
-      console.log('[MobileQRLogin] Failed to fetch molds:', err.message)
+      console.log('[MobileQRLogin] Failed to fetch molds from specifications:', err.message)
+      // 폴백: molds API 시도
+      try {
+        const fallbackRes = await api.get('/api/v1/molds?limit=10')
+        if (fallbackRes.data.success && fallbackRes.data.data) {
+          const molds = Array.isArray(fallbackRes.data.data) 
+            ? fallbackRes.data.data 
+            : fallbackRes.data.data.molds || []
+          setMoldList(molds.slice(0, 8))
+        }
+      } catch (e) {
+        console.log('[MobileQRLogin] Fallback also failed:', e.message)
+      }
     } finally {
       setLoadingMolds(false)
     }
@@ -156,22 +169,60 @@ export default function MobileQRLogin() {
     setError('')
     
     try {
-      // QR 코드로 금형 정보 조회
-      const response = await api.post('/api/v1/mobile/qr/scan', { code: qrCode })
+      // 1. QR 스캔 API 시도
+      try {
+        const response = await api.post('/api/v1/mobile/qr/scan', { code: qrCode })
+        if (response.data.success && response.data.data?.mold) {
+          const moldData = response.data.data.mold
+          setScannedMold({ ...moldData, qrCode })
+          
+          if (isAuthenticated && user) {
+            navigateToMoldPage(moldData, user)
+          } else {
+            setStep('login')
+          }
+          return
+        }
+      } catch (e) {
+        console.log('QR scan API failed, trying direct search...')
+      }
+
+      // 2. mold-specifications에서 직접 검색 (mold_code 또는 id)
+      let moldData = null
       
-      if (response.data.success) {
-        setScannedMold({
-          ...response.data.data.mold,
-          qrCode: qrCode
-        })
+      // ID로 검색 시도
+      if (/^\d+$/.test(qrCode)) {
+        try {
+          const specRes = await api.get(`/api/v1/mold-specifications/${qrCode}`)
+          if (specRes.data.success && specRes.data.data) {
+            moldData = specRes.data.data
+          }
+        } catch (e) {}
+      }
+      
+      // mold_code로 검색 시도
+      if (!moldData) {
+        try {
+          const searchRes = await api.get(`/api/v1/mold-specifications?mold_code=${encodeURIComponent(qrCode)}`)
+          if (searchRes.data.success && searchRes.data.data) {
+            const results = Array.isArray(searchRes.data.data) ? searchRes.data.data : [searchRes.data.data]
+            if (results.length > 0) {
+              moldData = results[0]
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (moldData) {
+        setScannedMold({ ...moldData, qrCode })
         
-        // 이미 로그인된 경우 바로 금형 페이지로
         if (isAuthenticated && user) {
-          navigateToMoldPage(response.data.data.mold, user)
+          navigateToMoldPage(moldData, user)
         } else {
-          // 로그인 필요
           setStep('login')
         }
+      } else {
+        setError('금형을 찾을 수 없습니다. 코드를 확인해주세요.')
       }
     } catch (err) {
       console.error('QR scan error:', err)
@@ -431,13 +482,13 @@ export default function MobileQRLogin() {
                 {moldList.map((mold) => (
                   <button
                     key={mold.id}
-                    onClick={() => handleManualInput(mold.mold_code || mold.moldCode)}
+                    onClick={() => handleManualInput(String(mold.id))}
                     className="text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors"
                   >
                     <div className="text-sm font-semibold text-gray-900 truncate">
-                      {mold.mold_name || mold.moldName || mold.part_name || mold.mold_code}
+                      {mold.part_name || mold.mold_name || mold.mold_code || `금형 #${mold.id}`}
                     </div>
-                    <div className="text-xs text-primary-600 font-medium">{mold.mold_code || mold.moldCode}</div>
+                    <div className="text-xs text-primary-600 font-medium">{mold.mold_code || `ID: ${mold.id}`}</div>
                     <div className="text-xs text-gray-500">{mold.car_model || '-'} | {mold.status || 'active'}</div>
                   </button>
                 ))}
