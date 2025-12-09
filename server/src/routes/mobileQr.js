@@ -18,6 +18,25 @@ router.post('/qr/scan', qrController.scanQr);
 router.get('/qr/scan', qrController.scanQr);
 
 /**
+ * QR 코드로 로그인 (세션 생성)
+ * POST /api/v1/mobile/qr/login
+ * Body: { code: "QR-MOLD-001", userId: 1, gps: { lat, lng }, deviceInfo: {} }
+ */
+router.post('/qr/login', qrController.qrLogin);
+
+/**
+ * QR 세션 검증
+ * GET /api/v1/mobile/qr/session/:token
+ */
+router.get('/qr/session/:token', qrController.validateSession);
+
+/**
+ * QR 세션 종료
+ * POST /api/v1/mobile/qr/session/:token/end
+ */
+router.post('/qr/session/:token/end', qrController.endSession);
+
+/**
  * 점검 세션 시작
  * POST /api/v1/mobile/molds/:moldId/checklists/start
  */

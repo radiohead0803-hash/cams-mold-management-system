@@ -36,7 +36,7 @@ class QRSession extends Model {
         },
         user_id: {
           type: DataTypes.INTEGER,
-          allowNull: false,
+          allowNull: true, // 비로그인 상태에서도 QR 스캔 가능
           references: {
             model: 'users',
             key: 'id'

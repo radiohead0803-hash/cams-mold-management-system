@@ -37,6 +37,30 @@ export default function QRLogin() {
   const [stream, setStream] = useState(null)
   const [scanInterval, setScanInterval] = useState(null)
   const [detectedQR, setDetectedQR] = useState(null)
+  const [moldList, setMoldList] = useState([]) // DB에서 가져온 금형 목록
+  const [loadingMolds, setLoadingMolds] = useState(false)
+
+  // DB에서 금형 목록 가져오기
+  useEffect(() => {
+    const fetchMolds = async () => {
+      setLoadingMolds(true)
+      try {
+        const response = await api.get('/api/v1/molds?limit=10')
+        if (response.data.success && response.data.data) {
+          // data가 배열인 경우와 객체인 경우 모두 처리
+          const molds = Array.isArray(response.data.data) 
+            ? response.data.data 
+            : response.data.data.molds || []
+          setMoldList(molds.slice(0, 6)) // 최대 6개만 표시
+        }
+      } catch (err) {
+        console.log('[QRLogin] Failed to fetch molds:', err.message)
+      } finally {
+        setLoadingMolds(false)
+      }
+    }
+    fetchMolds()
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -71,7 +95,20 @@ export default function QRLogin() {
       }
     } catch (err) {
       console.error('Camera error:', err)
-      setCameraError('카메라에 접근할 수 없습니다. 권한을 확인해주세요.')
+      // 에러 유형별 상세 메시지
+      if (err.name === 'NotAllowedError') {
+        setCameraError('카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.')
+      } else if (err.name === 'NotFoundError') {
+        setCameraError('카메라를 찾을 수 없습니다. 카메라가 연결되어 있는지 확인해주세요.')
+      } else if (err.name === 'NotReadableError') {
+        setCameraError('카메라가 다른 앱에서 사용 중입니다. 다른 앱을 종료 후 다시 시도해주세요.')
+      } else if (err.name === 'OverconstrainedError') {
+        setCameraError('요청한 카메라 설정을 지원하지 않습니다.')
+      } else if (err.name === 'SecurityError') {
+        setCameraError('보안 정책으로 카메라 접근이 차단되었습니다. HTTPS 연결이 필요합니다.')
+      } else {
+        setCameraError('카메라에 접근할 수 없습니다. 권한을 확인해주세요.')
+      }
     }
   }
 
@@ -384,31 +421,41 @@ export default function QRLogin() {
               <div className="w-full border-t border-purple-300"></div>
             </div>
             <div className="relative flex justify-center text-xs">
-              <span className="px-2 bg-gradient-to-br from-purple-50 to-purple-100 text-purple-600">QR 코드 테스트</span>
+              <span className="px-2 bg-gradient-to-br from-purple-50 to-purple-100 text-purple-600">QR 코드 테스트 (DB 연동)</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <button
-              onClick={() => handleManualQRInput('QR-MOLD-001')}
-              className="text-left px-3 py-2 bg-white border border-purple-300 rounded hover:bg-purple-50 transition-colors"
-            >
-              <div className="text-xs font-semibold text-purple-900">금형 #001</div>
-              <div className="text-xs text-purple-600">QR-MOLD-001</div>
-            </button>
-            <button
-              onClick={() => handleManualQRInput('QR-MOLD-002')}
-              className="text-left px-3 py-2 bg-white border border-purple-300 rounded hover:bg-purple-50 transition-colors"
-            >
-              <div className="text-xs font-semibold text-purple-900">금형 #002</div>
-              <div className="text-xs text-purple-600">QR-MOLD-002</div>
-            </button>
-          </div>
+          {/* DB에서 가져온 금형 목록 */}
+          {loadingMolds ? (
+            <div className="text-center py-4 text-purple-600 text-sm">
+              금형 목록 로딩 중...
+            </div>
+          ) : moldList.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2 mb-3 max-h-48 overflow-y-auto">
+              {moldList.map((mold) => (
+                <button
+                  key={mold.id}
+                  onClick={() => handleManualQRInput(mold.mold_code || mold.moldCode)}
+                  className="text-left px-3 py-2 bg-white border border-purple-300 rounded hover:bg-purple-50 transition-colors"
+                >
+                  <div className="text-xs font-semibold text-purple-900 truncate">
+                    {mold.mold_name || mold.moldName || mold.mold_code || mold.moldCode}
+                  </div>
+                  <div className="text-xs text-purple-600">{mold.mold_code || mold.moldCode}</div>
+                  <div className="text-xs text-gray-500">{mold.status || 'active'}</div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-2 text-gray-500 text-xs mb-3">
+              등록된 금형이 없습니다
+            </div>
+          )}
 
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="QR 코드 값 입력 (예: QR-MOLD-003)"
+              placeholder="QR 코드 값 직접 입력 (예: M2024-001)"
               className="input text-sm flex-1"
               onKeyPress={(e) => {
                 if (e.key === 'Enter' && e.target.value) {

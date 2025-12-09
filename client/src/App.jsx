@@ -44,6 +44,8 @@ import MoldSpecification from './pages/MoldSpecification'
 import MoldOverviewPage from './pages/mobile/MoldOverviewPage'
 import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
 import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
+import MobileQRLogin from './pages/mobile/MobileQRLogin'
+import MobileMoldDetail from './pages/mobile/MobileMoldDetail'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -77,7 +79,14 @@ function App() {
       <Route path="/periodic-inspection" element={<PeriodicAlias />} />
       <Route path="/daily-checklist" element={<DailyAlias />} />
       
-      {/* Mobile Routes */}
+      {/* Mobile Routes - 새로운 QR 로그인 플로우 */}
+      <Route path="/mobile/qr-login" element={<MobileQRLogin />} />
+      <Route path="/mobile/mold/:moldId" element={<MobileMoldDetail />} />
+      <Route path="/mobile/mold/:moldId/daily-check" element={<ChecklistStartPage />} />
+      <Route path="/mobile/mold/:moldId/periodic-check" element={<ChecklistStartPage />} />
+      <Route path="/mobile/mold/:moldId/repair-request" element={<RepairRequestListPage />} />
+      
+      {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
       <Route path="/mobile/molds/:moldId/check/:category" element={<ChecklistStartPage />} />
       <Route path="/mobile/molds/:moldId/repair/requests" element={<RepairRequestListPage />} />

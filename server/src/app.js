@@ -85,6 +85,7 @@ const hqMoldsRouter = require('./routes/hqMolds');
 const carModelsRouter = require('./routes/admin/carModels');
 const mobileMoldsRouter = require('./routes/mobileMolds');
 const mobileQrRouter = require('./routes/mobileQr');
+const mobileDashboardRouter = require('./routes/mobileDashboard');
 const repairRequestsRouter = require('./routes/repairRequests');
 const notificationsRouter = require('./routes/notifications');
 const dashboardRouter = require('./routes/dashboard');
