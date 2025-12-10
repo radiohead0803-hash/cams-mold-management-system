@@ -12,10 +12,12 @@ import { useAuthStore } from '../stores/authStore';
 /**
  * PC 수리요청 양식 페이지
  * 프로세스 기준 섹션 구분:
- * 1. 요청 단계 (Plant): 기본정보 + 사진
+ * 1. 요청 단계 (Plant): 기본정보 + 사진 + 카테고리(EO/현실화/돌발)
  * 2. 제품/금형 정보: 자동연동 (읽기전용)
- * 3. 수리 단계 (Maker): 수리정보
- * 4. 완료/관리 단계 (HQ): 관리정보
+ * 3. 수리처 선정 (Plant/개발담당자): 수리처 선정 → 개발담당자 승인
+ * 4. 귀책 협의 (개발담당자): 귀책 판정
+ * 5. 수리 단계 (Maker): 수리정보
+ * 6. 완료/관리 단계 (HQ): 관리정보
  */
 export default function RepairRequestForm() {
   const navigate = useNavigate();
@@ -33,6 +35,8 @@ export default function RepairRequestForm() {
   const [expandedSections, setExpandedSections] = useState({
     request: true,    // 요청 단계
     product: true,    // 제품/금형 정보
+    repairShop: false, // 수리처 선정
+    liability: false,  // 귀책 협의
     repair: false,    // 수리 단계
     complete: false   // 완료/관리 단계
   });
@@ -45,6 +49,7 @@ export default function RepairRequestForm() {
     occurred_date: new Date().toISOString().split('T')[0], // 발생일
     problem_type: '',                               // 문제 유형
     occurrence_type: '신규',                        // 발생 유형 (신규/재발)
+    repair_category: '',                            // 수리 카테고리 (EO/현실화/돌발)
     requester_name: user?.name || '',               // 요청자
     contact: '',                                    // 연락처
     
@@ -56,16 +61,35 @@ export default function RepairRequestForm() {
     production_site: '',                            // 생산처
     production_shot: '',                            // 현재 타수
     
+    // ===== 수리처 선정 (Plant/개발담당자 작성) =====
+    repair_shop_type: '',                           // 수리처 유형 (자체/외주)
+    repair_company: '',                             // 수리업체
+    repair_shop_selected_by: '',                    // 수리처 선정자
+    repair_shop_selected_date: '',                  // 수리처 선정일
+    repair_shop_approval_status: '대기',            // 수리처 승인상태 (대기/승인/반려)
+    repair_shop_approved_by: '',                    // 수리처 승인자 (개발담당자)
+    repair_shop_approved_date: '',                  // 수리처 승인일
+    repair_shop_rejection_reason: '',               // 수리처 반려사유
+    
+    // ===== 귀책 협의 (개발담당자 작성) =====
+    liability_type: '',                             // 귀책 유형 (제작처/생산처/공동/기타)
+    liability_ratio_maker: '',                      // 제작처 귀책비율 (%)
+    liability_ratio_plant: '',                      // 생산처 귀책비율 (%)
+    liability_reason: '',                           // 귀책 판정 사유
+    liability_decided_by: '',                       // 귀책 판정자
+    liability_decided_date: '',                     // 귀책 판정일
+    
     // ===== 수리 단계 (Maker 작성) =====
     status: '요청접수',                             // 진행상태
     manager_name: '',                               // 담당자
     temporary_action: '',                           // 임시 조치 내용
     root_cause_action: '',                          // 근본 원인 조치
-    repair_company: '',                             // 수리업체
     repair_cost: '',                                // 수리비용
     repair_duration: '',                            // 수리기간
     completion_date: '',                            // 완료예정일
     mold_arrival_date: '',                          // 금형 입고일
+    repair_start_date: '',                          // 수리 시작일
+    repair_end_date: '',                            // 수리 완료일
     
     // ===== 완료/관리 단계 (HQ 작성) =====
     operation_type: '양산',                         // 운영 유형
@@ -217,11 +241,17 @@ export default function RepairRequestForm() {
   };
 
   const priorityOptions = ['높음', '보통', '낮음'];
-  const statusOptions = ['요청접수', '검토중', '수리진행', '수리완료', '승인대기', '반려'];
+  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '귀책협의', '수리진행', '수리완료', '검수중', '완료'];
   const occurrenceOptions = ['신규', '재발'];
   const operationOptions = ['양산', '개발', '시작'];
   const problemTypeOptions = ['내구성', '외관', '치수', '기능', '기타'];
+  const repairCategoryOptions = ['EO', '현실화', '돌발'];  // 수리 카테고리
+  const repairShopTypeOptions = ['자체', '외주'];  // 수리처 유형
+  const liabilityTypeOptions = ['제작처', '생산처', '공동', '기타'];  // 귀책 유형
   const managementTypeOptions = ['전산공유(L1)', '일반', '긴급'];
+  
+  const isDeveloper = ['mold_developer', 'system_admin'].includes(user?.user_type);
+  const isRepairShopApproved = formData.repair_shop_approval_status === '승인';
 
   if (loading) {
     return (
@@ -377,6 +407,34 @@ export default function RepairRequestForm() {
                     </button>
                     <span className="text-sm text-slate-400">또는 이미지를 드래그하세요</span>
                   </div>
+                </div>
+              </div>
+
+              {/* 수리 카테고리 (EO/현실화/돌발) */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  수리 카테고리 <span className="text-red-500">*</span>
+                </label>
+                <div className="flex gap-3">
+                  {repairCategoryOptions.map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => handleChange('repair_category', opt)}
+                      className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
+                        formData.repair_category === opt
+                          ? opt === 'EO' ? 'bg-blue-500 text-white border-blue-500'
+                            : opt === '현실화' ? 'bg-green-500 text-white border-green-500'
+                            : 'bg-red-500 text-white border-red-500'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      {opt}
+                      {opt === 'EO' && <span className="block text-xs mt-1 opacity-80">설계변경</span>}
+                      {opt === '현실화' && <span className="block text-xs mt-1 opacity-80">양산준비</span>}
+                      {opt === '돌발' && <span className="block text-xs mt-1 opacity-80">긴급수리</span>}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -539,7 +597,274 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 3. 수리 단계 (Maker 작성) ===== */}
+        {/* ===== 3. 수리처 선정 (Plant/개발담당자 작성) ===== */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <button
+            onClick={() => toggleSection('repairShop')}
+            className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-cyan-50 to-teal-50 border-b border-slate-200"
+          >
+            <div className="flex items-center gap-3">
+              <Building className="w-5 h-5 text-cyan-600" />
+              <span className="font-semibold text-slate-800">3. 수리처 선정</span>
+              <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">Plant/개발담당자</span>
+              {formData.repair_shop_approval_status === '승인' && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <CheckCircle size={12} /> 승인됨
+                </span>
+              )}
+              {formData.repair_shop_approval_status === '반려' && (
+                <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <AlertCircle size={12} /> 반려
+                </span>
+              )}
+            </div>
+            {expandedSections.repairShop ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          
+          {expandedSections.repairShop && (
+            <div className="p-6 space-y-4">
+              {/* 수리처 유형 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">수리처 유형</label>
+                <div className="flex gap-3">
+                  {repairShopTypeOptions.map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => handleChange('repair_shop_type', opt)}
+                      className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
+                        formData.repair_shop_type === opt
+                          ? 'bg-cyan-500 text-white border-cyan-500'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      {opt}
+                      {opt === '자체' && <span className="block text-xs mt-1 opacity-80">사내 수리</span>}
+                      {opt === '외주' && <span className="block text-xs mt-1 opacity-80">외부 업체</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 수리업체, 선정자, 선정일 */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">수리업체</label>
+                  <input
+                    type="text"
+                    value={formData.repair_company}
+                    onChange={(e) => handleChange('repair_company', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-cyan-500"
+                    placeholder="수리업체명"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">선정자</label>
+                  <input
+                    type="text"
+                    value={formData.repair_shop_selected_by || user?.name || ''}
+                    onChange={(e) => handleChange('repair_shop_selected_by', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-cyan-500"
+                    placeholder="선정자명"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">선정일</label>
+                  <input
+                    type="date"
+                    value={formData.repair_shop_selected_date}
+                    onChange={(e) => handleChange('repair_shop_selected_date', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-cyan-500"
+                  />
+                </div>
+              </div>
+
+              {/* 승인 상태 (개발담당자만 수정 가능) */}
+              <div className="p-4 bg-slate-50 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-medium text-slate-700">개발담당자 승인</label>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    formData.repair_shop_approval_status === '승인' ? 'bg-green-100 text-green-700' :
+                    formData.repair_shop_approval_status === '반려' ? 'bg-red-100 text-red-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {formData.repair_shop_approval_status || '대기'}
+                  </span>
+                </div>
+                
+                {isDeveloper && formData.repair_shop_approval_status !== '승인' && (
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleChange('repair_shop_approval_status', '승인');
+                          handleChange('repair_shop_approved_by', user?.name || '');
+                          handleChange('repair_shop_approved_date', new Date().toISOString().split('T')[0]);
+                        }}
+                        className="flex-1 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600"
+                      >
+                        승인
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const reason = prompt('반려 사유를 입력하세요:');
+                          if (reason) {
+                            handleChange('repair_shop_approval_status', '반려');
+                            handleChange('repair_shop_rejection_reason', reason);
+                            handleChange('repair_shop_approved_by', user?.name || '');
+                            handleChange('repair_shop_approved_date', new Date().toISOString().split('T')[0]);
+                          }
+                        }}
+                        className="flex-1 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600"
+                      >
+                        반려
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {formData.repair_shop_approved_by && (
+                  <div className="mt-3 text-sm text-slate-600">
+                    <p>승인자: {formData.repair_shop_approved_by}</p>
+                    <p>승인일: {formData.repair_shop_approved_date}</p>
+                    {formData.repair_shop_rejection_reason && (
+                      <p className="text-red-600">반려사유: {formData.repair_shop_rejection_reason}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 4. 귀책 협의 (개발담당자 작성) ===== */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <button
+            onClick={() => toggleSection('liability')}
+            className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-violet-50 to-purple-50 border-b border-slate-200"
+          >
+            <div className="flex items-center gap-3">
+              <ClipboardList className="w-5 h-5 text-violet-600" />
+              <span className="font-semibold text-slate-800">4. 귀책 협의</span>
+              <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">개발담당자</span>
+              {!isRepairShopApproved && (
+                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
+              )}
+            </div>
+            {expandedSections.liability ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          
+          {expandedSections.liability && (
+            <div className={`p-6 space-y-4 ${!isRepairShopApproved ? 'opacity-50 pointer-events-none' : ''}`}>
+              {!isRepairShopApproved && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                  <AlertCircle size={16} className="inline mr-2" />
+                  수리처 선정이 승인된 후 귀책 협의를 진행할 수 있습니다.
+                </div>
+              )}
+
+              {/* 귀책 유형 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">귀책 유형</label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {liabilityTypeOptions.map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => handleChange('liability_type', opt)}
+                      disabled={!isRepairShopApproved}
+                      className={`py-3 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
+                        formData.liability_type === opt
+                          ? 'bg-violet-500 text-white border-violet-500'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 귀책 비율 (공동인 경우) */}
+              {formData.liability_type === '공동' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">제작처 귀책비율 (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.liability_ratio_maker}
+                      onChange={(e) => {
+                        handleChange('liability_ratio_maker', e.target.value);
+                        handleChange('liability_ratio_plant', String(100 - Number(e.target.value)));
+                      }}
+                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">생산처 귀책비율 (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.liability_ratio_plant}
+                      onChange={(e) => {
+                        handleChange('liability_ratio_plant', e.target.value);
+                        handleChange('liability_ratio_maker', String(100 - Number(e.target.value)));
+                      }}
+                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 귀책 판정 사유 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">귀책 판정 사유</label>
+                <textarea
+                  value={formData.liability_reason}
+                  onChange={(e) => handleChange('liability_reason', e.target.value)}
+                  rows={3}
+                  disabled={!isRepairShopApproved}
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+                  placeholder="귀책 판정 사유를 입력하세요"
+                />
+              </div>
+
+              {/* 판정자, 판정일 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">판정자</label>
+                  <input
+                    type="text"
+                    value={formData.liability_decided_by || (isDeveloper ? user?.name : '')}
+                    onChange={(e) => handleChange('liability_decided_by', e.target.value)}
+                    disabled={!isRepairShopApproved || !isDeveloper}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
+                    placeholder="판정자명"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">판정일</label>
+                  <input
+                    type="date"
+                    value={formData.liability_decided_date}
+                    onChange={(e) => handleChange('liability_decided_date', e.target.value)}
+                    disabled={!isRepairShopApproved || !isDeveloper}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 5. 수리 단계 (Maker 작성) ===== */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('repair')}
@@ -547,21 +872,32 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <Wrench className="w-5 h-5 text-green-600" />
-              <span className="font-semibold text-slate-800">3. 수리 단계</span>
+              <span className="font-semibold text-slate-800">5. 수리 단계</span>
               <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Maker 작성</span>
+              {!isRepairShopApproved && (
+                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
+              )}
             </div>
             {expandedSections.repair ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
           
           {expandedSections.repair && (
-            <div className="p-6 space-y-4">
-              {/* 진행상태, 담당자 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className={`p-6 space-y-4 ${!isRepairShopApproved ? 'opacity-50 pointer-events-none' : ''}`}>
+              {!isRepairShopApproved && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                  <AlertCircle size={16} className="inline mr-2" />
+                  수리처 선정이 승인된 후 수리를 진행할 수 있습니다.
+                </div>
+              )}
+
+              {/* 진행상태, 담당자, 금형입고일 */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">진행상태</label>
                   <select
                     value={formData.status}
                     onChange={(e) => handleChange('status', e.target.value)}
+                    disabled={!isRepairShopApproved}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   >
                     {statusOptions.map(opt => (
@@ -575,18 +911,9 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.manager_name}
                     onChange={(e) => handleChange('manager_name', e.target.value)}
+                    disabled={!isRepairShopApproved}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                     placeholder="담당자명"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">수리업체</label>
-                  <input
-                    type="text"
-                    value={formData.repair_company}
-                    onChange={(e) => handleChange('repair_company', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
-                    placeholder="수리업체명"
                   />
                 </div>
                 <div>
@@ -595,6 +922,7 @@ export default function RepairRequestForm() {
                     type="date"
                     value={formData.mold_arrival_date}
                     onChange={(e) => handleChange('mold_arrival_date', e.target.value)}
+                    disabled={!isRepairShopApproved}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -607,6 +935,7 @@ export default function RepairRequestForm() {
                   value={formData.temporary_action}
                   onChange={(e) => handleChange('temporary_action', e.target.value)}
                   rows={2}
+                  disabled={!isRepairShopApproved}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   placeholder="임시 조치 내용을 입력하세요"
                 />
@@ -619,21 +948,32 @@ export default function RepairRequestForm() {
                   value={formData.root_cause_action}
                   onChange={(e) => handleChange('root_cause_action', e.target.value)}
                   rows={2}
+                  disabled={!isRepairShopApproved}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   placeholder="근본 원인 조치 내용을 입력하세요"
                 />
               </div>
 
-              {/* 수리비용, 수리기간, 완료예정일 */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {/* 수리 일정 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">수리비용</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">수리 시작일</label>
                   <input
-                    type="text"
-                    value={formData.repair_cost}
-                    onChange={(e) => handleChange('repair_cost', e.target.value)}
+                    type="date"
+                    value={formData.repair_start_date}
+                    onChange={(e) => handleChange('repair_start_date', e.target.value)}
+                    disabled={!isRepairShopApproved}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
-                    placeholder="₩"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">수리 완료일</label>
+                  <input
+                    type="date"
+                    value={formData.repair_end_date}
+                    onChange={(e) => handleChange('repair_end_date', e.target.value)}
+                    disabled={!isRepairShopApproved}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   />
                 </div>
                 <div>
@@ -642,6 +982,7 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.repair_duration}
                     onChange={(e) => handleChange('repair_duration', e.target.value)}
+                    disabled={!isRepairShopApproved}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                     placeholder="예: 3일"
                   />
@@ -652,7 +993,23 @@ export default function RepairRequestForm() {
                     type="date"
                     value={formData.completion_date}
                     onChange={(e) => handleChange('completion_date', e.target.value)}
+                    disabled={!isRepairShopApproved}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+
+              {/* 수리비용 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">수리비용</label>
+                  <input
+                    type="text"
+                    value={formData.repair_cost}
+                    onChange={(e) => handleChange('repair_cost', e.target.value)}
+                    disabled={!isRepairShopApproved}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
+                    placeholder="₩"
                   />
                 </div>
               </div>
@@ -660,7 +1017,7 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 4. 완료/관리 단계 (HQ 작성) ===== */}
+        {/* ===== 6. 완료/관리 단계 (HQ 작성) ===== */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('complete')}
@@ -668,7 +1025,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <ClipboardList className="w-5 h-5 text-purple-600" />
-              <span className="font-semibold text-slate-800">4. 완료/관리 단계</span>
+              <span className="font-semibold text-slate-800">6. 완료/관리 단계</span>
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">HQ 작성</span>
             </div>
             {expandedSections.complete ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
