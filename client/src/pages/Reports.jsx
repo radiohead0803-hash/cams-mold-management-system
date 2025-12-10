@@ -126,6 +126,67 @@ const DonutChart = ({ data, size = 200 }) => {
   );
 };
 
+// 라인 차트 컴포넌트 (SVG)
+const LineChart = ({ data, labelKey, valueKey, color = '#3b82f6', height = 200 }) => {
+  if (!data || data.length === 0) {
+    return <div className="text-center py-8 text-gray-500">데이터 없음</div>;
+  }
+
+  const values = data.map(d => parseInt(d[valueKey]) || 0);
+  const maxValue = Math.max(...values, 1);
+  const minValue = Math.min(...values, 0);
+  const range = maxValue - minValue || 1;
+  
+  const width = 100;
+  const padding = 5;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - 40;
+  
+  const points = data.map((item, index) => {
+    const x = padding + (index / (data.length - 1 || 1)) * chartWidth;
+    const y = chartHeight - ((values[index] - minValue) / range) * (chartHeight - 20) + 10;
+    return { x, y, value: values[index], label: item[labelKey] };
+  });
+  
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  const areaD = `${pathD} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z`;
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ height }}>
+        {/* 그리드 라인 */}
+        {[0, 25, 50, 75, 100].map(percent => {
+          const y = chartHeight - (percent / 100) * (chartHeight - 20) + 10;
+          return (
+            <line key={percent} x1={padding} y1={y} x2={width - padding} y2={y} 
+                  stroke="#e5e7eb" strokeWidth="0.5" strokeDasharray="2,2" />
+          );
+        })}
+        
+        {/* 영역 */}
+        <path d={areaD} fill={color} fillOpacity="0.1" />
+        
+        {/* 라인 */}
+        <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" />
+        
+        {/* 포인트 */}
+        {points.map((p, i) => (
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r="3" fill="white" stroke={color} strokeWidth="2" />
+            <text x={p.x} y={chartHeight + 15} textAnchor="middle" fontSize="8" fill="#6b7280">
+              {p.label}
+            </text>
+          </g>
+        ))}
+      </svg>
+      <div className="flex justify-between text-xs text-gray-500 mt-1 px-2">
+        <span>최소: {minValue.toLocaleString()}</span>
+        <span>최대: {maxValue.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+};
+
 // 간단한 바 차트 컴포넌트
 const SimpleBarChart = ({ data, labelKey, valueKey, color = 'blue' }) => {
   const maxValue = Math.max(...data.map(d => parseInt(d[valueKey]) || 0), 1);
@@ -632,11 +693,12 @@ export default function Reports() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">월별 유지보전 추이</h3>
               {maintenanceStats?.by_month?.length > 0 ? (
-                <SimpleBarChart 
+                <LineChart 
                   data={maintenanceStats.by_month.map(m => ({ ...m, month: `${m.month}월` }))} 
                   labelKey="month" 
                   valueKey="count" 
-                  color="blue" 
+                  color="#3b82f6"
+                  height={180}
                 />
               ) : (
                 <div className="text-center py-8 text-gray-500">데이터 없음</div>
