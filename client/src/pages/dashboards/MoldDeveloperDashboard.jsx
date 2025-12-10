@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardHeader from '../../components/DashboardHeader';
 import { useAuthStore } from '../../stores/authStore';
+import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget } from '../../components/DashboardWidgets';
 
 export default function MoldDeveloperDashboard() {
   const { token } = useAuthStore();
@@ -261,6 +262,17 @@ export default function MoldDeveloperDashboard() {
             </div>
           </section>
         </div>
+
+        {/* 관리 현황 위젯 */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📋 관리 현황</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <PreProductionChecklistWidget />
+            <MaintenanceWidget />
+            <ScrappingWidget />
+            <AlertSummaryWidget />
+          </div>
+        </section>
 
         {/* 승인 대기 목록 */}
         <section className="bg-white rounded-lg shadow p-6">

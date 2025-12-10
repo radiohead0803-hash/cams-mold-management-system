@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Factory, CheckCircle, Wrench, TrendingUp, Package, AlertTriangle, QrCode, Calendar } from 'lucide-react';
 import api from '../../lib/api';
 import DashboardHeader from '../../components/DashboardHeader';
+import { MaintenanceWidget, AlertSummaryWidget, InspectionDueWidget } from '../../components/DashboardWidgets';
 
 export default function PlantDashboard() {
   const navigate = useNavigate();
@@ -192,6 +193,16 @@ export default function PlantDashboard() {
                 <AlertTriangle className="w-10 h-10 text-red-400" />
               </button>
             )}
+          </div>
+        </section>
+
+        {/* 관리 현황 위젯 */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📋 관리 현황</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <MaintenanceWidget />
+            <AlertSummaryWidget />
+            <InspectionDueWidget />
           </div>
         </section>
 

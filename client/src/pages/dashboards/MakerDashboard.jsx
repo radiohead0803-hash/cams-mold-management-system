@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 import DashboardHeader from '../../components/DashboardHeader';
+import { MaintenanceWidget, AlertSummaryWidget } from '../../components/DashboardWidgets';
 
 export default function MakerDashboard() {
   const { user } = useAuthStore();
@@ -123,6 +124,15 @@ export default function MakerDashboard() {
             <StatCard title="가공 중" value={stats.machining} icon="⚙️" color="orange" unit="개" />
             <StatCard title="조립 중" value={stats.assembly} icon="🔩" color="purple" unit="개" />
             <StatCard title="시운전 대기" value={stats.trialWaiting} icon="🧪" color="green" unit="개" />
+          </div>
+        </section>
+
+        {/* 관리 현황 위젯 */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📋 관리 현황</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <MaintenanceWidget />
+            <AlertSummaryWidget />
           </div>
         </section>
 
