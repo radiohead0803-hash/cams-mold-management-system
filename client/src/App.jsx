@@ -62,6 +62,8 @@ import MobileTransferRequest from './pages/mobile/MobileTransferRequest'
 import MobileTransferList from './pages/mobile/MobileTransferList'
 import MobileInspectionApproval from './pages/mobile/MobileInspectionApproval'
 import MobileRepairRequestForm from './pages/mobile/MobileRepairRequestForm'
+import MobileMaintenancePage from './pages/mobile/MobileMaintenancePage'
+import MobilePreProductionChecklist from './pages/mobile/MobilePreProductionChecklist'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
 import PreProductionChecklist from './pages/PreProductionChecklist'
@@ -126,6 +128,14 @@ function App() {
       <Route path="/mobile/transfer/:id" element={<MobileTransferList />} />
       <Route path="/mobile/mold/:moldId/inspection-approval" element={<MobileInspectionApproval />} />
       <Route path="/mobile/inspection-approval" element={<MobileInspectionApproval />} />
+      
+      {/* Mobile - 유지보전 */}
+      <Route path="/mobile/maintenance" element={<MobileMaintenancePage />} />
+      <Route path="/mobile/mold/:moldId/maintenance" element={<MobileMaintenancePage />} />
+      
+      {/* Mobile - 제작전 체크리스트 */}
+      <Route path="/mobile/pre-production-checklist" element={<MobilePreProductionChecklist />} />
+      <Route path="/mobile/pre-production-checklist/:id" element={<MobilePreProductionChecklist />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />

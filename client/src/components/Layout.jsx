@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2 } from 'lucide-react'
+import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2, Trash2, Cog, FileCheck } from 'lucide-react'
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
@@ -88,6 +88,33 @@ export default function Layout() {
             { to: '/reports/molds', label: '금형 현황' },
             { to: '/reports/makers', label: '제작처 분석' }
           ]
+        },
+        { 
+          to: '/pre-production-checklist', 
+          icon: FileCheck, 
+          label: '제작전 체크리스트',
+          subMenus: [
+            { to: '/pre-production-checklist', label: '체크리스트 목록' },
+            { to: '/pre-production-checklist/new', label: '새 체크리스트' }
+          ]
+        },
+        { 
+          to: '/maintenance', 
+          icon: Cog, 
+          label: '유지보전',
+          subMenus: [
+            { to: '/maintenance', label: '유지보전 기록' },
+            { to: '/maintenance/new', label: '기록 등록' }
+          ]
+        },
+        { 
+          to: '/scrapping', 
+          icon: Trash2, 
+          label: '금형 폐기',
+          subMenus: [
+            { to: '/scrapping', label: '폐기 요청 목록' },
+            { to: '/scrapping/new', label: '폐기 요청' }
+          ]
         }
       ]
     }
@@ -161,6 +188,30 @@ export default function Layout() {
           subMenus: [
             { to: '/reports/overview', label: '전체 현황' },
             { to: '/reports/makers', label: '제작처별 분석' }
+          ]
+        },
+        { 
+          to: '/pre-production-checklist', 
+          icon: FileCheck, 
+          label: '제작전 체크리스트',
+          subMenus: [
+            { to: '/pre-production-checklist', label: '체크리스트 목록' }
+          ]
+        },
+        { 
+          to: '/maintenance', 
+          icon: Cog, 
+          label: '유지보전',
+          subMenus: [
+            { to: '/maintenance', label: '유지보전 기록' }
+          ]
+        },
+        { 
+          to: '/scrapping', 
+          icon: Trash2, 
+          label: '금형 폐기',
+          subMenus: [
+            { to: '/scrapping', label: '폐기 요청 목록' }
           ]
         }
       ]

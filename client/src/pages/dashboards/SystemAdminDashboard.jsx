@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp, Eye } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
 import NaverMoldLocationMap from '../../components/NaverMoldLocationMap';
+import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget, InspectionDueWidget } from '../../components/DashboardWidgets';
 import { useDashboardKpi, useDashboardActivities } from '../../hooks/useDashboardKpi';
 import { useMoldLocations } from '../../hooks/useMoldLocations';
 
@@ -182,6 +183,18 @@ export default function SystemAdminDashboard() {
               </div>
               <TrendingUp className="w-10 h-10 text-blue-400" />
             </button>
+          </div>
+        </section>
+
+        {/* 신규 기능 위젯 섹션 */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📋 관리 현황</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <PreProductionChecklistWidget />
+            <MaintenanceWidget />
+            <ScrappingWidget />
+            <AlertSummaryWidget />
+            <InspectionDueWidget />
           </div>
         </section>
 
