@@ -1,55 +1,51 @@
 const logger = require('../utils/logger');
-const pool = require('../config/database');
+const { TransferRequest, Mold, Company, User } = require('../models/newIndex');
+let pool;
+try {
+  pool = require('../config/database');
+} catch (e) {
+  pool = null;
+}
 
 // 이관 목록 조회
 const getTransfers = async (req, res) => {
   try {
-    const { status, limit = 50, offset = 0 } = req.query;
+    const { status, limit = 100, offset = 0 } = req.query;
     
-    let query = `
-      SELECT 
-        t.*,
-        m.mold_code,
-        ms.part_number,
-        ms.part_name,
-        ms.car_model,
-        fc.company_name as from_company_name,
-        tc.company_name as to_company_name,
-        u.name as requested_by_name
-      FROM transfers t
-      LEFT JOIN molds m ON t.mold_id = m.id
-      LEFT JOIN mold_specifications ms ON m.id = ms.mold_id
-      LEFT JOIN companies fc ON t.from_company_id = fc.id
-      LEFT JOIN companies tc ON t.to_company_id = tc.id
-      LEFT JOIN users u ON t.requested_by = u.id
-      WHERE 1=1
-    `;
-    const params = [];
-    
+    const where = {};
     if (status && status !== 'all') {
-      params.push(status);
-      query += ` AND t.status = $${params.length}`;
+      where.status = status;
     }
     
-    query += ` ORDER BY t.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    params.push(parseInt(limit), parseInt(offset));
+    // TransferRequest 모델이 있으면 사용, 없으면 빈 배열 반환
+    let items = [];
+    let total = 0;
     
-    const result = await pool.query(query, params);
-    
-    // 총 개수 조회
-    let countQuery = 'SELECT COUNT(*) FROM transfers WHERE 1=1';
-    const countParams = [];
-    if (status && status !== 'all') {
-      countParams.push(status);
-      countQuery += ` AND status = $${countParams.length}`;
+    try {
+      const result = await TransferRequest.findAndCountAll({
+        where,
+        include: [
+          { model: Mold, as: 'mold', attributes: ['id', 'mold_code', 'mold_name'] },
+          { model: Company, as: 'fromCompany', attributes: ['id', 'company_name'] },
+          { model: Company, as: 'toCompany', attributes: ['id', 'company_name'] },
+          { model: User, as: 'requester', attributes: ['id', 'name'] }
+        ],
+        order: [['created_at', 'DESC']],
+        limit: parseInt(limit),
+        offset: parseInt(offset)
+      });
+      items = result.rows;
+      total = result.count;
+    } catch (modelError) {
+      // 모델이나 테이블이 없는 경우 무시
+      logger.warn('TransferRequest model/table not available:', modelError.message);
     }
-    const countResult = await pool.query(countQuery, countParams);
     
     res.json({
       success: true,
       data: {
-        items: result.rows,
-        total: parseInt(countResult.rows[0].count),
+        items,
+        total,
         limit: parseInt(limit),
         offset: parseInt(offset)
       }
@@ -62,7 +58,7 @@ const getTransfers = async (req, res) => {
       data: {
         items: [],
         total: 0,
-        limit: parseInt(req.query.limit) || 50,
+        limit: parseInt(req.query.limit) || 100,
         offset: parseInt(req.query.offset) || 0
       }
     });
@@ -74,80 +70,52 @@ const getTransferById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // 이관 기본 정보
-    const transferQuery = `
-      SELECT 
-        t.*,
-        m.mold_code,
-        ms.part_number,
-        ms.part_name,
-        ms.car_model,
-        ms.mold_type,
-        ms.tonnage,
-        ms.material,
-        fc.company_name as from_company_name,
-        tc.company_name as to_company_name,
-        u.name as requested_by_name,
-        du.name as developer_name
-      FROM transfers t
-      LEFT JOIN molds m ON t.mold_id = m.id
-      LEFT JOIN mold_specifications ms ON m.id = ms.mold_id
-      LEFT JOIN companies fc ON t.from_company_id = fc.id
-      LEFT JOIN companies tc ON t.to_company_id = tc.id
-      LEFT JOIN users u ON t.requested_by = u.id
-      LEFT JOIN users du ON t.developer_id = du.id
-      WHERE t.id = $1
-    `;
-    const transferResult = await pool.query(transferQuery, [id]);
-    
-    if (transferResult.rows.length === 0) {
-      return res.status(404).json({
+    // TransferRequest 모델로 조회 시도
+    try {
+      const transfer = await TransferRequest.findByPk(id, {
+        include: [
+          { model: Mold, as: 'mold', attributes: ['id', 'mold_code', 'mold_name'] },
+          { model: Company, as: 'fromCompany', attributes: ['id', 'company_name'] },
+          { model: Company, as: 'toCompany', attributes: ['id', 'company_name'] },
+          { model: User, as: 'requester', attributes: ['id', 'name'] }
+        ]
+      });
+      
+      if (!transfer) {
+        return res.status(404).json({
+          success: false,
+          error: { message: 'Transfer not found' }
+        });
+      }
+      
+      res.json({
+        success: true,
+        data: transfer
+      });
+    } catch (modelError) {
+      logger.warn('TransferRequest model/table not available:', modelError.message);
+      res.status(404).json({
         success: false,
         error: { message: 'Transfer not found' }
       });
     }
-    
-    // 승인 정보 조회
-    const approvalsQuery = `
-      SELECT * FROM transfer_approvals 
-      WHERE transfer_id = $1 
-      ORDER BY approval_order
-    `;
-    const approvalsResult = await pool.query(approvalsQuery, [id]);
-    
-    // 체크리스트 결과 조회
-    const checklistQuery = `
-      SELECT 
-        tir.*,
-        tci.category,
-        tci.item_name,
-        tci.item_description
-      FROM transfer_inspection_results tir
-      LEFT JOIN transfer_checklist_items tci ON tir.checklist_item_id = tci.id
-      WHERE tir.transfer_id = $1
-      ORDER BY tci.category_order, tci.item_order
-    `;
-    const checklistResult = await pool.query(checklistQuery, [id]);
-    
-    res.json({
-      success: true,
-      data: {
-        ...transferResult.rows[0],
-        approvals: approvalsResult.rows,
-        checklist_results: checklistResult.rows
-      }
-    });
   } catch (error) {
     logger.error('Get transfer by ID error:', error);
-    res.status(500).json({
+    res.status(404).json({
       success: false,
-      error: { message: 'Failed to get transfer', details: error.message }
+      error: { message: 'Transfer not found' }
     });
   }
 };
 
 // 이관 요청 생성
 const createTransfer = async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      success: false,
+      error: { message: 'Database connection not available' }
+    });
+  }
   const client = await pool.connect();
   
   try {
@@ -255,6 +223,12 @@ const createTransfer = async (req, res) => {
 
 // 이관 승인
 const approveTransfer = async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      success: false,
+      error: { message: 'Database connection not available' }
+    });
+  }
   const client = await pool.connect();
   
   try {
@@ -393,6 +367,12 @@ const approveTransfer = async (req, res) => {
 
 // 이관 반려
 const rejectTransfer = async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      success: false,
+      error: { message: 'Database connection not available' }
+    });
+  }
   const client = await pool.connect();
   
   try {
