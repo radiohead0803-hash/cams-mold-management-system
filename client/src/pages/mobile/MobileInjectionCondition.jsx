@@ -187,18 +187,25 @@ export default function MobileInjectionCondition() {
     }));
   };
 
-  // 밸브게이트 추가
+  // 밸브게이트 추가 (H/R 온도도 함께 추가)
   const addValveGate = () => {
     if (!isEditing) return;
     const newSeq = (conditionData.valve_gate_data?.length || 0) + 1;
-    setConditionData(prev => ({
-      ...prev,
-      valve_gate_count: newSeq,
-      valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, moving: '', fixed: '' }]
-    }));
+    setConditionData(prev => {
+      const newData = {
+        ...prev,
+        valve_gate_count: newSeq,
+        valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, moving: '', fixed: '' }]
+      };
+      // H/R 온도 필드 초기화 (없으면)
+      if (!newData[`hr_temp_${newSeq}`]) {
+        newData[`hr_temp_${newSeq}`] = '';
+      }
+      return newData;
+    });
   };
 
-  // 밸브게이트 삭제
+  // 밸브게이트 삭제 (H/R 온도도 함께 정리)
   const removeValveGate = (index) => {
     if (!isEditing) return;
     setConditionData(prev => {
@@ -674,11 +681,22 @@ export default function MobileInjectionCondition() {
                           </div>
                         </div>
 
-                        {/* H/R 온도 */}
+                        {/* H/R 온도 - 밸브게이트 수량에 맞게 동적 생성 */}
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700">H/R 온도</label>
+                          <label className="text-sm font-medium text-gray-700">
+                            H/R 온도 
+                            {conditionData.hot_runner_type === 'valve_gate' && conditionData.valve_gate_data?.length > 0 && (
+                              <span className="text-xs text-gray-500 ml-1">
+                                ({conditionData.valve_gate_data.length}개)
+                              </span>
+                            )}
+                          </label>
                           <div className="grid grid-cols-4 gap-2">
-                            {[1,2,3,4,5,6,7,8].map(num => (
+                            {/* 밸브게이트 타입: 게이트 수량만큼 표시, 오픈 타입: 기본 8개 */}
+                            {(conditionData.hot_runner_type === 'valve_gate' 
+                              ? Array.from({ length: Math.max(conditionData.valve_gate_data?.length || 1, 1) }, (_, i) => i + 1)
+                              : [1,2,3,4,5,6,7,8]
+                            ).map(num => (
                               <div key={num}>
                                 <label className="block text-xs text-gray-500 mb-1">{num}</label>
                                 <input

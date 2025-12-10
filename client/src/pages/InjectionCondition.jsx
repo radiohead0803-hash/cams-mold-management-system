@@ -229,15 +229,22 @@ export default function InjectionCondition() {
     }))
   }
 
-  // 밸브게이트 추가
+  // 밸브게이트 추가 (H/R 온도도 함께 추가)
   const addValveGate = () => {
     if (!canEdit) return
     const newSeq = (formData.valve_gate_data?.length || 0) + 1
-    setFormData(prev => ({
-      ...prev,
-      valve_gate_count: newSeq,
-      valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, moving: '', fixed: '' }]
-    }))
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        valve_gate_count: newSeq,
+        valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, moving: '', fixed: '' }]
+      }
+      // H/R 온도 필드 초기화 (없으면)
+      if (!newData[`hr_temp_${newSeq}`]) {
+        newData[`hr_temp_${newSeq}`] = ''
+      }
+      return newData
+    })
   }
 
   // 밸브게이트 삭제
@@ -671,11 +678,32 @@ export default function InjectionCondition() {
                         </div>
                       </div>
 
-                      {/* H/R 온도 */}
+                      {/* H/R 온도 - 밸브게이트 수량에 맞게 동적 생성 */}
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">H/R 온도</label>
-                        <div className="grid grid-cols-8 gap-2">
-                          {[1,2,3,4,5,6,7,8].map(num => (
+                        <label className="text-sm font-medium text-gray-700">
+                          H/R 온도
+                          {formData.hot_runner_type === 'valve_gate' && formData.valve_gate_data?.length > 0 && (
+                            <span className="text-xs text-gray-500 ml-2">
+                              (밸브게이트 {formData.valve_gate_data.length}개에 맞춤)
+                            </span>
+                          )}
+                        </label>
+                        <div className={`grid gap-2 ${
+                          formData.hot_runner_type === 'valve_gate' 
+                            ? `grid-cols-${Math.min(formData.valve_gate_data?.length || 1, 8)}`
+                            : 'grid-cols-8'
+                        }`} style={{
+                          gridTemplateColumns: `repeat(${
+                            formData.hot_runner_type === 'valve_gate' 
+                              ? Math.min(Math.max(formData.valve_gate_data?.length || 1, 1), 8)
+                              : 8
+                          }, minmax(0, 1fr))`
+                        }}>
+                          {/* 밸브게이트 타입: 게이트 수량만큼 표시, 오픈 타입: 기본 8개 */}
+                          {(formData.hot_runner_type === 'valve_gate' 
+                            ? Array.from({ length: Math.max(formData.valve_gate_data?.length || 1, 1) }, (_, i) => i + 1)
+                            : [1,2,3,4,5,6,7,8]
+                          ).map(num => (
                             <div key={num}>
                               <label className="block text-xs text-gray-500 mb-1 text-center">{num}</label>
                               <input
