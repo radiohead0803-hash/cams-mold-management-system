@@ -40,6 +40,38 @@ export default function MoldList() {
   const [bulkEditMode, setBulkEditMode] = useState(false)
   const [sortKey, setSortKey] = useState('') // '', 'mold_code', 'part_number', 'status'
   const [sortDirection, setSortDirection] = useState('asc') // 'asc' | 'desc'
+  const [recentSearches, setRecentSearches] = useState([])
+  const [showRecentSearches, setShowRecentSearches] = useState(false)
+
+  // 최근 검색 기록 로드
+  useEffect(() => {
+    const saved = JSON.parse(localStorage.getItem('moldRecentSearches') || '[]')
+    setRecentSearches(saved)
+  }, [])
+
+  // 검색어 저장
+  const saveSearchTerm = (term) => {
+    if (!term.trim()) return
+    const saved = JSON.parse(localStorage.getItem('moldRecentSearches') || '[]')
+    const filtered = saved.filter(s => s !== term)
+    const updated = [term, ...filtered].slice(0, 5) // 최대 5개
+    localStorage.setItem('moldRecentSearches', JSON.stringify(updated))
+    setRecentSearches(updated)
+  }
+
+  // 검색 실행
+  const handleSearch = (term) => {
+    setSearchTerm(term)
+    saveSearchTerm(term)
+    setShowRecentSearches(false)
+  }
+
+  // 최근 검색 삭제
+  const removeRecentSearch = (term) => {
+    const updated = recentSearches.filter(s => s !== term)
+    localStorage.setItem('moldRecentSearches', JSON.stringify(updated))
+    setRecentSearches(updated)
+  }
 
   // URL 파라미터 변경 시 필터 업데이트
   useEffect(() => {
@@ -338,8 +370,43 @@ export default function MoldList() {
               placeholder="금형코드, 부품번호, 부품명, 차종으로 검색..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setShowRecentSearches(true)}
+              onBlur={() => setTimeout(() => setShowRecentSearches(false), 200)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch(searchTerm)
+                }
+              }}
               className="input pl-10"
             />
+            {/* 최근 검색 기록 드롭다운 */}
+            {showRecentSearches && recentSearches.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <div className="px-3 py-2 text-xs text-gray-500 border-b">최근 검색</div>
+                {recentSearches.map((term, idx) => (
+                  <div 
+                    key={idx}
+                    className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <span 
+                      className="flex-1 text-sm text-gray-700"
+                      onClick={() => handleSearch(term)}
+                    >
+                      {term}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeRecentSearch(term)
+                      }}
+                      className="p-1 hover:bg-gray-200 rounded"
+                    >
+                      <X size={14} className="text-gray-400" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Filter size={20} className="text-gray-400" />
