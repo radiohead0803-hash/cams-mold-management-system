@@ -156,6 +156,24 @@ export const makerSpecificationAPI = {
   getDashboardStats: () => api.get('/maker-specifications/dashboard/stats'),
 }
 
+// Injection Condition API (사출조건 관리)
+export const injectionConditionAPI = {
+  // 사출조건 등록 (제작처/생산처)
+  create: (data) => api.post('/injection-conditions', data),
+  // 사출조건 조회 (금형별)
+  get: (params) => api.get('/injection-conditions', { params }),
+  // 사출조건 수정
+  update: (id, data) => api.put(`/injection-conditions/${id}`, data),
+  // 사출조건 승인/반려 (개발담당자)
+  approve: (id, data) => api.post(`/injection-conditions/${id}/approve`, data),
+  // 이력 조회
+  getHistory: (params) => api.get('/injection-conditions/history', { params }),
+  // 통계 조회
+  getStats: (params) => api.get('/injection-conditions/stats', { params }),
+  // 승인 대기 목록
+  getPending: () => api.get('/injection-conditions/pending'),
+}
+
 // Master Data API
 export const masterDataAPI = {
   // 차종

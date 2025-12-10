@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, History, Calendar, User, FileText, ChevronDown, ChevronUp, Filter, Download, Search } from 'lucide-react'
-import api from '../lib/api'
+import { injectionConditionAPI } from '../lib/api'
 
 /**
  * PC 사출조건 이력관리 페이지
@@ -27,9 +27,21 @@ export default function InjectionHistory() {
   const loadHistoryData = async () => {
     try {
       setLoading(true)
-      const response = await api.get(`/mold-specifications/${moldId}/injection-history`).catch(() => null)
-      if (response?.data?.data) {
-        setHistoryData(response.data.data)
+      const response = await injectionConditionAPI.getHistory({ mold_spec_id: moldId }).catch(() => null)
+      if (response?.data?.data && response.data.data.length > 0) {
+        setHistoryData(response.data.data.map(item => ({
+          id: item.id,
+          change_date: new Date(item.changed_at).toLocaleDateString('ko-KR'),
+          change_type: item.change_type,
+          change_type_label: getTypeLabel(item.change_type),
+          field_name: item.field_label || item.field_name,
+          old_value: item.old_value,
+          new_value: item.new_value,
+          reason: item.change_reason || '-',
+          changed_by: item.changed_by_name || '-',
+          approved_by: item.approved_by_name,
+          status: item.status
+        })))
       } else {
         // 샘플 데이터
         setHistoryData([
@@ -107,12 +119,24 @@ export default function InjectionHistory() {
     }
   }
 
+  const getTypeLabel = (type) => {
+    switch (type) {
+      case 'temperature': return '온도 변경'
+      case 'pressure': return '압력 변경'
+      case 'speed': return '속도 변경'
+      case 'time': return '시간 변경'
+      case 'metering': return '계량 변경'
+      default: return '기타 변경'
+    }
+  }
+
   const getTypeColor = (type) => {
     switch (type) {
       case 'temperature': return 'bg-red-100 text-red-700 border-red-200'
       case 'pressure': return 'bg-blue-100 text-blue-700 border-blue-200'
       case 'speed': return 'bg-green-100 text-green-700 border-green-200'
-      case 'metering': return 'bg-purple-100 text-purple-700 border-purple-200'
+      case 'time': return 'bg-purple-100 text-purple-700 border-purple-200'
+      case 'metering': return 'bg-orange-100 text-orange-700 border-orange-200'
       default: return 'bg-gray-100 text-gray-700 border-gray-200'
     }
   }

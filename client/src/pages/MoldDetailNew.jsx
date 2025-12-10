@@ -420,7 +420,7 @@ export default function MoldDetailNew() {
                                 } else if (item === '정기점검') {
                                   navigate(`/inspection/periodic?mold=${id}`);
                                 } else if (item === '사출조건 관리') {
-                                  navigate(`/injection-history?moldId=${id}`);
+                                  navigate(`/injection-condition?moldId=${id}`);
                                 } else if (item === '이력관리') {
                                   navigate(`/injection-history?moldId=${id}`);
                                 } else if (item === '변경관리 통계') {

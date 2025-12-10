@@ -43,6 +43,7 @@ import HardnessMeasurement from './pages/HardnessMeasurement'
 import MoldSpecification from './pages/MoldSpecification'
 import InjectionHistory from './pages/InjectionHistory'
 import InjectionStats from './pages/InjectionStats'
+import InjectionCondition from './pages/InjectionCondition'
 import MoldOverviewPage from './pages/mobile/MoldOverviewPage'
 import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
 import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
@@ -178,6 +179,7 @@ function App() {
         <Route path="mold-specification/:id" element={<MoldSpecification />} />
         <Route path="injection-history" element={<InjectionHistory />} />
         <Route path="injection-stats" element={<InjectionStats />} />
+        <Route path="injection-condition" element={<InjectionCondition />} />
       </Route>
     </Routes>
   )

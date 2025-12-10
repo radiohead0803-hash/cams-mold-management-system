@@ -42,6 +42,23 @@ const runMoldImagesMigration = async () => {
   }
 };
 
+// Run SQL migrations for injection_conditions table
+const runInjectionConditionsMigration = async () => {
+  console.log('🔄 Running injection_conditions table migration...');
+  try {
+    const sqlPath = path.join(__dirname, 'migrations', '20251210_injection_conditions.sql');
+    if (fs.existsSync(sqlPath)) {
+      const sql = fs.readFileSync(sqlPath, 'utf8');
+      await sequelize.query(sql);
+      console.log('✅ injection_conditions table migration completed.');
+    } else {
+      console.log('⚠️ injection_conditions migration file not found, skipping...');
+    }
+  } catch (error) {
+    console.error('⚠️ injection_conditions migration warning:', error.message);
+  }
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -54,6 +71,9 @@ const startServer = async () => {
     
     // Run mold_images table migration
     await runMoldImagesMigration();
+    
+    // Run injection_conditions table migration
+    await runInjectionConditionsMigration();
     
     // Sync models (development only)
     if (process.env.NODE_ENV === 'development') {

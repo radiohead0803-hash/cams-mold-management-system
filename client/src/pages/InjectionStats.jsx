@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, BarChart3, TrendingUp, TrendingDown, Calendar, PieChart, Download, Users } from 'lucide-react'
-import api from '../lib/api'
+import { injectionConditionAPI } from '../lib/api'
 
 /**
  * PC 사출조건 변경관리 통계 페이지
@@ -24,8 +24,8 @@ export default function InjectionStats() {
   const loadStatsData = async () => {
     try {
       setLoading(true)
-      const response = await api.get(`/mold-specifications/${moldId}/injection-stats?period=${period}`).catch(() => null)
-      if (response?.data?.data) {
+      const response = await injectionConditionAPI.getStats({ mold_spec_id: moldId, period }).catch(() => null)
+      if (response?.data?.data && response.data.data.summary?.total_changes > 0) {
         setStatsData(response.data.data)
       } else {
         // 샘플 데이터
