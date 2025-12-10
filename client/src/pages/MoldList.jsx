@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { moldSpecificationAPI } from '../lib/api'
 import { Package, Search, Filter, Edit, Image as ImageIcon, X, ArrowLeft, Download, Star } from 'lucide-react'
+import { TableSkeleton } from '../components/Skeleton'
 
 // CSV 다운로드 유틸리티
 const downloadCSV = (data, filename) => {
@@ -442,9 +443,7 @@ export default function MoldList() {
 
       {/* 금형 목록 - 테이블 */}
       {loading ? (
-        <div className="card text-center py-12">
-          <p className="text-gray-500">로딩 중...</p>
-        </div>
+        <TableSkeleton rows={8} columns={7} />
       ) : filteredMolds.length === 0 ? (
         <div className="card text-center py-12">
           <Package className="mx-auto mb-4 text-gray-400" size={48} />
