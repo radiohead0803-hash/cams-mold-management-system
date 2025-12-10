@@ -171,6 +171,59 @@ const runRepairRequestsMigration = async () => {
   logger.info('repair_requests migration completed.');
 };
 
+// injection_conditions 테이블 마이그레이션
+const runInjectionConditionsMigration = async () => {
+  // 테이블 생성
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS injection_conditions (
+        id SERIAL PRIMARY KEY,
+        mold_spec_id INTEGER,
+        mold_id INTEGER,
+        mold_code VARCHAR(100),
+        mold_name VARCHAR(200),
+        part_name VARCHAR(200),
+        material VARCHAR(100),
+        speed_1 DECIMAL(6,1), speed_2 DECIMAL(6,1), speed_3 DECIMAL(6,1), speed_4 DECIMAL(6,1), speed_cooling DECIMAL(6,1),
+        position_pv DECIMAL(6,1), position_1 DECIMAL(6,1), position_2 DECIMAL(6,1), position_3 DECIMAL(6,1),
+        pressure_1 DECIMAL(6,1), pressure_2 DECIMAL(6,1), pressure_3 DECIMAL(6,1), pressure_4 DECIMAL(6,1),
+        time_injection DECIMAL(6,2), time_holding DECIMAL(6,2), time_holding_3 DECIMAL(6,2), time_holding_4 DECIMAL(6,2), time_cooling DECIMAL(6,2),
+        metering_speed_vp DECIMAL(6,1), metering_speed_1 DECIMAL(6,1), metering_speed_2 DECIMAL(6,1), metering_speed_3 DECIMAL(6,1),
+        metering_position_1 DECIMAL(6,1), metering_position_2 DECIMAL(6,1),
+        metering_pressure_2 DECIMAL(6,1), metering_pressure_3 DECIMAL(6,1), metering_pressure_4 DECIMAL(6,1),
+        holding_pressure_1 DECIMAL(6,1), holding_pressure_2 DECIMAL(6,1), holding_pressure_3 DECIMAL(6,1), holding_pressure_4 DECIMAL(6,1),
+        holding_pressure_1h DECIMAL(6,1), holding_pressure_2h DECIMAL(6,1), holding_pressure_3h DECIMAL(6,1),
+        barrel_temp_1 DECIMAL(6,1), barrel_temp_2 DECIMAL(6,1), barrel_temp_3 DECIMAL(6,1), barrel_temp_4 DECIMAL(6,1), barrel_temp_5 DECIMAL(6,1),
+        barrel_temp_6 DECIMAL(6,1), barrel_temp_7 DECIMAL(6,1), barrel_temp_8 DECIMAL(6,1), barrel_temp_9 DECIMAL(6,1),
+        hot_runner_installed BOOLEAN DEFAULT false, hot_runner_type VARCHAR(50),
+        hr_temp_1 DECIMAL(6,1), hr_temp_2 DECIMAL(6,1), hr_temp_3 DECIMAL(6,1), hr_temp_4 DECIMAL(6,1),
+        hr_temp_5 DECIMAL(6,1), hr_temp_6 DECIMAL(6,1), hr_temp_7 DECIMAL(6,1), hr_temp_8 DECIMAL(6,1),
+        valve_gate_count INTEGER DEFAULT 0, valve_gate_data JSONB DEFAULT '[]'::jsonb,
+        chiller_temp_main DECIMAL(6,1), chiller_temp_moving DECIMAL(6,1), chiller_temp_fixed DECIMAL(6,1),
+        cycle_time DECIMAL(6,2),
+        status VARCHAR(20) DEFAULT 'draft',
+        registered_by INTEGER, registered_at TIMESTAMP DEFAULT NOW(),
+        approved_by INTEGER, approved_at TIMESTAMP, rejection_reason TEXT,
+        version INTEGER DEFAULT 1, is_current BOOLEAN DEFAULT true,
+        remarks TEXT,
+        created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    logger.info('injection_conditions table created/verified.');
+  } catch (err) {
+    logger.warn('injection_conditions table creation:', err.message);
+  }
+
+  // 인덱스 생성
+  try {
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_injection_conditions_mold_spec ON injection_conditions(mold_spec_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_injection_conditions_status ON injection_conditions(status);`);
+  } catch (err) {
+    // 무시
+  }
+  logger.info('injection_conditions migration completed.');
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -178,8 +231,9 @@ const startServer = async () => {
     await db.sequelize.authenticate();
     logger.info('Database connection established successfully.');
     
-    // repair_requests 테이블 마이그레이션 실행
+    // 마이그레이션 실행
     await runRepairRequestsMigration();
+    await runInjectionConditionsMigration();
     
     // Sync database (only in development)
     if (process.env.NODE_ENV === 'development') {
