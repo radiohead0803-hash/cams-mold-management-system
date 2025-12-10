@@ -243,7 +243,8 @@ const {
   rejectRepairRequest,
   assignRepairRequest,
   updateRepairProgress,
-  updateBlameParty
+  updateBlameParty,
+  updateRepairRequest
 } = require('./repairController');
 
 module.exports = {
@@ -256,5 +257,6 @@ module.exports = {
   assignRepairRequest,
   updateRepairProgress,
   updateBlameParty,
-  getRepairSummary
+  getRepairSummary,
+  updateRepairRequest
 };

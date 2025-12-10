@@ -11,7 +11,8 @@ const {
   assignRepairRequest,
   updateRepairProgress,
   updateBlameParty,
-  getRepairSummary
+  getRepairSummary,
+  updateRepairRequest
 } = require('../controllers/repairRequestController');
 const { authenticate } = require('../middleware/auth');
 
@@ -81,5 +82,11 @@ router.patch('/repair-requests/:id/blame', authenticate, updateBlameParty);
  * PATCH /api/v1/repair-requests/:id/status
  */
 router.patch('/repair-requests/:id/status', authenticate, updateRepairRequestStatus);
+
+/**
+ * 수리요청 수정 (협력사 작성항목 포함)
+ * PUT /api/v1/repair-requests/:id
+ */
+router.put('/repair-requests/:id', authenticate, updateRepairRequest);
 
 module.exports = router;

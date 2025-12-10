@@ -19,7 +19,41 @@ const createRepairRequest = async (req, res) => {
       severity,             // 클라이언트에서 보내는 필드 (low, medium, high, urgent)
       urgency,              // 'low', 'normal', 'high', 'urgent'
       estimated_cost,
-      session_id
+      session_id,
+      // 새로운 협력사 작성항목
+      problem,
+      cause_and_reason,
+      priority,
+      problem_source,
+      occurred_date,
+      manager_name,
+      requester_name,
+      car_model,
+      part_number,
+      part_name,
+      occurrence_type,
+      production_site,
+      production_manager,
+      contact,
+      production_shot,
+      maker,
+      operation_type,
+      problem_type,
+      repair_cost,
+      completion_date,
+      temporary_action,
+      root_cause_action,
+      mold_arrival_date,
+      stock_schedule_date,
+      stock_quantity,
+      stock_unit,
+      repair_company,
+      repair_duration,
+      management_type,
+      sign_off_status,
+      representative_part_number,
+      order_company,
+      related_files
     } = req.body;
     const userId = req.user.id;
     const files = req.files;
@@ -82,7 +116,41 @@ const createRepairRequest = async (req, res) => {
       urgency: finalUrgency,
       estimated_cost: estimated_cost || null,
       status: 'requested',
-      requested_at: new Date()
+      requested_at: new Date(),
+      // 새로운 협력사 작성항목
+      problem: problem || null,
+      cause_and_reason: cause_and_reason || null,
+      priority: priority || '보통',
+      problem_source: problem_source || null,
+      occurred_date: occurred_date || null,
+      manager_name: manager_name || null,
+      requester_name: requester_name || requester?.name || null,
+      car_model: car_model || null,
+      part_number: part_number || null,
+      part_name: part_name || null,
+      occurrence_type: occurrence_type || '신규',
+      production_site: production_site || null,
+      production_manager: production_manager || null,
+      contact: contact || null,
+      production_shot: production_shot || null,
+      maker: maker || null,
+      operation_type: operation_type || '양산',
+      problem_type: problem_type || null,
+      repair_cost: repair_cost || null,
+      completion_date: completion_date || null,
+      temporary_action: temporary_action || null,
+      root_cause_action: root_cause_action || null,
+      mold_arrival_date: mold_arrival_date || null,
+      stock_schedule_date: stock_schedule_date || null,
+      stock_quantity: stock_quantity || null,
+      stock_unit: stock_unit || 'EA',
+      repair_company: repair_company || null,
+      repair_duration: repair_duration || null,
+      management_type: management_type || null,
+      sign_off_status: sign_off_status || '제출되지 않음',
+      representative_part_number: representative_part_number || null,
+      order_company: order_company || null,
+      related_files: related_files || []
     }, { transaction });
 
     // 6. 사진 첨부 파일 저장
@@ -611,11 +679,94 @@ const updateBlameParty = async (req, res) => {
   }
 };
 
+/**
+ * 수리요청 수정 (협력사 작성항목 포함)
+ */
+const updateRepairRequest = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const updateData = req.body;
+
+    const repairRequest = await RepairRequest.findByPk(id);
+    
+    if (!repairRequest) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: { message: '수리요청을 찾을 수 없습니다.' }
+      });
+    }
+
+    // 업데이트 가능한 필드 목록
+    const allowedFields = [
+      'title', 'description', 'issue_type', 'issue_description', 'severity', 'urgency',
+      'problem', 'cause_and_reason', 'priority', 'problem_source', 'occurred_date',
+      'manager_name', 'requester_name', 'car_model', 'part_number', 'part_name',
+      'occurrence_type', 'production_site', 'production_manager', 'contact',
+      'production_shot', 'maker', 'operation_type', 'problem_type',
+      'repair_cost', 'completion_date', 'temporary_action', 'root_cause_action',
+      'mold_arrival_date', 'stock_schedule_date', 'stock_quantity', 'stock_unit',
+      'repair_company', 'repair_duration', 'management_type', 'sign_off_status',
+      'representative_part_number', 'order_company', 'related_files', 'status'
+    ];
+
+    const filteredData = {};
+    for (const field of allowedFields) {
+      if (updateData[field] !== undefined) {
+        filteredData[field] = updateData[field];
+      }
+    }
+
+    await repairRequest.update(filteredData, { transaction });
+
+    // 이력 기록
+    try {
+      const RepairRequestHistory = require('../models/newIndex').RepairRequestHistory;
+      if (RepairRequestHistory) {
+        await RepairRequestHistory.create({
+          repair_request_id: id,
+          user_id: userId,
+          action: 'updated',
+          notes: `수리요청 정보 수정`,
+          created_at: new Date()
+        }, { transaction });
+      }
+    } catch (e) {
+      // 이력 테이블이 없어도 계속 진행
+    }
+
+    await transaction.commit();
+
+    // 업데이트된 데이터 조회
+    const updated = await RepairRequest.findByPk(id);
+
+    logger.info(`Repair request ${id} updated by user ${userId}`);
+
+    res.json({
+      success: true,
+      message: '수리요청이 수정되었습니다.',
+      data: updated
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Update repair request error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '수리요청 수정 실패', details: error.message }
+    });
+  }
+};
+
 module.exports = {
   createRepairRequest,
   approveRepairRequest,
   rejectRepairRequest,
   assignRepairRequest,
   updateRepairProgress,
-  updateBlameParty
+  updateBlameParty,
+  updateRepairRequest
 };
