@@ -1,34 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Wrench, ChevronRight, AlertTriangle, Clock, CheckCircle2, Filter, RefreshCw, ArrowLeft } from 'lucide-react';
-import api from '../lib/api';
+import { Wrench, ChevronRight, AlertTriangle, Clock, CheckCircle2, Filter, RefreshCw, ArrowLeft, Plus } from 'lucide-react';
+import { repairRequestAPI } from '../lib/api';
 
 /**
  * HQ 수리요청 목록 페이지
  * 시스템 관리자 및 금형개발 담당자용
+ * PC/모바일 동기화: /repair-requests API 사용, repair_requests 테이블
  */
 const STATUS_FILTERS = [
-  { key: 'open', label: '진행 중' },
-  { key: 'completed', label: '완료' },
-  { key: 'rejected', label: '반려' },
   { key: 'all', label: '전체' },
+  { key: '금형수정중', label: '수정중' },
+  { key: '수리완료', label: '완료' },
+  { key: '검토중', label: '검토중' },
+  { key: '승인대기', label: '승인대기' },
+  { key: '반려', label: '반려' },
 ];
 
 const statusLabelMap = {
-  requested: '요청',
-  liability_review: '귀책협의',
-  approved: '승인',
-  in_repair: '수리중',
-  completed: '완료',
-  rejected: '반려',
+  '금형수정중': '수정중',
+  '수리완료': '완료',
+  '검토중': '검토중',
+  '승인대기': '승인대기',
+  '반려': '반려',
 };
 
-const severityLabelMap = {
-  low: 'LOW',
-  medium: 'MEDIUM',
-  high: 'HIGH',
-  critical: 'CRITICAL',
-  urgent: 'URGENT',
+const priorityLabelMap = {
+  '높음': { label: '높음', color: 'bg-red-100 text-red-700' },
+  '보통': { label: '보통', color: 'bg-yellow-100 text-yellow-700' },
+  '낮음': { label: '낮음', color: 'bg-green-100 text-green-700' },
 };
 
 export default function HqRepairListPage() {
@@ -37,18 +37,30 @@ export default function HqRepairListPage() {
   const [repairs, setRepairs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [total, setTotal] = useState(0);
 
-  const status = searchParams.get('status') || 'open';
+  const status = searchParams.get('status') || 'all';
+  const moldId = searchParams.get('moldId');
 
   const loadRepairs = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await api.get(`/hq/repairs?status=${status}`);
+      const params = { limit: 100 };
+      if (status !== 'all') {
+        params.status = status;
+      }
+      if (moldId) {
+        params.mold_spec_id = moldId;
+      }
+
+      // PC/모바일 동일 API 사용
+      const response = await repairRequestAPI.getAll(params);
       
       if (response.data.success) {
-        setRepairs(response.data.data.items || []);
+        setRepairs(response.data.data || []);
+        setTotal(response.data.total || response.data.data?.length || 0);
       } else {
         throw new Error(response.data.error?.message || '수리요청 목록 조회 실패');
       }
@@ -71,23 +83,22 @@ export default function HqRepairListPage() {
 
   const getStatusBadge = (status) => {
     const badges = {
-      requested: { label: '요청됨', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-      in_progress: { label: '진행중', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
-      completed: { label: '완료', color: 'bg-green-100 text-green-700 border-green-200' },
-      confirmed: { label: '확정', color: 'bg-slate-100 text-slate-700 border-slate-200' },
-      cancelled: { label: '취소', color: 'bg-red-100 text-red-700 border-red-200' }
+      '금형수정중': { label: '수정중', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+      '수리완료': { label: '완료', color: 'bg-green-100 text-green-700 border-green-200' },
+      '검토중': { label: '검토중', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+      '승인대기': { label: '승인대기', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+      '반려': { label: '반려', color: 'bg-red-100 text-red-700 border-red-200' }
     };
-    return badges[status] || badges.requested;
+    return badges[status] || { label: status || '-', color: 'bg-slate-100 text-slate-700 border-slate-200' };
   };
 
-  const getUrgencyBadge = (urgency) => {
+  const getPriorityBadge = (priority) => {
     const badges = {
-      low: { label: '낮음', color: 'bg-slate-100 text-slate-600' },
-      medium: { label: '보통', color: 'bg-blue-100 text-blue-600' },
-      high: { label: '높음', color: 'bg-orange-100 text-orange-600' },
-      urgent: { label: '긴급', color: 'bg-rose-100 text-rose-600' }
+      '높음': { label: '높음', color: 'bg-red-100 text-red-600' },
+      '보통': { label: '보통', color: 'bg-yellow-100 text-yellow-600' },
+      '낮음': { label: '낮음', color: 'bg-green-100 text-green-600' }
     };
-    return badges[urgency] || badges.medium;
+    return badges[priority] || { label: priority || '보통', color: 'bg-slate-100 text-slate-600' };
   };
 
   return (
@@ -182,19 +193,19 @@ export default function HqRepairListPage() {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    금형코드
+                    차종/품번
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    불량유형
+                    문제
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    긴급도
+                    우선순위
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                     상태
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    요청일
+                    발생일
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
                     액션
@@ -204,26 +215,27 @@ export default function HqRepairListPage() {
               <tbody className="bg-white divide-y divide-slate-200">
                 {repairs.map((repair) => {
                   const statusBadge = getStatusBadge(repair.status);
-                  const urgencyBadge = getUrgencyBadge(repair.severity);
+                  const priorityBadge = getPriorityBadge(repair.priority);
                   
                   return (
                     <tr key={repair.id} className="hover:bg-slate-50 transition">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-slate-900">
-                          {repair.mold?.mold_code || '-'}
+                          {repair.car_model || '-'}
                         </div>
-                        {repair.mold?.mold_name && (
-                          <div className="text-xs text-slate-500">
-                            {repair.mold.mold_name}
-                          </div>
+                        <div className="text-xs text-slate-500">
+                          {repair.part_number || '-'} / {repair.part_name || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-slate-900 max-w-xs truncate">{repair.problem || '-'}</div>
+                        {repair.problem_type && (
+                          <div className="text-xs text-slate-500">{repair.problem_type}</div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-900">{repair.issue_type || '-'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${urgencyBadge.color}`}>
-                          {urgencyBadge.label}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityBadge.color}`}>
+                          {priorityBadge.label}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -232,11 +244,11 @@ export default function HqRepairListPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                        {new Date(repair.created_at).toLocaleDateString('ko-KR')}
+                        {repair.occurred_date ? new Date(repair.occurred_date).toLocaleDateString('ko-KR') : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <button
-                          onClick={() => navigate(`/hq/repair-requests/${repair.id}`)}
+                          onClick={() => navigate(`/repair-request?id=${repair.id}`)}
                           className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium"
                         >
                           상세보기
@@ -252,10 +264,10 @@ export default function HqRepairListPage() {
         )}
 
         {/* 통계 요약 */}
-        {!loading && !error && data.length > 0 && (
+        {!loading && !error && repairs.length > 0 && (
           <div className="mt-6 bg-white rounded-xl border border-slate-200 p-4">
             <p className="text-sm text-slate-600">
-              총 <span className="font-semibold text-slate-900">{data.length}</span>건의 수리요청
+              총 <span className="font-semibold text-slate-900">{total}</span>건의 수리요청
             </p>
           </div>
         )}

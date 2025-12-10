@@ -5,7 +5,7 @@ import {
   Clock, User, Calendar, FileText, Phone, MapPin, Package, Wrench,
   Building, Truck, DollarSign, ClipboardList, Link2
 } from 'lucide-react';
-import api from '../../lib/api';
+import api, { repairRequestAPI, moldSpecificationAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function MobileRepairRequestForm() {
@@ -74,10 +74,10 @@ export default function MobileRepairRequestForm() {
     }
   }, [id, moldInfo?.id]);
 
-  // 금형정보 자동 연동
+  // 금형정보 자동 연동 (PC/모바일 동일 API 사용)
   const loadMoldInfoForAutoLink = async (moldSpecId) => {
     try {
-      const response = await api.get(`/mold-specifications/${moldSpecId}`);
+      const response = await moldSpecificationAPI.getById(moldSpecId);
       if (response.data?.data) {
         const spec = response.data.data;
         setFormData(prev => ({
@@ -95,10 +95,11 @@ export default function MobileRepairRequestForm() {
     }
   };
 
+  // PC/모바일 동일 API 사용
   const loadRepairRequest = async () => {
     try {
       setLoading(true);
-      const response = await api.get(`/repair-requests/${id}`);
+      const response = await repairRequestAPI.getById(id);
       if (response.data?.data) {
         setFormData(prev => ({ ...prev, ...response.data.data }));
       }
@@ -113,6 +114,7 @@ export default function MobileRepairRequestForm() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // PC/모바일 동일 API 사용
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -123,10 +125,10 @@ export default function MobileRepairRequestForm() {
       };
 
       if (id) {
-        await api.put(`/repair-requests/${id}`, dataToSave);
+        await repairRequestAPI.update(id, dataToSave);
         alert('수정되었습니다.');
       } else {
-        await api.post('/repair-requests', dataToSave);
+        await repairRequestAPI.create(dataToSave);
         alert('등록되었습니다.');
       }
 

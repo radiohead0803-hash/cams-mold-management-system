@@ -110,6 +110,27 @@ export const transferAPI = {
   create: (data) => api.post('/transfers', data),
   approve: (id, data) => api.patch(`/transfers/${id}/approve`, data),
   reject: (id, data) => api.patch(`/transfers/${id}/reject`, data),
+  getChecklistItems: () => api.get('/transfers/checklist/items'),
+}
+
+// Repair Request API (수리요청)
+export const repairRequestAPI = {
+  // 수리요청 목록 조회
+  getAll: (params) => api.get('/repair-requests', { params }),
+  // 수리요청 상세 조회
+  getById: (id) => api.get(`/repair-requests/${id}`),
+  // 수리요청 생성
+  create: (data) => api.post('/repair-requests', data),
+  // 수리요청 수정
+  update: (id, data) => api.put(`/repair-requests/${id}`, data),
+  // 수리요청 상태 변경
+  updateStatus: (id, data) => api.patch(`/repair-requests/${id}/status`, data),
+  // 수리요청 삭제
+  delete: (id) => api.delete(`/repair-requests/${id}`),
+  // 금형별 수리요청 조회
+  getByMold: (moldId) => api.get('/repair-requests', { params: { mold_id: moldId } }),
+  // 통계 조회
+  getStats: (params) => api.get('/repair-requests/stats', { params }),
 }
 
 // Report API
