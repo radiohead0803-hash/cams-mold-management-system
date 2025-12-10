@@ -1,21 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle,
   Clock, User, Calendar, FileText, Phone, MapPin, Package, Wrench,
-  Building, Truck, DollarSign, ClipboardList, Link2, ChevronDown, ChevronUp
+  Building, Truck, DollarSign, ClipboardList, Link2, ChevronDown, ChevronUp,
+  Image, Plus, Trash2
 } from 'lucide-react';
 import { repairRequestAPI, moldSpecificationAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
  * PC 수리요청 양식 페이지
- * PC/모바일 동기화: repairRequestAPI 사용, repair_requests 테이블
+ * 프로세스 기준 섹션 구분:
+ * 1. 요청 단계 (Plant): 기본정보 + 사진
+ * 2. 제품/금형 정보: 자동연동 (읽기전용)
+ * 3. 수리 단계 (Maker): 수리정보
+ * 4. 완료/관리 단계 (HQ): 관리정보
  */
 export default function RepairRequestForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
+  const fileInputRef = useRef(null);
   
   const moldId = searchParams.get('moldId');
   const requestId = searchParams.get('id');
@@ -23,54 +29,53 @@ export default function RepairRequestForm() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [moldInfo, setMoldInfo] = useState(null);
+  const [images, setImages] = useState([]); // 첨부 이미지
   const [expandedSections, setExpandedSections] = useState({
-    basic: true,
-    product: true,
-    repair: false,
-    management: false
+    request: true,    // 요청 단계
+    product: true,    // 제품/금형 정보
+    repair: false,    // 수리 단계
+    complete: false   // 완료/관리 단계
   });
   
   const [formData, setFormData] = useState({
-    // 기본 정보
-    problem: '',
-    cause_and_reason: '',
-    priority: '보통',
-    status: '금형수정중',
-    manager_name: '',
-    occurred_date: new Date().toISOString().split('T')[0],
-    problem_source: '',
+    // ===== 요청 단계 (Plant 작성) =====
+    problem: '',                                    // 문제 내용
+    cause_and_reason: '',                           // 원인 및 발생사유
+    priority: '보통',                               // 우선순위
+    occurred_date: new Date().toISOString().split('T')[0], // 발생일
+    problem_type: '',                               // 문제 유형
+    occurrence_type: '신규',                        // 발생 유형 (신규/재발)
+    requester_name: user?.name || '',               // 요청자
+    contact: '',                                    // 연락처
     
-    // 금형/제품 정보
-    requester_name: user?.name || '',
-    car_model: '',
-    part_number: '',
-    part_name: '',
-    occurrence_type: '신규',
-    production_site: '',
-    production_manager: '',
-    contact: '',
-    production_shot: '',
-    maker: '',
-    operation_type: '양산',
-    problem_type: '',
+    // ===== 제품/금형 정보 (자동연동) =====
+    car_model: '',                                  // 차종
+    part_number: '',                                // 품번
+    part_name: '',                                  // 품명
+    maker: '',                                      // 제작처
+    production_site: '',                            // 생산처
+    production_shot: '',                            // 현재 타수
     
-    // 수리 정보
-    repair_cost: '',
-    completion_date: '',
-    temporary_action: '',
-    root_cause_action: '',
-    mold_arrival_date: '',
-    stock_schedule_date: '',
-    stock_quantity: '',
-    stock_unit: 'EA',
-    repair_company: '',
-    repair_duration: '',
+    // ===== 수리 단계 (Maker 작성) =====
+    status: '요청접수',                             // 진행상태
+    manager_name: '',                               // 담당자
+    temporary_action: '',                           // 임시 조치 내용
+    root_cause_action: '',                          // 근본 원인 조치
+    repair_company: '',                             // 수리업체
+    repair_cost: '',                                // 수리비용
+    repair_duration: '',                            // 수리기간
+    completion_date: '',                            // 완료예정일
+    mold_arrival_date: '',                          // 금형 입고일
     
-    // 관리 정보
-    management_type: '',
-    sign_off_status: '제출되지 않음',
-    representative_part_number: '',
-    order_company: ''
+    // ===== 완료/관리 단계 (HQ 작성) =====
+    operation_type: '양산',                         // 운영 유형
+    management_type: '',                            // 관리 유형
+    sign_off_status: '제출되지 않음',               // 결재 상태
+    order_company: '',                              // 발주업체
+    representative_part_number: '',                 // 대표 품번
+    stock_schedule_date: '',                        // 재고 예정일
+    stock_quantity: '',                             // 재고 수량
+    stock_unit: 'EA'                                // 단위
   });
 
   useEffect(() => {
@@ -160,8 +165,59 @@ export default function RepairRequestForm() {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
+  // 이미지 추가
+  const handleImageUpload = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setImages(prev => [...prev, {
+            id: Date.now() + Math.random(),
+            file,
+            preview: event.target.result,
+            name: file.name
+          }]);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    e.target.value = '';
+  };
+
+  // 이미지 삭제
+  const handleImageRemove = (imageId) => {
+    setImages(prev => prev.filter(img => img.id !== imageId));
+  };
+
+  // 클립보드 붙여넣기
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setImages(prev => [...prev, {
+              id: Date.now() + Math.random(),
+              file,
+              preview: event.target.result,
+              name: `캡처_${new Date().toLocaleString()}.png`
+            }]);
+          };
+          reader.readAsDataURL(file);
+        }
+        break;
+      }
+    }
+  };
+
   const priorityOptions = ['높음', '보통', '낮음'];
-  const statusOptions = ['금형수정중', '수리완료', '검토중', '승인대기', '반려'];
+  const statusOptions = ['요청접수', '검토중', '수리진행', '수리완료', '승인대기', '반려'];
   const occurrenceOptions = ['신규', '재발'];
   const operationOptions = ['양산', '개발', '시작'];
   const problemTypeOptions = ['내구성', '외관', '치수', '기능', '기타'];
@@ -223,24 +279,25 @@ export default function RepairRequestForm() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-6 space-y-4">
-        {/* 기본 정보 섹션 */}
+      <main className="max-w-5xl mx-auto px-6 py-6 space-y-4" onPaste={handlePaste}>
+        {/* ===== 1. 요청 단계 (Plant 작성) ===== */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
-            onClick={() => toggleSection('basic')}
+            onClick={() => toggleSection('request')}
             className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50 border-b border-slate-200"
           >
             <div className="flex items-center gap-3">
               <FileText className="w-5 h-5 text-amber-600" />
-              <span className="font-semibold text-slate-800">기본 정보</span>
+              <span className="font-semibold text-slate-800">1. 요청 단계</span>
+              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Plant 작성</span>
               <span className="text-xs text-red-500">* 필수</span>
             </div>
-            {expandedSections.basic ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            {expandedSections.request ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
           
-          {expandedSections.basic && (
+          {expandedSections.request && (
             <div className="p-6 space-y-4">
-              {/* 문제 */}
+              {/* 문제 내용 */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   문제 내용 <span className="text-red-500">*</span>
@@ -262,13 +319,68 @@ export default function RepairRequestForm() {
                 <textarea
                   value={formData.cause_and_reason}
                   onChange={(e) => handleChange('cause_and_reason', e.target.value)}
-                  rows={4}
+                  rows={3}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   placeholder="- 원인:&#10;- 발생사유:"
                 />
               </div>
 
-              {/* 우선순위 & 진행상태 */}
+              {/* 사진 추가 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Camera size={16} />
+                    사진 추가
+                    <span className="text-xs text-slate-400">(Ctrl+V로 캡처 이미지 붙여넣기 가능)</span>
+                  </div>
+                </label>
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-4">
+                  {/* 이미지 미리보기 */}
+                  {images.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      {images.map((img) => (
+                        <div key={img.id} className="relative group">
+                          <img
+                            src={img.preview}
+                            alt={img.name}
+                            className="w-full h-24 object-cover rounded-lg border border-slate-200"
+                          />
+                          <button
+                            onClick={() => handleImageRemove(img.id)}
+                            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X size={14} />
+                          </button>
+                          <p className="text-xs text-slate-500 mt-1 truncate">{img.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* 업로드 버튼 */}
+                  <div className="flex items-center justify-center gap-4">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition text-sm"
+                    >
+                      <Upload size={16} />
+                      파일 선택
+                    </button>
+                    <span className="text-sm text-slate-400">또는 이미지를 드래그하세요</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 우선순위, 발생일, 문제유형, 발생유형 */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">우선순위</label>
@@ -283,18 +395,6 @@ export default function RepairRequestForm() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">진행상태</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => handleChange('status', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
-                  >
-                    {statusOptions.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">발생일</label>
                   <input
                     type="date"
@@ -303,20 +403,6 @@ export default function RepairRequestForm() {
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">담당자</label>
-                  <input
-                    type="text"
-                    value={formData.manager_name}
-                    onChange={(e) => handleChange('manager_name', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
-                    placeholder="담당자명"
-                  />
-                </div>
-              </div>
-
-              {/* 문제 유형 & 발생 유형 */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">문제 유형</label>
                   <select
@@ -342,127 +428,18 @@ export default function RepairRequestForm() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">운영 유형</label>
-                  <select
-                    value={formData.operation_type}
-                    onChange={(e) => handleChange('operation_type', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
-                  >
-                    {operationOptions.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* 제품/금형 정보 섹션 */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <button
-            onClick={() => toggleSection('product')}
-            className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200"
-          >
-            <div className="flex items-center gap-3">
-              <Package className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-slate-800">제품/금형 정보</span>
-              <span className="text-xs text-blue-500">자동연동</span>
-            </div>
-            {expandedSections.product ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-          
-          {expandedSections.product && (
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">차종</label>
-                  <input
-                    type="text"
-                    value={formData.car_model}
-                    onChange={(e) => handleChange('car_model', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
-                    placeholder="자동연동"
-                    readOnly={!!moldId}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">품번</label>
-                  <input
-                    type="text"
-                    value={formData.part_number}
-                    onChange={(e) => handleChange('part_number', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
-                    placeholder="자동연동"
-                    readOnly={!!moldId}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">품명</label>
-                  <input
-                    type="text"
-                    value={formData.part_name}
-                    onChange={(e) => handleChange('part_name', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
-                    placeholder="자동연동"
-                    readOnly={!!moldId}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">제작처</label>
-                  <input
-                    type="text"
-                    value={formData.maker}
-                    onChange={(e) => handleChange('maker', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
-                    placeholder="자동연동"
-                    readOnly={!!moldId}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">생산처</label>
-                  <input
-                    type="text"
-                    value={formData.production_site}
-                    onChange={(e) => handleChange('production_site', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
-                    placeholder="자동연동"
-                    readOnly={!!moldId}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">현재 타수</label>
-                  <input
-                    type="text"
-                    value={formData.production_shot}
-                    onChange={(e) => handleChange('production_shot', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
-                    placeholder="자동연동"
-                    readOnly={!!moldId}
-                  />
-                </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {/* 요청자, 연락처 */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">요청자</label>
                   <input
                     type="text"
                     value={formData.requester_name}
                     onChange={(e) => handleChange('requester_name', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
                     placeholder="요청자명"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">생산담당자</label>
-                  <input
-                    type="text"
-                    value={formData.production_manager}
-                    onChange={(e) => handleChange('production_manager', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
-                    placeholder="생산담당자명"
                   />
                 </div>
                 <div>
@@ -471,7 +448,7 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.contact}
                     onChange={(e) => handleChange('contact', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
                     placeholder="010-0000-0000"
                   />
                 </div>
@@ -480,7 +457,89 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* 수리 정보 섹션 */}
+        {/* ===== 2. 제품/금형 정보 (자동연동) ===== */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <button
+            onClick={() => toggleSection('product')}
+            className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200"
+          >
+            <div className="flex items-center gap-3">
+              <Package className="w-5 h-5 text-blue-600" />
+              <span className="font-semibold text-slate-800">2. 제품/금형 정보</span>
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">자동연동</span>
+            </div>
+            {expandedSections.product ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          
+          {expandedSections.product && (
+            <div className="p-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">차종</label>
+                  <input
+                    type="text"
+                    value={formData.car_model}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
+                    placeholder="자동연동"
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">품번</label>
+                  <input
+                    type="text"
+                    value={formData.part_number}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
+                    placeholder="자동연동"
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">품명</label>
+                  <input
+                    type="text"
+                    value={formData.part_name}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
+                    placeholder="자동연동"
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">제작처</label>
+                  <input
+                    type="text"
+                    value={formData.maker}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
+                    placeholder="자동연동"
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">생산처</label>
+                  <input
+                    type="text"
+                    value={formData.production_site}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
+                    placeholder="자동연동"
+                    readOnly
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">현재 타수</label>
+                  <input
+                    type="text"
+                    value={formData.production_shot}
+                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
+                    placeholder="자동연동"
+                    readOnly
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 3. 수리 단계 (Maker 작성) ===== */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('repair')}
@@ -488,13 +547,60 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <Wrench className="w-5 h-5 text-green-600" />
-              <span className="font-semibold text-slate-800">수리 정보</span>
+              <span className="font-semibold text-slate-800">3. 수리 단계</span>
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Maker 작성</span>
             </div>
             {expandedSections.repair ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
           
           {expandedSections.repair && (
             <div className="p-6 space-y-4">
+              {/* 진행상태, 담당자 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">진행상태</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => handleChange('status', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
+                  >
+                    {statusOptions.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">담당자</label>
+                  <input
+                    type="text"
+                    value={formData.manager_name}
+                    onChange={(e) => handleChange('manager_name', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
+                    placeholder="담당자명"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">수리업체</label>
+                  <input
+                    type="text"
+                    value={formData.repair_company}
+                    onChange={(e) => handleChange('repair_company', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
+                    placeholder="수리업체명"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">금형 입고일</label>
+                  <input
+                    type="date"
+                    value={formData.mold_arrival_date}
+                    onChange={(e) => handleChange('mold_arrival_date', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+
+              {/* 임시 조치 내용 */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">임시 조치 내용</label>
                 <textarea
@@ -506,6 +612,7 @@ export default function RepairRequestForm() {
                 />
               </div>
 
+              {/* 근본 원인 조치 */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">근본 원인 조치</label>
                 <textarea
@@ -517,24 +624,15 @@ export default function RepairRequestForm() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">수리업체</label>
-                  <input
-                    type="text"
-                    value={formData.repair_company}
-                    onChange={(e) => handleChange('repair_company', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
-                    placeholder="수리업체명"
-                  />
-                </div>
+              {/* 수리비용, 수리기간, 완료예정일 */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">수리비용</label>
                   <input
                     type="text"
                     value={formData.repair_cost}
                     onChange={(e) => handleChange('repair_cost', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                     placeholder="₩"
                   />
                 </div>
@@ -544,7 +642,7 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.repair_duration}
                     onChange={(e) => handleChange('repair_duration', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                     placeholder="예: 3일"
                   />
                 </div>
@@ -554,79 +652,49 @@ export default function RepairRequestForm() {
                     type="date"
                     value={formData.completion_date}
                     onChange={(e) => handleChange('completion_date', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">금형 입고일</label>
-                  <input
-                    type="date"
-                    value={formData.mold_arrival_date}
-                    onChange={(e) => handleChange('mold_arrival_date', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 예정일</label>
-                  <input
-                    type="date"
-                    value={formData.stock_schedule_date}
-                    onChange={(e) => handleChange('stock_schedule_date', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 수량</label>
-                  <input
-                    type="number"
-                    value={formData.stock_quantity}
-                    onChange={(e) => handleChange('stock_quantity', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">단위</label>
-                  <select
-                    value={formData.stock_unit}
-                    onChange={(e) => handleChange('stock_unit', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
-                  >
-                    <option value="EA">EA</option>
-                    <option value="SET">SET</option>
-                    <option value="BOX">BOX</option>
-                  </select>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* 관리 정보 섹션 */}
+        {/* ===== 4. 완료/관리 단계 (HQ 작성) ===== */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
-            onClick={() => toggleSection('management')}
+            onClick={() => toggleSection('complete')}
             className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-purple-50 to-violet-50 border-b border-slate-200"
           >
             <div className="flex items-center gap-3">
               <ClipboardList className="w-5 h-5 text-purple-600" />
-              <span className="font-semibold text-slate-800">관리 정보</span>
+              <span className="font-semibold text-slate-800">4. 완료/관리 단계</span>
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">HQ 작성</span>
             </div>
-            {expandedSections.management ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            {expandedSections.complete ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
           
-          {expandedSections.management && (
+          {expandedSections.complete && (
             <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">운영 유형</label>
+                  <select
+                    value={formData.operation_type}
+                    onChange={(e) => handleChange('operation_type', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+                  >
+                    {operationOptions.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">관리 유형</label>
                   <select
                     value={formData.management_type}
                     onChange={(e) => handleChange('management_type', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="">선택</option>
                     {managementTypeOptions.map(opt => (
@@ -640,7 +708,7 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.sign_off_status}
                     readOnly
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
+                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
                   />
                 </div>
                 <div>
@@ -649,21 +717,54 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.order_company}
                     onChange={(e) => handleChange('order_company', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
                     placeholder="발주업체명"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">대표 품번</label>
-                <input
-                  type="text"
-                  value={formData.representative_part_number}
-                  onChange={(e) => handleChange('representative_part_number', e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
-                  placeholder="대표 품번"
-                />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">대표 품번</label>
+                  <input
+                    type="text"
+                    value={formData.representative_part_number}
+                    onChange={(e) => handleChange('representative_part_number', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+                    placeholder="대표 품번"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 예정일</label>
+                  <input
+                    type="date"
+                    value={formData.stock_schedule_date}
+                    onChange={(e) => handleChange('stock_schedule_date', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 수량</label>
+                  <input
+                    type="number"
+                    value={formData.stock_quantity}
+                    onChange={(e) => handleChange('stock_quantity', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">단위</label>
+                  <select
+                    value={formData.stock_unit}
+                    onChange={(e) => handleChange('stock_unit', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="EA">EA</option>
+                    <option value="SET">SET</option>
+                    <option value="BOX">BOX</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
