@@ -96,6 +96,7 @@ const approvalWorkflowRouter = require('./routes/approvalWorkflow');
 const injectionConditionsRouter = require('./routes/injectionConditions');
 const weightRouter = require('./routes/weight');
 const materialRouter = require('./routes/material');
+const testDataRouter = require('./routes/testData');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -146,6 +147,8 @@ app.use('/api/v1/injection-conditions', injectionConditionsRouter);
 app.use('/api/v1/weight', weightRouter);
 // Material management (원재료 정보 이력관리)
 app.use('/api/v1/material', materialRouter);
+// Test data (테스트 데이터 삽입)
+app.use('/api/v1/test-data', testDataRouter);
 
 // Health check
 app.get('/health', (req, res) => {
