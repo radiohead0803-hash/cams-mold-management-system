@@ -67,6 +67,18 @@ export default function MoldDetailNew() {
       color: 'bg-sky-400',
       hoverColor: 'hover:bg-sky-500',
       items: ['이관현황']
+    },
+    maintenance: { 
+      label: '유지보전', 
+      color: 'bg-orange-400',
+      hoverColor: 'hover:bg-orange-500',
+      items: ['유지보전 기록', '유지보전 등록']
+    },
+    scrapping: { 
+      label: '폐기관리', 
+      color: 'bg-red-400',
+      hoverColor: 'hover:bg-red-500',
+      items: ['폐기 요청', '폐기 현황']
     }
   };
 
@@ -689,20 +701,34 @@ export default function MoldDetailNew() {
               </div>
               <div className="p-4 grid grid-cols-2 gap-3">
                 {/* 점검 버튼 (상하 배치) */}
-                <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <button 
                     onClick={() => navigate(`/checklist/daily?moldId=${id}`)}
-                    className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl hover:shadow-md transition-shadow text-center flex-1"
+                    className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl hover:shadow-md transition-shadow text-center"
                   >
-                    <CheckCircle className="mx-auto mb-2 text-green-600" size={24} />
-                    <span className="text-sm font-medium text-gray-700">일상점검</span>
+                    <CheckCircle className="mx-auto mb-1 text-green-600" size={20} />
+                    <span className="text-xs font-medium text-gray-700">일상점검</span>
                   </button>
                   <button 
                     onClick={() => navigate(`/inspection/periodic?moldId=${id}`)}
-                    className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl hover:shadow-md transition-shadow text-center flex-1"
+                    className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl hover:shadow-md transition-shadow text-center"
                   >
-                    <Calendar className="mx-auto mb-2 text-blue-600" size={24} />
-                    <span className="text-sm font-medium text-gray-700">정기점검</span>
+                    <Calendar className="mx-auto mb-1 text-blue-600" size={20} />
+                    <span className="text-xs font-medium text-gray-700">정기점검</span>
+                  </button>
+                  <button 
+                    onClick={() => navigate(`/maintenance?moldId=${id}`)}
+                    className="p-3 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl hover:shadow-md transition-shadow text-center"
+                  >
+                    <Settings className="mx-auto mb-1 text-orange-600" size={20} />
+                    <span className="text-xs font-medium text-gray-700">유지보전</span>
+                  </button>
+                  <button 
+                    onClick={() => navigate(`/scrapping?moldId=${id}`)}
+                    className="p-3 bg-gradient-to-br from-red-50 to-rose-50 rounded-xl hover:shadow-md transition-shadow text-center"
+                  >
+                    <AlertTriangle className="mx-auto mb-1 text-red-600" size={20} />
+                    <span className="text-xs font-medium text-gray-700">폐기요청</span>
                   </button>
                 </div>
                 {/* QR 코드 - 스캔 시 모바일 페이지로 이동 */}
