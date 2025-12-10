@@ -119,6 +119,15 @@ export default function Layout() {
             { to: '/scrapping', label: '폐기 요청 목록' },
             { to: '/scrapping/new', label: '폐기 요청' }
           ]
+        },
+        { 
+          to: '/transfers', 
+          icon: Truck, 
+          label: '금형 이관',
+          subMenus: [
+            { to: '/transfers', label: '이관 현황' },
+            { to: '/transfers/new', label: '이관 요청' }
+          ]
         }
       ]
     }
@@ -221,6 +230,15 @@ export default function Layout() {
           subMenus: [
             { to: '/scrapping', label: '폐기 요청 목록' }
           ]
+        },
+        { 
+          to: '/transfers', 
+          icon: Truck, 
+          label: '금형 이관',
+          subMenus: [
+            { to: '/transfers', label: '이관 현황' },
+            { to: '/transfers/new', label: '이관 요청' }
+          ]
         }
       ]
     }
@@ -322,6 +340,14 @@ export default function Layout() {
           icon: Bell, 
           label: '알림',
           subMenus: []
+        },
+        { 
+          to: '/transfers', 
+          icon: Truck, 
+          label: '금형 이관',
+          subMenus: [
+            { to: '/transfers', label: '이관 현황' }
+          ]
         }
       ]
     }
