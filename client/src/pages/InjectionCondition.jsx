@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, Info, User, Calendar, FileText, Edit3,
   Plus, Minus, ToggleLeft, ToggleRight
 } from 'lucide-react'
-import { injectionConditionAPI, moldSpecificationAPI } from '../lib/api'
+import { injectionConditionAPI, moldSpecificationAPI, weightAPI } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 
 /**
@@ -94,6 +94,24 @@ export default function InjectionCondition() {
   const handleSave = async (submitForApproval = false) => {
     try {
       setSaving(true)
+      
+      // 중량 데이터 별도 저장 (이력 관리)
+      if (formData.design_weight && isDeveloper) {
+        await weightAPI.update(moldId, {
+          weight_type: 'design',
+          weight_value: formData.design_weight,
+          weight_unit: formData.design_weight_unit || 'g',
+          change_reason: changeReason
+        })
+      }
+      if (formData.actual_weight && !isDeveloper) {
+        await weightAPI.update(moldId, {
+          weight_type: 'actual',
+          weight_value: formData.actual_weight,
+          weight_unit: formData.actual_weight_unit || 'g',
+          change_reason: changeReason
+        })
+      }
       
       const dataToSave = {
         ...formData,

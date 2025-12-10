@@ -94,6 +94,7 @@ const inspectionsRouter = require('./routes/inspections');
 const moldImagesRouter = require('./routes/moldImages');
 const approvalWorkflowRouter = require('./routes/approvalWorkflow');
 const injectionConditionsRouter = require('./routes/injectionConditions');
+const weightRouter = require('./routes/weight');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -140,6 +141,8 @@ app.use('/api/v1/mold-images', moldImagesRouter);
 app.use('/api/v1/workflow', approvalWorkflowRouter);
 // Injection conditions (사출조건 관리)
 app.use('/api/v1/injection-conditions', injectionConditionsRouter);
+// Weight management (설계중량/실중량 이력관리)
+app.use('/api/v1/weight', weightRouter);
 
 // Health check
 app.get('/health', (req, res) => {

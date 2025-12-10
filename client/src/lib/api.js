@@ -174,6 +174,16 @@ export const injectionConditionAPI = {
   getPending: () => api.get('/injection-conditions/pending'),
 }
 
+// Weight API (설계중량/실중량 이력관리)
+export const weightAPI = {
+  // 현재 중량 조회
+  get: (moldSpecId) => api.get(`/weight/${moldSpecId}`),
+  // 중량 업데이트 (이력 자동 기록)
+  update: (moldSpecId, data) => api.put(`/weight/${moldSpecId}`, data),
+  // 중량 이력 조회
+  getHistory: (moldSpecId, params) => api.get(`/weight/${moldSpecId}/history`, { params }),
+}
+
 // Master Data API
 export const masterDataAPI = {
   // 차종

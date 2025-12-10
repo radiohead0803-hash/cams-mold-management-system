@@ -5,7 +5,7 @@ import {
   Thermometer, Gauge, Settings, Droplets, Clock, CheckCircle, AlertCircle, Info,
   User, Calendar, FileText, Edit3, Plus, Minus, ToggleLeft, ToggleRight
 } from 'lucide-react';
-import { moldSpecificationAPI, injectionConditionAPI } from '../../lib/api';
+import { moldSpecificationAPI, injectionConditionAPI, weightAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function MobileInjectionCondition() {
@@ -99,6 +99,24 @@ export default function MobileInjectionCondition() {
   const handleSave = async () => {
     try {
       setSaving(true);
+      
+      // 중량 데이터 별도 저장 (이력 관리)
+      if (conditionData.design_weight && isDeveloper) {
+        await weightAPI.update(moldId, {
+          weight_type: 'design',
+          weight_value: conditionData.design_weight,
+          weight_unit: conditionData.design_weight_unit || 'g',
+          change_reason: changeReason
+        });
+      }
+      if (conditionData.actual_weight && !isDeveloper) {
+        await weightAPI.update(moldId, {
+          weight_type: 'actual',
+          weight_value: conditionData.actual_weight,
+          weight_unit: conditionData.actual_weight_unit || 'g',
+          change_reason: changeReason
+        });
+      }
       
       const dataToSave = {
         ...conditionData,

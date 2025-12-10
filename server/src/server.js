@@ -103,7 +103,7 @@ const runInjectionConditionsMigration = async () => {
   }
 };
 
-// Run SQL migrations for weight columns
+// Run SQL migrations for weight columns and history table
 const runWeightColumnsMigration = async () => {
   console.log('🔄 Running weight columns migration...');
   try {
@@ -126,7 +126,42 @@ const runWeightColumnsMigration = async () => {
         // 컬럼 이미 존재하면 무시
       }
     }
-    console.log('✅ Weight columns migration completed.');
+    console.log('✅ Weight columns added to mold_specifications.');
+
+    // weight_history 이력 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS weight_history (
+        id SERIAL PRIMARY KEY,
+        mold_spec_id INTEGER NOT NULL,
+        mold_id INTEGER,
+        weight_type VARCHAR(20) NOT NULL,
+        weight_value DECIMAL(10,2) NOT NULL,
+        weight_unit VARCHAR(10) DEFAULT 'g',
+        change_reason TEXT,
+        registered_by INTEGER,
+        registered_by_name VARCHAR(100),
+        registered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        previous_value DECIMAL(10,2),
+        previous_unit VARCHAR(10),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ weight_history table created/verified.');
+
+    // 인덱스 생성
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_weight_history_mold_spec ON weight_history(mold_spec_id)',
+      'CREATE INDEX IF NOT EXISTS idx_weight_history_type ON weight_history(weight_type)',
+      'CREATE INDEX IF NOT EXISTS idx_weight_history_registered_at ON weight_history(registered_at DESC)'
+    ];
+    for (const idx of indexes) {
+      try {
+        await sequelize.query(idx);
+      } catch (e) {
+        // 인덱스 이미 존재하면 무시
+      }
+    }
+    console.log('✅ Weight history indexes created/verified.');
   } catch (error) {
     console.error('⚠️ Weight columns migration warning:', error.message);
   }
