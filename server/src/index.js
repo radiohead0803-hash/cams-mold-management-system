@@ -81,6 +81,8 @@ app.use('/api/v1/inspections', require('./routes/inspections'));
 app.use('/api/v1/transfers', require('./routes/transfers'));
 app.use('/api/v1/alerts', require('./routes/alerts'));
 app.use('/api/v1/reports', require('./routes/reports'));
+app.use('/api/v1/periodic-inspection', require('./routes/periodicInspection'));
+app.use('/api/v1/production', require('./routes/production'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -646,6 +648,141 @@ const runGpsAlertsMigration = async () => {
   logger.info('GPS and alerts migration completed.');
 };
 
+// 체크리스트 템플릿 및 정기점검 항목 마이그레이션
+const runChecklistTemplateMigration = async () => {
+  // checklist_template_versions 테이블 (버전 관리)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_template_versions (
+        id SERIAL PRIMARY KEY,
+        template_id INTEGER NOT NULL,
+        version_number INTEGER NOT NULL DEFAULT 1,
+        version_name VARCHAR(100),
+        status VARCHAR(20) DEFAULT 'draft',
+        items JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_by INTEGER REFERENCES users(id),
+        approved_by INTEGER REFERENCES users(id),
+        approved_at TIMESTAMP,
+        deployed_at TIMESTAMP,
+        deployed_by INTEGER REFERENCES users(id),
+        rollback_from INTEGER,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_template_versions_template ON checklist_template_versions(template_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_template_versions_status ON checklist_template_versions(status);`);
+    logger.info('checklist_template_versions table created/verified.');
+  } catch (err) {
+    logger.warn('checklist_template_versions table:', err.message);
+  }
+
+  // periodic_inspection_items 테이블 (정기점검 항목)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS periodic_inspection_items (
+        id SERIAL PRIMARY KEY,
+        category VARCHAR(100) NOT NULL,
+        item_name VARCHAR(200) NOT NULL,
+        item_code VARCHAR(50),
+        description TEXT,
+        inspection_method TEXT,
+        acceptance_criteria TEXT,
+        shot_thresholds JSONB DEFAULT '[]'::jsonb,
+        is_required BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_periodic_items_category ON periodic_inspection_items(category);`);
+    logger.info('periodic_inspection_items table created/verified.');
+  } catch (err) {
+    logger.warn('periodic_inspection_items table:', err.message);
+  }
+
+  // 정기점검 항목 시드 데이터 삽입
+  try {
+    const [existing] = await db.sequelize.query(`SELECT COUNT(*) as count FROM periodic_inspection_items`);
+    if (parseInt(existing[0].count) === 0) {
+      const periodicItems = [
+        // 1. 파팅면/성형면 (20K부터)
+        { category: '파팅면/성형면', item_name: '파팅면 단차 확인', item_code: 'PI-001', description: '파팅면 단차 ±0.02mm 이내', inspection_method: '게이지 측정', acceptance_criteria: '±0.02mm', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 1 },
+        { category: '파팅면/성형면', item_name: '성형면 손상 여부', item_code: 'PI-002', description: '성형면 스크래치, 마모, 손상 확인', inspection_method: '육안검사', acceptance_criteria: '손상 없음', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 2 },
+        { category: '파팅면/성형면', item_name: '표면 이상 여부', item_code: 'PI-003', description: '표면 오염, 변색, 코팅 상태', inspection_method: '육안검사', acceptance_criteria: '이상 없음', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 3 },
+        
+        // 2. 벤트/게이트 (20K부터)
+        { category: '벤트/게이트', item_name: '벤트홀 막힘 확인', item_code: 'PI-004', description: '벤트홀 막힘, 오염 여부', inspection_method: '육안검사/에어건', acceptance_criteria: '막힘 없음', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 4 },
+        { category: '벤트/게이트', item_name: '게이트 청결 상태', item_code: 'PI-005', description: '게이트 잔류물, 청결 상태', inspection_method: '육안검사', acceptance_criteria: '청결', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 5 },
+        { category: '벤트/게이트', item_name: '게이트 마모 확인', item_code: 'PI-006', description: '게이트 마모 0.03mm 이상 시 재가공', inspection_method: '게이지 측정', acceptance_criteria: '<0.03mm', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 6 },
+        
+        // 3. 작동부 (20K부터)
+        { category: '작동부', item_name: '슬라이드 작동 확인', item_code: 'PI-007', description: '슬라이드 이상음, 걸림, 노유 여부', inspection_method: '작동 테스트', acceptance_criteria: '원활한 작동', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 7 },
+        { category: '작동부', item_name: '가이드핀 상태', item_code: 'PI-008', description: '가이드핀 마모, 유격 ±0.02mm', inspection_method: '게이지 측정', acceptance_criteria: '±0.02mm', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 8 },
+        { category: '작동부', item_name: '리프트핀 상태', item_code: 'PI-009', description: '리프트핀 마모, 변형, 이상음', inspection_method: '작동 테스트', acceptance_criteria: '이상 없음', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 9 },
+        
+        // 4. 습합(접합) (20K부터)
+        { category: '습합(접합)', item_name: '금형 간극 확인', item_code: 'PI-010', description: '금형 간극 ±0.02mm 이내', inspection_method: '틈새 게이지', acceptance_criteria: '±0.02mm', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 10 },
+        { category: '습합(접합)', item_name: '접합 정렬 상태', item_code: 'PI-011', description: '접합면 정렬, 단차 확인', inspection_method: '육안검사/측정', acceptance_criteria: '정렬 양호', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 11 },
+        { category: '습합(접합)', item_name: '습합 압력 균일성', item_code: 'PI-012', description: '습합 압력 균일 분포 확인', inspection_method: '압력 테스트', acceptance_criteria: '균일', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 12 },
+        
+        // 5. 취출계통 (20K부터)
+        { category: '취출계통', item_name: '밀핀 작동 확인', item_code: 'PI-013', description: '밀핀 작동, 박힘, 변형 여부', inspection_method: '작동 테스트', acceptance_criteria: '정상 작동', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 13 },
+        { category: '취출계통', item_name: '스프링 상태', item_code: 'PI-014', description: '스프링 탄성, 변형 확인', inspection_method: '육안검사/테스트', acceptance_criteria: '정상', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 14 },
+        { category: '취출계통', item_name: '취출핀 마모', item_code: 'PI-015', description: '취출핀 마모, 손상 여부', inspection_method: '게이지 측정', acceptance_criteria: '마모 없음', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 15 },
+        
+        // 6. 냉각/유압 연결부 (20K부터)
+        { category: '냉각/유압', item_name: '누유/누수 확인', item_code: 'PI-016', description: '냉각수, 유압 누유/누수 여부', inspection_method: '육안검사', acceptance_criteria: '누출 없음', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 16 },
+        { category: '냉각/유압', item_name: '조인트/커넥터 상태', item_code: 'PI-017', description: '조인트, 커넥터, 호스 상태', inspection_method: '육안검사', acceptance_criteria: '정상', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 17 },
+        { category: '냉각/유압', item_name: '냉각수 유량/온도', item_code: 'PI-018', description: '유량 저하, 온도 편차 ±10%', inspection_method: '유량계/온도계', acceptance_criteria: '±10% 이내', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 18 },
+        { category: '냉각/유압', item_name: '냉각라인 스케일', item_code: 'PI-019', description: '스케일 제거, 이물 세척', inspection_method: '분해 점검', acceptance_criteria: '청결', shot_thresholds: [100000, 120000, 150000], sort_order: 19 },
+        
+        // 7. 히터/센서/배선 (50K부터)
+        { category: '히터/센서/배선', item_name: '히터 저항 확인', item_code: 'PI-020', description: '히터 저항 ±10% 이내', inspection_method: '저항 측정', acceptance_criteria: '±10%', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 20 },
+        { category: '히터/센서/배선', item_name: '온도센서 상태', item_code: 'PI-021', description: '온도센서 손상, 접촉불량', inspection_method: '테스트', acceptance_criteria: '정상', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 21 },
+        { category: '히터/센서/배선', item_name: '배선 절연 상태', item_code: 'PI-022', description: '배선 손상, 절연 상태', inspection_method: '절연 테스트', acceptance_criteria: '정상', shot_thresholds: [100000, 120000, 150000], sort_order: 22 },
+        
+        // 8. 표면처리/코팅 (50K부터)
+        { category: '표면처리/코팅', item_name: '코팅 박리 확인', item_code: 'PI-023', description: '코팅 박리, 변색 여부', inspection_method: '육안검사', acceptance_criteria: '박리 없음', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 23 },
+        { category: '표면처리/코팅', item_name: '크롬층 상태', item_code: 'PI-024', description: '크롬층 불균일, 두께 이상', inspection_method: '두께 측정', acceptance_criteria: '균일', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 24 },
+        
+        // 9. 치수 확인 (100K부터)
+        { category: '치수확인', item_name: '표준치수 확인', item_code: 'PI-025', description: '도면 대비 편차 ±0.05mm', inspection_method: '3차원 측정', acceptance_criteria: '±0.05mm', shot_thresholds: [100000, 120000, 150000], sort_order: 25 },
+        { category: '치수확인', item_name: '인서트 치수 확인', item_code: 'PI-026', description: '인서트 정렬, 치수 확인', inspection_method: '게이지 측정', acceptance_criteria: '정상', shot_thresholds: [100000, 120000, 150000], sort_order: 26 },
+        
+        // 10. 세척 (80K부터 집중)
+        { category: '세척', item_name: '금형 외곽 세척', item_code: 'PI-027', description: '금형 외곽 분진, 오염 제거', inspection_method: '세척 작업', acceptance_criteria: '청결', shot_thresholds: [80000, 100000, 120000, 150000], sort_order: 27 },
+        { category: '세척', item_name: '코어/캐비티 세척', item_code: 'PI-028', description: '코어, 캐비티 내 이물 제거', inspection_method: '세척 작업', acceptance_criteria: '청결', shot_thresholds: [80000, 100000, 120000, 150000], sort_order: 28 },
+        { category: '세척', item_name: '세척제 기록', item_code: 'PI-029', description: '사용 세척제, 희석 비율 기록', inspection_method: '기록', acceptance_criteria: '기록 완료', shot_thresholds: [80000, 100000, 120000, 150000], sort_order: 29 },
+        
+        // 11. 윤활 (모든 주기)
+        { category: '윤활', item_name: '윤활 상태 확인', item_code: 'PI-030', description: '슬라이드, 가이드 윤활 상태', inspection_method: '육안검사', acceptance_criteria: '적정', shot_thresholds: [20000, 50000, 80000, 100000, 120000, 150000], sort_order: 30 },
+        { category: '윤활', item_name: '윤활유 보충', item_code: 'PI-031', description: '필요시 윤활유 보충', inspection_method: '보충 작업', acceptance_criteria: '보충 완료', shot_thresholds: [50000, 80000, 100000, 120000, 150000], sort_order: 31 }
+      ];
+      
+      for (let i = 0; i < periodicItems.length; i++) {
+        const item = periodicItems[i];
+        await db.sequelize.query(`
+          INSERT INTO periodic_inspection_items (category, item_name, item_code, description, inspection_method, acceptance_criteria, shot_thresholds, sort_order, is_active, created_at, updated_at)
+          VALUES (:category, :item_name, :item_code, :description, :inspection_method, :acceptance_criteria, :shot_thresholds::jsonb, :sort_order, true, NOW(), NOW())
+        `, {
+          replacements: {
+            ...item,
+            shot_thresholds: JSON.stringify(item.shot_thresholds)
+          }
+        });
+      }
+      logger.info('Periodic inspection items seed data inserted: ' + periodicItems.length + ' items');
+    }
+  } catch (err) {
+    logger.warn('Periodic inspection items seed:', err.message);
+  }
+
+  logger.info('Checklist template migration completed.');
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -659,6 +796,7 @@ const startServer = async () => {
     await runRawMaterialsMigration();
     await runMasterDataMigration();
     await runGpsAlertsMigration();
+    await runChecklistTemplateMigration();
     
     // Sync database (only in development)
     if (process.env.NODE_ENV === 'development') {
