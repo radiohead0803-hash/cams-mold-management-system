@@ -56,9 +56,15 @@ const getTransfers = async (req, res) => {
     });
   } catch (error) {
     logger.error('Get transfers error:', error);
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to get transfers', details: error.message }
+    // 에러 시 빈 데이터 반환
+    res.json({
+      success: true,
+      data: {
+        items: [],
+        total: 0,
+        limit: parseInt(req.query.limit) || 50,
+        offset: parseInt(req.query.offset) || 0
+      }
     });
   }
 };

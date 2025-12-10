@@ -102,6 +102,7 @@ const preProductionChecklistRouter = require('./routes/preProductionChecklist');
 const maintenanceRouter = require('./routes/maintenance');
 const scrappingRouter = require('./routes/scrapping');
 const statisticsRouter = require('./routes/statistics');
+const transfersRouter = require('./routes/transfers');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -164,6 +165,8 @@ app.use('/api/v1/maintenance', maintenanceRouter);
 app.use('/api/v1/scrapping', scrappingRouter);
 // Statistics (통계)
 app.use('/api/v1/statistics', statisticsRouter);
+// Transfers (이관)
+app.use('/api/v1/transfers', transfersRouter);
 
 // Health check
 app.get('/health', (req, res) => {

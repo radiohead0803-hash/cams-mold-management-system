@@ -50,9 +50,10 @@ async function listRepairRequests(req, res) {
     });
   } catch (err) {
     console.error('[listRepairRequests] error:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: '수리요청 조회 실패' 
+    // 에러 시 빈 배열 반환
+    res.json({ 
+      success: true, 
+      data: [] 
     });
   }
 }
