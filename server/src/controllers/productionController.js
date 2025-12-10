@@ -137,26 +137,38 @@ async function updateInspectionSchedule(mold, currentShots, transaction) {
 
 /**
  * 타수 임계값 체크 및 알람 생성
+ * 정기점검 기준:
+ * - 타수 기준: 2만 → 5만 → 8만 → 10만 → 12만 → 15만 (이후 3만 단위)
+ * - 일자 기준: 3개월 단위
+ * - 타수 또는 개월수 중 먼저 도달하는 기준으로 알람 발생
  */
 async function checkShotsThreshold(mold, currentShots, transaction) {
   try {
     const targetShots = mold.target_shots;
+    const shotsIncrement = mold.shots_increment || 0;
+    const prevShots = currentShots - shotsIncrement;
     
-    // 정기점검 타수 임계값 (100K, 500K, 1M)
+    // 정기점검 타수 임계값 (2만, 5만, 8만, 10만, 12만, 15만...)
     const inspectionThresholds = [
-      { shots: 100000, type: '1차 정기점검', priority: 'medium' },
-      { shots: 200000, type: '2차 정기점검', priority: 'medium' },
-      { shots: 500000, type: '3차 정기점검', priority: 'high' },
-      { shots: 800000, type: '4차 정기점검', priority: 'high' },
-      { shots: 1000000, type: '5차 정기점검 (전면)', priority: 'critical' }
+      { shots: 20000, type: '1차 정기점검', priority: 'medium', order: 1 },
+      { shots: 50000, type: '2차 정기점검', priority: 'medium', order: 2 },
+      { shots: 80000, type: '3차 정기점검', priority: 'high', order: 3 },
+      { shots: 100000, type: '4차 정기점검', priority: 'high', order: 4 },
+      { shots: 120000, type: '5차 정기점검', priority: 'high', order: 5 },
+      { shots: 150000, type: '6차 정기점검', priority: 'critical', order: 6 },
+      // 15만 이후는 3만 단위로 계속 (18만, 21만, 24만...)
+      { shots: 180000, type: '7차 정기점검', priority: 'critical', order: 7 },
+      { shots: 210000, type: '8차 정기점검', priority: 'critical', order: 8 },
+      { shots: 240000, type: '9차 정기점검', priority: 'critical', order: 9 },
+      { shots: 270000, type: '10차 정기점검', priority: 'critical', order: 10 },
+      { shots: 300000, type: '11차 정기점검', priority: 'critical', order: 11 }
     ];
     
     // 점검 임계값 도달 체크
     for (const threshold of inspectionThresholds) {
-      const prevMilestone = currentShots - (mold.shots_increment || 0);
       // 이번 생산으로 임계값을 넘었는지 확인
-      if (prevMilestone < threshold.shots && currentShots >= threshold.shots) {
-        await createInspectionAlert(mold, threshold, currentShots, transaction);
+      if (prevShots < threshold.shots && currentShots >= threshold.shots) {
+        await createInspectionAlert(mold, threshold, currentShots, 'shots', transaction);
       }
     }
     
@@ -171,7 +183,7 @@ async function checkShotsThreshold(mold, currentShots, transaction) {
       ];
 
       for (const threshold of progressThresholds) {
-        const prevProgress = ((currentShots - (mold.shots_increment || 0)) / targetShots) * 100;
+        const prevProgress = (prevShots / targetShots) * 100;
         if (prevProgress < threshold.percent && progress >= threshold.percent) {
           await createProgressAlert(mold, threshold, currentShots, targetShots, transaction);
         }
@@ -183,28 +195,166 @@ async function checkShotsThreshold(mold, currentShots, transaction) {
 }
 
 /**
- * 정기점검 알람 생성
+ * 일자 기준 정기점검 체크 (3개월 단위)
+ * 서버 시작 시 또는 스케줄러에서 호출
  */
-async function createInspectionAlert(mold, threshold, currentShots, transaction) {
+async function checkDateBasedInspection(moldId = null) {
   try {
+    // 금형 조회 조건
+    const whereClause = moldId ? `AND m.id = ${moldId}` : '';
+    
+    // 마지막 정기점검 이후 3개월이 지난 금형 조회
+    const [moldsNeedingInspection] = await sequelize.query(`
+      SELECT 
+        m.id, 
+        m.mold_code, 
+        m.mold_name,
+        m.current_shots,
+        m.last_inspection_date,
+        COALESCE(m.last_inspection_date, m.created_at) as base_date,
+        EXTRACT(DAY FROM NOW() - COALESCE(m.last_inspection_date, m.created_at)) as days_since_inspection
+      FROM molds m
+      WHERE m.status NOT IN ('scrapped', 'inactive')
+        AND (
+          m.last_inspection_date IS NULL 
+          OR m.last_inspection_date < NOW() - INTERVAL '3 months'
+        )
+        ${whereClause}
+    `);
+    
+    for (const mold of moldsNeedingInspection) {
+      const daysSince = Math.floor(mold.days_since_inspection || 0);
+      const monthsSince = Math.floor(daysSince / 30);
+      
+      // 3개월 단위로 점검 차수 계산
+      const inspectionOrder = Math.floor(monthsSince / 3);
+      
+      if (inspectionOrder >= 1) {
+        // 이미 해당 기간에 대한 알람이 있는지 확인
+        const [existingAlert] = await sequelize.query(`
+          SELECT id FROM alerts 
+          WHERE mold_id = :mold_id 
+            AND alert_type = 'inspection_due_date'
+            AND created_at > NOW() - INTERVAL '3 months'
+            AND status = 'active'
+        `, {
+          replacements: { mold_id: mold.id }
+        });
+        
+        if (existingAlert.length === 0) {
+          // 일자 기준 정기점검 알람 생성
+          await sequelize.query(`
+            INSERT INTO alerts (
+              mold_id, alert_type, title, message, priority, status,
+              trigger_type, trigger_value, created_at, updated_at
+            ) VALUES (
+              :mold_id, 'inspection_due_date', :title, :message, :priority, 'active',
+              'date', :months, NOW(), NOW()
+            )
+          `, {
+            replacements: {
+              mold_id: mold.id,
+              title: `정기점검 필요 (${monthsSince}개월 경과)`,
+              message: `금형 ${mold.mold_code}의 마지막 점검 후 ${monthsSince}개월이 경과하여 정기점검이 필요합니다. (3개월 주기)`,
+              priority: monthsSince >= 6 ? 'critical' : monthsSince >= 4 ? 'high' : 'medium',
+              months: monthsSince
+            }
+          });
+          logger.info(`Date-based inspection alert created: Mold ${mold.mold_code} - ${monthsSince} months since last inspection`);
+        }
+      }
+    }
+    
+    return moldsNeedingInspection.length;
+  } catch (error) {
+    logger.error('Check date-based inspection error:', error);
+    return 0;
+  }
+}
+
+/**
+ * 복합 정기점검 체크 (타수 OR 일자 중 먼저 도달)
+ */
+async function checkCombinedInspectionDue(mold, currentShots, transaction) {
+  try {
+    // 타수 기준 다음 점검 임계값 계산
+    const shotsThresholds = [20000, 50000, 80000, 100000, 120000, 150000];
+    // 15만 이후 3만 단위 추가
+    for (let s = 180000; s <= 500000; s += 30000) {
+      shotsThresholds.push(s);
+    }
+    
+    const nextShotsThreshold = shotsThresholds.find(t => t > currentShots) || shotsThresholds[shotsThresholds.length - 1];
+    const shotsUntilNext = nextShotsThreshold - currentShots;
+    
+    // 일자 기준 다음 점검까지 남은 일수
+    const lastInspectionDate = mold.last_inspection_date || mold.created_at;
+    const nextInspectionDate = new Date(lastInspectionDate);
+    nextInspectionDate.setMonth(nextInspectionDate.getMonth() + 3);
+    const daysUntilNext = Math.ceil((nextInspectionDate - new Date()) / (1000 * 60 * 60 * 24));
+    
+    // 어느 기준이 먼저 도달하는지 판단
+    const triggerType = daysUntilNext <= 0 ? 'date' : (shotsUntilNext <= 0 ? 'shots' : null);
+    
+    if (triggerType) {
+      const alertMessage = triggerType === 'date' 
+        ? `3개월 주기 도래 (타수: ${currentShots.toLocaleString()})`
+        : `타수 ${nextShotsThreshold.toLocaleString()} 도달 (${daysUntilNext}일 전 점검 예정이었음)`;
+      
+      return {
+        needsInspection: true,
+        triggerType,
+        message: alertMessage,
+        nextShotsThreshold,
+        daysUntilNext,
+        shotsUntilNext
+      };
+    }
+    
+    return {
+      needsInspection: false,
+      nextShotsThreshold,
+      daysUntilNext,
+      shotsUntilNext
+    };
+  } catch (error) {
+    logger.error('Check combined inspection due error:', error);
+    return { needsInspection: false };
+  }
+}
+
+/**
+ * 정기점검 알람 생성
+ * @param {Object} mold - 금형 정보
+ * @param {Object} threshold - 임계값 정보
+ * @param {number} currentShots - 현재 타수
+ * @param {string} triggerType - 트리거 유형 ('shots' 또는 'date')
+ * @param {Object} transaction - DB 트랜잭션
+ */
+async function createInspectionAlert(mold, threshold, currentShots, triggerType = 'shots', transaction) {
+  try {
+    const triggerLabel = triggerType === 'shots' ? '타수 기준' : '일자 기준 (3개월)';
+    
     await sequelize.query(`
       INSERT INTO alerts (
         mold_id, alert_type, title, message, priority, status,
-        created_at, updated_at
+        trigger_type, trigger_value, created_at, updated_at
       ) VALUES (
         :mold_id, 'inspection_due', :title, :message, :priority, 'active',
-        NOW(), NOW()
+        :trigger_type, :trigger_value, NOW(), NOW()
       )
     `, {
       replacements: {
         mold_id: mold.id,
-        title: `${threshold.type} 필요`,
-        message: `금형 ${mold.mold_code || mold.id}의 타수가 ${currentShots.toLocaleString()}회에 도달하여 ${threshold.type}이 필요합니다.`,
-        priority: threshold.priority
+        title: `${threshold.type} 필요 [${triggerLabel}]`,
+        message: `금형 ${mold.mold_code || mold.id}의 타수가 ${currentShots.toLocaleString()}회에 도달하여 ${threshold.type}이 필요합니다. (${triggerLabel})`,
+        priority: threshold.priority,
+        trigger_type: triggerType,
+        trigger_value: triggerType === 'shots' ? threshold.shots : null
       },
       transaction
     });
-    logger.info(`Inspection alert created: Mold ${mold.mold_code} - ${threshold.type} at ${currentShots} shots`);
+    logger.info(`Inspection alert created: Mold ${mold.mold_code} - ${threshold.type} at ${currentShots} shots [${triggerType}]`);
   } catch (error) {
     logger.error('Create inspection alert error:', error);
   }
@@ -331,8 +481,118 @@ const getDailyStatistics = async (req, res) => {
   }
 };
 
+/**
+ * 정기점검 스케줄 정보 조회
+ * GET /api/v1/production/inspection-schedule/:mold_id
+ */
+const getInspectionSchedule = async (req, res) => {
+  try {
+    const { mold_id } = req.params;
+    
+    const mold = await Mold.findByPk(mold_id);
+    if (!mold) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Mold not found' }
+      });
+    }
+    
+    const currentShots = mold.current_shots || 0;
+    
+    // 타수 기준 다음 점검 임계값 계산
+    const shotsThresholds = [20000, 50000, 80000, 100000, 120000, 150000];
+    for (let s = 180000; s <= 500000; s += 30000) {
+      shotsThresholds.push(s);
+    }
+    
+    // 현재 타수 기준 완료된 점검 차수
+    const completedInspections = shotsThresholds.filter(t => currentShots >= t).length;
+    const nextShotsThreshold = shotsThresholds.find(t => t > currentShots) || shotsThresholds[shotsThresholds.length - 1];
+    const shotsUntilNext = Math.max(0, nextShotsThreshold - currentShots);
+    
+    // 일자 기준 다음 점검까지 남은 일수
+    const lastInspectionDate = mold.last_inspection_date || mold.created_at;
+    const nextInspectionDate = new Date(lastInspectionDate);
+    nextInspectionDate.setMonth(nextInspectionDate.getMonth() + 3);
+    const daysUntilNext = Math.ceil((nextInspectionDate - new Date()) / (1000 * 60 * 60 * 24));
+    
+    // 어느 기준이 먼저 도달하는지 판단
+    let nextTrigger = 'none';
+    if (daysUntilNext <= 0 && shotsUntilNext <= 0) {
+      nextTrigger = 'both';
+    } else if (daysUntilNext <= 0) {
+      nextTrigger = 'date';
+    } else if (shotsUntilNext <= 0) {
+      nextTrigger = 'shots';
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        mold_id: mold.id,
+        mold_code: mold.mold_code,
+        current_shots: currentShots,
+        inspection_schedule: {
+          // 타수 기준
+          shots_based: {
+            thresholds: shotsThresholds,
+            completed_count: completedInspections,
+            next_threshold: nextShotsThreshold,
+            shots_until_next: shotsUntilNext,
+            next_inspection_order: completedInspections + 1
+          },
+          // 일자 기준 (3개월)
+          date_based: {
+            interval_months: 3,
+            last_inspection_date: lastInspectionDate,
+            next_inspection_date: nextInspectionDate,
+            days_until_next: daysUntilNext
+          },
+          // 복합 판단
+          next_trigger: nextTrigger,
+          needs_inspection: nextTrigger !== 'none',
+          priority: nextTrigger === 'both' ? 'critical' : (nextTrigger !== 'none' ? 'high' : 'normal')
+        }
+      }
+    });
+    
+  } catch (error) {
+    logger.error('Get inspection schedule error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to get inspection schedule' }
+    });
+  }
+};
+
+/**
+ * 일자 기준 정기점검 알람 생성 (스케줄러용 API)
+ * POST /api/v1/production/check-date-inspections
+ */
+const runDateBasedInspectionCheck = async (req, res) => {
+  try {
+    const count = await checkDateBasedInspection();
+    res.json({
+      success: true,
+      data: {
+        molds_checked: count,
+        message: `${count}개 금형에 대한 일자 기준 점검 알람이 확인되었습니다.`
+      }
+    });
+  } catch (error) {
+    logger.error('Run date-based inspection check error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to run date-based inspection check' }
+    });
+  }
+};
+
 module.exports = {
   recordProduction,
   getProductionHistory,
-  getDailyStatistics
+  getDailyStatistics,
+  getInspectionSchedule,
+  runDateBasedInspectionCheck,
+  checkDateBasedInspection
 };

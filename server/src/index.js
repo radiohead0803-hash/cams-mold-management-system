@@ -539,6 +539,8 @@ const runGpsAlertsMigration = async () => {
         message TEXT,
         priority VARCHAR(20) DEFAULT 'medium',
         status VARCHAR(20) DEFAULT 'active',
+        trigger_type VARCHAR(20),
+        trigger_value INTEGER,
         read_at TIMESTAMP,
         resolved_at TIMESTAMP,
         resolved_by INTEGER REFERENCES users(id),
@@ -550,9 +552,22 @@ const runGpsAlertsMigration = async () => {
     await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);`);
     await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_alerts_priority ON alerts(priority);`);
     await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_alerts_type ON alerts(alert_type);`);
+    // trigger_type, trigger_value 컬럼 추가 (기존 테이블용)
+    await db.sequelize.query(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS trigger_type VARCHAR(20);`);
+    await db.sequelize.query(`ALTER TABLE alerts ADD COLUMN IF NOT EXISTS trigger_value INTEGER;`);
     logger.info('alerts table created/verified.');
   } catch (err) {
     logger.warn('alerts table:', err.message);
+  }
+
+  // molds 테이블에 last_inspection_date 컬럼 추가
+  try {
+    await db.sequelize.query(`ALTER TABLE molds ADD COLUMN IF NOT EXISTS last_inspection_date TIMESTAMP;`);
+    await db.sequelize.query(`ALTER TABLE molds ADD COLUMN IF NOT EXISTS next_inspection_shots INTEGER;`);
+    await db.sequelize.query(`ALTER TABLE molds ADD COLUMN IF NOT EXISTS next_inspection_date DATE;`);
+    logger.info('molds inspection columns added.');
+  } catch (err) {
+    logger.warn('molds inspection columns:', err.message);
   }
 
   // production_quantities 테이블 생성
