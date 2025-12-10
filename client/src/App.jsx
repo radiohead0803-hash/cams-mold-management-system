@@ -65,6 +65,7 @@ import MobileRepairRequestForm from './pages/mobile/MobileRepairRequestForm'
 import MobileMaintenancePage from './pages/mobile/MobileMaintenancePage'
 import MobilePreProductionChecklist from './pages/mobile/MobilePreProductionChecklist'
 import MobileScrappingPage from './pages/mobile/MobileScrappingPage'
+import MobileHomePage from './pages/mobile/MobileHomePage'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
 import PreProductionChecklist from './pages/PreProductionChecklist'
@@ -144,6 +145,10 @@ function App() {
       <Route path="/mobile/scrapping" element={<MobileScrappingPage />} />
       <Route path="/mobile/scrapping/new" element={<MobileScrappingPage />} />
       <Route path="/mobile/scrapping/:id" element={<MobileScrappingPage />} />
+      
+      {/* Mobile - 홈 */}
+      <Route path="/mobile/home" element={<MobileHomePage />} />
+      <Route path="/mobile" element={<MobileHomePage />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
