@@ -24,7 +24,7 @@ export default function MobileInjectionCondition() {
   const canEdit = !isDeveloper || condition?.status === 'draft';
   
   const [conditionData, setConditionData] = useState({
-    // 온도 조건
+    // 온도 설정
     nozzle_temp: '',
     cylinder_temp_1: '',
     cylinder_temp_2: '',
@@ -32,7 +32,7 @@ export default function MobileInjectionCondition() {
     cylinder_temp_4: '',
     mold_temp_fixed: '',
     mold_temp_moving: '',
-    // 압력 조건
+    // 압력 설정
     injection_pressure_1: '',
     injection_pressure_2: '',
     injection_pressure_3: '',
@@ -40,20 +40,25 @@ export default function MobileInjectionCondition() {
     holding_pressure_2: '',
     holding_pressure_3: '',
     back_pressure: '',
-    // 속도
+    // 속도 설정
     injection_speed_1: '',
     injection_speed_2: '',
     injection_speed_3: '',
     screw_rpm: '',
-    // 시간
+    // 시간 설정
     injection_time: '',
     holding_time: '',
     cooling_time: '',
     cycle_time: '',
-    // 계량
+    // 계량 설정
     metering_stroke: '',
+    suck_back: '',
     cushion: '',
-    suck_back: ''
+    // 기타 설정
+    clamping_force: '',
+    ejector_stroke: '',
+    ejector_speed: '',
+    remarks: ''
   });
 
   useEffect(() => {
@@ -177,12 +182,12 @@ export default function MobileInjectionCondition() {
       iconColor: 'text-red-600',
       fields: [
         { key: 'nozzle_temp', label: '노즐 온도', suffix: '°C' },
-        { key: 'cylinder_temp_1', label: '실린더 1존', suffix: '°C' },
-        { key: 'cylinder_temp_2', label: '실린더 2존', suffix: '°C' },
-        { key: 'cylinder_temp_3', label: '실린더 3존', suffix: '°C' },
-        { key: 'cylinder_temp_4', label: '실린더 4존', suffix: '°C' },
-        { key: 'mold_temp_fixed', label: '금형 (고정측)', suffix: '°C' },
-        { key: 'mold_temp_moving', label: '금형 (가동측)', suffix: '°C' }
+        { key: 'cylinder_temp_1', label: '실린더 온도 1존', suffix: '°C' },
+        { key: 'cylinder_temp_2', label: '실린더 온도 2존', suffix: '°C' },
+        { key: 'cylinder_temp_3', label: '실린더 온도 3존', suffix: '°C' },
+        { key: 'cylinder_temp_4', label: '실린더 온도 4존', suffix: '°C' },
+        { key: 'mold_temp_fixed', label: '금형 온도 (고정측)', suffix: '°C' },
+        { key: 'mold_temp_moving', label: '금형 온도 (가동측)', suffix: '°C' }
       ]
     },
     {
@@ -192,9 +197,9 @@ export default function MobileInjectionCondition() {
       color: 'from-blue-50 to-indigo-50',
       iconColor: 'text-blue-600',
       fields: [
-        { key: 'injection_pressure_1', label: '사출압력 1단', suffix: 'MPa' },
-        { key: 'injection_pressure_2', label: '사출압력 2단', suffix: 'MPa' },
-        { key: 'injection_pressure_3', label: '사출압력 3단', suffix: 'MPa' },
+        { key: 'injection_pressure_1', label: '사출 압력 1단', suffix: 'MPa' },
+        { key: 'injection_pressure_2', label: '사출 압력 2단', suffix: 'MPa' },
+        { key: 'injection_pressure_3', label: '사출 압력 3단', suffix: 'MPa' },
         { key: 'holding_pressure_1', label: '보압 1단', suffix: 'MPa' },
         { key: 'holding_pressure_2', label: '보압 2단', suffix: 'MPa' },
         { key: 'holding_pressure_3', label: '보압 3단', suffix: 'MPa' },
@@ -208,9 +213,9 @@ export default function MobileInjectionCondition() {
       color: 'from-green-50 to-emerald-50',
       iconColor: 'text-green-600',
       fields: [
-        { key: 'injection_speed_1', label: '사출속도 1단', suffix: '%' },
-        { key: 'injection_speed_2', label: '사출속도 2단', suffix: '%' },
-        { key: 'injection_speed_3', label: '사출속도 3단', suffix: '%' },
+        { key: 'injection_speed_1', label: '사출 속도 1단', suffix: '%' },
+        { key: 'injection_speed_2', label: '사출 속도 2단', suffix: '%' },
+        { key: 'injection_speed_3', label: '사출 속도 3단', suffix: '%' },
         { key: 'screw_rpm', label: '스크류 회전수', suffix: 'rpm' }
       ]
     },
@@ -235,8 +240,20 @@ export default function MobileInjectionCondition() {
       iconColor: 'text-orange-600',
       fields: [
         { key: 'metering_stroke', label: '계량값', suffix: 'mm' },
-        { key: 'cushion', label: '쿠션', suffix: 'mm' },
-        { key: 'suck_back', label: '석백', suffix: 'mm' }
+        { key: 'suck_back', label: '석백', suffix: 'mm' },
+        { key: 'cushion', label: '쿠션', suffix: 'mm' }
+      ]
+    },
+    {
+      id: 'other',
+      title: '기타 설정',
+      icon: Settings,
+      color: 'from-gray-50 to-slate-50',
+      iconColor: 'text-gray-600',
+      fields: [
+        { key: 'clamping_force', label: '형체력', suffix: 'ton' },
+        { key: 'ejector_stroke', label: '이젝터 스트로크', suffix: 'mm' },
+        { key: 'ejector_speed', label: '이젝터 속도', suffix: '%' }
       ]
     }
   ];
@@ -353,6 +370,19 @@ export default function MobileInjectionCondition() {
             </div>
           );
         })}
+
+        {/* 비고 */}
+        <div className="bg-white rounded-xl shadow-sm p-4">
+          <label className="text-sm font-medium text-gray-700 block mb-2">비고</label>
+          <textarea
+            value={conditionData.remarks || ''}
+            onChange={(e) => handleChange('remarks', e.target.value)}
+            disabled={!isEditing}
+            placeholder="비고 사항을 입력하세요..."
+            rows={3}
+            className="w-full px-3 py-2 border rounded-lg text-sm disabled:bg-gray-50"
+          />
+        </div>
 
         {/* 변경 사유 (수정 시) */}
         {condition?.id && isEditing && (

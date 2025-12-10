@@ -154,6 +154,7 @@ const updateInjectionCondition = async (req, res) => {
 
     // 변경된 필드 감지 및 이력 생성
     const fieldLabels = {
+      // 온도 설정
       nozzle_temp: '노즐 온도',
       cylinder_temp_1: '실린더 온도 1존',
       cylinder_temp_2: '실린더 온도 2존',
@@ -161,6 +162,7 @@ const updateInjectionCondition = async (req, res) => {
       cylinder_temp_4: '실린더 온도 4존',
       mold_temp_fixed: '금형 온도 (고정측)',
       mold_temp_moving: '금형 온도 (가동측)',
+      // 압력 설정
       injection_pressure_1: '사출 압력 1단',
       injection_pressure_2: '사출 압력 2단',
       injection_pressure_3: '사출 압력 3단',
@@ -168,33 +170,44 @@ const updateInjectionCondition = async (req, res) => {
       holding_pressure_2: '보압 2단',
       holding_pressure_3: '보압 3단',
       back_pressure: '배압',
+      // 속도 설정
       injection_speed_1: '사출 속도 1단',
       injection_speed_2: '사출 속도 2단',
       injection_speed_3: '사출 속도 3단',
       screw_rpm: '스크류 회전수',
+      // 시간 설정
       injection_time: '사출 시간',
       holding_time: '보압 시간',
       cooling_time: '냉각 시간',
       cycle_time: '사이클 타임',
+      // 계량 설정
       metering_stroke: '계량값',
       suck_back: '석백',
       cushion: '쿠션',
+      // 기타 설정
       clamping_force: '형체력',
       ejector_stroke: '이젝터 스트로크',
-      ejector_speed: '이젝터 속도'
+      ejector_speed: '이젝터 속도',
+      remarks: '비고'
     };
 
     const fieldTypes = {
+      // 온도
       nozzle_temp: 'temperature', cylinder_temp_1: 'temperature', cylinder_temp_2: 'temperature',
       cylinder_temp_3: 'temperature', cylinder_temp_4: 'temperature',
       mold_temp_fixed: 'temperature', mold_temp_moving: 'temperature',
+      // 압력
       injection_pressure_1: 'pressure', injection_pressure_2: 'pressure', injection_pressure_3: 'pressure',
       holding_pressure_1: 'pressure', holding_pressure_2: 'pressure', holding_pressure_3: 'pressure',
       back_pressure: 'pressure',
+      // 속도
       injection_speed_1: 'speed', injection_speed_2: 'speed', injection_speed_3: 'speed', screw_rpm: 'speed',
+      // 시간
       injection_time: 'time', holding_time: 'time', cooling_time: 'time', cycle_time: 'time',
+      // 계량
       metering_stroke: 'metering', suck_back: 'metering', cushion: 'metering',
-      clamping_force: 'other', ejector_stroke: 'other', ejector_speed: 'other'
+      // 기타
+      clamping_force: 'other', ejector_stroke: 'other', ejector_speed: 'other', remarks: 'other'
     };
 
     const changes = [];
