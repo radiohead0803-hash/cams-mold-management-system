@@ -1,11 +1,13 @@
 const { Sequelize } = require('sequelize');
-const config = require('./src/config/database');
 
-const env = process.env.NODE_ENV || 'production';
-const dbConfig = config[env];
+// Railway PostgreSQL 연결
+const DATABASE_URL = 'postgresql://postgres:wGDLaCKVdvhNnxOVsLSWayzEFfmCLHMa@autorack.proxy.rlwy.net:52053/railway';
 
-const sequelize = new Sequelize(dbConfig.url, {
-  ...dbConfig,
+const sequelize = new Sequelize(DATABASE_URL, {
+  dialect: 'postgres',
+  dialectOptions: {
+    ssl: false
+  },
   logging: console.log
 });
 
@@ -15,110 +17,103 @@ async function runMigration() {
     await sequelize.authenticate();
     console.log('✅ Database connection established.');
 
-    console.log('\n📋 Creating companies table...');
+    console.log('\n📋 Updating repair_requests table...');
     
-    // companies 테이블 생성
-    await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS companies (
-        id SERIAL PRIMARY KEY,
-        company_code VARCHAR(50) UNIQUE NOT NULL,
-        company_name VARCHAR(200) NOT NULL,
-        company_type VARCHAR(20) NOT NULL CHECK (company_type IN ('maker', 'plant')),
-        business_number VARCHAR(50),
-        representative VARCHAR(100),
-        phone VARCHAR(20),
-        fax VARCHAR(20),
-        email VARCHAR(100),
-        address VARCHAR(500),
-        address_detail VARCHAR(200),
-        postal_code VARCHAR(20),
-        latitude DECIMAL(10, 8),
-        longitude DECIMAL(11, 8),
-        manager_name VARCHAR(100),
-        manager_phone VARCHAR(20),
-        manager_email VARCHAR(100),
-        contract_start_date DATE,
-        contract_end_date DATE,
-        contract_status VARCHAR(20) DEFAULT 'active',
-        rating DECIMAL(3, 2),
-        quality_score DECIMAL(5, 2),
-        delivery_score DECIMAL(5, 2),
-        production_capacity INTEGER,
-        equipment_list JSONB,
-        certifications JSONB,
-        specialties JSONB,
-        production_lines INTEGER,
-        injection_machines JSONB,
-        daily_capacity INTEGER,
-        total_molds INTEGER DEFAULT 0,
-        active_molds INTEGER DEFAULT 0,
-        completed_projects INTEGER DEFAULT 0,
-        notes TEXT,
-        is_active BOOLEAN DEFAULT TRUE,
-        registered_by INTEGER,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-    console.log('✅ Companies table created.');
+    // repair_requests 테이블에 컬럼 추가
+    const columnsToAdd = [
+      // 기본 정보
+      { name: 'problem', type: 'TEXT' },
+      { name: 'cause_and_reason', type: 'TEXT' },
+      { name: 'problem_source', type: 'TEXT' },
+      { name: 'occurred_date', type: 'DATE' },
+      { name: 'manager_name', type: 'VARCHAR(100)' },
+      // 금형/제품 정보
+      { name: 'requester_name', type: 'VARCHAR(100)' },
+      { name: 'car_model', type: 'VARCHAR(100)' },
+      { name: 'part_number', type: 'VARCHAR(100)' },
+      { name: 'part_name', type: 'VARCHAR(200)' },
+      { name: 'occurrence_type', type: "VARCHAR(50) DEFAULT '신규'" },
+      { name: 'production_site', type: 'VARCHAR(200)' },
+      { name: 'production_manager', type: 'VARCHAR(100)' },
+      { name: 'contact', type: 'VARCHAR(50)' },
+      { name: 'production_shot', type: 'INTEGER' },
+      { name: 'maker', type: 'VARCHAR(200)' },
+      { name: 'operation_type', type: "VARCHAR(50) DEFAULT '양산'" },
+      { name: 'problem_type', type: 'VARCHAR(100)' },
+      { name: 'repair_category', type: 'VARCHAR(50)' },
+      // 수리 정보
+      { name: 'repair_cost', type: 'DECIMAL(12,0)' },
+      { name: 'completion_date', type: 'DATE' },
+      { name: 'temporary_action', type: 'TEXT' },
+      { name: 'root_cause_action', type: 'TEXT' },
+      { name: 'mold_arrival_date', type: 'DATE' },
+      { name: 'repair_start_date', type: 'DATE' },
+      { name: 'repair_end_date', type: 'DATE' },
+      { name: 'stock_schedule_date', type: 'DATE' },
+      { name: 'stock_quantity', type: 'INTEGER' },
+      { name: 'stock_unit', type: "VARCHAR(20) DEFAULT 'EA'" },
+      { name: 'repair_company', type: 'VARCHAR(200)' },
+      { name: 'repair_duration', type: 'VARCHAR(50)' },
+      { name: 'management_type', type: 'VARCHAR(50)' },
+      { name: 'sign_off_status', type: "VARCHAR(100) DEFAULT '제출되지 않음'" },
+      { name: 'representative_part_number', type: 'VARCHAR(100)' },
+      { name: 'order_company', type: 'VARCHAR(200)' },
+      { name: 'related_files', type: "JSONB DEFAULT '[]'::jsonb" },
+      // 수리처 선정
+      { name: 'repair_shop_type', type: 'VARCHAR(50)' },
+      { name: 'repair_shop_selected_by', type: 'VARCHAR(100)' },
+      { name: 'repair_shop_selected_date', type: 'DATE' },
+      { name: 'repair_shop_approval_status', type: "VARCHAR(20) DEFAULT '대기'" },
+      { name: 'repair_shop_approved_by', type: 'VARCHAR(100)' },
+      { name: 'repair_shop_approved_date', type: 'DATE' },
+      { name: 'repair_shop_rejection_reason', type: 'TEXT' },
+      // 귀책 협의
+      { name: 'liability_type', type: 'VARCHAR(50)' },
+      { name: 'liability_ratio_maker', type: 'INTEGER' },
+      { name: 'liability_ratio_plant', type: 'INTEGER' },
+      { name: 'liability_reason', type: 'TEXT' },
+      { name: 'liability_decided_by', type: 'VARCHAR(100)' },
+      { name: 'liability_decided_date', type: 'DATE' }
+    ];
+
+    for (const col of columnsToAdd) {
+      try {
+        await sequelize.query(`ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS ${col.name} ${col.type};`);
+        console.log(`✅ Added column: ${col.name}`);
+      } catch (err) {
+        console.log(`⚠️  Column ${col.name}: ${err.message}`);
+      }
+    }
 
     console.log('\n📋 Creating indexes...');
-    await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_companies_company_code ON companies(company_code);`);
-    await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_companies_company_type ON companies(company_type);`);
-    await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_companies_company_name ON companies(company_name);`);
-    await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_companies_is_active ON companies(is_active);`);
-    console.log('✅ Indexes created.');
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_occurred_date ON repair_requests(occurred_date);',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_car_model ON repair_requests(car_model);',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_part_number ON repair_requests(part_number);',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_occurrence_type ON repair_requests(occurrence_type);',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_problem_type ON repair_requests(problem_type);',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_repair_category ON repair_requests(repair_category);',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_repair_shop_approval_status ON repair_requests(repair_shop_approval_status);'
+    ];
 
-    console.log('\n📋 Adding columns to existing tables...');
-    
-    // users 테이블에 company_id 추가
-    try {
-      await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES companies(id);`);
-      await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_users_company_id ON users(company_id);`);
-      console.log('✅ Added company_id to users table.');
-    } catch (err) {
-      console.log('⚠️  users.company_id already exists or error:', err.message);
-    }
-
-    // molds 테이블에 company_id 추가
-    try {
-      await sequelize.query(`ALTER TABLE molds ADD COLUMN IF NOT EXISTS maker_company_id INTEGER REFERENCES companies(id);`);
-      await sequelize.query(`ALTER TABLE molds ADD COLUMN IF NOT EXISTS plant_company_id INTEGER REFERENCES companies(id);`);
-      await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_molds_maker_company_id ON molds(maker_company_id);`);
-      await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_molds_plant_company_id ON molds(plant_company_id);`);
-      console.log('✅ Added company_id columns to molds table.');
-    } catch (err) {
-      console.log('⚠️  molds company_id columns already exist or error:', err.message);
-    }
-
-    // mold_specifications 테이블에 company_id 추가
-    try {
-      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS maker_company_id INTEGER REFERENCES companies(id);`);
-      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS plant_company_id INTEGER REFERENCES companies(id);`);
-      await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_mold_specifications_maker_company_id ON mold_specifications(maker_company_id);`);
-      await sequelize.query(`CREATE INDEX IF NOT EXISTS idx_mold_specifications_plant_company_id ON mold_specifications(plant_company_id);`);
-      console.log('✅ Added company_id columns to mold_specifications table.');
-    } catch (err) {
-      console.log('⚠️  mold_specifications company_id columns already exist or error:', err.message);
-    }
-
-    console.log('\n📋 Updating migration status...');
-    try {
-      await sequelize.query(`
-        INSERT INTO "SequelizeMeta" (name) 
-        VALUES ('20251124000000-create-companies-table.js')
-        ON CONFLICT (name) DO NOTHING;
-      `);
-      console.log('✅ Migration status updated.');
-    } catch (err) {
-      console.log('⚠️  Migration status update error:', err.message);
+    for (const idx of indexes) {
+      try {
+        await sequelize.query(idx);
+        console.log('✅ Index created');
+      } catch (err) {
+        console.log(`⚠️  Index: ${err.message}`);
+      }
     }
 
     console.log('\n🎉 Migration completed successfully!');
     
-    // 테이블 확인
-    const [results] = await sequelize.query(`SELECT COUNT(*) as count FROM companies;`);
-    console.log(`\n📊 Companies table has ${results[0].count} rows.`);
+    // 테이블 컬럼 확인
+    const [results] = await sequelize.query(`
+      SELECT column_name FROM information_schema.columns 
+      WHERE table_name = 'repair_requests' 
+      ORDER BY ordinal_position;
+    `);
+    console.log(`\n📊 repair_requests table has ${results.length} columns.`);
 
   } catch (error) {
     console.error('❌ Migration failed:', error);
