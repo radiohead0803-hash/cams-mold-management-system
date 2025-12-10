@@ -114,29 +114,36 @@ const uploadMoldImage = async (req, res) => {
           reference_type, reference_id, checklist_id, checklist_item_id,
           repair_id, transfer_id, maker_spec_id,
           created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, NOW(), NOW())
+        ) VALUES (
+          :mold_id, :mold_spec_id, :image_type, :image_url,
+          :original_filename, :file_size, :mime_type,
+          :description, :is_primary, :uploaded_by,
+          :reference_type, :reference_id, :checklist_id, :checklist_item_id,
+          :repair_id, :transfer_id, :maker_spec_id,
+          NOW(), NOW()
+        )
         RETURNING *
       `;
       const [rows] = await sequelize.query(insertQuery, {
-        replacements: [
-          mold_id || null,
-          mold_spec_id || null,
+        replacements: {
+          mold_id: mold_id || null,
+          mold_spec_id: mold_spec_id || null,
           image_type,
-          imageUrl,
-          file.originalname,
-          file.size,
-          file.mimetype,
-          description || null,
-          is_primary === 'true' || is_primary === true,
+          image_url: imageUrl,
+          original_filename: file.originalname,
+          file_size: file.size,
+          mime_type: file.mimetype,
+          description: description || null,
+          is_primary: is_primary === 'true' || is_primary === true,
           uploaded_by,
-          reference_type || null,
-          reference_id || null,
-          checklist_id || null,
-          checklist_item_id || null,
-          repair_id || null,
-          transfer_id || null,
-          maker_spec_id || null
-        ]
+          reference_type: reference_type || null,
+          reference_id: reference_id || null,
+          checklist_id: checklist_id || null,
+          checklist_item_id: checklist_item_id || null,
+          repair_id: repair_id || null,
+          transfer_id: transfer_id || null,
+          maker_spec_id: maker_spec_id || null
+        }
       });
       result = { rows };
     } catch (extendedError) {
@@ -148,22 +155,27 @@ const uploadMoldImage = async (req, res) => {
           original_filename, file_size, mime_type,
           description, is_primary, uploaded_by,
           created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+        ) VALUES (
+          :mold_id, :mold_spec_id, :image_type, :image_url,
+          :original_filename, :file_size, :mime_type,
+          :description, :is_primary, :uploaded_by,
+          NOW(), NOW()
+        )
         RETURNING *
       `;
       const [basicRows] = await sequelize.query(basicInsertQuery, {
-        replacements: [
-          mold_id || null,
-          mold_spec_id || null,
+        replacements: {
+          mold_id: mold_id || null,
+          mold_spec_id: mold_spec_id || null,
           image_type,
-          imageUrl,
-          file.originalname,
-          file.size,
-          file.mimetype,
-          description || null,
-          is_primary === 'true' || is_primary === true,
+          image_url: imageUrl,
+          original_filename: file.originalname,
+          file_size: file.size,
+          mime_type: file.mimetype,
+          description: description || null,
+          is_primary: is_primary === 'true' || is_primary === true,
           uploaded_by
-        ]
+        }
       });
       result = { rows: basicRows };
     }
@@ -211,69 +223,89 @@ const getMoldImages = async (req, res) => {
       maker_spec_id
     } = req.query;
 
+    // 먼저 테이블 존재 여부 확인
+    try {
+      await sequelize.query('SELECT 1 FROM mold_images LIMIT 1');
+    } catch (tableError) {
+      // 테이블이 없으면 빈 배열 반환
+      logger.warn('mold_images table does not exist, returning empty array');
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // 기본 쿼리 - display_order 컬럼이 없을 수 있으므로 안전하게 처리
     let query = `
       SELECT mi.*, u.name as uploader_name
       FROM mold_images mi
       LEFT JOIN users u ON mi.uploaded_by = u.id
       WHERE 1=1
     `;
-    const params = [];
+    const replacements = {};
 
     if (mold_id) {
-      params.push(mold_id);
-      query += ` AND mi.mold_id = $${params.length}`;
+      query += ` AND mi.mold_id = :mold_id`;
+      replacements.mold_id = mold_id;
     }
 
     if (mold_spec_id) {
-      params.push(mold_spec_id);
-      query += ` AND mi.mold_spec_id = $${params.length}`;
+      query += ` AND mi.mold_spec_id = :mold_spec_id`;
+      replacements.mold_spec_id = mold_spec_id;
     }
 
     if (image_type) {
-      params.push(image_type);
-      query += ` AND mi.image_type = $${params.length}`;
+      query += ` AND mi.image_type = :image_type`;
+      replacements.image_type = image_type;
     }
 
     if (reference_type) {
-      params.push(reference_type);
-      query += ` AND mi.reference_type = $${params.length}`;
+      query += ` AND mi.reference_type = :reference_type`;
+      replacements.reference_type = reference_type;
     }
 
     if (reference_id) {
-      params.push(reference_id);
-      query += ` AND mi.reference_id = $${params.length}`;
+      query += ` AND mi.reference_id = :reference_id`;
+      replacements.reference_id = reference_id;
     }
 
     if (checklist_id) {
-      params.push(checklist_id);
-      query += ` AND mi.checklist_id = $${params.length}`;
+      query += ` AND mi.checklist_id = :checklist_id`;
+      replacements.checklist_id = checklist_id;
     }
 
     if (repair_id) {
-      params.push(repair_id);
-      query += ` AND mi.repair_id = $${params.length}`;
+      query += ` AND mi.repair_id = :repair_id`;
+      replacements.repair_id = repair_id;
     }
 
     if (transfer_id) {
-      params.push(transfer_id);
-      query += ` AND mi.transfer_id = $${params.length}`;
+      query += ` AND mi.transfer_id = :transfer_id`;
+      replacements.transfer_id = transfer_id;
     }
 
     if (maker_spec_id) {
-      params.push(maker_spec_id);
-      query += ` AND mi.maker_spec_id = $${params.length}`;
+      query += ` AND mi.maker_spec_id = :maker_spec_id`;
+      replacements.maker_spec_id = maker_spec_id;
     }
 
-    query += ` ORDER BY mi.is_primary DESC, mi.display_order, mi.created_at DESC`;
+    query += ` ORDER BY mi.is_primary DESC, mi.created_at DESC`;
 
-    const [rows] = await sequelize.query(query, { replacements: params });
+    const [rows] = await sequelize.query(query, { replacements });
 
     res.json({
       success: true,
-      data: rows
+      data: rows || []
     });
   } catch (error) {
     logger.error('Get mold images error:', error);
+    // 테이블 관련 에러인 경우 빈 배열 반환
+    if (error.message && (error.message.includes('does not exist') || error.message.includes('column') || error.message.includes('relation'))) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
     res.status(500).json({
       success: false,
       error: { message: '이미지 목록 조회 실패', details: error.message }
