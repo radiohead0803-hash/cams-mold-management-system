@@ -307,8 +307,9 @@ const startServer = async () => {
       console.log('🚀 CAMS API Server started');
       console.log(`📍 Server running on: http://localhost:${PORT}`);
       console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-      console.log(`📋 Daily Checks API: http://localhost:${PORT}/api/daily-checks`);
-      console.log(`🔍 Periodic Inspections API: http://localhost:${PORT}/api/periodic-inspections`);
+      console.log(`📋 Daily Checks API: http://localhost:${PORT}/api/v1/daily-checks`);
+      console.log(`🔍 Periodic Inspections API: http://localhost:${PORT}/api/v1/periodic-inspections`);
+      console.log(`🖼️ Mold Images API: http://localhost:${PORT}/api/v1/mold-images`);
       console.log(`\n⏰ Server started at: ${new Date().toLocaleString('ko-KR')}`);
     });
   } catch (error) {

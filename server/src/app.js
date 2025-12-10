@@ -110,8 +110,8 @@ app.use('/api/v1/qr', qrRouter);
 app.use('/api/v1/production', productionRouter);
 app.use('/api/v1/development', developmentRouter);
 app.use('/api/v1/pre-production', preProductionRouter);
-app.use('/api/daily-checks', dailyChecksRouter);
-app.use('/api/periodic-inspections', periodicInspectionsRouter);
+app.use('/api/v1/daily-checks', dailyChecksRouter);
+app.use('/api/v1/periodic-inspections', periodicInspectionsRouter);
 app.use('/api/v1/mold-specifications', moldSpecificationsRouter);
 app.use('/api/v1/maker-specifications', makerSpecificationsRouter);
 app.use('/api/v1/companies', companiesRouter);
@@ -165,8 +165,11 @@ app.get('/', (req, res) => {
     message: 'CAMS API Server',
     version: '04-02',
     endpoints: {
-      dailyChecks: '/api/daily-checks',
-      periodicInspections: '/api/periodic-inspections',
+      auth: '/api/v1/auth',
+      moldSpecifications: '/api/v1/mold-specifications',
+      moldImages: '/api/v1/mold-images',
+      dailyChecks: '/api/v1/daily-checks',
+      periodicInspections: '/api/v1/periodic-inspections',
       health: '/health'
     }
   });
