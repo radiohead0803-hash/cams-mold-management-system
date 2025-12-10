@@ -783,6 +783,281 @@ const runChecklistTemplateMigration = async () => {
   logger.info('Checklist template migration completed.');
 };
 
+// 이관 4M 체크리스트 및 유지보전 마이그레이션
+const runTransfer4MMigration = async () => {
+  // mold_transfers 테이블 생성
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS mold_transfers (
+        id SERIAL PRIMARY KEY,
+        transfer_number VARCHAR(50) UNIQUE,
+        mold_id INTEGER NOT NULL REFERENCES molds(id),
+        transfer_type VARCHAR(50) NOT NULL,
+        from_location VARCHAR(200),
+        from_company_id INTEGER REFERENCES users(id),
+        to_location VARCHAR(200),
+        to_company_id INTEGER REFERENCES users(id),
+        transfer_reason TEXT,
+        status VARCHAR(30) DEFAULT 'requested',
+        requested_by INTEGER REFERENCES users(id),
+        requested_at TIMESTAMP DEFAULT NOW(),
+        approved_by INTEGER REFERENCES users(id),
+        approved_at TIMESTAMP,
+        shipped_at TIMESTAMP,
+        received_at TIMESTAMP,
+        received_by INTEGER REFERENCES users(id),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_transfers_mold ON mold_transfers(mold_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_transfers_status ON mold_transfers(status);`);
+    logger.info('mold_transfers table created/verified.');
+  } catch (err) {
+    logger.warn('mold_transfers table:', err.message);
+  }
+
+  // transfer_4m_checklist 테이블 생성
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS transfer_4m_checklist (
+        id SERIAL PRIMARY KEY,
+        transfer_id INTEGER NOT NULL REFERENCES mold_transfers(id),
+        checklist_type VARCHAR(20) NOT NULL,
+        
+        -- Man (인력) 체크항목
+        man_operator_assigned BOOLEAN DEFAULT false,
+        man_operator_name VARCHAR(100),
+        man_training_completed BOOLEAN DEFAULT false,
+        man_training_date DATE,
+        man_skill_level VARCHAR(20),
+        man_notes TEXT,
+        
+        -- Machine (설비) 체크항목
+        machine_tonnage_check BOOLEAN DEFAULT false,
+        machine_tonnage_value INTEGER,
+        machine_spec_compatible BOOLEAN DEFAULT false,
+        machine_condition_check BOOLEAN DEFAULT false,
+        machine_injection_unit_check BOOLEAN DEFAULT false,
+        machine_notes TEXT,
+        
+        -- Material (원료) 체크항목
+        material_type_confirmed BOOLEAN DEFAULT false,
+        material_name VARCHAR(100),
+        material_grade VARCHAR(100),
+        material_drying_condition BOOLEAN DEFAULT false,
+        material_drying_temp INTEGER,
+        material_drying_time INTEGER,
+        material_color_confirmed BOOLEAN DEFAULT false,
+        material_notes TEXT,
+        
+        -- Method (작업방법) 체크항목
+        method_sop_available BOOLEAN DEFAULT false,
+        method_sop_version VARCHAR(50),
+        method_injection_condition BOOLEAN DEFAULT false,
+        method_cycle_time_set BOOLEAN DEFAULT false,
+        method_cycle_time_value DECIMAL(6,2),
+        method_quality_standard BOOLEAN DEFAULT false,
+        method_notes TEXT,
+        
+        -- 전체 상태
+        overall_status VARCHAR(20) DEFAULT 'pending',
+        checked_by INTEGER REFERENCES users(id),
+        checked_at TIMESTAMP,
+        approved_by INTEGER REFERENCES users(id),
+        approved_at TIMESTAMP,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_4m_transfer ON transfer_4m_checklist(transfer_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_4m_type ON transfer_4m_checklist(checklist_type);`);
+    logger.info('transfer_4m_checklist table created/verified.');
+  } catch (err) {
+    logger.warn('transfer_4m_checklist table:', err.message);
+  }
+
+  // transfer_shipment_checklist 테이블 (반출 체크리스트)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS transfer_shipment_checklist (
+        id SERIAL PRIMARY KEY,
+        transfer_id INTEGER NOT NULL REFERENCES mold_transfers(id),
+        
+        -- 금형 상태 확인
+        mold_condition_check BOOLEAN DEFAULT false,
+        mold_condition_notes TEXT,
+        mold_cleaning_done BOOLEAN DEFAULT false,
+        mold_rust_prevention BOOLEAN DEFAULT false,
+        
+        -- 부속품 확인
+        accessories_check BOOLEAN DEFAULT false,
+        accessories_list JSONB DEFAULT '[]'::jsonb,
+        spare_parts_included BOOLEAN DEFAULT false,
+        spare_parts_list JSONB DEFAULT '[]'::jsonb,
+        
+        -- 문서 확인
+        documents_included BOOLEAN DEFAULT false,
+        document_list JSONB DEFAULT '[]'::jsonb,
+        drawing_included BOOLEAN DEFAULT false,
+        sop_included BOOLEAN DEFAULT false,
+        
+        -- 포장 확인
+        packaging_done BOOLEAN DEFAULT false,
+        packaging_type VARCHAR(50),
+        packaging_photos JSONB DEFAULT '[]'::jsonb,
+        
+        -- GPS 위치
+        shipment_gps_lat DECIMAL(10, 8),
+        shipment_gps_lng DECIMAL(11, 8),
+        
+        -- 서명
+        shipper_name VARCHAR(100),
+        shipper_signature TEXT,
+        shipped_at TIMESTAMP,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_shipment_transfer ON transfer_shipment_checklist(transfer_id);`);
+    logger.info('transfer_shipment_checklist table created/verified.');
+  } catch (err) {
+    logger.warn('transfer_shipment_checklist table:', err.message);
+  }
+
+  // transfer_receiving_checklist 테이블 (입고 체크리스트)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS transfer_receiving_checklist (
+        id SERIAL PRIMARY KEY,
+        transfer_id INTEGER NOT NULL REFERENCES mold_transfers(id),
+        
+        -- 금형 상태 확인
+        mold_condition_check BOOLEAN DEFAULT false,
+        mold_condition_notes TEXT,
+        damage_found BOOLEAN DEFAULT false,
+        damage_description TEXT,
+        damage_photos JSONB DEFAULT '[]'::jsonb,
+        
+        -- 부속품 확인
+        accessories_received BOOLEAN DEFAULT false,
+        accessories_missing JSONB DEFAULT '[]'::jsonb,
+        spare_parts_received BOOLEAN DEFAULT false,
+        spare_parts_missing JSONB DEFAULT '[]'::jsonb,
+        
+        -- 문서 확인
+        documents_received BOOLEAN DEFAULT false,
+        documents_missing JSONB DEFAULT '[]'::jsonb,
+        
+        -- 포장 상태
+        packaging_condition VARCHAR(50),
+        packaging_notes TEXT,
+        
+        -- GPS 위치
+        receiving_gps_lat DECIMAL(10, 8),
+        receiving_gps_lng DECIMAL(11, 8),
+        
+        -- 서명
+        receiver_name VARCHAR(100),
+        receiver_signature TEXT,
+        received_at TIMESTAMP,
+        
+        -- 이상 발견 시
+        issue_reported BOOLEAN DEFAULT false,
+        issue_description TEXT,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_receiving_transfer ON transfer_receiving_checklist(transfer_id);`);
+    logger.info('transfer_receiving_checklist table created/verified.');
+  } catch (err) {
+    logger.warn('transfer_receiving_checklist table:', err.message);
+  }
+
+  // maintenance_records 테이블 (유지보전 기록)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS maintenance_records (
+        id SERIAL PRIMARY KEY,
+        mold_id INTEGER NOT NULL REFERENCES molds(id),
+        maintenance_type VARCHAR(50) NOT NULL,
+        maintenance_category VARCHAR(50),
+        description TEXT,
+        work_details TEXT,
+        parts_replaced JSONB DEFAULT '[]'::jsonb,
+        cost DECIMAL(12, 0),
+        performed_by INTEGER REFERENCES users(id),
+        performed_at TIMESTAMP DEFAULT NOW(),
+        next_maintenance_date DATE,
+        next_maintenance_shots INTEGER,
+        photos JSONB DEFAULT '[]'::jsonb,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_mold ON maintenance_records(mold_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_maintenance_type ON maintenance_records(maintenance_type);`);
+    logger.info('maintenance_records table created/verified.');
+  } catch (err) {
+    logger.warn('maintenance_records table:', err.message);
+  }
+
+  // scrapping_requests 테이블 (금형 폐기 요청)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS scrapping_requests (
+        id SERIAL PRIMARY KEY,
+        request_number VARCHAR(50) UNIQUE,
+        mold_id INTEGER NOT NULL REFERENCES molds(id),
+        reason VARCHAR(100) NOT NULL,
+        reason_detail TEXT,
+        current_shots INTEGER,
+        target_shots INTEGER,
+        condition_assessment TEXT,
+        repair_history_summary TEXT,
+        estimated_scrap_value DECIMAL(12, 0),
+        status VARCHAR(30) DEFAULT 'requested',
+        requested_by INTEGER REFERENCES users(id),
+        requested_at TIMESTAMP DEFAULT NOW(),
+        
+        -- 1차 승인 (금형개발 담당)
+        first_approved_by INTEGER REFERENCES users(id),
+        first_approved_at TIMESTAMP,
+        first_approval_notes TEXT,
+        
+        -- 2차 승인 (시스템 관리자)
+        second_approved_by INTEGER REFERENCES users(id),
+        second_approved_at TIMESTAMP,
+        second_approval_notes TEXT,
+        
+        -- 폐기 처리
+        scrapped_at TIMESTAMP,
+        scrapped_by INTEGER REFERENCES users(id),
+        disposal_method VARCHAR(50),
+        disposal_company VARCHAR(200),
+        disposal_cost DECIMAL(12, 0),
+        disposal_certificate TEXT,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_scrapping_mold ON scrapping_requests(mold_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_scrapping_status ON scrapping_requests(status);`);
+    logger.info('scrapping_requests table created/verified.');
+  } catch (err) {
+    logger.warn('scrapping_requests table:', err.message);
+  }
+
+  logger.info('Transfer 4M and maintenance migration completed.');
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -797,6 +1072,7 @@ const startServer = async () => {
     await runMasterDataMigration();
     await runGpsAlertsMigration();
     await runChecklistTemplateMigration();
+    await runTransfer4MMigration();
     
     // Sync database (only in development)
     if (process.env.NODE_ENV === 'development') {

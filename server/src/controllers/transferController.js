@@ -551,11 +551,485 @@ const getDefaultTransferChecklistItems = () => [
   { id: 14, category: 'heater', category_name: '히터', item_name: '수지 누출', item_description: '수지 넘침 확인', requires_photo: false, item_order: 14 }
 ];
 
+// 4M 체크리스트 조회
+const get4MChecklist = async (req, res) => {
+  try {
+    const { transfer_id } = req.params;
+    
+    const query = `
+      SELECT * FROM transfer_4m_checklist
+      WHERE transfer_id = $1
+      ORDER BY checklist_type
+    `;
+    const result = await pool.query(query, [transfer_id]);
+    
+    res.json({
+      success: true,
+      data: {
+        checklists: result.rows,
+        transfer_id: parseInt(transfer_id)
+      }
+    });
+  } catch (error) {
+    logger.error('Get 4M checklist error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to get 4M checklist', details: error.message }
+    });
+  }
+};
+
+// 4M 체크리스트 저장/업데이트
+const save4MChecklist = async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { transfer_id } = req.params;
+    const { checklist_type, ...checklistData } = req.body;
+    const userId = req.user?.id;
+    
+    // 기존 체크리스트 확인
+    const existingQuery = `
+      SELECT id FROM transfer_4m_checklist
+      WHERE transfer_id = $1 AND checklist_type = $2
+    `;
+    const existing = await client.query(existingQuery, [transfer_id, checklist_type]);
+    
+    if (existing.rows.length > 0) {
+      // 업데이트
+      const updateFields = [];
+      const updateValues = [];
+      let paramIndex = 1;
+      
+      for (const [key, value] of Object.entries(checklistData)) {
+        updateFields.push(`${key} = $${paramIndex}`);
+        updateValues.push(value);
+        paramIndex++;
+      }
+      
+      updateFields.push(`checked_by = $${paramIndex}`);
+      updateValues.push(userId);
+      paramIndex++;
+      
+      updateFields.push(`checked_at = NOW()`);
+      updateFields.push(`updated_at = NOW()`);
+      
+      updateValues.push(transfer_id, checklist_type);
+      
+      const updateQuery = `
+        UPDATE transfer_4m_checklist
+        SET ${updateFields.join(', ')}
+        WHERE transfer_id = $${paramIndex} AND checklist_type = $${paramIndex + 1}
+        RETURNING *
+      `;
+      
+      const result = await client.query(updateQuery, updateValues);
+      await client.query('COMMIT');
+      
+      return res.json({
+        success: true,
+        data: result.rows[0]
+      });
+    } else {
+      // 새로 생성
+      const insertQuery = `
+        INSERT INTO transfer_4m_checklist (
+          transfer_id, checklist_type,
+          man_operator_assigned, man_operator_name, man_training_completed, man_training_date, man_skill_level, man_notes,
+          machine_tonnage_check, machine_tonnage_value, machine_spec_compatible, machine_condition_check, machine_injection_unit_check, machine_notes,
+          material_type_confirmed, material_name, material_grade, material_drying_condition, material_drying_temp, material_drying_time, material_color_confirmed, material_notes,
+          method_sop_available, method_sop_version, method_injection_condition, method_cycle_time_set, method_cycle_time_value, method_quality_standard, method_notes,
+          overall_status, checked_by, checked_at, created_at, updated_at
+        ) VALUES (
+          $1, $2,
+          $3, $4, $5, $6, $7, $8,
+          $9, $10, $11, $12, $13, $14,
+          $15, $16, $17, $18, $19, $20, $21, $22,
+          $23, $24, $25, $26, $27, $28, $29,
+          'pending', $30, NOW(), NOW(), NOW()
+        )
+        RETURNING *
+      `;
+      
+      const result = await client.query(insertQuery, [
+        transfer_id, checklist_type,
+        checklistData.man_operator_assigned || false,
+        checklistData.man_operator_name || null,
+        checklistData.man_training_completed || false,
+        checklistData.man_training_date || null,
+        checklistData.man_skill_level || null,
+        checklistData.man_notes || null,
+        checklistData.machine_tonnage_check || false,
+        checklistData.machine_tonnage_value || null,
+        checklistData.machine_spec_compatible || false,
+        checklistData.machine_condition_check || false,
+        checklistData.machine_injection_unit_check || false,
+        checklistData.machine_notes || null,
+        checklistData.material_type_confirmed || false,
+        checklistData.material_name || null,
+        checklistData.material_grade || null,
+        checklistData.material_drying_condition || false,
+        checklistData.material_drying_temp || null,
+        checklistData.material_drying_time || null,
+        checklistData.material_color_confirmed || false,
+        checklistData.material_notes || null,
+        checklistData.method_sop_available || false,
+        checklistData.method_sop_version || null,
+        checklistData.method_injection_condition || false,
+        checklistData.method_cycle_time_set || false,
+        checklistData.method_cycle_time_value || null,
+        checklistData.method_quality_standard || false,
+        checklistData.method_notes || null,
+        userId
+      ]);
+      
+      await client.query('COMMIT');
+      
+      return res.status(201).json({
+        success: true,
+        data: result.rows[0]
+      });
+    }
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('Save 4M checklist error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to save 4M checklist', details: error.message }
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// 반출 체크리스트 저장
+const saveShipmentChecklist = async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { transfer_id } = req.params;
+    const checklistData = req.body;
+    
+    // 기존 체크리스트 확인
+    const existingQuery = `SELECT id FROM transfer_shipment_checklist WHERE transfer_id = $1`;
+    const existing = await client.query(existingQuery, [transfer_id]);
+    
+    if (existing.rows.length > 0) {
+      // 업데이트
+      const updateQuery = `
+        UPDATE transfer_shipment_checklist SET
+          mold_condition_check = $1, mold_condition_notes = $2,
+          mold_cleaning_done = $3, mold_rust_prevention = $4,
+          accessories_check = $5, accessories_list = $6,
+          spare_parts_included = $7, spare_parts_list = $8,
+          documents_included = $9, document_list = $10,
+          drawing_included = $11, sop_included = $12,
+          packaging_done = $13, packaging_type = $14, packaging_photos = $15,
+          shipment_gps_lat = $16, shipment_gps_lng = $17,
+          shipper_name = $18, shipper_signature = $19,
+          shipped_at = $20, updated_at = NOW()
+        WHERE transfer_id = $21
+        RETURNING *
+      `;
+      
+      const result = await client.query(updateQuery, [
+        checklistData.mold_condition_check || false,
+        checklistData.mold_condition_notes || null,
+        checklistData.mold_cleaning_done || false,
+        checklistData.mold_rust_prevention || false,
+        checklistData.accessories_check || false,
+        JSON.stringify(checklistData.accessories_list || []),
+        checklistData.spare_parts_included || false,
+        JSON.stringify(checklistData.spare_parts_list || []),
+        checklistData.documents_included || false,
+        JSON.stringify(checklistData.document_list || []),
+        checklistData.drawing_included || false,
+        checklistData.sop_included || false,
+        checklistData.packaging_done || false,
+        checklistData.packaging_type || null,
+        JSON.stringify(checklistData.packaging_photos || []),
+        checklistData.shipment_gps_lat || null,
+        checklistData.shipment_gps_lng || null,
+        checklistData.shipper_name || null,
+        checklistData.shipper_signature || null,
+        checklistData.shipped_at || null,
+        transfer_id
+      ]);
+      
+      // 이관 상태 업데이트
+      if (checklistData.shipped_at) {
+        await client.query(`
+          UPDATE mold_transfers SET shipped_at = $1, status = 'shipped', updated_at = NOW()
+          WHERE id = $2
+        `, [checklistData.shipped_at, transfer_id]);
+      }
+      
+      await client.query('COMMIT');
+      return res.json({ success: true, data: result.rows[0] });
+    } else {
+      // 새로 생성
+      const insertQuery = `
+        INSERT INTO transfer_shipment_checklist (
+          transfer_id, mold_condition_check, mold_condition_notes,
+          mold_cleaning_done, mold_rust_prevention,
+          accessories_check, accessories_list, spare_parts_included, spare_parts_list,
+          documents_included, document_list, drawing_included, sop_included,
+          packaging_done, packaging_type, packaging_photos,
+          shipment_gps_lat, shipment_gps_lng,
+          shipper_name, shipper_signature, shipped_at,
+          created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, NOW(), NOW()
+        )
+        RETURNING *
+      `;
+      
+      const result = await client.query(insertQuery, [
+        transfer_id,
+        checklistData.mold_condition_check || false,
+        checklistData.mold_condition_notes || null,
+        checklistData.mold_cleaning_done || false,
+        checklistData.mold_rust_prevention || false,
+        checklistData.accessories_check || false,
+        JSON.stringify(checklistData.accessories_list || []),
+        checklistData.spare_parts_included || false,
+        JSON.stringify(checklistData.spare_parts_list || []),
+        checklistData.documents_included || false,
+        JSON.stringify(checklistData.document_list || []),
+        checklistData.drawing_included || false,
+        checklistData.sop_included || false,
+        checklistData.packaging_done || false,
+        checklistData.packaging_type || null,
+        JSON.stringify(checklistData.packaging_photos || []),
+        checklistData.shipment_gps_lat || null,
+        checklistData.shipment_gps_lng || null,
+        checklistData.shipper_name || null,
+        checklistData.shipper_signature || null,
+        checklistData.shipped_at || null
+      ]);
+      
+      await client.query('COMMIT');
+      return res.status(201).json({ success: true, data: result.rows[0] });
+    }
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('Save shipment checklist error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to save shipment checklist', details: error.message }
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// 입고 체크리스트 저장
+const saveReceivingChecklist = async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { transfer_id } = req.params;
+    const checklistData = req.body;
+    const userId = req.user?.id;
+    
+    // 기존 체크리스트 확인
+    const existingQuery = `SELECT id FROM transfer_receiving_checklist WHERE transfer_id = $1`;
+    const existing = await client.query(existingQuery, [transfer_id]);
+    
+    if (existing.rows.length > 0) {
+      // 업데이트
+      const updateQuery = `
+        UPDATE transfer_receiving_checklist SET
+          mold_condition_check = $1, mold_condition_notes = $2,
+          damage_found = $3, damage_description = $4, damage_photos = $5,
+          accessories_received = $6, accessories_missing = $7,
+          spare_parts_received = $8, spare_parts_missing = $9,
+          documents_received = $10, documents_missing = $11,
+          packaging_condition = $12, packaging_notes = $13,
+          receiving_gps_lat = $14, receiving_gps_lng = $15,
+          receiver_name = $16, receiver_signature = $17,
+          received_at = $18, issue_reported = $19, issue_description = $20,
+          updated_at = NOW()
+        WHERE transfer_id = $21
+        RETURNING *
+      `;
+      
+      const result = await client.query(updateQuery, [
+        checklistData.mold_condition_check || false,
+        checklistData.mold_condition_notes || null,
+        checklistData.damage_found || false,
+        checklistData.damage_description || null,
+        JSON.stringify(checklistData.damage_photos || []),
+        checklistData.accessories_received || false,
+        JSON.stringify(checklistData.accessories_missing || []),
+        checklistData.spare_parts_received || false,
+        JSON.stringify(checklistData.spare_parts_missing || []),
+        checklistData.documents_received || false,
+        JSON.stringify(checklistData.documents_missing || []),
+        checklistData.packaging_condition || null,
+        checklistData.packaging_notes || null,
+        checklistData.receiving_gps_lat || null,
+        checklistData.receiving_gps_lng || null,
+        checklistData.receiver_name || null,
+        checklistData.receiver_signature || null,
+        checklistData.received_at || null,
+        checklistData.issue_reported || false,
+        checklistData.issue_description || null,
+        transfer_id
+      ]);
+      
+      // 이관 상태 업데이트
+      if (checklistData.received_at) {
+        await client.query(`
+          UPDATE mold_transfers SET 
+            received_at = $1, received_by = $2, status = 'received', updated_at = NOW()
+          WHERE id = $3
+        `, [checklistData.received_at, userId, transfer_id]);
+      }
+      
+      await client.query('COMMIT');
+      return res.json({ success: true, data: result.rows[0] });
+    } else {
+      // 새로 생성
+      const insertQuery = `
+        INSERT INTO transfer_receiving_checklist (
+          transfer_id, mold_condition_check, mold_condition_notes,
+          damage_found, damage_description, damage_photos,
+          accessories_received, accessories_missing,
+          spare_parts_received, spare_parts_missing,
+          documents_received, documents_missing,
+          packaging_condition, packaging_notes,
+          receiving_gps_lat, receiving_gps_lng,
+          receiver_name, receiver_signature, received_at,
+          issue_reported, issue_description,
+          created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, NOW(), NOW()
+        )
+        RETURNING *
+      `;
+      
+      const result = await client.query(insertQuery, [
+        transfer_id,
+        checklistData.mold_condition_check || false,
+        checklistData.mold_condition_notes || null,
+        checklistData.damage_found || false,
+        checklistData.damage_description || null,
+        JSON.stringify(checklistData.damage_photos || []),
+        checklistData.accessories_received || false,
+        JSON.stringify(checklistData.accessories_missing || []),
+        checklistData.spare_parts_received || false,
+        JSON.stringify(checklistData.spare_parts_missing || []),
+        checklistData.documents_received || false,
+        JSON.stringify(checklistData.documents_missing || []),
+        checklistData.packaging_condition || null,
+        checklistData.packaging_notes || null,
+        checklistData.receiving_gps_lat || null,
+        checklistData.receiving_gps_lng || null,
+        checklistData.receiver_name || null,
+        checklistData.receiver_signature || null,
+        checklistData.received_at || null,
+        checklistData.issue_reported || false,
+        checklistData.issue_description || null
+      ]);
+      
+      await client.query('COMMIT');
+      return res.status(201).json({ success: true, data: result.rows[0] });
+    }
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('Save receiving checklist error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to save receiving checklist', details: error.message }
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// 4M 체크리스트 기본 항목 반환
+const get4MChecklistTemplate = async (req, res) => {
+  try {
+    const template = {
+      man: {
+        title: 'Man (인력)',
+        items: [
+          { key: 'man_operator_assigned', label: '작업자 배정', type: 'boolean', required: true },
+          { key: 'man_operator_name', label: '작업자명', type: 'text', required: true },
+          { key: 'man_training_completed', label: '교육 이수', type: 'boolean', required: true },
+          { key: 'man_training_date', label: '교육 이수일', type: 'date', required: false },
+          { key: 'man_skill_level', label: '숙련도', type: 'select', options: ['초급', '중급', '고급'], required: false },
+          { key: 'man_notes', label: '비고', type: 'textarea', required: false }
+        ]
+      },
+      machine: {
+        title: 'Machine (설비)',
+        items: [
+          { key: 'machine_tonnage_check', label: '톤수 확인', type: 'boolean', required: true },
+          { key: 'machine_tonnage_value', label: '톤수 (ton)', type: 'number', required: true },
+          { key: 'machine_spec_compatible', label: '사양 호환성', type: 'boolean', required: true },
+          { key: 'machine_condition_check', label: '설비 상태 확인', type: 'boolean', required: true },
+          { key: 'machine_injection_unit_check', label: '사출 유닛 확인', type: 'boolean', required: true },
+          { key: 'machine_notes', label: '비고', type: 'textarea', required: false }
+        ]
+      },
+      material: {
+        title: 'Material (원료)',
+        items: [
+          { key: 'material_type_confirmed', label: '원료 종류 확인', type: 'boolean', required: true },
+          { key: 'material_name', label: '원료명', type: 'text', required: true },
+          { key: 'material_grade', label: '그레이드', type: 'text', required: true },
+          { key: 'material_drying_condition', label: '건조 조건 확인', type: 'boolean', required: true },
+          { key: 'material_drying_temp', label: '건조 온도 (°C)', type: 'number', required: false },
+          { key: 'material_drying_time', label: '건조 시간 (hr)', type: 'number', required: false },
+          { key: 'material_color_confirmed', label: '색상 확인', type: 'boolean', required: false },
+          { key: 'material_notes', label: '비고', type: 'textarea', required: false }
+        ]
+      },
+      method: {
+        title: 'Method (작업방법)',
+        items: [
+          { key: 'method_sop_available', label: 'SOP 확보', type: 'boolean', required: true },
+          { key: 'method_sop_version', label: 'SOP 버전', type: 'text', required: false },
+          { key: 'method_injection_condition', label: '사출 조건 확인', type: 'boolean', required: true },
+          { key: 'method_cycle_time_set', label: '사이클 타임 설정', type: 'boolean', required: true },
+          { key: 'method_cycle_time_value', label: '사이클 타임 (초)', type: 'number', required: false },
+          { key: 'method_quality_standard', label: '품질 기준 확인', type: 'boolean', required: true },
+          { key: 'method_notes', label: '비고', type: 'textarea', required: false }
+        ]
+      }
+    };
+    
+    res.json({
+      success: true,
+      data: template
+    });
+  } catch (error) {
+    logger.error('Get 4M checklist template error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to get 4M checklist template' }
+    });
+  }
+};
+
 module.exports = {
   getTransfers,
   getTransferById,
   createTransfer,
   approveTransfer,
   rejectTransfer,
-  getChecklistItems
+  getChecklistItems,
+  get4MChecklist,
+  save4MChecklist,
+  saveShipmentChecklist,
+  saveReceivingChecklist,
+  get4MChecklistTemplate
 };
