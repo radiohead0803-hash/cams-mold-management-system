@@ -63,6 +63,69 @@ const downloadPDF = (title, content) => {
   printWindow.document.close();
 };
 
+// 도넛 차트 컴포넌트 (SVG)
+const DonutChart = ({ data, size = 200 }) => {
+  const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
+  
+  let currentAngle = 0;
+  const segments = data.map((item, index) => {
+    const percentage = total > 0 ? (item.value / total) * 100 : 0;
+    const angle = (percentage / 100) * 360;
+    const startAngle = currentAngle;
+    currentAngle += angle;
+    
+    const startRad = (startAngle - 90) * (Math.PI / 180);
+    const endRad = (startAngle + angle - 90) * (Math.PI / 180);
+    
+    const radius = size / 2 - 10;
+    const innerRadius = radius * 0.6;
+    const centerX = size / 2;
+    const centerY = size / 2;
+    
+    const x1 = centerX + radius * Math.cos(startRad);
+    const y1 = centerY + radius * Math.sin(startRad);
+    const x2 = centerX + radius * Math.cos(endRad);
+    const y2 = centerY + radius * Math.sin(endRad);
+    const x3 = centerX + innerRadius * Math.cos(endRad);
+    const y3 = centerY + innerRadius * Math.sin(endRad);
+    const x4 = centerX + innerRadius * Math.cos(startRad);
+    const y4 = centerY + innerRadius * Math.sin(startRad);
+    
+    const largeArc = angle > 180 ? 1 : 0;
+    
+    const path = `M ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+    
+    return { ...item, path, color: colors[index % colors.length], percentage };
+  });
+
+  return (
+    <div className="flex items-center gap-6">
+      <svg width={size} height={size} className="transform -rotate-90">
+        {segments.map((segment, index) => (
+          <path
+            key={index}
+            d={segment.path}
+            fill={segment.color}
+            className="transition-all duration-300 hover:opacity-80"
+          />
+        ))}
+        <circle cx={size/2} cy={size/2} r={size/2 * 0.35} fill="white" />
+      </svg>
+      <div className="space-y-2">
+        {segments.map((segment, index) => (
+          <div key={index} className="flex items-center gap-2 text-sm">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }} />
+            <span className="text-gray-600">{segment.label}</span>
+            <span className="font-semibold text-gray-900">{segment.value}</span>
+            <span className="text-gray-400">({segment.percentage.toFixed(1)}%)</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // 간단한 바 차트 컴포넌트
 const SimpleBarChart = ({ data, labelKey, valueKey, color = 'blue' }) => {
   const maxValue = Math.max(...data.map(d => parseInt(d[valueKey]) || 0), 1);
@@ -499,6 +562,21 @@ export default function Reports() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 상태별 도넛 차트 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">상태별 금형 분포</h3>
+              <DonutChart 
+                data={[
+                  { label: '계획', value: moldStats?.byStatus?.planning || 0 },
+                  { label: '설계', value: moldStats?.byStatus?.design || 0 },
+                  { label: '제작', value: moldStats?.byStatus?.manufacturing || 0 },
+                  { label: '시운전', value: moldStats?.byStatus?.trial || 0 },
+                  { label: '양산', value: moldStats?.byStatus?.production || 0 },
+                  { label: '정비', value: moldStats?.byStatus?.maintenance || 0 },
+                  { label: '폐기', value: moldStats?.byStatus?.retired || 0 }
+                ].filter(d => d.value > 0)}
+              />
+            </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">차종별 금형 분포</h3>
               <SimpleBarChart 
