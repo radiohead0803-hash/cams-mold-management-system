@@ -4,7 +4,7 @@ import {
   ArrowLeft, Settings, ChevronDown, Upload, Eye, 
   CheckCircle, MapPin, TrendingUp, User, AlertTriangle,
   Thermometer, Gauge, Clock, Box, Wrench, FileText,
-  ClipboardCheck, Calendar, Activity, Camera, Shield, X, History
+  ClipboardCheck, Calendar, Activity, Camera, Shield, X, History, Printer
 } from 'lucide-react';
 import { moldSpecificationAPI, moldAPI, moldImageAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
@@ -310,6 +310,70 @@ export default function MoldDetailNew() {
     setMoldLocationPopup(moldData);
   }, []);
 
+  // 금형 정보 인쇄
+  const handlePrint = () => {
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>금형 정보 - ${mold?.mold_code || ''}</title>
+        <style>
+          body { font-family: 'Malgun Gothic', sans-serif; padding: 30px; }
+          h1 { color: #1f2937; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
+          h2 { color: #374151; margin-top: 25px; font-size: 16px; }
+          table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          th, td { border: 1px solid #e5e7eb; padding: 10px; text-align: left; }
+          th { background-color: #f3f4f6; font-weight: 600; width: 30%; }
+          .header { display: flex; justify-content: space-between; align-items: center; }
+          .status { padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+          .footer { margin-top: 30px; text-align: center; color: #9ca3af; font-size: 11px; }
+          @media print { body { padding: 15px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>금형 상세 정보</h1>
+          <span class="status" style="background: #dbeafe; color: #1d4ed8;">${mold?.status || '-'}</span>
+        </div>
+        
+        <h2>기본 정보</h2>
+        <table>
+          <tr><th>금형코드</th><td>${mold?.mold_code || '-'}</td></tr>
+          <tr><th>품번</th><td>${mold?.part_number || '-'}</td></tr>
+          <tr><th>품명</th><td>${mold?.part_name || '-'}</td></tr>
+          <tr><th>차종</th><td>${mold?.car_model || '-'}</td></tr>
+          <tr><th>제작처</th><td>${mold?.maker_company_name || '-'}</td></tr>
+          <tr><th>생산처</th><td>${mold?.plant_company_name || '-'}</td></tr>
+        </table>
+        
+        <h2>금형 사양</h2>
+        <table>
+          <tr><th>캐비티</th><td>${mold?.cavity || '-'}</td></tr>
+          <tr><th>톤수</th><td>${mold?.tonnage || '-'}</td></tr>
+          <tr><th>금형 크기</th><td>${mold?.mold_size || '-'}</td></tr>
+          <tr><th>재질</th><td>${mold?.material || '-'}</td></tr>
+        </table>
+        
+        <h2>생산 정보</h2>
+        <table>
+          <tr><th>현재 타수</th><td>${(mold?.current_shots || 0).toLocaleString()}</td></tr>
+          <tr><th>보증 타수</th><td>${(mold?.guaranteed_shots || 0).toLocaleString()}</td></tr>
+          <tr><th>사이클 타임</th><td>${mold?.cycle_time || '-'} 초</td></tr>
+        </table>
+        
+        <div class="footer">
+          <p>CAMS 금형관리 시스템 - ${new Date().toLocaleDateString('ko-KR')} 인쇄</p>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.onload = () => printWindow.print();
+  };
+
   // 현재 금형의 위치 데이터
   const currentMoldLocation = mold ? [{
     id: mold.id || parseInt(id),
@@ -475,8 +539,15 @@ export default function MoldDetailNew() {
               </div>
             )}
 
-            {/* Right: User Info */}
+            {/* Right: User Info & Actions */}
             <div className="flex items-center gap-2">
+              <button 
+                onClick={handlePrint}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                title="인쇄"
+              >
+                <Printer size={20} className="text-gray-600" />
+              </button>
               <button className="p-2 hover:bg-gray-100 rounded-full">
                 <User size={20} className="text-gray-600" />
               </button>
