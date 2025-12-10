@@ -3,7 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { 
   ArrowLeft, Save, Send, Thermometer, Gauge, Timer, 
   Settings, AlertCircle, CheckCircle, Clock, History,
-  ChevronDown, ChevronUp, Info, User, Calendar, FileText, Edit3
+  ChevronDown, ChevronUp, Info, User, Calendar, FileText, Edit3,
+  Plus, Minus, ToggleLeft, ToggleRight
 } from 'lucide-react'
 import { injectionConditionAPI, moldSpecificationAPI } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
@@ -34,8 +35,7 @@ export default function InjectionCondition() {
     metering_pressure: false,
     full_pressure: false,
     barrel: false,
-    hr: false,
-    valve_gate: false,
+    hot_runner: true,
     chiller: true,
     other: false
   })
@@ -190,7 +190,7 @@ export default function InjectionCondition() {
     </div>
   )
 
-  const SectionHeader = ({ icon: Icon, title, section, color }) => (
+  const SectionHeader = ({ icon: Icon, title, section, color, badge }) => (
     <button
       onClick={() => toggleSection(section)}
       className={`w-full flex items-center justify-between p-4 ${color} rounded-t-xl`}
@@ -198,10 +198,71 @@ export default function InjectionCondition() {
       <div className="flex items-center gap-2 text-white font-semibold">
         <Icon size={20} />
         {title}
+        {badge}
       </div>
       {expandedSections[section] ? <ChevronUp className="text-white" /> : <ChevronDown className="text-white" />}
     </button>
   )
+
+  // 핫런너 설치 토글
+  const toggleHotRunner = () => {
+    if (!canEdit) return
+    setFormData(prev => ({
+      ...prev,
+      hot_runner_installed: !prev.hot_runner_installed,
+      hot_runner_type: !prev.hot_runner_installed ? 'open' : '',
+      valve_gate_count: 0,
+      valve_gate_data: []
+    }))
+  }
+
+  // 핫런너 타입 변경
+  const handleHotRunnerTypeChange = (type) => {
+    if (!canEdit) return
+    setFormData(prev => ({
+      ...prev,
+      hot_runner_type: type,
+      valve_gate_count: type === 'valve_gate' ? (prev.valve_gate_count || 1) : 0,
+      valve_gate_data: type === 'valve_gate' 
+        ? (prev.valve_gate_data?.length > 0 ? prev.valve_gate_data : [{ seq: 1, moving: '', fixed: '' }]) 
+        : []
+    }))
+  }
+
+  // 밸브게이트 추가
+  const addValveGate = () => {
+    if (!canEdit) return
+    const newSeq = (formData.valve_gate_data?.length || 0) + 1
+    setFormData(prev => ({
+      ...prev,
+      valve_gate_count: newSeq,
+      valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, moving: '', fixed: '' }]
+    }))
+  }
+
+  // 밸브게이트 삭제
+  const removeValveGate = (index) => {
+    if (!canEdit) return
+    setFormData(prev => {
+      const newData = prev.valve_gate_data.filter((_, i) => i !== index)
+        .map((item, i) => ({ ...item, seq: i + 1 }))
+      return {
+        ...prev,
+        valve_gate_count: newData.length,
+        valve_gate_data: newData
+      }
+    })
+  }
+
+  // 밸브게이트 값 변경
+  const handleValveGateChange = (index, field, value) => {
+    if (!canEdit) return
+    setFormData(prev => {
+      const newData = [...(prev.valve_gate_data || [])]
+      newData[index] = { ...newData[index], [field]: value }
+      return { ...prev, valve_gate_data: newData }
+    })
+  }
 
   if (loading) {
     return (
@@ -545,26 +606,159 @@ export default function InjectionCondition() {
               )}
             </div>
 
-            {/* H/R */}
+            {/* 핫런너 */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <SectionHeader icon={Thermometer} title="H/R" section="hr" color="bg-violet-500" />
-              {expandedSections.hr && (
-                <div className="p-4 grid grid-cols-4 gap-3">
-                  <InputField label="1" field="hr_temp_1" unit="°C" />
-                  <InputField label="2" field="hr_temp_2" unit="°C" />
-                  <InputField label="3" field="hr_temp_3" unit="°C" />
-                  <InputField label="4" field="hr_temp_4" unit="°C" />
-                </div>
-              )}
-            </div>
+              <SectionHeader 
+                icon={Thermometer} 
+                title="핫런너" 
+                section="hot_runner" 
+                color="bg-violet-500"
+                badge={formData.hot_runner_installed && (
+                  <span className="ml-2 px-2 py-0.5 bg-white/30 text-white text-xs rounded-full">설치</span>
+                )}
+              />
+              {expandedSections.hot_runner && (
+                <div className="p-4 space-y-4">
+                  {/* 핫런너 설치 유무 */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm font-medium text-gray-700">핫런너 설치</span>
+                    <button
+                      onClick={toggleHotRunner}
+                      disabled={!canEdit}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        formData.hot_runner_installed 
+                          ? 'bg-violet-500 text-white' 
+                          : 'bg-gray-200 text-gray-600'
+                      } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {formData.hot_runner_installed ? (
+                        <><ToggleRight size={18} /> 설치</>
+                      ) : (
+                        <><ToggleLeft size={18} /> 미설치</>
+                      )}
+                    </button>
+                  </div>
 
-            {/* 밸브게이트 */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <SectionHeader icon={Settings} title="밸브게이트" section="valve_gate" color="bg-slate-500" />
-              {expandedSections.valve_gate && (
-                <div className="p-4 grid grid-cols-2 gap-3">
-                  <InputField label="가동" field="valve_gate_moving" unit="" />
-                  <InputField label="고정" field="valve_gate_fixed" unit="" />
+                  {/* 핫런너 설치 시 상세 설정 */}
+                  {formData.hot_runner_installed && (
+                    <>
+                      {/* 핫런너 타입 선택 */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">핫런너 타입</label>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => handleHotRunnerTypeChange('open')}
+                            disabled={!canEdit}
+                            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium border-2 transition-colors ${
+                              formData.hot_runner_type === 'open'
+                                ? 'bg-violet-500 text-white border-violet-500'
+                                : 'bg-white text-gray-600 border-gray-300 hover:border-violet-300'
+                            } ${!canEdit ? 'opacity-50' : ''}`}
+                          >
+                            오픈 타입
+                          </button>
+                          <button
+                            onClick={() => handleHotRunnerTypeChange('valve_gate')}
+                            disabled={!canEdit}
+                            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium border-2 transition-colors ${
+                              formData.hot_runner_type === 'valve_gate'
+                                ? 'bg-violet-500 text-white border-violet-500'
+                                : 'bg-white text-gray-600 border-gray-300 hover:border-violet-300'
+                            } ${!canEdit ? 'opacity-50' : ''}`}
+                          >
+                            밸브게이트
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* H/R 온도 */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">H/R 온도</label>
+                        <div className="grid grid-cols-8 gap-2">
+                          {[1,2,3,4,5,6,7,8].map(num => (
+                            <div key={num}>
+                              <label className="block text-xs text-gray-500 mb-1 text-center">{num}</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={formData[`hr_temp_${num}`] || ''}
+                                onChange={(e) => handleChange(`hr_temp_${num}`, e.target.value)}
+                                disabled={!canEdit}
+                                className="w-full border rounded-lg px-2 py-2 text-sm text-center disabled:bg-gray-100"
+                                placeholder="°C"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 밸브게이트 타입 선택 시 */}
+                      {formData.hot_runner_type === 'valve_gate' && (
+                        <div className="space-y-3 border-t pt-4">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium text-gray-700">
+                              밸브게이트 ({formData.valve_gate_data?.length || 0}개)
+                            </label>
+                            {canEdit && (
+                              <button
+                                onClick={addValveGate}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-violet-100 text-violet-600 rounded-lg text-sm font-medium hover:bg-violet-200"
+                              >
+                                <Plus size={16} /> 게이트 추가
+                              </button>
+                            )}
+                          </div>
+                          
+                          {/* 밸브게이트 목록 */}
+                          <div className="space-y-2">
+                            {(formData.valve_gate_data || []).map((gate, index) => (
+                              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                <span className="text-sm font-bold text-violet-600 w-8">#{gate.seq}</span>
+                                <div className="flex-1 grid grid-cols-2 gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-gray-500 w-10">가동</label>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={gate.moving || ''}
+                                      onChange={(e) => handleValveGateChange(index, 'moving', e.target.value)}
+                                      disabled={!canEdit}
+                                      className="flex-1 border rounded-lg px-3 py-2 text-sm disabled:bg-white"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <label className="text-sm text-gray-500 w-10">고정</label>
+                                    <input
+                                      type="number"
+                                      step="0.1"
+                                      value={gate.fixed || ''}
+                                      onChange={(e) => handleValveGateChange(index, 'fixed', e.target.value)}
+                                      disabled={!canEdit}
+                                      className="flex-1 border rounded-lg px-3 py-2 text-sm disabled:bg-white"
+                                    />
+                                  </div>
+                                </div>
+                                {canEdit && (
+                                  <button
+                                    onClick={() => removeValveGate(index)}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
+                                  >
+                                    <Minus size={18} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            
+                            {(!formData.valve_gate_data || formData.valve_gate_data.length === 0) && (
+                              <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-lg">
+                                밸브게이트를 추가하세요
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>

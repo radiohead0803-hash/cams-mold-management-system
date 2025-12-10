@@ -74,15 +74,23 @@ CREATE TABLE IF NOT EXISTS injection_conditions (
   barrel_temp_8 DECIMAL(6,1),         -- BARREL 8
   barrel_temp_9 DECIMAL(6,1),         -- BARREL 9
   
-  -- ========== H/R 온도 ==========
+  -- ========== 핫런너 설정 ==========
+  hot_runner_installed BOOLEAN DEFAULT false,  -- 핫런너 설치 유무
+  hot_runner_type VARCHAR(50),                 -- 핫런너 타입 (open, valve_gate)
+  
+  -- H/R 온도 (핫런너 설치 시)
   hr_temp_1 DECIMAL(6,1),             -- H/R 1
   hr_temp_2 DECIMAL(6,1),             -- H/R 2
   hr_temp_3 DECIMAL(6,1),             -- H/R 3
   hr_temp_4 DECIMAL(6,1),             -- H/R 4
+  hr_temp_5 DECIMAL(6,1),             -- H/R 5
+  hr_temp_6 DECIMAL(6,1),             -- H/R 6
+  hr_temp_7 DECIMAL(6,1),             -- H/R 7
+  hr_temp_8 DECIMAL(6,1),             -- H/R 8
   
   -- ========== 밸브게이트 ==========
-  valve_gate_moving DECIMAL(6,1),     -- 밸브게이트 가동
-  valve_gate_fixed DECIMAL(6,1),      -- 밸브게이트 고정
+  valve_gate_count INTEGER DEFAULT 0,          -- 밸브게이트 수량
+  valve_gate_data JSONB DEFAULT '[]'::jsonb,   -- 밸브게이트 데이터 [{seq, moving, fixed}]
   
   -- ========== 칠러온도 ==========
   chiller_temp_main DECIMAL(6,1),     -- 칠러온도 메인

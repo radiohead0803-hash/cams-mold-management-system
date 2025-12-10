@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Save, Send, ChevronDown, ChevronUp,
   Thermometer, Gauge, Settings, Droplets, Clock, CheckCircle, AlertCircle, Info,
-  User, Calendar, FileText, Edit3
+  User, Calendar, FileText, Edit3, Plus, Minus, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { moldSpecificationAPI, injectionConditionAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
@@ -45,10 +45,15 @@ export default function MobileInjectionCondition() {
     // BARREL 온도
     barrel_temp_1: '', barrel_temp_2: '', barrel_temp_3: '', barrel_temp_4: '', barrel_temp_5: '',
     barrel_temp_6: '', barrel_temp_7: '', barrel_temp_8: '', barrel_temp_9: '',
+    // 핫런너 설정
+    hot_runner_installed: false,
+    hot_runner_type: '',  // 'open' or 'valve_gate'
     // H/R 온도
     hr_temp_1: '', hr_temp_2: '', hr_temp_3: '', hr_temp_4: '',
-    // 밸브게이트
-    valve_gate_moving: '', valve_gate_fixed: '',
+    hr_temp_5: '', hr_temp_6: '', hr_temp_7: '', hr_temp_8: '',
+    // 밸브게이트 (동적)
+    valve_gate_count: 0,
+    valve_gate_data: [],  // [{seq, moving, fixed}]
     // 칠러온도
     chiller_temp_main: '', chiller_temp_moving: '', chiller_temp_fixed: '',
     // 기타
@@ -157,6 +162,64 @@ export default function MobileInjectionCondition() {
       default:
         return null;
     }
+  };
+
+  // 핫런너 설치 토글
+  const toggleHotRunner = () => {
+    if (!isEditing) return;
+    setConditionData(prev => ({
+      ...prev,
+      hot_runner_installed: !prev.hot_runner_installed,
+      hot_runner_type: !prev.hot_runner_installed ? 'open' : '',
+      valve_gate_count: 0,
+      valve_gate_data: []
+    }));
+  };
+
+  // 핫런너 타입 변경
+  const handleHotRunnerTypeChange = (type) => {
+    if (!isEditing) return;
+    setConditionData(prev => ({
+      ...prev,
+      hot_runner_type: type,
+      valve_gate_count: type === 'valve_gate' ? (prev.valve_gate_count || 1) : 0,
+      valve_gate_data: type === 'valve_gate' ? (prev.valve_gate_data.length > 0 ? prev.valve_gate_data : [{ seq: 1, moving: '', fixed: '' }]) : []
+    }));
+  };
+
+  // 밸브게이트 추가
+  const addValveGate = () => {
+    if (!isEditing) return;
+    const newSeq = (conditionData.valve_gate_data?.length || 0) + 1;
+    setConditionData(prev => ({
+      ...prev,
+      valve_gate_count: newSeq,
+      valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, moving: '', fixed: '' }]
+    }));
+  };
+
+  // 밸브게이트 삭제
+  const removeValveGate = (index) => {
+    if (!isEditing) return;
+    setConditionData(prev => {
+      const newData = prev.valve_gate_data.filter((_, i) => i !== index)
+        .map((item, i) => ({ ...item, seq: i + 1 }));
+      return {
+        ...prev,
+        valve_gate_count: newData.length,
+        valve_gate_data: newData
+      };
+    });
+  };
+
+  // 밸브게이트 값 변경
+  const handleValveGateChange = (index, field, value) => {
+    if (!isEditing) return;
+    setConditionData(prev => {
+      const newData = [...prev.valve_gate_data];
+      newData[index] = { ...newData[index], [field]: value };
+      return { ...prev, valve_gate_data: newData };
+    });
   };
 
   if (loading) {
@@ -293,28 +356,12 @@ export default function MobileInjectionCondition() {
       ]
     },
     {
-      id: 'hr',
-      title: 'H/R',
+      id: 'hot_runner',
+      title: '핫런너',
       icon: Thermometer,
       color: 'from-violet-50 to-purple-50',
       iconColor: 'text-violet-600',
-      fields: [
-        { key: 'hr_temp_1', label: '1', suffix: '°C' },
-        { key: 'hr_temp_2', label: '2', suffix: '°C' },
-        { key: 'hr_temp_3', label: '3', suffix: '°C' },
-        { key: 'hr_temp_4', label: '4', suffix: '°C' }
-      ]
-    },
-    {
-      id: 'valve_gate',
-      title: '밸브게이트',
-      icon: Settings,
-      color: 'from-slate-50 to-gray-50',
-      iconColor: 'text-slate-600',
-      fields: [
-        { key: 'valve_gate_moving', label: '가동', suffix: '' },
-        { key: 'valve_gate_fixed', label: '고정', suffix: '' }
-      ]
+      isCustom: true  // 커스텀 렌더링 필요
     },
     {
       id: 'chiller',
@@ -555,6 +602,172 @@ export default function MobileInjectionCondition() {
           const Icon = section.icon;
           const isExpanded = expandedSection === section.id;
           
+          // 핫런너 커스텀 섹션
+          if (section.isCustom && section.id === 'hot_runner') {
+            return (
+              <div key={section.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <button
+                  onClick={() => setExpandedSection(isExpanded ? null : section.id)}
+                  className={`w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r ${section.color}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon size={18} className={section.iconColor} />
+                    <span className="font-semibold text-gray-800">{section.title}</span>
+                    {conditionData.hot_runner_installed && (
+                      <span className="px-2 py-0.5 bg-violet-500 text-white text-xs rounded-full">설치</span>
+                    )}
+                  </div>
+                  {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </button>
+
+                {isExpanded && (
+                  <div className="p-4 space-y-4">
+                    {/* 핫런너 설치 유무 */}
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700">핫런너 설치</span>
+                      <button
+                        onClick={toggleHotRunner}
+                        disabled={!isEditing}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                          conditionData.hot_runner_installed 
+                            ? 'bg-violet-500 text-white' 
+                            : 'bg-gray-200 text-gray-600'
+                        } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {conditionData.hot_runner_installed ? (
+                          <><ToggleRight size={16} /> 설치</>
+                        ) : (
+                          <><ToggleLeft size={16} /> 미설치</>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* 핫런너 설치 시 상세 설정 */}
+                    {conditionData.hot_runner_installed && (
+                      <>
+                        {/* 핫런너 타입 선택 */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700">핫런너 타입</label>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleHotRunnerTypeChange('open')}
+                              disabled={!isEditing}
+                              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
+                                conditionData.hot_runner_type === 'open'
+                                  ? 'bg-violet-500 text-white border-violet-500'
+                                  : 'bg-white text-gray-600 border-gray-300'
+                              } ${!isEditing ? 'opacity-50' : ''}`}
+                            >
+                              오픈 타입
+                            </button>
+                            <button
+                              onClick={() => handleHotRunnerTypeChange('valve_gate')}
+                              disabled={!isEditing}
+                              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
+                                conditionData.hot_runner_type === 'valve_gate'
+                                  ? 'bg-violet-500 text-white border-violet-500'
+                                  : 'bg-white text-gray-600 border-gray-300'
+                              } ${!isEditing ? 'opacity-50' : ''}`}
+                            >
+                              밸브게이트
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* H/R 온도 */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700">H/R 온도</label>
+                          <div className="grid grid-cols-4 gap-2">
+                            {[1,2,3,4,5,6,7,8].map(num => (
+                              <div key={num}>
+                                <label className="block text-xs text-gray-500 mb-1">{num}</label>
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={conditionData[`hr_temp_${num}`] || ''}
+                                  onChange={(e) => handleChange(`hr_temp_${num}`, e.target.value)}
+                                  disabled={!isEditing}
+                                  className="w-full border rounded-lg px-2 py-1.5 text-sm disabled:bg-gray-50"
+                                  placeholder="°C"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* 밸브게이트 타입 선택 시 */}
+                        {conditionData.hot_runner_type === 'valve_gate' && (
+                          <div className="space-y-3 border-t pt-4">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-medium text-gray-700">
+                                밸브게이트 ({conditionData.valve_gate_data?.length || 0}개)
+                              </label>
+                              {isEditing && (
+                                <button
+                                  onClick={addValveGate}
+                                  className="flex items-center gap-1 px-2 py-1 bg-violet-100 text-violet-600 rounded text-xs font-medium"
+                                >
+                                  <Plus size={14} /> 추가
+                                </button>
+                              )}
+                            </div>
+                            
+                            {/* 밸브게이트 목록 */}
+                            <div className="space-y-2">
+                              {(conditionData.valve_gate_data || []).map((gate, index) => (
+                                <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                  <span className="text-xs font-medium text-gray-500 w-6">#{gate.seq}</span>
+                                  <div className="flex-1 grid grid-cols-2 gap-2">
+                                    <div>
+                                      <label className="block text-xs text-gray-500">가동</label>
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        value={gate.moving || ''}
+                                        onChange={(e) => handleValveGateChange(index, 'moving', e.target.value)}
+                                        disabled={!isEditing}
+                                        className="w-full border rounded px-2 py-1 text-sm disabled:bg-white"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs text-gray-500">고정</label>
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        value={gate.fixed || ''}
+                                        onChange={(e) => handleValveGateChange(index, 'fixed', e.target.value)}
+                                        disabled={!isEditing}
+                                        className="w-full border rounded px-2 py-1 text-sm disabled:bg-white"
+                                      />
+                                    </div>
+                                  </div>
+                                  {isEditing && (
+                                    <button
+                                      onClick={() => removeValveGate(index)}
+                                      className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                    >
+                                      <Minus size={16} />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                              
+                              {(!conditionData.valve_gate_data || conditionData.valve_gate_data.length === 0) && (
+                                <p className="text-sm text-gray-400 text-center py-2">
+                                  밸브게이트를 추가하세요
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          
           return (
             <div key={section.id} className="bg-white rounded-xl shadow-sm overflow-hidden">
               <button
@@ -568,7 +781,7 @@ export default function MobileInjectionCondition() {
                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
               </button>
 
-              {isExpanded && (
+              {isExpanded && section.fields && (
                 <div className="p-4 grid grid-cols-2 gap-3">
                   {section.fields.map((field) => (
                     <div key={field.key}>
