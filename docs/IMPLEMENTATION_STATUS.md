@@ -1,0 +1,232 @@
+# CAMS 금형관리 시스템 - 구현 현황
+
+## 📅 최종 업데이트: 2024-12-10
+
+---
+
+## ✅ 백엔드 API 구현 현황
+
+### 1. 금형 관리
+| API | 경로 | 상태 |
+|-----|------|------|
+| 금형 목록 | GET /api/v1/molds | ✅ |
+| 금형 상세 | GET /api/v1/molds/:id | ✅ |
+| 금형 등록 | POST /api/v1/molds | ✅ |
+| 금형 수정 | PUT /api/v1/molds/:id | ✅ |
+| 금형 삭제 | DELETE /api/v1/molds/:id | ✅ |
+| 금형 사양 | GET /api/v1/mold-specifications | ✅ |
+
+### 2. 점검 관리
+| API | 경로 | 상태 |
+|-----|------|------|
+| 일상점검 목록 | GET /api/v1/daily-checks | ✅ |
+| 일상점검 등록 | POST /api/v1/daily-checks | ✅ |
+| 정기점검 목록 | GET /api/v1/periodic-inspection | ✅ |
+| 정기점검 등록 | POST /api/v1/periodic-inspection | ✅ |
+| 정기점검 항목 | GET /api/v1/periodic-inspection/items | ✅ |
+
+### 3. 체크리스트 관리
+| API | 경로 | 상태 |
+|-----|------|------|
+| 제작전 체크리스트 목록 | GET /api/v1/pre-production-checklist | ✅ |
+| 제작전 체크리스트 상세 | GET /api/v1/pre-production-checklist/:id | ✅ |
+| 제작전 체크리스트 생성 | POST /api/v1/pre-production-checklist | ✅ |
+| 체크리스트 결과 저장 | PATCH /api/v1/pre-production-checklist/:id/results | ✅ |
+| 체크리스트 제출 | POST /api/v1/pre-production-checklist/:id/submit | ✅ |
+| 체크리스트 승인 | POST /api/v1/pre-production-checklist/:id/approve | ✅ |
+| 체크리스트 반려 | POST /api/v1/pre-production-checklist/:id/reject | ✅ |
+| 이관 4M 체크리스트 | GET /api/v1/transfers/:id/4m-checklist | ✅ |
+| 반출/입고 체크리스트 | GET /api/v1/transfers/:id/shipping-checklist | ✅ |
+
+### 4. 유지보전 관리
+| API | 경로 | 상태 |
+|-----|------|------|
+| 유지보전 목록 | GET /api/v1/maintenance | ✅ |
+| 유지보전 상세 | GET /api/v1/maintenance/:id | ✅ |
+| 유지보전 등록 | POST /api/v1/maintenance | ✅ |
+| 유지보전 수정 | PUT /api/v1/maintenance/:id | ✅ |
+| 유지보전 통계 | GET /api/v1/maintenance/statistics | ✅ |
+
+### 5. 금형 폐기 관리
+| API | 경로 | 상태 |
+|-----|------|------|
+| 폐기 요청 목록 | GET /api/v1/scrapping | ✅ |
+| 폐기 요청 상세 | GET /api/v1/scrapping/:id | ✅ |
+| 폐기 요청 등록 | POST /api/v1/scrapping | ✅ |
+| 1차 승인 | POST /api/v1/scrapping/:id/first-approve | ✅ |
+| 최종 승인 | POST /api/v1/scrapping/:id/approve | ✅ |
+| 폐기 완료 | POST /api/v1/scrapping/:id/complete | ✅ |
+| 폐기 통계 | GET /api/v1/scrapping/statistics | ✅ |
+
+### 6. 알림 관리
+| API | 경로 | 상태 |
+|-----|------|------|
+| 알림 목록 | GET /api/v1/alerts | ✅ |
+| 알림 상세 | GET /api/v1/alerts/:id | ✅ |
+| 알림 읽음 처리 | PATCH /api/v1/alerts/:id/read | ✅ |
+| 알림 트리거 | POST /api/v1/alerts/trigger | ✅ |
+| 예방 알람 체크 | POST /api/v1/alerts/check-all | ✅ |
+
+### 7. 통계 API
+| API | 경로 | 상태 |
+|-----|------|------|
+| 금형 통계 | GET /api/v1/statistics/molds | ✅ |
+| 점검 통계 | GET /api/v1/statistics/inspections | ✅ |
+| 수리 통계 | GET /api/v1/statistics/repairs | ✅ |
+| 체크리스트 통계 | GET /api/v1/statistics/checklists | ✅ |
+| 대시보드 통계 | GET /api/v1/statistics/dashboard | ✅ |
+
+---
+
+## ✅ 프론트엔드 구현 현황
+
+### 1. PC 페이지
+| 페이지 | 경로 | 상태 |
+|--------|------|------|
+| 대시보드 (시스템 관리자) | /dashboard/admin | ✅ |
+| 대시보드 (금형개발 담당) | /dashboard/developer | ✅ |
+| 대시보드 (생산처) | /dashboard/plant | ✅ |
+| 대시보드 (제작처) | /dashboard/maker | ✅ |
+| 금형 목록 | /molds | ✅ |
+| 금형 상세 | /molds/:id | ✅ |
+| 금형 등록 | /molds/new | ✅ |
+| 제작전 체크리스트 | /pre-production-checklist | ✅ |
+| 유지보전 관리 | /maintenance | ✅ |
+| 금형 폐기 관리 | /scrapping | ✅ |
+| 알림 목록 | /alerts | ✅ |
+| 알림 설정 | /notification-settings | ✅ |
+| 통계 리포트 | /reports | ✅ |
+
+### 2. 모바일 페이지
+| 페이지 | 경로 | 상태 |
+|--------|------|------|
+| 모바일 홈 | /mobile | ✅ |
+| 금형 상세 | /mobile/mold/:id | ✅ |
+| 일상점검 | /mobile/mold/:id/daily-check | ✅ |
+| 정기점검 | /mobile/mold/:id/periodic-check | ✅ |
+| 유지보전 | /mobile/maintenance | ✅ |
+| 제작전 체크리스트 | /mobile/pre-production-checklist | ✅ |
+| 금형 폐기 | /mobile/scrapping | ✅ |
+| 수리 요청 | /mobile/repair-request | ✅ |
+| 이관 관리 | /mobile/mold/:id/transfer | ✅ |
+
+### 3. 대시보드 위젯
+| 위젯 | 설명 | 상태 |
+|------|------|------|
+| PreProductionChecklistWidget | 제작전 체크리스트 현황 | ✅ |
+| MaintenanceWidget | 유지보전 현황 | ✅ |
+| ScrappingWidget | 금형 폐기 현황 | ✅ |
+| AlertSummaryWidget | 최근 알림 | ✅ |
+| InspectionDueWidget | 점검 예정 | ✅ |
+
+---
+
+## ✅ 알림 시스템
+
+### 알림 유형 (16개)
+| 유형 | 설명 |
+|------|------|
+| inspection_due_shots | 타수 기준 점검 예정 |
+| inspection_due_date | 일자 기준 점검 예정 |
+| inspection_overdue | 점검 지연 |
+| maintenance_due | 유지보전 예정 |
+| maintenance_completed | 유지보전 완료 |
+| pre_production_checklist_reminder | 제작전 체크리스트 알림 |
+| pre_production_checklist_submitted | 체크리스트 제출 |
+| pre_production_checklist_approved | 체크리스트 승인 |
+| pre_production_checklist_rejected | 체크리스트 반려 |
+| scrapping_requested | 폐기 요청 |
+| scrapping_approved | 폐기 승인 |
+| repair_requested | 수리 요청 |
+| repair_status | 수리 상태 변경 |
+| liability_negotiation | 귀책 협의 |
+| transfer_requested | 이관 요청 |
+| transfer_4m_required | 4M 체크리스트 필요 |
+
+---
+
+## ✅ 체크리스트 항목
+
+### 1. 제작전 체크리스트 (81개 항목, 9개 카테고리)
+- I. 원재료 (9개)
+- II. 금형 (10개)
+- III. 가스 배기 (9개)
+- IV. 성형 해석 (9개)
+- V. 싱크마크 (9개)
+- VI. 취출 (9개)
+- VII. MIC 제품 (9개)
+- VIII. 도금 (9개)
+- IX. 리어 백빔 (8개)
+
+### 2. 정기점검 항목 (31개 항목, 11개 카테고리)
+- 금형 외관 (3개)
+- 파팅면 (3개)
+- 슬라이드 (3개)
+- 이젝터 (3개)
+- 냉각 (3개)
+- 핫러너 (3개)
+- 유압/공압 (3개)
+- 센서 (2개)
+- 안전장치 (2개)
+- 문서 (3개)
+- 종합 (3개)
+
+### 3. 이관 4M 체크리스트 (16개 항목)
+- Man (4개): 담당자 지정, 교육 완료, 연락처 확인, 인수인계
+- Machine (4개): 설비 호환성, 톤수 확인, 인터페이스, 시운전
+- Material (4개): 원료 확보, 색상 확인, 건조 조건, 재고 확인
+- Method (4개): 작업 표준서, 품질 기준, 검사 방법, 포장 사양
+
+### 4. 반출/입고 체크리스트 (12개 항목)
+- 반출 (6개): 외관 점검, 부품 확인, 포장 상태, 문서 준비, 운송 준비, 최종 확인
+- 입고 (6개): 외관 검사, 부품 확인, 손상 여부, 문서 확인, 설치 준비, 시운전 준비
+
+---
+
+## 📊 데이터베이스 테이블
+
+### 신규 추가 테이블
+- `pre_production_checklists` - 제작전 체크리스트
+- `pre_production_checklist_items` - 체크리스트 항목 마스터
+- `pre_production_checklist_results` - 체크리스트 결과
+- `mold_scrapping_requests` - 금형 폐기 요청
+- `maintenance_records` - 유지보전 기록
+- `periodic_inspection_items` - 정기점검 항목 마스터
+- `transfer_4m_checklist` - 이관 4M 체크리스트
+- `shipping_checklist` - 반출/입고 체크리스트
+
+---
+
+## 🔄 예방 알람 서비스
+
+### maintenanceAlertService.js
+- `checkMaintenanceAlerts()`: 유지보전 예정 알림 체크
+  - 일자 기준: D-7, D-3, D-1
+  - 타수 기준: 90% 도달 시
+- `checkPeriodicInspectionAlerts()`: 정기점검 예정 알림 체크
+  - 타수 기준: 90% 도달 시
+  - 일자 기준: D-7 이내
+- `runAllAlertChecks()`: 전체 알람 체크 실행
+
+---
+
+## 📱 모바일 빠른 작업 (8개)
+1. QR 스캔
+2. 일상점검
+3. 정기점검
+4. 유지보전
+5. 수리요청
+6. 폐기관리
+7. 체크리스트
+8. 알림
+
+---
+
+## 🎯 다음 개발 계획
+
+### Week 4 예정
+- [ ] 리포트 PDF 다운로드
+- [ ] 이메일 알림 발송
+- [ ] 푸시 알림 연동
+- [ ] 성능 최적화
+- [ ] 테스트 코드 작성
