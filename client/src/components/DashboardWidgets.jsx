@@ -394,6 +394,85 @@ export function InspectionDueWidget() {
 }
 
 /**
+ * 수리 현황 위젯
+ */
+export function RepairWidget() {
+  const navigate = useNavigate();
+  const [data, setData] = useState({ requested: 0, in_progress: 0, completed: 0, liability: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const response = await api.get('/repair-requests', { params: { limit: 100 } });
+      const items = response.data.data?.items || response.data.data || [];
+      const counts = items.reduce((acc, item) => {
+        if (item.status === 'requested') acc.requested++;
+        else if (item.status === 'in_progress' || item.status === 'repairing') acc.in_progress++;
+        else if (item.status === 'completed') acc.completed++;
+        if (item.liability_status === 'pending') acc.liability++;
+        return acc;
+      }, { requested: 0, in_progress: 0, completed: 0, liability: 0 });
+      setData(counts);
+    } catch (error) {
+      console.error('Failed to load repair data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+        <div className="h-20 bg-gray-100 rounded"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+            <Wrench size={20} className="text-amber-600" />
+          </div>
+          <h3 className="font-semibold text-gray-900">수리 현황</h3>
+        </div>
+        <button
+          onClick={() => navigate('/repairs')}
+          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+        >
+          전체보기 <ArrowRight size={14} />
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3">
+        <div className="text-center p-3 bg-yellow-50 rounded-lg">
+          <div className="text-2xl font-bold text-yellow-600">{data.requested}</div>
+          <div className="text-xs text-yellow-600">요청</div>
+        </div>
+        <div className="text-center p-3 bg-blue-50 rounded-lg">
+          <div className="text-2xl font-bold text-blue-600">{data.in_progress}</div>
+          <div className="text-xs text-blue-600">진행중</div>
+        </div>
+        <div className="text-center p-3 bg-green-50 rounded-lg">
+          <div className="text-2xl font-bold text-green-600">{data.completed}</div>
+          <div className="text-xs text-green-600">완료</div>
+        </div>
+        <div className="text-center p-3 bg-orange-50 rounded-lg">
+          <div className="text-2xl font-bold text-orange-600">{data.liability}</div>
+          <div className="text-xs text-orange-600">귀책협의</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * 대시보드 위젯 그리드
  */
 export default function DashboardWidgets() {
@@ -402,6 +481,7 @@ export default function DashboardWidgets() {
       <PreProductionChecklistWidget />
       <MaintenanceWidget />
       <ScrappingWidget />
+      <RepairWidget />
       <AlertSummaryWidget />
       <InspectionDueWidget />
     </div>
