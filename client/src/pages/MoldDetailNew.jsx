@@ -460,15 +460,15 @@ export default function MoldDetailNew() {
 
             {/* Center: Menu Dropdowns */}
             {!isQRAccess && (
-              <div className="hidden lg:flex items-center gap-2">
+              <div className="hidden lg:flex items-center gap-1">
                 {Object.entries(menuItems).map(([key, menu]) => (
                   <div key={key} className="relative">
                     <button
                       onClick={() => setActiveMenu(activeMenu === key ? null : key)}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium text-white flex items-center gap-1 ${menu.color}`}
+                      className={`px-2.5 py-1.5 rounded-full text-xs font-medium text-white flex items-center gap-0.5 tracking-tight whitespace-nowrap ${menu.color}`}
                     >
-                      {menu.label}
-                      <ChevronDown size={14} />
+                      <span className="tracking-tight">{menu.label}</span>
+                      <ChevronDown size={12} />
                     </button>
                     {activeMenu === key && (
                       <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border py-2 min-w-[180px] z-50">
