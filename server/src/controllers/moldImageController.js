@@ -21,6 +21,37 @@ const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'cams-mold-images';
  */
 const uploadMoldImage = async (req, res) => {
   try {
+    // 먼저 테이블 존재 여부 확인 및 생성
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS mold_images (
+          id SERIAL PRIMARY KEY,
+          mold_id INTEGER,
+          mold_spec_id INTEGER,
+          image_type VARCHAR(50) NOT NULL DEFAULT 'mold',
+          image_url TEXT NOT NULL,
+          original_filename VARCHAR(255),
+          file_size INTEGER,
+          mime_type VARCHAR(100),
+          description TEXT,
+          display_order INTEGER DEFAULT 0,
+          is_primary BOOLEAN DEFAULT FALSE,
+          uploaded_by INTEGER,
+          reference_type VARCHAR(50),
+          reference_id INTEGER,
+          checklist_id INTEGER,
+          checklist_item_id INTEGER,
+          repair_id INTEGER,
+          transfer_id INTEGER,
+          maker_spec_id INTEGER,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (tableError) {
+      logger.warn('Table creation check:', tableError.message);
+    }
+
     const { 
       mold_id, 
       mold_spec_id, 
@@ -37,7 +68,7 @@ const uploadMoldImage = async (req, res) => {
       maker_spec_id
     } = req.body;
     const file = req.file;
-    const uploaded_by = req.user.id;
+    const uploaded_by = req.user?.id || null;
 
     if (!file) {
       return res.status(400).json({
@@ -223,7 +254,39 @@ const getMoldImages = async (req, res) => {
       maker_spec_id
     } = req.query;
 
-    // 먼저 테이블 존재 여부 확인
+    // 먼저 테이블 존재 여부 확인 및 생성
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS mold_images (
+          id SERIAL PRIMARY KEY,
+          mold_id INTEGER,
+          mold_spec_id INTEGER,
+          image_type VARCHAR(50) NOT NULL DEFAULT 'mold',
+          image_url TEXT NOT NULL,
+          original_filename VARCHAR(255),
+          file_size INTEGER,
+          mime_type VARCHAR(100),
+          description TEXT,
+          display_order INTEGER DEFAULT 0,
+          is_primary BOOLEAN DEFAULT FALSE,
+          uploaded_by INTEGER,
+          reference_type VARCHAR(50),
+          reference_id INTEGER,
+          checklist_id INTEGER,
+          checklist_item_id INTEGER,
+          repair_id INTEGER,
+          transfer_id INTEGER,
+          maker_spec_id INTEGER,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (tableError) {
+      // 테이블 생성 실패해도 계속 진행
+      logger.warn('Table creation check:', tableError.message);
+    }
+
+    // 테이블 존재 확인
     try {
       await sequelize.query('SELECT 1 FROM mold_images LIMIT 1');
     } catch (tableError) {

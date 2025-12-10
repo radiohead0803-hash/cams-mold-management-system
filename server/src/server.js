@@ -28,14 +28,58 @@ const runMigrations = () => {
 const runMoldImagesMigration = async () => {
   console.log('🔄 Running mold_images table migration...');
   try {
-    const sqlPath = path.join(__dirname, 'migrations', '20251210_fix_mold_images_columns.sql');
-    if (fs.existsSync(sqlPath)) {
-      const sql = fs.readFileSync(sqlPath, 'utf8');
-      await sequelize.query(sql);
-      console.log('✅ mold_images table migration completed.');
-    } else {
-      console.log('⚠️ mold_images migration file not found, skipping...');
+    // 테이블 생성 (없으면)
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS mold_images (
+        id SERIAL PRIMARY KEY,
+        mold_id INTEGER,
+        mold_spec_id INTEGER,
+        image_type VARCHAR(50) NOT NULL DEFAULT 'mold',
+        image_url TEXT NOT NULL,
+        original_filename VARCHAR(255),
+        file_size INTEGER,
+        mime_type VARCHAR(100),
+        description TEXT,
+        display_order INTEGER DEFAULT 0,
+        is_primary BOOLEAN DEFAULT FALSE,
+        uploaded_by INTEGER,
+        reference_type VARCHAR(50),
+        reference_id INTEGER,
+        checklist_id INTEGER,
+        checklist_item_id INTEGER,
+        repair_id INTEGER,
+        transfer_id INTEGER,
+        maker_spec_id INTEGER,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ mold_images table created/verified.');
+
+    // 인덱스 생성 (없으면)
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_mold_images_mold_id ON mold_images(mold_id)',
+      'CREATE INDEX IF NOT EXISTS idx_mold_images_mold_spec_id ON mold_images(mold_spec_id)',
+      'CREATE INDEX IF NOT EXISTS idx_mold_images_image_type ON mold_images(image_type)'
+    ];
+    for (const idx of indexes) {
+      try {
+        await sequelize.query(idx);
+      } catch (e) {
+        // 인덱스 이미 존재하면 무시
+      }
     }
+    console.log('✅ mold_images indexes created/verified.');
+
+    // mold_specifications에 이미지 URL 컬럼 추가
+    try {
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS mold_image_url TEXT`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS product_image_url TEXT`);
+      console.log('✅ mold_specifications image columns added/verified.');
+    } catch (e) {
+      console.log('⚠️ mold_specifications columns may already exist:', e.message);
+    }
+
   } catch (error) {
     console.error('⚠️ mold_images migration warning:', error.message);
     // Don't throw - table might already exist with correct structure
