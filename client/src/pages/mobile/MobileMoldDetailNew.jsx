@@ -194,9 +194,8 @@ export default function MobileMoldDetailNew() {
       color: 'bg-rose-400',
       items: [
         { label: '사출조건 관리', action: () => navigate(`/mobile/mold/${moldId}/injection-condition`) },
-        { label: '사출조건 수정관리', action: () => navigate(`/mobile/mold/${moldId}/injection-condition`) },
-        { label: '러너관리' },
-        { label: '변경이력 현황표' }
+        { label: '이력관리', action: () => navigate(`/mobile/mold/${moldId}/injection-history`) },
+        { label: '변경관리 통계', action: () => navigate(`/mobile/mold/${moldId}/injection-stats`) }
       ]
     },
     repair: {

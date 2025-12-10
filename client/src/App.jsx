@@ -41,6 +41,8 @@ import MoldDevelopmentPlan from './pages/MoldDevelopmentPlan'
 import MoldChecklist from './pages/MoldChecklist'
 import HardnessMeasurement from './pages/HardnessMeasurement'
 import MoldSpecification from './pages/MoldSpecification'
+import InjectionHistory from './pages/InjectionHistory'
+import InjectionStats from './pages/InjectionStats'
 import MoldOverviewPage from './pages/mobile/MoldOverviewPage'
 import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
 import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
@@ -53,6 +55,8 @@ import MobileMoldNurturing from './pages/mobile/MobileMoldNurturing'
 import MobileHardnessMeasurement from './pages/mobile/MobileHardnessMeasurement'
 import MobileMoldSpecification from './pages/mobile/MobileMoldSpecification'
 import MobileInjectionCondition from './pages/mobile/MobileInjectionCondition'
+import MobileInjectionHistory from './pages/mobile/MobileInjectionHistory'
+import MobileInjectionStats from './pages/mobile/MobileInjectionStats'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -103,6 +107,8 @@ function App() {
       <Route path="/mobile/mold/:moldId/hardness" element={<MobileHardnessMeasurement />} />
       <Route path="/mobile/mold/:moldId/specification" element={<MobileMoldSpecification />} />
       <Route path="/mobile/mold/:moldId/injection-condition" element={<MobileInjectionCondition />} />
+      <Route path="/mobile/mold/:moldId/injection-history" element={<MobileInjectionHistory />} />
+      <Route path="/mobile/mold/:moldId/injection-stats" element={<MobileInjectionStats />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
@@ -170,6 +176,8 @@ function App() {
         <Route path="mold-checklist" element={<MoldChecklist />} />
         <Route path="mold-specification" element={<MoldSpecification />} />
         <Route path="mold-specification/:id" element={<MoldSpecification />} />
+        <Route path="injection-history" element={<InjectionHistory />} />
+        <Route path="injection-stats" element={<InjectionStats />} />
       </Route>
     </Routes>
   )

@@ -48,7 +48,7 @@ export default function MoldDetailNew() {
       label: '사출정보', 
       color: 'bg-rose-400',
       hoverColor: 'hover:bg-rose-500',
-      items: ['사출조건 관리', '사출조건 수정관리', '러너관리', '변경이력 현황표']
+      items: ['사출조건 관리', '이력관리', '변경관리 통계']
     },
     repair: { 
       label: '금형수리', 
@@ -419,6 +419,12 @@ export default function MoldDetailNew() {
                                   navigate(`/checklist/daily?mold=${id}`);
                                 } else if (item === '정기점검') {
                                   navigate(`/inspection/periodic?mold=${id}`);
+                                } else if (item === '사출조건 관리') {
+                                  navigate(`/injection-history?moldId=${id}`);
+                                } else if (item === '이력관리') {
+                                  navigate(`/injection-history?moldId=${id}`);
+                                } else if (item === '변경관리 통계') {
+                                  navigate(`/injection-stats?moldId=${id}`);
                                 }
                               }}
                             >
