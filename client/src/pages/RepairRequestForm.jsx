@@ -59,6 +59,10 @@ export default function RepairRequestForm() {
     repair_category: '',                            // 수리 카테고리 (EO/현실화/돌발)
     requester_name: user?.name || '',               // 요청자
     contact: '',                                    // 연락처
+    representative_part_number: '',                 // 대표 품번
+    stock_schedule_date: '',                        // 재고 예정일
+    stock_quantity: '',                             // 재고 수량
+    stock_unit: 'EA',                               // 단위
     
     // ===== 제품/금형 정보 (자동연동) =====
     car_model: '',                                  // 차종
@@ -102,11 +106,7 @@ export default function RepairRequestForm() {
     operation_type: '양산',                         // 운영 유형
     management_type: '',                            // 관리 유형
     sign_off_status: '제출되지 않음',               // 결재 상태
-    order_company: '',                              // 발주업체
-    representative_part_number: '',                 // 대표 품번
-    stock_schedule_date: '',                        // 재고 예정일
-    stock_quantity: '',                             // 재고 수량
-    stock_unit: 'EA'                                // 단위
+    order_company: ''                               // 발주업체
   });
 
   useEffect(() => {
@@ -580,6 +580,51 @@ export default function RepairRequestForm() {
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
                     placeholder="010-0000-0000"
                   />
+                </div>
+              </div>
+
+              {/* 대표 품번, 재고 예정일, 재고 수량, 단위 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-200">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">대표 품번</label>
+                  <input
+                    type="text"
+                    value={formData.representative_part_number}
+                    onChange={(e) => handleChange('representative_part_number', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
+                    placeholder="대표 품번"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 예정일</label>
+                  <input
+                    type="date"
+                    value={formData.stock_schedule_date}
+                    onChange={(e) => handleChange('stock_schedule_date', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 수량</label>
+                  <input
+                    type="number"
+                    value={formData.stock_quantity}
+                    onChange={(e) => handleChange('stock_quantity', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">단위</label>
+                  <select
+                    value={formData.stock_unit}
+                    onChange={(e) => handleChange('stock_unit', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value="EA">EA</option>
+                    <option value="SET">SET</option>
+                    <option value="BOX">BOX</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -1323,50 +1368,6 @@ export default function RepairRequestForm() {
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
                     placeholder="발주업체명"
                   />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">대표 품번</label>
-                  <input
-                    type="text"
-                    value={formData.representative_part_number}
-                    onChange={(e) => handleChange('representative_part_number', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
-                    placeholder="대표 품번"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 예정일</label>
-                  <input
-                    type="date"
-                    value={formData.stock_schedule_date}
-                    onChange={(e) => handleChange('stock_schedule_date', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 수량</label>
-                  <input
-                    type="number"
-                    value={formData.stock_quantity}
-                    onChange={(e) => handleChange('stock_quantity', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">단위</label>
-                  <select
-                    value={formData.stock_unit}
-                    onChange={(e) => handleChange('stock_unit', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="EA">EA</option>
-                    <option value="SET">SET</option>
-                    <option value="BOX">BOX</option>
-                  </select>
                 </div>
               </div>
             </div>
