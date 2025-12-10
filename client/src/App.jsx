@@ -73,6 +73,7 @@ import ScrappingManagement from './pages/ScrappingManagement'
 import MaintenanceManagement from './pages/MaintenanceManagement'
 import NotificationSettings from './pages/NotificationSettings'
 import Reports from './pages/Reports'
+import MoldHistory from './pages/MoldHistory'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -241,6 +242,10 @@ function App() {
         {/* 통계 리포트 */}
         <Route path="reports" element={<Reports />} />
         <Route path="reports/:tab" element={<Reports />} />
+        
+        {/* 금형 이력 */}
+        <Route path="mold-history" element={<MoldHistory />} />
+        <Route path="mold-history/:id" element={<MoldHistory />} />
       </Route>
     </Routes>
   )
