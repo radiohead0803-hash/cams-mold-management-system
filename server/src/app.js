@@ -99,6 +99,9 @@ const materialRouter = require('./routes/material');
 const testDataRouter = require('./routes/testData');
 const alertsRouter = require('./routes/alerts');
 const preProductionChecklistRouter = require('./routes/preProductionChecklist');
+const maintenanceRouter = require('./routes/maintenance');
+const scrappingRouter = require('./routes/scrapping');
+const statisticsRouter = require('./routes/statistics');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -155,6 +158,12 @@ app.use('/api/v1/test-data', testDataRouter);
 app.use('/api/v1/alerts', alertsRouter);
 // Pre-production checklist (제작전 체크리스트)
 app.use('/api/v1/pre-production-checklist', preProductionChecklistRouter);
+// Maintenance (유지보전)
+app.use('/api/v1/maintenance', maintenanceRouter);
+// Scrapping (폐기)
+app.use('/api/v1/scrapping', scrappingRouter);
+// Statistics (통계)
+app.use('/api/v1/statistics', statisticsRouter);
 
 // Health check
 app.get('/health', (req, res) => {
