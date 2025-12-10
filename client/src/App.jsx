@@ -69,6 +69,7 @@ import RepairRequestForm from './pages/RepairRequestForm'
 import PreProductionChecklist from './pages/PreProductionChecklist'
 import ScrappingManagement from './pages/ScrappingManagement'
 import MaintenanceManagement from './pages/MaintenanceManagement'
+import NotificationSettings from './pages/NotificationSettings'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -220,6 +221,10 @@ function App() {
         {/* 유지보전 관리 */}
         <Route path="maintenance" element={<MaintenanceManagement />} />
         <Route path="maintenance/:id" element={<MaintenanceManagement />} />
+        
+        {/* 알림 설정 */}
+        <Route path="notifications" element={<Alerts />} />
+        <Route path="notification-settings" element={<NotificationSettings />} />
       </Route>
     </Routes>
   )
