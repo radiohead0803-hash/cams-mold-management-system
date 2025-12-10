@@ -612,6 +612,27 @@ export default function MobileMoldDetailNew() {
                     <span className="text-xs font-medium text-gray-700">정기점검</span>
                   </button>
                   <button
+                    onClick={() => navigate(`/mobile/mold/${moldId}/maintenance`)}
+                    className="p-3 bg-orange-50 rounded-xl text-center"
+                  >
+                    <Settings size={20} className="mx-auto mb-1 text-orange-600" />
+                    <span className="text-xs font-medium text-gray-700">유지보전</span>
+                  </button>
+                  <button
+                    onClick={() => navigate(`/mobile/mold/${moldId}/repair-request`)}
+                    className="p-3 bg-red-50 rounded-xl text-center"
+                  >
+                    <Wrench size={20} className="mx-auto mb-1 text-red-600" />
+                    <span className="text-xs font-medium text-gray-700">수리요청</span>
+                  </button>
+                  <button
+                    onClick={() => navigate(`/mobile/mold/${moldId}/transfer`)}
+                    className="p-3 bg-purple-50 rounded-xl text-center"
+                  >
+                    <Truck size={20} className="mx-auto mb-1 text-purple-600" />
+                    <span className="text-xs font-medium text-gray-700">이관관리</span>
+                  </button>
+                  <button
                     onClick={() => setShowQRCode(true)}
                     className="p-3 bg-gray-50 rounded-xl text-center"
                   >
