@@ -150,11 +150,20 @@ const uploadMoldImage = async (req, res) => {
 
     // is_primary가 true이면 기존 대표 이미지 해제
     if (is_primary === 'true' || is_primary === true) {
-      await sequelize.query(`
-        UPDATE mold_images 
-        SET is_primary = false, updated_at = NOW()
-        WHERE (mold_id = :mold_id OR mold_spec_id = :mold_spec_id) AND image_type = :image_type
-      `, { replacements: { mold_id, mold_spec_id, image_type } });
+      // mold_id 또는 mold_spec_id 중 하나만 있어도 동작하도록 조건 분리
+      if (mold_spec_id) {
+        await sequelize.query(`
+          UPDATE mold_images 
+          SET is_primary = false, updated_at = NOW()
+          WHERE mold_spec_id = :mold_spec_id AND image_type = :image_type
+        `, { replacements: { mold_spec_id, image_type } });
+      } else if (mold_id) {
+        await sequelize.query(`
+          UPDATE mold_images 
+          SET is_primary = false, updated_at = NOW()
+          WHERE mold_id = :mold_id AND image_type = :image_type
+        `, { replacements: { mold_id, image_type } });
+      }
     }
 
     // DB에 이미지 정보 저장
