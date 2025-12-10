@@ -152,18 +152,18 @@ const uploadMoldImage = async (req, res) => {
     // DB에 이미지 정보 저장
     let result;
     
-    // 먼저 확장 컬럼(image_data 포함)으로 시도, 실패하면 기본 컬럼으로 재시도
+    // 먼저 기본 컬럼으로 INSERT (image_data 제외), 성공 후 image_data 업데이트
     try {
       const insertQuery = `
         INSERT INTO mold_images (
-          mold_id, mold_spec_id, image_type, image_url, image_data,
+          mold_id, mold_spec_id, image_type, image_url,
           original_filename, file_size, mime_type,
           description, is_primary, uploaded_by,
           reference_type, reference_id, checklist_id, checklist_item_id,
           repair_id, transfer_id, maker_spec_id,
           created_at, updated_at
         ) VALUES (
-          :mold_id, :mold_spec_id, :image_type, :image_url, :image_data,
+          :mold_id, :mold_spec_id, :image_type, :image_url,
           :original_filename, :file_size, :mime_type,
           :description, :is_primary, :uploaded_by,
           :reference_type, :reference_id, :checklist_id, :checklist_item_id,
@@ -178,7 +178,6 @@ const uploadMoldImage = async (req, res) => {
           mold_spec_id: mold_spec_id || null,
           image_type,
           image_url: imageUrl,
-          image_data: imageData, // BYTEA로 저장
           original_filename: file.originalname,
           file_size: file.size,
           mime_type: file.mimetype,
@@ -194,18 +193,35 @@ const uploadMoldImage = async (req, res) => {
           maker_spec_id: maker_spec_id || null
         }
       });
+      
+      // image_data가 있으면 별도로 업데이트 (BYTEA 바인딩 문제 회피)
+      if (imageData && rows && rows[0]) {
+        try {
+          await sequelize.query(
+            `UPDATE mold_images SET image_data = $1 WHERE id = $2`,
+            { 
+              bind: [imageData, rows[0].id],
+              type: sequelize.QueryTypes.UPDATE
+            }
+          );
+        } catch (updateError) {
+          logger.warn('Failed to save image_data to DB:', updateError.message);
+          // image_data 저장 실패해도 계속 진행 (URL은 이미 저장됨)
+        }
+      }
+      
       result = { rows };
     } catch (extendedError) {
-      // 확장 컬럼이 없으면 기본 컬럼만 사용 (image_data 포함)
+      // 확장 컬럼이 없으면 기본 컬럼만 사용
       logger.warn('Extended columns not available, using basic columns:', extendedError.message);
       const basicInsertQuery = `
         INSERT INTO mold_images (
-          mold_id, mold_spec_id, image_type, image_url, image_data,
+          mold_id, mold_spec_id, image_type, image_url,
           original_filename, file_size, mime_type,
           description, is_primary, uploaded_by,
           created_at, updated_at
         ) VALUES (
-          :mold_id, :mold_spec_id, :image_type, :image_url, :image_data,
+          :mold_id, :mold_spec_id, :image_type, :image_url,
           :original_filename, :file_size, :mime_type,
           :description, :is_primary, :uploaded_by,
           NOW(), NOW()
@@ -218,7 +234,6 @@ const uploadMoldImage = async (req, res) => {
           mold_spec_id: mold_spec_id || null,
           image_type,
           image_url: imageUrl,
-          image_data: imageData, // BYTEA로 저장
           original_filename: file.originalname,
           file_size: file.size,
           mime_type: file.mimetype,
@@ -227,6 +242,22 @@ const uploadMoldImage = async (req, res) => {
           uploaded_by
         }
       });
+      
+      // image_data가 있으면 별도로 업데이트
+      if (imageData && basicRows && basicRows[0]) {
+        try {
+          await sequelize.query(
+            `UPDATE mold_images SET image_data = $1 WHERE id = $2`,
+            { 
+              bind: [imageData, basicRows[0].id],
+              type: sequelize.QueryTypes.UPDATE
+            }
+          );
+        } catch (updateError) {
+          logger.warn('Failed to save image_data to DB (basic):', updateError.message);
+        }
+      }
+      
       result = { rows: basicRows };
     }
 
