@@ -2,6 +2,7 @@ const app = require('./app');
 const { sequelize } = require('./models/newIndex');
 const { exec } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const PORT = process.env.PORT || 5000;
 
@@ -23,6 +24,24 @@ const runMigrations = () => {
   });
 };
 
+// Run SQL migrations for mold_images table
+const runMoldImagesMigration = async () => {
+  console.log('🔄 Running mold_images table migration...');
+  try {
+    const sqlPath = path.join(__dirname, 'migrations', '20251210_fix_mold_images_columns.sql');
+    if (fs.existsSync(sqlPath)) {
+      const sql = fs.readFileSync(sqlPath, 'utf8');
+      await sequelize.query(sql);
+      console.log('✅ mold_images table migration completed.');
+    } else {
+      console.log('⚠️ mold_images migration file not found, skipping...');
+    }
+  } catch (error) {
+    console.error('⚠️ mold_images migration warning:', error.message);
+    // Don't throw - table might already exist with correct structure
+  }
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -32,6 +51,9 @@ const startServer = async () => {
     
     // Run migrations automatically
     await runMigrations();
+    
+    // Run mold_images table migration
+    await runMoldImagesMigration();
     
     // Sync models (development only)
     if (process.env.NODE_ENV === 'development') {

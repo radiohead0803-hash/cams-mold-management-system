@@ -6,15 +6,23 @@ CREATE TABLE IF NOT EXISTS mold_images (
   id SERIAL PRIMARY KEY,
   mold_id INTEGER REFERENCES molds(id) ON DELETE CASCADE,
   mold_spec_id INTEGER REFERENCES mold_specifications(id) ON DELETE CASCADE,
-  image_type VARCHAR(50) NOT NULL, -- 'part' (부품사진), 'mold' (금형사진), 'drawing' (도면), 'defect' (불량사진)
+  image_type VARCHAR(50) NOT NULL, -- 'part' (부품사진), 'mold' (금형사진), 'product' (제품사진), 'drawing' (도면), 'defect' (불량사진)
   image_url TEXT NOT NULL,
-  file_name VARCHAR(255),
+  original_filename VARCHAR(255),
   file_size INTEGER,
   mime_type VARCHAR(100),
   description TEXT,
-  sort_order INTEGER DEFAULT 0,
+  display_order INTEGER DEFAULT 0,
   is_primary BOOLEAN DEFAULT FALSE, -- 대표 이미지 여부
   uploaded_by INTEGER REFERENCES users(id),
+  -- 연계 항목 컬럼들
+  reference_type VARCHAR(50), -- mold_info, daily_check, periodic_check, repair, transfer, maker_checklist, development
+  reference_id INTEGER,
+  checklist_id INTEGER,
+  checklist_item_id INTEGER,
+  repair_id INTEGER,
+  transfer_id INTEGER,
+  maker_spec_id INTEGER,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
