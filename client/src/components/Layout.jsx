@@ -57,6 +57,15 @@ export default function Layout() {
           ]
         },
         { 
+          to: '/repairs', 
+          icon: Wrench, 
+          label: '수리 관리',
+          subMenus: [
+            { to: '/repairs', label: '수리 현황' },
+            { to: '/repairs/new', label: '수리 요청' }
+          ]
+        },
+        { 
           to: '/companies', 
           icon: Building2, 
           label: '업체 관리',
@@ -168,6 +177,15 @@ export default function Layout() {
             { to: '/approvals/design', label: '설계 승인' },
             { to: '/approvals/trial', label: '시운전 승인' },
             { to: '/approvals/repair', label: '수리 귀책 협의' }
+          ]
+        },
+        { 
+          to: '/repairs', 
+          icon: Wrench, 
+          label: '수리 관리',
+          subMenus: [
+            { to: '/repairs', label: '수리 현황' },
+            { to: '/repairs/new', label: '수리 요청' }
           ]
         },
         { 
