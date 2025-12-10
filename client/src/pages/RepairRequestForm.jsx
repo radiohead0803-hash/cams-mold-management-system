@@ -6,7 +6,7 @@ import {
   Building, Truck, DollarSign, ClipboardList, Link2, ChevronDown, ChevronUp,
   Image, Plus, Trash2
 } from 'lucide-react';
-import { repairRequestAPI, moldSpecificationAPI, inspectionAPI } from '../lib/api';
+import { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -33,10 +33,12 @@ export default function RepairRequestForm() {
   const [moldInfo, setMoldInfo] = useState(null);
   const [images, setImages] = useState([]); // 첨부 이미지
   const [inspectionInfo, setInspectionInfo] = useState({
-    lastDailyCheck: null,      // 최근 일상점검
-    lastPeriodicCheck: null,   // 최근 정기점검
+    lastDailyCheck: null,
+    lastPeriodicCheck: null,
     loading: false
   });
+  const [injectionCondition, setInjectionCondition] = useState(null);
+  const [moldSpec, setMoldSpec] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
     request: true,    // 요청 단계
     product: true,    // 제품/금형 정보
@@ -129,6 +131,7 @@ export default function RepairRequestForm() {
       if (response.data?.data) {
         const spec = response.data.data;
         setMoldInfo(spec);
+        setMoldSpec(spec); // 금형사양 정보 저장
         setFormData(prev => ({
           ...prev,
           car_model: spec.car_model || '',
@@ -138,11 +141,26 @@ export default function RepairRequestForm() {
           production_site: spec.plantCompany?.company_name || '',
           production_shot: spec.mold?.current_shots || ''
         }));
+        
+        // 사출조건 정보 로드
+        loadInjectionCondition(moldId);
       }
     } catch (error) {
       console.error('Load mold info error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 사출조건 정보 로드
+  const loadInjectionCondition = async (specId) => {
+    try {
+      const response = await injectionConditionAPI.get({ mold_spec_id: specId });
+      if (response.data?.data) {
+        setInjectionCondition(response.data.data);
+      }
+    } catch (error) {
+      console.error('Load injection condition error:', error);
     }
   };
 
@@ -644,6 +662,90 @@ export default function RepairRequestForm() {
                     placeholder="자동연동"
                     readOnly
                   />
+                </div>
+              </div>
+
+              {/* 사출조건 관리 */}
+              <div className="mt-6 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <span className="text-red-500">🔥</span>
+                    사출조건 관리
+                  </h4>
+                  <button
+                    onClick={() => navigate(`/injection-condition?moldId=${moldId}`)}
+                    className="px-3 py-1 bg-red-500 text-white text-xs rounded-full hover:bg-red-600"
+                  >
+                    상세보기
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="p-3 bg-red-50 rounded-lg border border-red-100">
+                    <p className="text-xs text-slate-500 mb-1">사출온도</p>
+                    <p className="text-lg font-bold text-red-600">
+                      {injectionCondition?.barrel_temp_1 || '-'}°C
+                    </p>
+                  </div>
+                  <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
+                    <p className="text-xs text-slate-500 mb-1">사출압력</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {injectionCondition?.pressure_1 || '-'} MPa
+                    </p>
+                  </div>
+                  <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                    <p className="text-xs text-slate-500 mb-1">사출속도</p>
+                    <p className="text-lg font-bold text-yellow-600">
+                      {injectionCondition?.speed_1 || '-'} mm/s
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">사이클타임</p>
+                    <p className="text-lg font-bold text-slate-600">
+                      {injectionCondition?.cycle_time || '-'} sec
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 금형사양 */}
+              <div className="mt-6 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <span className="text-green-500">💎</span>
+                    금형사양
+                  </h4>
+                  <button
+                    onClick={() => navigate(`/mold-detail/${moldId}`)}
+                    className="px-3 py-1 bg-green-500 text-white text-xs rounded-full hover:bg-green-600"
+                  >
+                    상세보기
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">재질</p>
+                    <p className="text-lg font-bold text-slate-700">
+                      {moldSpec?.material || 'NAK80'}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">중량</p>
+                    <p className="text-lg font-bold text-slate-700">
+                      {moldSpec?.mold?.weight || '-'}kg
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">치수</p>
+                    <p className="text-lg font-bold text-slate-700">
+                      {moldSpec?.mold?.dimensions || '-'}mm
+                    </p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">캐비티</p>
+                    <p className="text-lg font-bold text-slate-700">
+                      {moldSpec?.cavity_count || '-'}개
+                    </p>
+                  </div>
                 </div>
               </div>
 
