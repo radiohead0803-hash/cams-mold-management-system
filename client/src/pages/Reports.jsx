@@ -25,6 +25,44 @@ const convertToCSV = (headers, rows) => {
   return [headerRow, ...dataRows].join('\n');
 };
 
+// PDF 다운로드 (HTML to Print)
+const downloadPDF = (title, content) => {
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${title}</title>
+      <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 40px; }
+        h1 { color: #1f2937; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
+        h2 { color: #374151; margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { border: 1px solid #e5e7eb; padding: 12px; text-align: left; }
+        th { background-color: #f3f4f6; font-weight: 600; }
+        tr:nth-child(even) { background-color: #f9fafb; }
+        .stat-card { display: inline-block; width: 23%; margin: 1%; padding: 20px; 
+                     border: 1px solid #e5e7eb; border-radius: 8px; text-align: center; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #3b82f6; }
+        .stat-label { font-size: 14px; color: #6b7280; margin-top: 5px; }
+        .footer { margin-top: 40px; text-align: center; color: #9ca3af; font-size: 12px; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head>
+    <body>
+      ${content}
+      <div class="footer">
+        <p>CAMS 금형관리 시스템 - ${new Date().toLocaleDateString('ko-KR')} 생성</p>
+      </div>
+      <script>
+        window.onload = function() { window.print(); }
+      </script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
+
 // 간단한 바 차트 컴포넌트
 const SimpleBarChart = ({ data, labelKey, valueKey, color = 'blue' }) => {
   const maxValue = Math.max(...data.map(d => parseInt(d[valueKey]) || 0), 1);
@@ -199,6 +237,98 @@ export default function Reports() {
     alert('리포트가 다운로드되었습니다.');
   };
 
+  // PDF 리포트 다운로드
+  const handleDownloadPDF = () => {
+    const title = `CAMS 금형관리 시스템 - ${year}년 ${activeTab === 'overview' ? '전체 현황' : activeTab === 'molds' ? '금형 통계' : activeTab === 'maintenance' ? '유지보전 통계' : '체크리스트 통계'} 리포트`;
+    
+    let content = `<h1>${title}</h1>`;
+    
+    if (activeTab === 'overview' || activeTab === 'molds') {
+      content += `
+        <h2>금형 현황</h2>
+        <div>
+          <div class="stat-card">
+            <div class="stat-value">${moldStats?.total || 0}</div>
+            <div class="stat-label">전체 금형</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${moldStats?.byStatus?.production || 0}</div>
+            <div class="stat-label">양산 중</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${moldStats?.byStatus?.maintenance || 0}</div>
+            <div class="stat-label">정비 중</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${moldStats?.byStatus?.retired || 0}</div>
+            <div class="stat-label">폐기</div>
+          </div>
+        </div>
+        <h2>상태별 현황</h2>
+        <table>
+          <tr><th>상태</th><th>수량</th></tr>
+          <tr><td>계획</td><td>${moldStats?.byStatus?.planning || 0}</td></tr>
+          <tr><td>설계</td><td>${moldStats?.byStatus?.design || 0}</td></tr>
+          <tr><td>제작</td><td>${moldStats?.byStatus?.manufacturing || 0}</td></tr>
+          <tr><td>시운전</td><td>${moldStats?.byStatus?.trial || 0}</td></tr>
+          <tr><td>양산</td><td>${moldStats?.byStatus?.production || 0}</td></tr>
+          <tr><td>정비</td><td>${moldStats?.byStatus?.maintenance || 0}</td></tr>
+          <tr><td>폐기</td><td>${moldStats?.byStatus?.retired || 0}</td></tr>
+        </table>
+      `;
+    }
+    
+    if (activeTab === 'overview' || activeTab === 'maintenance') {
+      content += `
+        <h2>유지보전 현황</h2>
+        <div>
+          <div class="stat-card">
+            <div class="stat-value">${maintenanceStats?.total || 0}</div>
+            <div class="stat-label">전체</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${maintenanceStats?.completed || 0}</div>
+            <div class="stat-label">완료</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${maintenanceStats?.pending || 0}</div>
+            <div class="stat-label">대기</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${maintenanceStats?.completionRate || 0}%</div>
+            <div class="stat-label">완료율</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    if (activeTab === 'overview' || activeTab === 'checklists') {
+      content += `
+        <h2>체크리스트 현황</h2>
+        <div>
+          <div class="stat-card">
+            <div class="stat-value">${checklistStats?.total || 0}</div>
+            <div class="stat-label">전체</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${checklistStats?.approved || 0}</div>
+            <div class="stat-label">승인</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${checklistStats?.submitted || 0}</div>
+            <div class="stat-label">제출</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">${checklistStats?.completionRate || 0}%</div>
+            <div class="stat-label">완료율</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    downloadPDF(title, content);
+  };
+
   const tabs = [
     { id: 'overview', label: '전체 현황', icon: BarChart3 },
     { id: 'molds', label: '금형 통계', icon: Package },
@@ -253,10 +383,17 @@ export default function Reports() {
           </button>
           <button
             onClick={handleDownloadReport}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Download size={18} />
+            CSV
+          </button>
+          <button
+            onClick={handleDownloadPDF}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Download size={18} />
-            리포트 다운로드
+            PDF
           </button>
         </div>
       </div>
