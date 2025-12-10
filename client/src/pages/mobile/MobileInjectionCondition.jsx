@@ -583,22 +583,91 @@ export default function MobileInjectionCondition() {
             {expandedSection === 'moldInfo' ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </button>
           {expandedSection === 'moldInfo' && (
-            <div className="p-4 grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-500">금형코드</label>
-                <p className="font-medium text-sm">{moldInfo?.mold_code || '-'}</p>
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500">금형코드</label>
+                  <p className="font-medium text-sm">{moldInfo?.mold_code || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">금형명</label>
+                  <p className="font-medium text-sm">{moldInfo?.mold_name || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">품명</label>
+                  <p className="font-medium text-sm">{moldInfo?.part_name || '-'}</p>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">재질</label>
+                  <p className="font-medium text-sm">{moldInfo?.material || '-'}</p>
+                </div>
               </div>
-              <div>
-                <label className="text-xs text-gray-500">금형명</label>
-                <p className="font-medium text-sm">{moldInfo?.mold_name || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">품명</label>
-                <p className="font-medium text-sm">{moldInfo?.part_name || '-'}</p>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500">재질</label>
-                <p className="font-medium text-sm">{moldInfo?.material || '-'}</p>
+              
+              {/* 설계중량 / 실중량 */}
+              <div className="border-t pt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {/* 설계중량 - 개발담당자만 입력 가능 */}
+                  <div>
+                    <label className="text-xs text-gray-500">설계중량</label>
+                    {isDeveloper && isEditing ? (
+                      <div className="flex items-center gap-1 mt-1">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={conditionData.design_weight || moldInfo?.design_weight || ''}
+                          onChange={(e) => handleChange('design_weight', e.target.value)}
+                          className="flex-1 border rounded px-2 py-1 text-sm"
+                          placeholder="0.00"
+                        />
+                        <select
+                          value={conditionData.design_weight_unit || moldInfo?.design_weight_unit || 'g'}
+                          onChange={(e) => handleChange('design_weight_unit', e.target.value)}
+                          className="border rounded px-1 py-1 text-sm"
+                        >
+                          <option value="g">g</option>
+                          <option value="kg">kg</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <p className="font-medium text-sm">
+                        {moldInfo?.design_weight 
+                          ? `${moldInfo.design_weight} ${moldInfo.design_weight_unit || 'g'}`
+                          : '-'}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* 실중량 - 제작처/생산처 입력 가능 */}
+                  <div>
+                    <label className="text-xs text-gray-500">실중량</label>
+                    {!isDeveloper && isEditing ? (
+                      <div className="flex items-center gap-1 mt-1">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={conditionData.actual_weight || moldInfo?.actual_weight || ''}
+                          onChange={(e) => handleChange('actual_weight', e.target.value)}
+                          className="flex-1 border rounded px-2 py-1 text-sm"
+                          placeholder="0.00"
+                        />
+                        <select
+                          value={conditionData.actual_weight_unit || moldInfo?.actual_weight_unit || 'g'}
+                          onChange={(e) => handleChange('actual_weight_unit', e.target.value)}
+                          className="border rounded px-1 py-1 text-sm"
+                        >
+                          <option value="g">g</option>
+                          <option value="kg">kg</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <p className="font-medium text-sm">
+                        {moldInfo?.actual_weight 
+                          ? `${moldInfo.actual_weight} ${moldInfo.actual_weight_unit || 'g'}`
+                          : '-'}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}

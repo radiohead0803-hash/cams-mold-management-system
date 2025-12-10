@@ -103,6 +103,35 @@ const runInjectionConditionsMigration = async () => {
   }
 };
 
+// Run SQL migrations for weight columns
+const runWeightColumnsMigration = async () => {
+  console.log('🔄 Running weight columns migration...');
+  try {
+    // mold_specifications에 중량 컬럼 추가
+    const columns = [
+      { name: 'design_weight', sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS design_weight DECIMAL(10,2)' },
+      { name: 'design_weight_unit', sql: "ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS design_weight_unit VARCHAR(10) DEFAULT 'g'" },
+      { name: 'actual_weight', sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS actual_weight DECIMAL(10,2)' },
+      { name: 'actual_weight_unit', sql: "ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS actual_weight_unit VARCHAR(10) DEFAULT 'g'" },
+      { name: 'design_weight_registered_by', sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS design_weight_registered_by INTEGER' },
+      { name: 'design_weight_registered_at', sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS design_weight_registered_at TIMESTAMP WITH TIME ZONE' },
+      { name: 'actual_weight_registered_by', sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS actual_weight_registered_by INTEGER' },
+      { name: 'actual_weight_registered_at', sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS actual_weight_registered_at TIMESTAMP WITH TIME ZONE' }
+    ];
+    
+    for (const col of columns) {
+      try {
+        await sequelize.query(col.sql);
+      } catch (e) {
+        // 컬럼 이미 존재하면 무시
+      }
+    }
+    console.log('✅ Weight columns migration completed.');
+  } catch (error) {
+    console.error('⚠️ Weight columns migration warning:', error.message);
+  }
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -118,6 +147,9 @@ const startServer = async () => {
     
     // Run injection_conditions table migration
     await runInjectionConditionsMigration();
+    
+    // Run weight columns migration
+    await runWeightColumnsMigration();
     
     // Sync models (development only)
     if (process.env.NODE_ENV === 'development') {

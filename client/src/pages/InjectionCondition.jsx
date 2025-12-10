@@ -469,22 +469,93 @@ export default function InjectionCondition() {
                 <Info size={20} className="text-gray-600" />
                 <span className="font-semibold text-gray-700">금형 기본정보 (자동 연결)</span>
               </div>
-              <div className="p-4 grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-gray-500">금형코드</label>
-                  <p className="font-medium">{formData.mold_code || moldInfo?.mold_code || '-'}</p>
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <label className="text-sm text-gray-500">금형코드</label>
+                    <p className="font-medium">{formData.mold_code || moldInfo?.mold_code || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">금형명</label>
+                    <p className="font-medium">{formData.mold_name || moldInfo?.mold_name || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">품명</label>
+                    <p className="font-medium">{formData.part_name || moldInfo?.part_name || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-500">재질</label>
+                    <p className="font-medium">{formData.material || moldInfo?.material || '-'}</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm text-gray-500">금형명</label>
-                  <p className="font-medium">{formData.mold_name || moldInfo?.mold_name || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-500">품명</label>
-                  <p className="font-medium">{formData.part_name || moldInfo?.part_name || '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-500">재질</label>
-                  <p className="font-medium">{formData.material || moldInfo?.material || '-'}</p>
+                
+                {/* 설계중량 / 실중량 */}
+                <div className="border-t pt-4">
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* 설계중량 - 개발담당자만 입력 가능 */}
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm text-gray-500 w-20">설계중량</label>
+                      {isDeveloper && canEdit ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={formData.design_weight || moldInfo?.design_weight || ''}
+                            onChange={(e) => handleChange('design_weight', e.target.value)}
+                            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                            placeholder="0.00"
+                          />
+                          <select
+                            value={formData.design_weight_unit || moldInfo?.design_weight_unit || 'g'}
+                            onChange={(e) => handleChange('design_weight_unit', e.target.value)}
+                            className="border rounded-lg px-2 py-2 text-sm"
+                          >
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                          </select>
+                          <span className="text-xs text-blue-500">(개발담당자)</span>
+                        </div>
+                      ) : (
+                        <p className="font-medium">
+                          {moldInfo?.design_weight 
+                            ? `${moldInfo.design_weight} ${moldInfo.design_weight_unit || 'g'}`
+                            : '-'}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* 실중량 - 제작처/생산처 입력 가능 */}
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm text-gray-500 w-20">실중량</label>
+                      {!isDeveloper && canEdit ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={formData.actual_weight || moldInfo?.actual_weight || ''}
+                            onChange={(e) => handleChange('actual_weight', e.target.value)}
+                            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                            placeholder="0.00"
+                          />
+                          <select
+                            value={formData.actual_weight_unit || moldInfo?.actual_weight_unit || 'g'}
+                            onChange={(e) => handleChange('actual_weight_unit', e.target.value)}
+                            className="border rounded-lg px-2 py-2 text-sm"
+                          >
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                          </select>
+                          <span className="text-xs text-green-500">(제작처/생산처)</span>
+                        </div>
+                      ) : (
+                        <p className="font-medium">
+                          {moldInfo?.actual_weight 
+                            ? `${moldInfo.actual_weight} ${moldInfo.actual_weight_unit || 'g'}`
+                            : '-'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
