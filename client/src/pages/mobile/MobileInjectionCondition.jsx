@@ -5,7 +5,7 @@ import {
   ChevronRight, RotateCcw, Zap, Target, Timer, Gauge, Thermometer,
   Droplets, Settings, ToggleLeft, ToggleRight, Plus, Minus, History
 } from 'lucide-react';
-import { moldSpecificationAPI, injectionConditionAPI, weightAPI, materialAPI } from '../../lib/api';
+import { moldSpecificationAPI, injectionConditionAPI, weightAPI, materialAPI, masterDataAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function MobileInjectionCondition() {
@@ -20,6 +20,7 @@ export default function MobileInjectionCondition() {
   const [isEditing, setIsEditing] = useState(false);
   const [activeCategory, setActiveCategory] = useState(null);
   const [changeReason, setChangeReason] = useState('');
+  const [rawMaterials, setRawMaterials] = useState([]);
   
   const isDeveloper = ['mold_developer', 'system_admin'].includes(user?.user_type);
   const canEdit = !isDeveloper || condition?.status === 'draft';
@@ -151,6 +152,12 @@ export default function MobileInjectionCondition() {
         setCondition(conditionResponse.data.data);
         setConditionData(conditionResponse.data.data);
       }
+      
+      // 원재료 기초정보 로드
+      const rawMaterialsResponse = await masterDataAPI.getRawMaterials({ is_active: true }).catch(() => null);
+      if (rawMaterialsResponse?.data?.data) {
+        setRawMaterials(rawMaterialsResponse.data.data);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -160,6 +167,22 @@ export default function MobileInjectionCondition() {
 
   const handleChange = (field, value) => {
     setConditionData(prev => ({ ...prev, [field]: value }));
+  };
+  
+  // 원재료 선택 시 관련 정보 자동 입력
+  const handleRawMaterialSelect = (materialId) => {
+    const selected = rawMaterials.find(m => m.id === parseInt(materialId));
+    if (selected) {
+      setConditionData(prev => ({
+        ...prev,
+        material_spec: selected.material_name,
+        material_grade: selected.material_grade || '',
+        material_supplier: selected.supplier || '',
+        material_shrinkage: selected.shrinkage_rate || '',
+        mold_shrinkage: selected.mold_shrinkage || '',
+        material_density: selected.density || ''
+      }));
+    }
   };
 
   const handleSave = async () => {

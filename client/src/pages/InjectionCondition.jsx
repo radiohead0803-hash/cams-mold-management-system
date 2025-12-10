@@ -6,7 +6,7 @@ import {
   Droplets, Settings, ToggleLeft, ToggleRight, Plus, Minus, Package,
   Send, History
 } from 'lucide-react';
-import { moldSpecificationAPI, injectionConditionAPI, weightAPI, materialAPI } from '../lib/api';
+import { moldSpecificationAPI, injectionConditionAPI, weightAPI, materialAPI, masterDataAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -38,6 +38,8 @@ export default function InjectionConditionNew() {
   });
   
   const isDeveloper = ['mold_developer', 'system_admin'].includes(user?.user_type);
+  
+  const [rawMaterials, setRawMaterials] = useState([]);
   
   const [conditionData, setConditionData] = useState({
     // 속도 설정
@@ -91,10 +93,32 @@ export default function InjectionConditionNew() {
         setCondition(conditionResponse.data.data);
         setConditionData(conditionResponse.data.data);
       }
+      
+      // 원재료 기초정보 로드
+      const rawMaterialsResponse = await masterDataAPI.getRawMaterials({ is_active: true }).catch(() => null);
+      if (rawMaterialsResponse?.data?.data) {
+        setRawMaterials(rawMaterialsResponse.data.data);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // 원재료 선택 시 관련 정보 자동 입력
+  const handleRawMaterialSelect = (materialId) => {
+    const selected = rawMaterials.find(m => m.id === parseInt(materialId));
+    if (selected) {
+      setConditionData(prev => ({
+        ...prev,
+        material_spec: selected.material_name,
+        material_grade: selected.material_grade || '',
+        material_supplier: selected.supplier || '',
+        material_shrinkage: selected.shrinkage_rate || '',
+        mold_shrinkage: selected.mold_shrinkage || '',
+        material_density: selected.density || ''
+      }));
     }
   };
 
@@ -369,16 +393,34 @@ export default function InjectionConditionNew() {
           
           {expandedSections.material && (
             <div className="p-6 space-y-4">
+              {/* 원재료 선택 드롭다운 */}
+              {isEditing && isDeveloper && rawMaterials.length > 0 && (
+                <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <label className="block text-sm font-medium text-purple-700 mb-2">📦 기초정보에서 원재료 선택</label>
+                  <select
+                    onChange={(e) => handleRawMaterialSelect(e.target.value)}
+                    className="w-full border border-purple-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">-- 원재료를 선택하면 자동으로 정보가 입력됩니다 --</option>
+                    {rawMaterials.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.material_name} - {m.material_grade} ({m.supplier}) | 수축률: {m.shrinkage_rate}% | 비중: {m.density}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">MS SPEC</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">MS SPEC (원재료)</label>
                   <input
                     type="text"
                     value={conditionData.material_spec || moldInfo?.material_spec || ''}
                     onChange={(e) => handleChange('material_spec', e.target.value)}
                     disabled={!isEditing || !isDeveloper}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-600 focus:ring-2 focus:ring-purple-500"
-                    placeholder="원재료 규격"
+                    placeholder="원재료명 (예: ABS, PP, PC)"
                   />
                 </div>
                 <div>
@@ -422,6 +464,18 @@ export default function InjectionConditionNew() {
                     step="0.001"
                     value={conditionData.mold_shrinkage || moldInfo?.mold_shrinkage || ''}
                     onChange={(e) => handleChange('mold_shrinkage', e.target.value)}
+                    disabled={!isEditing || !isDeveloper}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-600 focus:ring-2 focus:ring-purple-500"
+                    placeholder="0.000"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">비중 (g/cm³)</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={conditionData.material_density || moldInfo?.material_density || ''}
+                    onChange={(e) => handleChange('material_density', e.target.value)}
                     disabled={!isEditing || !isDeveloper}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-600 focus:ring-2 focus:ring-purple-500"
                     placeholder="0.000"
