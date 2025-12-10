@@ -74,6 +74,7 @@ import MaintenanceManagement from './pages/MaintenanceManagement'
 import NotificationSettings from './pages/NotificationSettings'
 import Reports from './pages/Reports'
 import MoldHistory from './pages/MoldHistory'
+import QRSessionsPage from './pages/QRSessionsPage'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -246,6 +247,9 @@ function App() {
         {/* 금형 이력 */}
         <Route path="mold-history" element={<MoldHistory />} />
         <Route path="mold-history/:id" element={<MoldHistory />} />
+        
+        {/* QR 세션 */}
+        <Route path="qr-sessions" element={<QRSessionsPage />} />
       </Route>
     </Routes>
   )

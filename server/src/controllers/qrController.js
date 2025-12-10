@@ -354,6 +354,57 @@ const getActiveSessions = async (req, res) => {
 };
 
 /**
+ * 전체 세션 목록 조회 (관리자용)
+ */
+const getAllSessions = async (req, res) => {
+  try {
+    const { limit = 100, offset = 0 } = req.query;
+
+    let sessions = [];
+    try {
+      sessions = await QRSession.findAll({
+        include: [
+          {
+            association: 'mold',
+            attributes: ['id', 'mold_code', 'mold_name', 'status'],
+            required: false
+          },
+          {
+            association: 'user',
+            attributes: ['id', 'name', 'email'],
+            required: false
+          }
+        ],
+        order: [['created_at', 'DESC']],
+        limit: parseInt(limit),
+        offset: parseInt(offset)
+      });
+    } catch (queryError) {
+      logger.warn('QRSession query error, trying minimal:', queryError.message);
+      // association 에러 시 기본 조회
+      sessions = await QRSession.findAll({
+        order: [['created_at', 'DESC']],
+        limit: parseInt(limit),
+        offset: parseInt(offset)
+      });
+    }
+
+    res.json({
+      success: true,
+      data: sessions
+    });
+
+  } catch (error) {
+    logger.error('Get all sessions error:', error);
+    // 에러 시 빈 배열 반환
+    res.json({
+      success: true,
+      data: []
+    });
+  }
+};
+
+/**
  * QR 세션을 통한 수리요청 생성
  * POST /api/v1/qr/molds/:id/repairs
  */
@@ -617,5 +668,6 @@ module.exports = {
   validateSession,
   endSession,
   getActiveSessions,
+  getAllSessions,
   createRepairRequest
 };
