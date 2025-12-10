@@ -97,6 +97,8 @@ const injectionConditionsRouter = require('./routes/injectionConditions');
 const weightRouter = require('./routes/weight');
 const materialRouter = require('./routes/material');
 const testDataRouter = require('./routes/testData');
+const alertsRouter = require('./routes/alerts');
+const preProductionChecklistRouter = require('./routes/preProductionChecklist');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -149,6 +151,10 @@ app.use('/api/v1/weight', weightRouter);
 app.use('/api/v1/material', materialRouter);
 // Test data (테스트 데이터 삽입)
 app.use('/api/v1/test-data', testDataRouter);
+// Alerts (알림)
+app.use('/api/v1/alerts', alertsRouter);
+// Pre-production checklist (제작전 체크리스트)
+app.use('/api/v1/pre-production-checklist', preProductionChecklistRouter);
 
 // Health check
 app.get('/health', (req, res) => {
