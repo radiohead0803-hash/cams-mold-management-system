@@ -13,14 +13,14 @@ const createRepairRequest = async (req, res) => {
       mold_spec_id,
       title,
       description,
-      issue_type,           // 클라이언트에서 보내는 필드
-      issue_description,    // 클라이언트에서 보내는 필드
+      issue_type,
+      issue_description,
       ng_type,
-      severity,             // 클라이언트에서 보내는 필드 (low, medium, high, urgent)
-      urgency,              // 'low', 'normal', 'high', 'urgent'
+      severity,
+      urgency,
       estimated_cost,
       session_id,
-      // 새로운 협력사 작성항목
+      // 협력사 작성항목
       problem,
       cause_and_reason,
       priority,
@@ -39,11 +39,14 @@ const createRepairRequest = async (req, res) => {
       maker,
       operation_type,
       problem_type,
+      repair_category,
       repair_cost,
       completion_date,
       temporary_action,
       root_cause_action,
       mold_arrival_date,
+      repair_start_date,
+      repair_end_date,
       stock_schedule_date,
       stock_quantity,
       stock_unit,
@@ -53,7 +56,22 @@ const createRepairRequest = async (req, res) => {
       sign_off_status,
       representative_part_number,
       order_company,
-      related_files
+      related_files,
+      // 수리처 선정
+      repair_shop_type,
+      repair_shop_selected_by,
+      repair_shop_selected_date,
+      repair_shop_approval_status,
+      repair_shop_approved_by,
+      repair_shop_approved_date,
+      repair_shop_rejection_reason,
+      // 귀책 협의
+      liability_type,
+      liability_ratio_maker,
+      liability_ratio_plant,
+      liability_reason,
+      liability_decided_by,
+      liability_decided_date
     } = req.body;
     const userId = req.user.id;
     const files = req.files;
@@ -161,11 +179,14 @@ const createRepairRequest = async (req, res) => {
       contact: contact || null,
       operation_type: operation_type || '양산',
       problem_type: problem_type || null,
+      repair_category: repair_category || null,
       repair_cost: repair_cost || null,
       completion_date: completion_date || null,
       temporary_action: temporary_action || null,
       root_cause_action: root_cause_action || null,
       mold_arrival_date: mold_arrival_date || null,
+      repair_start_date: repair_start_date || null,
+      repair_end_date: repair_end_date || null,
       stock_schedule_date: stock_schedule_date || null,
       stock_quantity: stock_quantity || null,
       stock_unit: stock_unit || 'EA',
@@ -175,7 +196,22 @@ const createRepairRequest = async (req, res) => {
       sign_off_status: sign_off_status || '제출되지 않음',
       representative_part_number: representative_part_number || null,
       order_company: order_company || null,
-      related_files: related_files || []
+      related_files: related_files || [],
+      // 수리처 선정
+      repair_shop_type: repair_shop_type || null,
+      repair_shop_selected_by: repair_shop_selected_by || null,
+      repair_shop_selected_date: repair_shop_selected_date || null,
+      repair_shop_approval_status: repair_shop_approval_status || '대기',
+      repair_shop_approved_by: repair_shop_approved_by || null,
+      repair_shop_approved_date: repair_shop_approved_date || null,
+      repair_shop_rejection_reason: repair_shop_rejection_reason || null,
+      // 귀책 협의
+      liability_type: liability_type || null,
+      liability_ratio_maker: liability_ratio_maker || null,
+      liability_ratio_plant: liability_ratio_plant || null,
+      liability_reason: liability_reason || null,
+      liability_decided_by: liability_decided_by || null,
+      liability_decided_date: liability_decided_date || null
     }, { transaction });
 
     // 6. 사진 첨부 파일 저장
@@ -731,11 +767,19 @@ const updateRepairRequest = async (req, res) => {
       'problem', 'cause_and_reason', 'priority', 'problem_source', 'occurred_date',
       'manager_name', 'requester_name', 'car_model', 'part_number', 'part_name',
       'occurrence_type', 'production_site', 'production_manager', 'contact',
-      'production_shot', 'maker', 'operation_type', 'problem_type',
+      'production_shot', 'maker', 'operation_type', 'problem_type', 'repair_category',
       'repair_cost', 'completion_date', 'temporary_action', 'root_cause_action',
-      'mold_arrival_date', 'stock_schedule_date', 'stock_quantity', 'stock_unit',
+      'mold_arrival_date', 'repair_start_date', 'repair_end_date',
+      'stock_schedule_date', 'stock_quantity', 'stock_unit',
       'repair_company', 'repair_duration', 'management_type', 'sign_off_status',
-      'representative_part_number', 'order_company', 'related_files', 'status'
+      'representative_part_number', 'order_company', 'related_files', 'status',
+      // 수리처 선정
+      'repair_shop_type', 'repair_shop_selected_by', 'repair_shop_selected_date',
+      'repair_shop_approval_status', 'repair_shop_approved_by', 'repair_shop_approved_date',
+      'repair_shop_rejection_reason',
+      // 귀책 협의
+      'liability_type', 'liability_ratio_maker', 'liability_ratio_plant',
+      'liability_reason', 'liability_decided_by', 'liability_decided_date'
     ];
 
     const filteredData = {};
