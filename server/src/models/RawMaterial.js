@@ -37,7 +37,11 @@ module.exports = (sequelize) => {
       },
       shrinkage_rate: {
         type: DataTypes.DECIMAL(5, 3),
-        comment: '수축률 (%)'
+        comment: '원재료 수축률 (%)'
+      },
+      mold_shrinkage: {
+        type: DataTypes.DECIMAL(5, 3),
+        comment: '금형 수축률 (%)'
       },
       melt_temp_min: {
         type: DataTypes.INTEGER,

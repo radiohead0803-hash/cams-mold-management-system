@@ -329,9 +329,25 @@ export default function MasterData() {
             <input
               type="number"
               step="0.001"
-              placeholder="수축률 (%)"
+              placeholder="원재료 수축률 (%)"
               value={formData.shrinkage_rate || ''}
               onChange={(e) => setFormData({ ...formData, shrinkage_rate: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              step="0.001"
+              placeholder="금형 수축률 (%)"
+              value={formData.mold_shrinkage || ''}
+              onChange={(e) => setFormData({ ...formData, mold_shrinkage: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              step="0.001"
+              placeholder="비중 (g/cm³)"
+              value={formData.density || ''}
+              onChange={(e) => setFormData({ ...formData, density: e.target.value })}
               className="input"
             />
             <input
@@ -528,27 +544,29 @@ export default function MasterData() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">순서</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">원재료명</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">코드</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">등급</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">분류</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">공급업체</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">수축률</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-10">순서</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">원재료</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">그레이드</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">공급업체</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">분류</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">원재료수축률</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">비중</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">금형수축률</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {data.map((item, index) => (
                 <tr key={item.id}>
-                  <td className="px-4 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
-                  <td className="px-4 py-4 whitespace-nowrap font-medium">{item.material_name}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">{item.material_code || '-'}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">{item.material_grade || '-'}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">{item.category || '-'}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">{item.supplier || '-'}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">{item.shrinkage_rate ? `${item.shrinkage_rate}%` : '-'}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
+                  <td className="px-3 py-3 whitespace-nowrap font-medium">{item.material_name}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.material_grade || '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.supplier || '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.category || '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.shrinkage_rate ? `${item.shrinkage_rate}%` : '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.density || '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.mold_shrinkage ? `${item.mold_shrinkage}%` : '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
                       <Edit2 size={16} />
                     </button>

@@ -481,7 +481,7 @@ const createRawMaterial = async (req, res) => {
   try {
     const {
       material_name, material_code, material_grade, supplier, category, color,
-      shrinkage_rate, melt_temp_min, melt_temp_max, mold_temp_min, mold_temp_max,
+      shrinkage_rate, mold_shrinkage, melt_temp_min, melt_temp_max, mold_temp_min, mold_temp_max,
       drying_temp, drying_time, density, mfi, tensile_strength, flexural_modulus,
       impact_strength, hdt, description, sort_order
     } = req.body;
@@ -489,12 +489,12 @@ const createRawMaterial = async (req, res) => {
     const [result] = await sequelize.query(`
       INSERT INTO raw_materials (
         material_name, material_code, material_grade, supplier, category, color,
-        shrinkage_rate, melt_temp_min, melt_temp_max, mold_temp_min, mold_temp_max,
+        shrinkage_rate, mold_shrinkage, melt_temp_min, melt_temp_max, mold_temp_min, mold_temp_max,
         drying_temp, drying_time, density, mfi, tensile_strength, flexural_modulus,
         impact_strength, hdt, description, sort_order, is_active, created_at, updated_at
       ) VALUES (
         :material_name, :material_code, :material_grade, :supplier, :category, :color,
-        :shrinkage_rate, :melt_temp_min, :melt_temp_max, :mold_temp_min, :mold_temp_max,
+        :shrinkage_rate, :mold_shrinkage, :melt_temp_min, :melt_temp_max, :mold_temp_min, :mold_temp_max,
         :drying_temp, :drying_time, :density, :mfi, :tensile_strength, :flexural_modulus,
         :impact_strength, :hdt, :description, :sort_order, true, NOW(), NOW()
       ) RETURNING *
@@ -502,10 +502,11 @@ const createRawMaterial = async (req, res) => {
       replacements: {
         material_name, material_code: material_code || null, material_grade: material_grade || null,
         supplier: supplier || null, category: category || null, color: color || null,
-        shrinkage_rate: shrinkage_rate || null, melt_temp_min: melt_temp_min || null,
-        melt_temp_max: melt_temp_max || null, mold_temp_min: mold_temp_min || null,
-        mold_temp_max: mold_temp_max || null, drying_temp: drying_temp || null,
-        drying_time: drying_time || null, density: density || null, mfi: mfi || null,
+        shrinkage_rate: shrinkage_rate || null, mold_shrinkage: mold_shrinkage || null,
+        melt_temp_min: melt_temp_min || null, melt_temp_max: melt_temp_max || null,
+        mold_temp_min: mold_temp_min || null, mold_temp_max: mold_temp_max || null,
+        drying_temp: drying_temp || null, drying_time: drying_time || null,
+        density: density || null, mfi: mfi || null,
         tensile_strength: tensile_strength || null, flexural_modulus: flexural_modulus || null,
         impact_strength: impact_strength || null, hdt: hdt || null,
         description: description || null, sort_order: sort_order || 0
@@ -535,7 +536,7 @@ const updateRawMaterial = async (req, res) => {
 
     const allowedFields = [
       'material_name', 'material_code', 'material_grade', 'supplier', 'category', 'color',
-      'shrinkage_rate', 'melt_temp_min', 'melt_temp_max', 'mold_temp_min', 'mold_temp_max',
+      'shrinkage_rate', 'mold_shrinkage', 'melt_temp_min', 'melt_temp_max', 'mold_temp_min', 'mold_temp_max',
       'drying_temp', 'drying_time', 'density', 'mfi', 'tensile_strength', 'flexural_modulus',
       'impact_strength', 'hdt', 'description', 'sort_order', 'is_active'
     ];

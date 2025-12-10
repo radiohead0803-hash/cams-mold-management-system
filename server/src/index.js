@@ -237,6 +237,7 @@ const runRawMaterialsMigration = async () => {
         category VARCHAR(50),
         color VARCHAR(50),
         shrinkage_rate DECIMAL(5,3),
+        mold_shrinkage DECIMAL(5,3),
         melt_temp_min INTEGER,
         melt_temp_max INTEGER,
         mold_temp_min INTEGER,
@@ -268,6 +269,71 @@ const runRawMaterialsMigration = async () => {
   } catch (err) {
     // 무시
   }
+
+  // MS SPEC 기준 원재료 기본 데이터 삽입
+  try {
+    const [existing] = await db.sequelize.query(`SELECT COUNT(*) as count FROM raw_materials`);
+    if (existing[0].count === '0' || existing[0].count === 0) {
+      const rawMaterialsData = [
+        // ABS 계열
+        { material_name: 'ABS', material_code: 'ABS-001', material_grade: 'HI-121H', supplier: 'LG화학', category: '범용수지', shrinkage_rate: 0.5, density: 1.05, mold_shrinkage: 0.5 },
+        { material_name: 'ABS', material_code: 'ABS-002', material_grade: 'AF-312', supplier: '금호석유화학', category: '범용수지', shrinkage_rate: 0.5, density: 1.04, mold_shrinkage: 0.5 },
+        { material_name: 'ABS', material_code: 'ABS-003', material_grade: 'HP-181', supplier: 'LG화학', category: '범용수지', shrinkage_rate: 0.4, density: 1.05, mold_shrinkage: 0.45 },
+        { material_name: 'ABS', material_code: 'ABS-004', material_grade: 'SD-0150', supplier: '삼성SDI', category: '범용수지', shrinkage_rate: 0.5, density: 1.05, mold_shrinkage: 0.5 },
+        // ABS+PC 계열
+        { material_name: 'ABS+PC', material_code: 'ABSPC-001', material_grade: 'LUPOY HI5002', supplier: 'LG화학', category: '엔지니어링수지', shrinkage_rate: 0.5, density: 1.15, mold_shrinkage: 0.5 },
+        { material_name: 'ABS+PC', material_code: 'ABSPC-002', material_grade: 'STAREX WP-0160', supplier: '삼성SDI', category: '엔지니어링수지', shrinkage_rate: 0.5, density: 1.14, mold_shrinkage: 0.5 },
+        { material_name: 'ABS+PC', material_code: 'ABSPC-003', material_grade: 'BAYBLEND T65', supplier: 'Covestro', category: '엔지니어링수지', shrinkage_rate: 0.5, density: 1.13, mold_shrinkage: 0.5 },
+        // PP 계열
+        { material_name: 'PP', material_code: 'PP-001', material_grade: 'SEETEC H7700', supplier: 'LG화학', category: '범용수지', shrinkage_rate: 1.5, density: 0.91, mold_shrinkage: 1.5 },
+        { material_name: 'PP', material_code: 'PP-002', material_grade: 'HJ730', supplier: '한화토탈', category: '범용수지', shrinkage_rate: 1.5, density: 0.90, mold_shrinkage: 1.5 },
+        { material_name: 'PP', material_code: 'PP-003', material_grade: 'J-170', supplier: '롯데케미칼', category: '범용수지', shrinkage_rate: 1.8, density: 0.91, mold_shrinkage: 1.8 },
+        { material_name: 'PP-TD20', material_code: 'PPTD-001', material_grade: 'SEETEC H7520', supplier: 'LG화학', category: '범용수지', shrinkage_rate: 0.8, density: 1.04, mold_shrinkage: 0.8 },
+        { material_name: 'PP-GF30', material_code: 'PPGF-001', material_grade: 'KOPLEN GP3030', supplier: '코오롱플라스틱', category: '엔지니어링수지', shrinkage_rate: 0.4, density: 1.14, mold_shrinkage: 0.4 },
+        // PC 계열
+        { material_name: 'PC', material_code: 'PC-001', material_grade: 'LUPOY PC1303AH', supplier: 'LG화학', category: '엔지니어링수지', shrinkage_rate: 0.6, density: 1.20, mold_shrinkage: 0.6 },
+        { material_name: 'PC', material_code: 'PC-002', material_grade: 'MAKROLON 2805', supplier: 'Covestro', category: '엔지니어링수지', shrinkage_rate: 0.6, density: 1.20, mold_shrinkage: 0.6 },
+        { material_name: 'PC', material_code: 'PC-003', material_grade: 'LEXAN 141R', supplier: 'SABIC', category: '엔지니어링수지', shrinkage_rate: 0.6, density: 1.20, mold_shrinkage: 0.6 },
+        // PA (나일론) 계열
+        { material_name: 'PA6', material_code: 'PA6-001', material_grade: 'KOPLA PA6 1011', supplier: '코오롱플라스틱', category: '엔지니어링수지', shrinkage_rate: 1.2, density: 1.13, mold_shrinkage: 1.2 },
+        { material_name: 'PA6-GF30', material_code: 'PA6GF-001', material_grade: 'KOPLA PA6 GF30', supplier: '코오롱플라스틱', category: '엔지니어링수지', shrinkage_rate: 0.4, density: 1.36, mold_shrinkage: 0.4 },
+        { material_name: 'PA66', material_code: 'PA66-001', material_grade: 'ZYTEL 101L', supplier: 'DuPont', category: '엔지니어링수지', shrinkage_rate: 1.5, density: 1.14, mold_shrinkage: 1.5 },
+        { material_name: 'PA66-GF30', material_code: 'PA66GF-001', material_grade: 'ZYTEL 70G30', supplier: 'DuPont', category: '엔지니어링수지', shrinkage_rate: 0.3, density: 1.37, mold_shrinkage: 0.3 },
+        // POM 계열
+        { material_name: 'POM', material_code: 'POM-001', material_grade: 'KEPITAL F20-03', supplier: '코오롱플라스틱', category: '엔지니어링수지', shrinkage_rate: 2.0, density: 1.41, mold_shrinkage: 2.0 },
+        { material_name: 'POM', material_code: 'POM-002', material_grade: 'DELRIN 500P', supplier: 'DuPont', category: '엔지니어링수지', shrinkage_rate: 2.1, density: 1.42, mold_shrinkage: 2.1 },
+        // PBT 계열
+        { material_name: 'PBT', material_code: 'PBT-001', material_grade: 'LUPOX HI1006F', supplier: 'LG화학', category: '엔지니어링수지', shrinkage_rate: 1.8, density: 1.31, mold_shrinkage: 1.8 },
+        { material_name: 'PBT-GF30', material_code: 'PBTGF-001', material_grade: 'LUPOX GP2300', supplier: 'LG화학', category: '엔지니어링수지', shrinkage_rate: 0.4, density: 1.53, mold_shrinkage: 0.4 },
+        // PMMA 계열
+        { material_name: 'PMMA', material_code: 'PMMA-001', material_grade: 'LG PMMA IF850', supplier: 'LG MMA', category: '엔지니어링수지', shrinkage_rate: 0.5, density: 1.19, mold_shrinkage: 0.5 },
+        // TPO/TPE 계열
+        { material_name: 'TPO', material_code: 'TPO-001', material_grade: 'SEETEC TPO', supplier: 'LG화학', category: '엔지니어링수지', shrinkage_rate: 1.2, density: 0.90, mold_shrinkage: 1.2 },
+        { material_name: 'TPE', material_code: 'TPE-001', material_grade: 'KEYFLEX BT-1035D', supplier: 'LG화학', category: '엔지니어링수지', shrinkage_rate: 1.5, density: 1.05, mold_shrinkage: 1.5 },
+        // ASA 계열
+        { material_name: 'ASA', material_code: 'ASA-001', material_grade: 'LURAN S 757R', supplier: 'BASF', category: '엔지니어링수지', shrinkage_rate: 0.5, density: 1.07, mold_shrinkage: 0.5 },
+        { material_name: 'ASA+PC', material_code: 'ASAPC-001', material_grade: 'LURAN SC', supplier: 'BASF', category: '엔지니어링수지', shrinkage_rate: 0.5, density: 1.12, mold_shrinkage: 0.5 },
+        // PPS 계열
+        { material_name: 'PPS-GF40', material_code: 'PPSGF-001', material_grade: 'FORTRON 1140L4', supplier: 'Celanese', category: '슈퍼엔지니어링수지', shrinkage_rate: 0.2, density: 1.65, mold_shrinkage: 0.2 },
+        // PEEK 계열
+        { material_name: 'PEEK', material_code: 'PEEK-001', material_grade: 'VICTREX 450G', supplier: 'Victrex', category: '슈퍼엔지니어링수지', shrinkage_rate: 1.2, density: 1.30, mold_shrinkage: 1.2 }
+      ];
+
+      for (let i = 0; i < rawMaterialsData.length; i++) {
+        const m = rawMaterialsData[i];
+        await db.sequelize.query(`
+          INSERT INTO raw_materials (material_name, material_code, material_grade, supplier, category, shrinkage_rate, density, mold_shrinkage, sort_order, is_active, created_at, updated_at)
+          VALUES (:material_name, :material_code, :material_grade, :supplier, :category, :shrinkage_rate, :density, :mold_shrinkage, :sort_order, true, NOW(), NOW())
+        `, {
+          replacements: { ...m, sort_order: i + 1, mold_shrinkage: m.mold_shrinkage }
+        });
+      }
+      logger.info('MS SPEC raw materials data inserted: ' + rawMaterialsData.length + ' items');
+    }
+  } catch (err) {
+    logger.warn('Raw materials seed data:', err.message);
+  }
+
   logger.info('raw_materials migration completed.');
 };
 
