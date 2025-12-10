@@ -91,46 +91,37 @@ export default function Reports() {
       setLoading(true);
       
       // 병렬로 통계 데이터 로드
-      const [maintenanceRes, scrappingRes] = await Promise.all([
+      const [moldRes, maintenanceRes, scrappingRes, checklistRes] = await Promise.all([
+        api.get('/statistics/molds', { params: { year } }).catch(() => ({ data: { data: {} } })),
         api.get('/maintenance/statistics', { params: { year } }).catch(() => ({ data: { data: {} } })),
-        api.get('/scrapping/statistics', { params: { year } }).catch(() => ({ data: { data: {} } }))
+        api.get('/scrapping/statistics', { params: { year } }).catch(() => ({ data: { data: {} } })),
+        api.get('/statistics/checklists', { params: { year } }).catch(() => ({ data: { data: {} } }))
       ]);
+
+      // 금형 통계
+      const moldData = moldRes.data.data;
+      setMoldStats({
+        total: moldData.total || 0,
+        active: moldData.active || 0,
+        development: moldData.development || 0,
+        manufacturing: moldData.manufacturing || 0,
+        scrapped: moldData.scrapped || 0,
+        byCarModel: moldData.by_car_model || [],
+        byMaker: moldData.by_maker || []
+      });
 
       setMaintenanceStats(maintenanceRes.data.data);
       setScrappingStats(scrappingRes.data.data);
 
-      // 금형 통계 (기본값)
-      setMoldStats({
-        total: 245,
-        active: 198,
-        development: 15,
-        manufacturing: 23,
-        scrapped: 9,
-        byCarModel: [
-          { name: 'K5', count: 45 },
-          { name: 'K8', count: 38 },
-          { name: 'Sportage', count: 52 },
-          { name: 'Sorento', count: 41 },
-          { name: 'Carnival', count: 35 },
-          { name: 'EV6', count: 34 }
-        ],
-        byMaker: [
-          { name: 'A제작소', count: 42 },
-          { name: 'B제작소', count: 38 },
-          { name: 'C제작소', count: 35 },
-          { name: 'D제작소', count: 28 },
-          { name: 'E제작소', count: 22 }
-        ]
-      });
-
-      // 체크리스트 통계 (기본값)
+      // 체크리스트 통계
+      const checklistData = checklistRes.data.data;
       setChecklistStats({
-        total: 156,
-        draft: 12,
-        submitted: 8,
-        approved: 128,
-        rejected: 8,
-        completionRate: 82
+        total: checklistData.total || 0,
+        draft: checklistData.draft || 0,
+        submitted: checklistData.submitted || 0,
+        approved: checklistData.approved || 0,
+        rejected: checklistData.rejected || 0,
+        completionRate: checklistData.completion_rate || 0
       });
 
     } catch (error) {
