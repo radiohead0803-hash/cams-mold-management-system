@@ -61,7 +61,9 @@ import MobileInjectionStats from './pages/mobile/MobileInjectionStats'
 import MobileTransferRequest from './pages/mobile/MobileTransferRequest'
 import MobileTransferList from './pages/mobile/MobileTransferList'
 import MobileInspectionApproval from './pages/mobile/MobileInspectionApproval'
+import MobileRepairRequestForm from './pages/mobile/MobileRepairRequestForm'
 import InspectionApproval from './pages/InspectionApproval'
+import RepairRequestForm from './pages/RepairRequestForm'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -105,7 +107,8 @@ function App() {
       <Route path="/mobile/mold/:moldId" element={<MobileMoldDetail />} />
       <Route path="/mobile/mold/:moldId/daily-check" element={<ChecklistStartPage />} />
       <Route path="/mobile/mold/:moldId/periodic-check" element={<ChecklistStartPage />} />
-      <Route path="/mobile/mold/:moldId/repair-request" element={<RepairRequestListPage />} />
+      <Route path="/mobile/mold/:moldId/repair-request" element={<MobileRepairRequestForm />} />
+      <Route path="/mobile/mold/:moldId/repair-list" element={<RepairRequestListPage />} />
       <Route path="/mobile/mold/:moldId/development-plan" element={<MobileDevelopmentPlan />} />
       <Route path="/mobile/mold/:moldId/mold-checklist" element={<MobileMoldChecklist />} />
       <Route path="/mobile/mold/:moldId/nurturing" element={<MobileMoldNurturing />} />
@@ -191,6 +194,7 @@ function App() {
         <Route path="injection-stats" element={<InjectionStats />} />
         <Route path="injection-condition" element={<InjectionCondition />} />
         <Route path="inspection-approval" element={<InspectionApproval />} />
+        <Route path="repair-request-form" element={<RepairRequestForm />} />
       </Route>
     </Routes>
   )

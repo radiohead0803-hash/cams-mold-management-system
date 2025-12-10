@@ -430,7 +430,7 @@ export default function MoldDetailNew() {
                                 } 
                                 // 금형수리 메뉴
                                 else if (item === '수리요청') {
-                                  navigate(`/hq/repair-requests?moldId=${id}`);
+                                  navigate(`/repair-request-form?moldId=${id}`);
                                 } else if (item === '금형수리 현황표') {
                                   navigate(`/hq/repair-requests?moldId=${id}&view=status`);
                                 } else if (item === '금형수리 진행현황') {

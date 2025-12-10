@@ -9,7 +9,7 @@ import api, { repairRequestAPI, moldSpecificationAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function MobileRepairRequestForm() {
-  const { id } = useParams(); // 수정 시 ID
+  const { id, moldId } = useParams(); // id: 수정 시 ID, moldId: 금형 ID
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
@@ -19,8 +19,8 @@ export default function MobileRepairRequestForm() {
   const [isEditing, setIsEditing] = useState(!id);
   const [activeSection, setActiveSection] = useState('basic');
   
-  // 금형 정보 (QR 스캔 또는 선택에서 전달)
-  const moldInfo = location.state?.moldInfo || {};
+  // 금형 정보 (QR 스캔 또는 선택에서 전달, 또는 moldId로 로드)
+  const moldInfo = location.state?.moldInfo || { id: moldId };
   
   const [formData, setFormData] = useState({
     // 기본 정보
@@ -68,11 +68,11 @@ export default function MobileRepairRequestForm() {
   useEffect(() => {
     if (id) {
       loadRepairRequest();
-    } else if (moldInfo?.id) {
+    } else if (moldInfo?.id || moldId) {
       // 신규 등록 시 금형정보에서 자동 연동
-      loadMoldInfoForAutoLink(moldInfo.id);
+      loadMoldInfoForAutoLink(moldInfo?.id || moldId);
     }
-  }, [id, moldInfo?.id]);
+  }, [id, moldInfo?.id, moldId]);
 
   // 금형정보 자동 연동 (PC/모바일 동일 API 사용)
   const loadMoldInfoForAutoLink = async (moldSpecId) => {
@@ -121,7 +121,7 @@ export default function MobileRepairRequestForm() {
       
       const dataToSave = {
         ...formData,
-        mold_spec_id: moldInfo?.id || formData.mold_spec_id
+        mold_spec_id: moldInfo?.id || moldId || formData.mold_spec_id
       };
 
       if (id) {
