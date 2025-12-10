@@ -6,7 +6,7 @@ import {
   Building, Truck, DollarSign, ClipboardList, Link2, ChevronDown, ChevronUp,
   Image, Plus, Trash2
 } from 'lucide-react';
-import { repairRequestAPI, moldSpecificationAPI } from '../lib/api';
+import { repairRequestAPI, moldSpecificationAPI, inspectionAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -32,6 +32,11 @@ export default function RepairRequestForm() {
   const [saving, setSaving] = useState(false);
   const [moldInfo, setMoldInfo] = useState(null);
   const [images, setImages] = useState([]); // 첨부 이미지
+  const [inspectionInfo, setInspectionInfo] = useState({
+    lastDailyCheck: null,      // 최근 일상점검
+    lastPeriodicCheck: null,   // 최근 정기점검
+    loading: false
+  });
   const [expandedSections, setExpandedSections] = useState({
     request: true,    // 요청 단계
     product: true,    // 제품/금형 정보
@@ -110,6 +115,13 @@ export default function RepairRequestForm() {
     }
   }, [requestId, moldId]);
 
+  // 점검 정보 로드
+  useEffect(() => {
+    if (moldId) {
+      loadInspectionInfo(moldId);
+    }
+  }, [moldId]);
+
   const loadMoldInfo = async () => {
     try {
       setLoading(true);
@@ -132,6 +144,47 @@ export default function RepairRequestForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 최근 점검 정보 로드
+  const loadInspectionInfo = async (specId) => {
+    try {
+      setInspectionInfo(prev => ({ ...prev, loading: true }));
+      
+      // 일상점검 최근 기록 조회
+      const dailyResponse = await inspectionAPI.getAll({ 
+        mold_spec_id: specId, 
+        inspection_type: 'daily',
+        limit: 1,
+        sort: 'created_at:desc'
+      }).catch(() => null);
+      
+      // 정기점검 최근 기록 조회
+      const periodicResponse = await inspectionAPI.getAll({ 
+        mold_spec_id: specId, 
+        inspection_type: 'periodic',
+        limit: 1,
+        sort: 'created_at:desc'
+      }).catch(() => null);
+      
+      setInspectionInfo({
+        lastDailyCheck: dailyResponse?.data?.data?.[0] || null,
+        lastPeriodicCheck: periodicResponse?.data?.data?.[0] || null,
+        loading: false
+      });
+    } catch (error) {
+      console.error('Load inspection info error:', error);
+      setInspectionInfo(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // 점검 시트로 이동
+  const navigateToInspection = (inspection) => {
+    if (!inspection) return;
+    const path = inspection.inspection_type === 'daily' 
+      ? `/daily-check?id=${inspection.id}&moldId=${moldId}`
+      : `/periodic-check?id=${inspection.id}&moldId=${moldId}`;
+    navigate(path);
   };
 
   const loadRepairRequest = async () => {
@@ -591,6 +644,97 @@ export default function RepairRequestForm() {
                     placeholder="자동연동"
                     readOnly
                   />
+                </div>
+              </div>
+
+              {/* 점검 정보 */}
+              <div className="mt-6 pt-6 border-t border-slate-200">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <ClipboardList size={16} className="text-blue-600" />
+                  점검 관리 현황
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* 일상점검 */}
+                  <div 
+                    onClick={() => navigateToInspection(inspectionInfo.lastDailyCheck)}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      inspectionInfo.lastDailyCheck 
+                        ? 'border-green-200 bg-green-50 hover:border-green-400 cursor-pointer' 
+                        : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-slate-700">일상점검</span>
+                      {inspectionInfo.loading ? (
+                        <span className="text-xs text-slate-400">로딩중...</span>
+                      ) : inspectionInfo.lastDailyCheck ? (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <CheckCircle size={10} /> 기록있음
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">기록없음</span>
+                      )}
+                    </div>
+                    {inspectionInfo.lastDailyCheck ? (
+                      <div className="space-y-1">
+                        <p className="text-sm text-slate-600">
+                          <Calendar size={12} className="inline mr-1" />
+                          최근: {new Date(inspectionInfo.lastDailyCheck.created_at).toLocaleDateString('ko-KR')}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          상태: {inspectionInfo.lastDailyCheck.status === 'approved' ? '승인됨' : 
+                                 inspectionInfo.lastDailyCheck.status === 'pending' ? '대기중' : 
+                                 inspectionInfo.lastDailyCheck.status}
+                        </p>
+                        <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                          <Link2 size={10} /> 클릭하여 점검시트 보기
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">일상점검 기록이 없습니다.</p>
+                    )}
+                  </div>
+
+                  {/* 정기점검 */}
+                  <div 
+                    onClick={() => navigateToInspection(inspectionInfo.lastPeriodicCheck)}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      inspectionInfo.lastPeriodicCheck 
+                        ? 'border-purple-200 bg-purple-50 hover:border-purple-400 cursor-pointer' 
+                        : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-slate-700">정기점검</span>
+                      {inspectionInfo.loading ? (
+                        <span className="text-xs text-slate-400">로딩중...</span>
+                      ) : inspectionInfo.lastPeriodicCheck ? (
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <CheckCircle size={10} /> 기록있음
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">기록없음</span>
+                      )}
+                    </div>
+                    {inspectionInfo.lastPeriodicCheck ? (
+                      <div className="space-y-1">
+                        <p className="text-sm text-slate-600">
+                          <Calendar size={12} className="inline mr-1" />
+                          최근: {new Date(inspectionInfo.lastPeriodicCheck.created_at).toLocaleDateString('ko-KR')}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          상태: {inspectionInfo.lastPeriodicCheck.status === 'approved' ? '승인됨' : 
+                                 inspectionInfo.lastPeriodicCheck.status === 'pending' ? '대기중' : 
+                                 inspectionInfo.lastPeriodicCheck.status}
+                        </p>
+                        <p className="text-xs text-purple-600 mt-2 flex items-center gap-1">
+                          <Link2 size={10} /> 클릭하여 점검시트 보기
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400">정기점검 기록이 없습니다.</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
