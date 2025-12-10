@@ -78,15 +78,19 @@ export default function Layout() {
           to: '/alerts', 
           icon: Bell, 
           label: '알림',
-          subMenus: []
+          subMenus: [
+            { to: '/alerts', label: '알림 목록' },
+            { to: '/notification-settings', label: '알림 설정' }
+          ]
         },
         { 
           to: '/reports', 
           icon: BarChart3, 
           label: '통계 리포트',
           subMenus: [
-            { to: '/reports/molds', label: '금형 현황' },
-            { to: '/reports/makers', label: '제작처 분석' }
+            { to: '/reports', label: '전체 현황' },
+            { to: '/reports/molds', label: '금형 통계' },
+            { to: '/reports/maintenance', label: '유지보전 통계' }
           ]
         },
         { 
@@ -179,15 +183,19 @@ export default function Layout() {
           to: '/alerts', 
           icon: Bell, 
           label: '알림',
-          subMenus: []
+          subMenus: [
+            { to: '/alerts', label: '알림 목록' },
+            { to: '/notification-settings', label: '알림 설정' }
+          ]
         },
         { 
           to: '/reports', 
           icon: BarChart3, 
           label: '통계 리포트',
           subMenus: [
-            { to: '/reports/overview', label: '전체 현황' },
-            { to: '/reports/makers', label: '제작처별 분석' }
+            { to: '/reports', label: '전체 현황' },
+            { to: '/reports/molds', label: '금형 통계' },
+            { to: '/reports/maintenance', label: '유지보전 통계' }
           ]
         },
         { 
