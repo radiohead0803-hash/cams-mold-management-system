@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ClipboardCheck, Wrench, Trash2, AlertTriangle, 
   CheckCircle, Clock, TrendingUp, Calendar, Package,
-  FileCheck, Cog, Bell, ArrowRight
+  FileCheck, Cog, Bell, ArrowRight, Truck
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -473,6 +473,85 @@ export function RepairWidget() {
 }
 
 /**
+ * 이관 현황 위젯
+ */
+export function TransferWidget() {
+  const navigate = useNavigate();
+  const [data, setData] = useState({ pending: 0, approved: 0, in_progress: 0, completed: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const response = await api.get('/transfers', { params: { limit: 100 } });
+      const items = response.data.data?.items || response.data.data || [];
+      const counts = items.reduce((acc, item) => {
+        if (item.status === 'pending') acc.pending++;
+        else if (item.status === 'approved') acc.approved++;
+        else if (item.status === 'in_progress') acc.in_progress++;
+        else if (item.status === 'completed') acc.completed++;
+        return acc;
+      }, { pending: 0, approved: 0, in_progress: 0, completed: 0 });
+      setData(counts);
+    } catch (error) {
+      console.error('Failed to load transfer data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+        <div className="h-20 bg-gray-100 rounded"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+            <Truck size={20} className="text-purple-600" />
+          </div>
+          <h3 className="font-semibold text-gray-900">이관 현황</h3>
+        </div>
+        <button
+          onClick={() => navigate('/transfers')}
+          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+        >
+          전체보기 <ArrowRight size={14} />
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3">
+        <div className="text-center p-3 bg-yellow-50 rounded-lg">
+          <div className="text-2xl font-bold text-yellow-600">{data.pending}</div>
+          <div className="text-xs text-yellow-600">승인대기</div>
+        </div>
+        <div className="text-center p-3 bg-blue-50 rounded-lg">
+          <div className="text-2xl font-bold text-blue-600">{data.in_progress}</div>
+          <div className="text-xs text-blue-600">진행중</div>
+        </div>
+        <div className="text-center p-3 bg-green-50 rounded-lg">
+          <div className="text-2xl font-bold text-green-600">{data.approved}</div>
+          <div className="text-xs text-green-600">승인</div>
+        </div>
+        <div className="text-center p-3 bg-gray-50 rounded-lg">
+          <div className="text-2xl font-bold text-gray-600">{data.completed}</div>
+          <div className="text-xs text-gray-600">완료</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * 대시보드 위젯 그리드
  */
 export default function DashboardWidgets() {
@@ -482,6 +561,7 @@ export default function DashboardWidgets() {
       <MaintenanceWidget />
       <ScrappingWidget />
       <RepairWidget />
+      <TransferWidget />
       <AlertSummaryWidget />
       <InspectionDueWidget />
     </div>
