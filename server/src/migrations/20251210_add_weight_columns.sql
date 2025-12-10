@@ -53,4 +53,55 @@ COMMENT ON COLUMN weight_history.weight_type IS '중량 타입: design(설계중
 COMMENT ON COLUMN mold_specifications.design_weight IS '설계중량 최신값 (개발담당자 입력)';
 COMMENT ON COLUMN mold_specifications.actual_weight IS '실중량 최신값 (제작처/생산처 입력)';
 
+-- ========== 원재료 정보 컬럼 추가 ==========
+-- 개발담당자만 입력 가능, 이력관리 필요
+
+ALTER TABLE mold_specifications 
+ADD COLUMN IF NOT EXISTS material_spec VARCHAR(100),           -- MS SPEC (원재료 규격)
+ADD COLUMN IF NOT EXISTS material_grade VARCHAR(100),          -- 그레이드
+ADD COLUMN IF NOT EXISTS material_supplier VARCHAR(200),       -- 원재료 업체
+ADD COLUMN IF NOT EXISTS material_shrinkage DECIMAL(5,3),      -- 원재료 수축율 (%)
+ADD COLUMN IF NOT EXISTS mold_shrinkage DECIMAL(5,3),          -- 금형 수축율 (%)
+ADD COLUMN IF NOT EXISTS material_registered_by INTEGER,
+ADD COLUMN IF NOT EXISTS material_registered_at TIMESTAMP WITH TIME ZONE;
+
+-- 원재료 이력 테이블 생성
+CREATE TABLE IF NOT EXISTS material_history (
+  id SERIAL PRIMARY KEY,
+  mold_spec_id INTEGER NOT NULL,
+  mold_id INTEGER,
+  
+  -- 원재료 정보
+  material_spec VARCHAR(100),
+  material_grade VARCHAR(100),
+  material_supplier VARCHAR(200),
+  material_shrinkage DECIMAL(5,3),
+  mold_shrinkage DECIMAL(5,3),
+  
+  -- 변경 사유
+  change_reason TEXT,
+  
+  -- 등록 정보
+  registered_by INTEGER,
+  registered_by_name VARCHAR(100),
+  registered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  -- 이전 값 (JSON으로 저장)
+  previous_data JSONB,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 인덱스 생성
+CREATE INDEX IF NOT EXISTS idx_material_history_mold_spec ON material_history(mold_spec_id);
+CREATE INDEX IF NOT EXISTS idx_material_history_registered_at ON material_history(registered_at DESC);
+
+-- 코멘트 추가
+COMMENT ON TABLE material_history IS '원재료 정보 이력 테이블';
+COMMENT ON COLUMN mold_specifications.material_spec IS 'MS SPEC (원재료 규격) - 개발담당자 입력';
+COMMENT ON COLUMN mold_specifications.material_grade IS '원재료 그레이드 - 개발담당자 입력';
+COMMENT ON COLUMN mold_specifications.material_supplier IS '원재료 업체 - 개발담당자 입력';
+COMMENT ON COLUMN mold_specifications.material_shrinkage IS '원재료 수축율 (%) - 개발담당자 입력';
+COMMENT ON COLUMN mold_specifications.mold_shrinkage IS '금형 수축율 (%) - 개발담당자 입력';
+
 SELECT '중량 컬럼 및 이력 테이블 추가 완료' as result;

@@ -162,6 +162,47 @@ const runWeightColumnsMigration = async () => {
       }
     }
     console.log('✅ Weight history indexes created/verified.');
+
+    // 원재료 정보 컬럼 추가
+    const materialColumns = [
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS material_spec VARCHAR(100)' },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS material_grade VARCHAR(100)' },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS material_supplier VARCHAR(200)' },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS material_shrinkage DECIMAL(5,3)' },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS mold_shrinkage DECIMAL(5,3)' },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS material_registered_by INTEGER' },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS material_registered_at TIMESTAMP WITH TIME ZONE' }
+    ];
+    for (const col of materialColumns) {
+      try { await sequelize.query(col.sql); } catch (e) { }
+    }
+    console.log('✅ Material columns added to mold_specifications.');
+
+    // material_history 이력 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS material_history (
+        id SERIAL PRIMARY KEY,
+        mold_spec_id INTEGER NOT NULL,
+        mold_id INTEGER,
+        material_spec VARCHAR(100),
+        material_grade VARCHAR(100),
+        material_supplier VARCHAR(200),
+        material_shrinkage DECIMAL(5,3),
+        mold_shrinkage DECIMAL(5,3),
+        change_reason TEXT,
+        registered_by INTEGER,
+        registered_by_name VARCHAR(100),
+        registered_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        previous_data JSONB,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ material_history table created/verified.');
+
+    // 인덱스 생성
+    try { await sequelize.query('CREATE INDEX IF NOT EXISTS idx_material_history_mold_spec ON material_history(mold_spec_id)'); } catch (e) { }
+    try { await sequelize.query('CREATE INDEX IF NOT EXISTS idx_material_history_registered_at ON material_history(registered_at DESC)'); } catch (e) { }
+    console.log('✅ Material history indexes created/verified.');
   } catch (error) {
     console.error('⚠️ Weight columns migration warning:', error.message);
   }

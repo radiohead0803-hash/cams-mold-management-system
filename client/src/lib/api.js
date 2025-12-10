@@ -184,6 +184,16 @@ export const weightAPI = {
   getHistory: (moldSpecId, params) => api.get(`/weight/${moldSpecId}/history`, { params }),
 }
 
+// Material API (원재료 정보 이력관리)
+export const materialAPI = {
+  // 현재 원재료 정보 조회
+  get: (moldSpecId) => api.get(`/material/${moldSpecId}`),
+  // 원재료 정보 업데이트 (이력 자동 기록, 개발담당자만)
+  update: (moldSpecId, data) => api.put(`/material/${moldSpecId}`, data),
+  // 원재료 이력 조회
+  getHistory: (moldSpecId, params) => api.get(`/material/${moldSpecId}/history`, { params }),
+}
+
 // Master Data API
 export const masterDataAPI = {
   // 차종

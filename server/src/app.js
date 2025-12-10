@@ -95,6 +95,7 @@ const moldImagesRouter = require('./routes/moldImages');
 const approvalWorkflowRouter = require('./routes/approvalWorkflow');
 const injectionConditionsRouter = require('./routes/injectionConditions');
 const weightRouter = require('./routes/weight');
+const materialRouter = require('./routes/material');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -143,6 +144,8 @@ app.use('/api/v1/workflow', approvalWorkflowRouter);
 app.use('/api/v1/injection-conditions', injectionConditionsRouter);
 // Weight management (설계중량/실중량 이력관리)
 app.use('/api/v1/weight', weightRouter);
+// Material management (원재료 정보 이력관리)
+app.use('/api/v1/material', materialRouter);
 
 // Health check
 app.get('/health', (req, res) => {

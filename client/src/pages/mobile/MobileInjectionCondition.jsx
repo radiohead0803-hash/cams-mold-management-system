@@ -5,7 +5,7 @@ import {
   ChevronRight, RotateCcw, Zap, Target, Timer, Gauge, Thermometer,
   Droplets, Settings, ToggleLeft, ToggleRight, Plus, Minus, History
 } from 'lucide-react';
-import { moldSpecificationAPI, injectionConditionAPI, weightAPI } from '../../lib/api';
+import { moldSpecificationAPI, injectionConditionAPI, weightAPI, materialAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function MobileInjectionCondition() {
@@ -180,6 +180,19 @@ export default function MobileInjectionCondition() {
           weight_type: 'actual',
           weight_value: conditionData.actual_weight,
           weight_unit: conditionData.actual_weight_unit || 'g',
+          change_reason: changeReason
+        });
+      }
+      
+      // 원재료 정보 별도 저장 (개발담당자만, 이력관리)
+      if (isDeveloper && (conditionData.material_spec || conditionData.material_grade || 
+          conditionData.material_supplier || conditionData.material_shrinkage || conditionData.mold_shrinkage)) {
+        await materialAPI.update(moldId, {
+          material_spec: conditionData.material_spec,
+          material_grade: conditionData.material_grade,
+          material_supplier: conditionData.material_supplier,
+          material_shrinkage: conditionData.material_shrinkage,
+          mold_shrinkage: conditionData.mold_shrinkage,
           change_reason: changeReason
         });
       }
@@ -834,6 +847,96 @@ export default function MobileInjectionCondition() {
             <div>
               <span className="text-gray-500">실중량</span>
               <p className="font-medium">{moldInfo?.actual_weight ? `${moldInfo.actual_weight} ${moldInfo.actual_weight_unit || 'g'}` : '-'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 원재료 정보 (개발담당자 입력) */}
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-800">원재료 정보</h3>
+            {isDeveloper && (
+              <span className="text-xs text-blue-500 bg-blue-50 px-2 py-1 rounded">개발담당자 입력</span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <span className="text-gray-500">MS SPEC</span>
+              {isDeveloper && isEditing ? (
+                <input
+                  type="text"
+                  value={conditionData.material_spec || moldInfo?.material_spec || ''}
+                  onChange={(e) => handleChange('material_spec', e.target.value)}
+                  className="w-full border rounded px-2 py-1 mt-1 text-sm"
+                  placeholder="원재료 규격"
+                />
+              ) : (
+                <p className="font-medium">{moldInfo?.material_spec || '-'}</p>
+              )}
+            </div>
+            <div>
+              <span className="text-gray-500">그레이드</span>
+              {isDeveloper && isEditing ? (
+                <input
+                  type="text"
+                  value={conditionData.material_grade || moldInfo?.material_grade || ''}
+                  onChange={(e) => handleChange('material_grade', e.target.value)}
+                  className="w-full border rounded px-2 py-1 mt-1 text-sm"
+                  placeholder="그레이드"
+                />
+              ) : (
+                <p className="font-medium">{moldInfo?.material_grade || '-'}</p>
+              )}
+            </div>
+            <div className="col-span-2">
+              <span className="text-gray-500">원재료 업체</span>
+              {isDeveloper && isEditing ? (
+                <input
+                  type="text"
+                  value={conditionData.material_supplier || moldInfo?.material_supplier || ''}
+                  onChange={(e) => handleChange('material_supplier', e.target.value)}
+                  className="w-full border rounded px-2 py-1 mt-1 text-sm"
+                  placeholder="원재료 공급업체"
+                />
+              ) : (
+                <p className="font-medium">{moldInfo?.material_supplier || '-'}</p>
+              )}
+            </div>
+            <div>
+              <span className="text-gray-500">원재료 수축율</span>
+              {isDeveloper && isEditing ? (
+                <div className="flex items-center gap-1 mt-1">
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={conditionData.material_shrinkage || moldInfo?.material_shrinkage || ''}
+                    onChange={(e) => handleChange('material_shrinkage', e.target.value)}
+                    className="flex-1 border rounded px-2 py-1 text-sm"
+                    placeholder="0.000"
+                  />
+                  <span className="text-gray-500">%</span>
+                </div>
+              ) : (
+                <p className="font-medium">{moldInfo?.material_shrinkage ? `${moldInfo.material_shrinkage}%` : '-'}</p>
+              )}
+            </div>
+            <div>
+              <span className="text-gray-500">금형 수축율</span>
+              {isDeveloper && isEditing ? (
+                <div className="flex items-center gap-1 mt-1">
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={conditionData.mold_shrinkage || moldInfo?.mold_shrinkage || ''}
+                    onChange={(e) => handleChange('mold_shrinkage', e.target.value)}
+                    className="flex-1 border rounded px-2 py-1 text-sm"
+                    placeholder="0.000"
+                  />
+                  <span className="text-gray-500">%</span>
+                </div>
+              ) : (
+                <p className="font-medium">{moldInfo?.mold_shrinkage ? `${moldInfo.mold_shrinkage}%` : '-'}</p>
+              )}
             </div>
           </div>
         </div>
