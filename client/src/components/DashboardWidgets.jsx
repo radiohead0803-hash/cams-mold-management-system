@@ -552,6 +552,194 @@ export function TransferWidget() {
 }
 
 /**
+ * 승인 대기 현황 위젯
+ */
+export function ApprovalPendingWidget() {
+  const navigate = useNavigate();
+  const [data, setData] = useState({ design: 0, sample: 0, repair: 0, transfer: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      // 여러 API에서 승인 대기 건수 조회
+      const [repairRes, transferRes, checklistRes] = await Promise.allSettled([
+        api.get('/repair-requests', { params: { status: 'pending', limit: 100 } }),
+        api.get('/transfers', { params: { status: 'pending', limit: 100 } }),
+        api.get('/pre-production-checklist', { params: { status: 'submitted', limit: 100 } })
+      ]);
+
+      const repairCount = repairRes.status === 'fulfilled' 
+        ? (repairRes.value.data.data?.items?.length || repairRes.value.data.data?.length || 0) 
+        : 0;
+      const transferCount = transferRes.status === 'fulfilled' 
+        ? (transferRes.value.data.data?.items?.length || transferRes.value.data.data?.length || 0) 
+        : 0;
+      const checklistCount = checklistRes.status === 'fulfilled' 
+        ? (checklistRes.value.data.data?.items?.length || 0) 
+        : 0;
+
+      setData({
+        design: checklistCount,
+        sample: 0, // 시료 승인은 별도 API 필요
+        repair: repairCount,
+        transfer: transferCount
+      });
+    } catch (error) {
+      console.error('Failed to load approval data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+        <div className="h-20 bg-gray-100 rounded"></div>
+      </div>
+    );
+  }
+
+  const totalPending = data.design + data.sample + data.repair + data.transfer;
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+            <ClipboardCheck size={20} className="text-indigo-600" />
+          </div>
+          <h3 className="font-semibold text-gray-900">승인 대기</h3>
+          {totalPending > 0 && (
+            <span className="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-full">
+              {totalPending}건
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => navigate('/approvals')}
+          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+        >
+          전체보기 <ArrowRight size={14} />
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3">
+        <div className="text-center p-3 bg-blue-50 rounded-lg cursor-pointer hover:bg-blue-100 transition" onClick={() => navigate('/pre-production-checklist?status=submitted')}>
+          <div className="text-2xl font-bold text-blue-600">{data.design}</div>
+          <div className="text-xs text-blue-600">설계 승인</div>
+        </div>
+        <div className="text-center p-3 bg-purple-50 rounded-lg cursor-pointer hover:bg-purple-100 transition" onClick={() => navigate('/sample-approval')}>
+          <div className="text-2xl font-bold text-purple-600">{data.sample}</div>
+          <div className="text-xs text-purple-600">시료 승인</div>
+        </div>
+        <div className="text-center p-3 bg-orange-50 rounded-lg cursor-pointer hover:bg-orange-100 transition" onClick={() => navigate('/repairs?status=pending')}>
+          <div className="text-2xl font-bold text-orange-600">{data.repair}</div>
+          <div className="text-xs text-orange-600">수리 귀책</div>
+        </div>
+        <div className="text-center p-3 bg-green-50 rounded-lg cursor-pointer hover:bg-green-100 transition" onClick={() => navigate('/transfers?status=pending')}>
+          <div className="text-2xl font-bold text-green-600">{data.transfer}</div>
+          <div className="text-xs text-green-600">이관 승인</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 금형 개발 진행 현황 위젯
+ */
+export function DevelopmentProgressWidget() {
+  const navigate = useNavigate();
+  const [data, setData] = useState({ planning: 0, design: 0, manufacturing: 0, trial: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const response = await api.get('/mold-specifications', { params: { limit: 200 } });
+      const items = response.data.data?.items || response.data.data || [];
+      
+      const counts = items.reduce((acc, item) => {
+        const status = item.development_status || item.status || '';
+        if (['planning', 'plan'].includes(status)) acc.planning++;
+        else if (['design', 'designing'].includes(status)) acc.design++;
+        else if (['manufacturing', 'making'].includes(status)) acc.manufacturing++;
+        else if (['trial', 'testing', 'sample'].includes(status)) acc.trial++;
+        return acc;
+      }, { planning: 0, design: 0, manufacturing: 0, trial: 0 });
+      
+      setData(counts);
+    } catch (error) {
+      console.error('Failed to load development data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+        <div className="h-20 bg-gray-100 rounded"></div>
+      </div>
+    );
+  }
+
+  const total = data.planning + data.design + data.manufacturing + data.trial;
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
+            <TrendingUp size={20} className="text-teal-600" />
+          </div>
+          <h3 className="font-semibold text-gray-900">개발 진행</h3>
+          {total > 0 && (
+            <span className="px-2 py-0.5 text-xs font-medium bg-teal-100 text-teal-700 rounded-full">
+              {total}건
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => navigate('/molds?filter=development')}
+          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+        >
+          전체보기 <ArrowRight size={14} />
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-4 gap-2">
+        <div className="text-center p-2 bg-gray-50 rounded-lg">
+          <div className="text-xl font-bold text-gray-600">{data.planning}</div>
+          <div className="text-[10px] text-gray-500">기획</div>
+        </div>
+        <div className="text-center p-2 bg-blue-50 rounded-lg">
+          <div className="text-xl font-bold text-blue-600">{data.design}</div>
+          <div className="text-[10px] text-blue-600">설계</div>
+        </div>
+        <div className="text-center p-2 bg-orange-50 rounded-lg">
+          <div className="text-xl font-bold text-orange-600">{data.manufacturing}</div>
+          <div className="text-[10px] text-orange-600">제작</div>
+        </div>
+        <div className="text-center p-2 bg-green-50 rounded-lg">
+          <div className="text-xl font-bold text-green-600">{data.trial}</div>
+          <div className="text-[10px] text-green-600">시험</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * 대시보드 위젯 그리드
  */
 export default function DashboardWidgets() {
@@ -564,6 +752,8 @@ export default function DashboardWidgets() {
       <TransferWidget />
       <AlertSummaryWidget />
       <InspectionDueWidget />
+      <ApprovalPendingWidget />
+      <DevelopmentProgressWidget />
     </div>
   );
 }

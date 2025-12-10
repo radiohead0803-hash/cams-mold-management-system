@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp, Eye } from 'lucide-react';
+import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
 import NaverMoldLocationMap from '../../components/NaverMoldLocationMap';
-import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget, InspectionDueWidget } from '../../components/DashboardWidgets';
+import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget, InspectionDueWidget, ApprovalPendingWidget, DevelopmentProgressWidget } from '../../components/DashboardWidgets';
 import { useDashboardKpi, useDashboardActivities } from '../../hooks/useDashboardKpi';
 import { useMoldLocations } from '../../hooks/useMoldLocations';
 
@@ -17,6 +17,8 @@ export default function SystemAdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [locationFilter, setLocationFilter] = useState('all'); // all | normal | moved
   const [moldPopup, setMoldPopup] = useState(null); // 더블클릭 시 표시할 금형 정보
+  const [showKpi, setShowKpi] = useState(true); // KPI 섹션 표시 여부
+  const [showManagement, setShowManagement] = useState(true); // 관리 현황 섹션 표시 여부
 
   // 지도에서 마커 더블클릭 시 금형 정보 팝업 열기
   const handleMoldDoubleClick = useCallback((mold) => {
@@ -104,7 +106,17 @@ export default function SystemAdminDashboard() {
       <div className="p-6 space-y-6">
         {/* 핵심 KPI 카드 - 6개 그리드 */}
         <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 핵심 지표 (KPI)</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">📊 핵심 지표 (KPI)</h2>
+            <button
+              onClick={() => setShowKpi(!showKpi)}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+            >
+              {showKpi ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {showKpi ? '숨기기' : '펼치기'}
+            </button>
+          </div>
+          {showKpi && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* 전체 금형 수 */}
             <button
@@ -184,18 +196,32 @@ export default function SystemAdminDashboard() {
               <TrendingUp className="w-10 h-10 text-blue-400" />
             </button>
           </div>
+          )}
         </section>
 
         {/* 신규 기능 위젯 섹션 */}
         <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">📋 관리 현황</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">📋 관리 현황</h2>
+            <button
+              onClick={() => setShowManagement(!showManagement)}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+            >
+              {showManagement ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {showManagement ? '숨기기' : '펼치기'}
+            </button>
+          </div>
+          {showManagement && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <PreProductionChecklistWidget />
             <MaintenanceWidget />
             <ScrappingWidget />
             <AlertSummaryWidget />
             <InspectionDueWidget />
+            {/* 추가 위젯: 승인 대기 현황 */}
+            <ApprovalPendingWidget />
           </div>
+          )}
         </section>
 
         {/* 금형 위치 현황 카드 */}
