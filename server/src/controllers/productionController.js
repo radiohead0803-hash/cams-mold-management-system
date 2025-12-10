@@ -141,24 +141,100 @@ async function updateInspectionSchedule(mold, currentShots, transaction) {
 async function checkShotsThreshold(mold, currentShots, transaction) {
   try {
     const targetShots = mold.target_shots;
-    if (!targetShots) return;
-
-    const progress = (currentShots / targetShots) * 100;
-    const thresholds = [
-      { percent: 80, message: '타수 80% 도달' },
-      { percent: 90, message: '타수 90% 도달' },
-      { percent: 95, message: '타수 95% 도달 - 점검 필요' },
-      { percent: 100, message: '목표 타수 도달' }
+    
+    // 정기점검 타수 임계값 (100K, 500K, 1M)
+    const inspectionThresholds = [
+      { shots: 100000, type: '1차 정기점검', priority: 'medium' },
+      { shots: 200000, type: '2차 정기점검', priority: 'medium' },
+      { shots: 500000, type: '3차 정기점검', priority: 'high' },
+      { shots: 800000, type: '4차 정기점검', priority: 'high' },
+      { shots: 1000000, type: '5차 정기점검 (전면)', priority: 'critical' }
     ];
+    
+    // 점검 임계값 도달 체크
+    for (const threshold of inspectionThresholds) {
+      const prevMilestone = currentShots - (mold.shots_increment || 0);
+      // 이번 생산으로 임계값을 넘었는지 확인
+      if (prevMilestone < threshold.shots && currentShots >= threshold.shots) {
+        await createInspectionAlert(mold, threshold, currentShots, transaction);
+      }
+    }
+    
+    // 목표 타수 대비 진행률 체크
+    if (targetShots) {
+      const progress = (currentShots / targetShots) * 100;
+      const progressThresholds = [
+        { percent: 80, message: '타수 80% 도달', priority: 'low' },
+        { percent: 90, message: '타수 90% 도달', priority: 'medium' },
+        { percent: 95, message: '타수 95% 도달 - 점검 필요', priority: 'high' },
+        { percent: 100, message: '목표 타수 도달', priority: 'critical' }
+      ];
 
-    for (const threshold of thresholds) {
-      if (progress >= threshold.percent && progress < threshold.percent + 5) {
-        // 알람 생성 로직 (Notification 모델 사용)
-        logger.info(`Mold ${mold.mold_code}: ${threshold.message} (${currentShots}/${targetShots})`);
+      for (const threshold of progressThresholds) {
+        const prevProgress = ((currentShots - (mold.shots_increment || 0)) / targetShots) * 100;
+        if (prevProgress < threshold.percent && progress >= threshold.percent) {
+          await createProgressAlert(mold, threshold, currentShots, targetShots, transaction);
+        }
       }
     }
   } catch (error) {
     logger.error('Check shots threshold error:', error);
+  }
+}
+
+/**
+ * 정기점검 알람 생성
+ */
+async function createInspectionAlert(mold, threshold, currentShots, transaction) {
+  try {
+    await sequelize.query(`
+      INSERT INTO alerts (
+        mold_id, alert_type, title, message, priority, status,
+        created_at, updated_at
+      ) VALUES (
+        :mold_id, 'inspection_due', :title, :message, :priority, 'active',
+        NOW(), NOW()
+      )
+    `, {
+      replacements: {
+        mold_id: mold.id,
+        title: `${threshold.type} 필요`,
+        message: `금형 ${mold.mold_code || mold.id}의 타수가 ${currentShots.toLocaleString()}회에 도달하여 ${threshold.type}이 필요합니다.`,
+        priority: threshold.priority
+      },
+      transaction
+    });
+    logger.info(`Inspection alert created: Mold ${mold.mold_code} - ${threshold.type} at ${currentShots} shots`);
+  } catch (error) {
+    logger.error('Create inspection alert error:', error);
+  }
+}
+
+/**
+ * 진행률 알람 생성
+ */
+async function createProgressAlert(mold, threshold, currentShots, targetShots, transaction) {
+  try {
+    await sequelize.query(`
+      INSERT INTO alerts (
+        mold_id, alert_type, title, message, priority, status,
+        created_at, updated_at
+      ) VALUES (
+        :mold_id, 'shots_progress', :title, :message, :priority, 'active',
+        NOW(), NOW()
+      )
+    `, {
+      replacements: {
+        mold_id: mold.id,
+        title: threshold.message,
+        message: `금형 ${mold.mold_code || mold.id}: ${threshold.message} (${currentShots.toLocaleString()}/${targetShots.toLocaleString()})`,
+        priority: threshold.priority
+      },
+      transaction
+    });
+    logger.info(`Progress alert created: Mold ${mold.mold_code} - ${threshold.message}`);
+  } catch (error) {
+    logger.error('Create progress alert error:', error);
   }
 }
 

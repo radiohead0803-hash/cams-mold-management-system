@@ -1,6 +1,38 @@
-const { Mold, ChecklistTemplate, QRSession, User } = require('../models/newIndex');
+const { Mold, ChecklistTemplate, QRSession, User, sequelize } = require('../models/newIndex');
 const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
+
+/**
+ * GPS 위치 기록 저장
+ */
+async function recordGpsLocation(moldId, userId, gps, actionType, transaction = null) {
+  if (!gps || !gps.lat || !gps.lng) return;
+  
+  try {
+    await sequelize.query(`
+      INSERT INTO gps_locations (
+        mold_id, user_id, latitude, longitude, accuracy, action_type,
+        recorded_at, created_at
+      ) VALUES (
+        :mold_id, :user_id, :latitude, :longitude, :accuracy, :action_type,
+        NOW(), NOW()
+      )
+    `, {
+      replacements: {
+        mold_id: moldId,
+        user_id: userId,
+        latitude: gps.lat,
+        longitude: gps.lng,
+        accuracy: gps.accuracy || null,
+        action_type: actionType
+      },
+      transaction
+    });
+    console.log(`[GPS] Location recorded for mold ${moldId}: ${gps.lat}, ${gps.lng}`);
+  } catch (error) {
+    console.error('[GPS] Error recording location:', error.message);
+  }
+}
 
 /**
  * QR 코드 스캔 - 금형 정보 조회
@@ -145,6 +177,11 @@ exports.qrLogin = async (req, res) => {
       gps_longitude: gps?.lng || null,
       device_info: deviceInfo || null
     });
+
+    // GPS 위치 기록 (gps_locations 테이블에 저장)
+    if (gps) {
+      await recordGpsLocation(mold.id, user?.id, gps, 'qr_login');
+    }
 
     // JWT 토큰 생성 (QR 세션용)
     const jwtToken = jwt.sign(

@@ -830,6 +830,297 @@ const updateRepairRequest = async (req, res) => {
   }
 };
 
+/**
+ * 1차 귀책 협의 (생산처 ↔ 제작처)
+ */
+const initiateFirstLiabilityNegotiation = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    const { 
+      proposed_liability_type,
+      proposed_ratio_maker,
+      proposed_ratio_plant,
+      proposal_reason,
+      proposed_by_type // 'plant' or 'maker'
+    } = req.body;
+    const userId = req.user.id;
+
+    const repairRequest = await RepairRequest.findByPk(id, {
+      include: [{ model: Mold, as: 'mold' }],
+      transaction
+    });
+    
+    if (!repairRequest) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Repair request not found' }
+      });
+    }
+
+    // 1차 협의 시작
+    await repairRequest.update({
+      liability_negotiation_status: 'first_negotiation',
+      first_proposal_type: proposed_liability_type,
+      first_proposal_ratio_maker: proposed_ratio_maker || 0,
+      first_proposal_ratio_plant: proposed_ratio_plant || 0,
+      first_proposal_reason: proposal_reason,
+      first_proposal_by: userId,
+      first_proposal_by_type: proposed_by_type,
+      first_proposal_date: new Date()
+    }, { transaction });
+
+    // 상대방에게 알림 생성
+    const targetUserType = proposed_by_type === 'plant' ? 'maker' : 'plant';
+    const targetUsers = await User.findAll({
+      where: {
+        user_type: targetUserType,
+        is_active: true,
+        ...(targetUserType === 'maker' && repairRequest.assigned_to_company_id 
+          ? { company_id: repairRequest.assigned_to_company_id } 
+          : {})
+      }
+    });
+
+    for (const targetUser of targetUsers) {
+      await Notification.create({
+        user_id: targetUser.id,
+        notification_type: 'liability_negotiation',
+        title: `귀책 협의 요청 - ${repairRequest.request_number}`,
+        message: `수리요청 ${repairRequest.request_number}에 대한 귀책 협의가 요청되었습니다.`,
+        priority: 'high',
+        related_type: 'repair_request',
+        related_id: repairRequest.id,
+        is_read: false
+      }, { transaction });
+    }
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      data: {
+        repairRequest: {
+          id: repairRequest.id,
+          liability_negotiation_status: 'first_negotiation',
+          first_proposal_date: repairRequest.first_proposal_date
+        }
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Initiate first liability negotiation error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to initiate liability negotiation' }
+    });
+  }
+};
+
+/**
+ * 1차 귀책 협의 응답 (수락/거절)
+ */
+const respondFirstLiabilityNegotiation = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    const { 
+      response, // 'accept' or 'reject'
+      counter_proposal_type,
+      counter_ratio_maker,
+      counter_ratio_plant,
+      counter_reason
+    } = req.body;
+    const userId = req.user.id;
+
+    const repairRequest = await RepairRequest.findByPk(id, { transaction });
+    
+    if (!repairRequest) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Repair request not found' }
+      });
+    }
+
+    if (response === 'accept') {
+      // 1차 협의 수락 - 귀책 확정
+      await repairRequest.update({
+        liability_negotiation_status: 'agreed',
+        liability_type: repairRequest.first_proposal_type,
+        liability_ratio_maker: repairRequest.first_proposal_ratio_maker,
+        liability_ratio_plant: repairRequest.first_proposal_ratio_plant,
+        liability_reason: repairRequest.first_proposal_reason,
+        liability_decided_by: userId,
+        liability_decided_date: new Date(),
+        first_response: 'accepted',
+        first_response_by: userId,
+        first_response_date: new Date()
+      }, { transaction });
+    } else {
+      // 1차 협의 거절 - 2차 협의로 이관
+      await repairRequest.update({
+        liability_negotiation_status: 'second_negotiation_required',
+        first_response: 'rejected',
+        first_response_by: userId,
+        first_response_date: new Date(),
+        counter_proposal_type,
+        counter_ratio_maker: counter_ratio_maker || 0,
+        counter_ratio_plant: counter_ratio_plant || 0,
+        counter_reason
+      }, { transaction });
+
+      // 본사(금형개발 담당)에게 2차 협의 요청 알림
+      const developers = await User.findAll({
+        where: {
+          user_type: 'mold_developer',
+          is_active: true
+        }
+      });
+
+      for (const developer of developers) {
+        await Notification.create({
+          user_id: developer.id,
+          notification_type: 'liability_escalation',
+          title: `2차 귀책 협의 필요 - ${repairRequest.request_number}`,
+          message: `1차 귀책 협의가 합의되지 않아 본사 개입이 필요합니다.`,
+          priority: 'critical',
+          related_type: 'repair_request',
+          related_id: repairRequest.id,
+          is_read: false
+        }, { transaction });
+      }
+    }
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      data: {
+        repairRequest: {
+          id: repairRequest.id,
+          liability_negotiation_status: repairRequest.liability_negotiation_status,
+          first_response: response === 'accept' ? 'accepted' : 'rejected'
+        }
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Respond first liability negotiation error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to respond to liability negotiation' }
+    });
+  }
+};
+
+/**
+ * 2차 귀책 협의 (본사 개입)
+ */
+const finalizeSecondLiabilityNegotiation = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    const { 
+      final_liability_type,
+      final_ratio_maker,
+      final_ratio_plant,
+      final_reason,
+      cost_allocation // { maker_cost, plant_cost, hq_cost }
+    } = req.body;
+    const userId = req.user.id;
+
+    // 본사 권한 확인
+    if (req.user.user_type !== 'mold_developer' && req.user.user_type !== 'system_admin') {
+      await transaction.rollback();
+      return res.status(403).json({
+        success: false,
+        error: { message: '2차 귀책 협의는 본사 담당자만 가능합니다.' }
+      });
+    }
+
+    const repairRequest = await RepairRequest.findByPk(id, { transaction });
+    
+    if (!repairRequest) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Repair request not found' }
+      });
+    }
+
+    // 2차 협의 확정
+    await repairRequest.update({
+      liability_negotiation_status: 'finalized',
+      liability_type: final_liability_type,
+      liability_ratio_maker: final_ratio_maker || 0,
+      liability_ratio_plant: final_ratio_plant || 0,
+      liability_reason: final_reason,
+      liability_decided_by: userId,
+      liability_decided_date: new Date(),
+      second_decision_by: userId,
+      second_decision_date: new Date(),
+      cost_allocation_maker: cost_allocation?.maker_cost || 0,
+      cost_allocation_plant: cost_allocation?.plant_cost || 0,
+      cost_allocation_hq: cost_allocation?.hq_cost || 0
+    }, { transaction });
+
+    // 관련 당사자들에게 알림
+    const notifyUserIds = [repairRequest.requester_id];
+    if (repairRequest.assigned_to_company_id) {
+      const makerUsers = await User.findAll({
+        where: { company_id: repairRequest.assigned_to_company_id, is_active: true }
+      });
+      notifyUserIds.push(...makerUsers.map(u => u.id));
+    }
+
+    for (const notifyUserId of notifyUserIds) {
+      if (notifyUserId) {
+        await Notification.create({
+          user_id: notifyUserId,
+          notification_type: 'liability_finalized',
+          title: `귀책 협의 확정 - ${repairRequest.request_number}`,
+          message: `귀책 협의가 본사에 의해 확정되었습니다. 귀책: ${final_liability_type}`,
+          priority: 'high',
+          related_type: 'repair_request',
+          related_id: repairRequest.id,
+          is_read: false
+        }, { transaction });
+      }
+    }
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      data: {
+        repairRequest: {
+          id: repairRequest.id,
+          liability_negotiation_status: 'finalized',
+          liability_type: final_liability_type,
+          liability_ratio_maker: final_ratio_maker,
+          liability_ratio_plant: final_ratio_plant,
+          cost_allocation: cost_allocation
+        }
+      }
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Finalize second liability negotiation error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to finalize liability negotiation' }
+    });
+  }
+};
+
 module.exports = {
   createRepairRequest,
   approveRepairRequest,
@@ -837,5 +1128,8 @@ module.exports = {
   assignRepairRequest,
   updateRepairProgress,
   updateBlameParty,
-  updateRepairRequest
+  updateRepairRequest,
+  initiateFirstLiabilityNegotiation,
+  respondFirstLiabilityNegotiation,
+  finalizeSecondLiabilityNegotiation
 };

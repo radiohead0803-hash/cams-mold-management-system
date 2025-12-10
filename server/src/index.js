@@ -158,7 +158,34 @@ const runRepairRequestsMigration = async () => {
     { name: 'liability_ratio_plant', type: 'INTEGER' },
     { name: 'liability_reason', type: 'TEXT' },
     { name: 'liability_decided_by', type: 'VARCHAR(100)' },
-    { name: 'liability_decided_date', type: 'DATE' }
+    { name: 'liability_decided_date', type: 'DATE' },
+    // 1차/2차 귀책 협의 워크플로우
+    { name: 'liability_negotiation_status', type: "VARCHAR(50) DEFAULT 'pending'" },
+    { name: 'first_proposal_type', type: 'VARCHAR(50)' },
+    { name: 'first_proposal_ratio_maker', type: 'INTEGER DEFAULT 0' },
+    { name: 'first_proposal_ratio_plant', type: 'INTEGER DEFAULT 0' },
+    { name: 'first_proposal_reason', type: 'TEXT' },
+    { name: 'first_proposal_by', type: 'INTEGER' },
+    { name: 'first_proposal_by_type', type: 'VARCHAR(20)' },
+    { name: 'first_proposal_date', type: 'TIMESTAMP' },
+    { name: 'first_response', type: 'VARCHAR(20)' },
+    { name: 'first_response_by', type: 'INTEGER' },
+    { name: 'first_response_date', type: 'TIMESTAMP' },
+    { name: 'counter_proposal_type', type: 'VARCHAR(50)' },
+    { name: 'counter_ratio_maker', type: 'INTEGER DEFAULT 0' },
+    { name: 'counter_ratio_plant', type: 'INTEGER DEFAULT 0' },
+    { name: 'counter_reason', type: 'TEXT' },
+    { name: 'second_decision_by', type: 'INTEGER' },
+    { name: 'second_decision_date', type: 'TIMESTAMP' },
+    { name: 'cost_allocation_maker', type: 'DECIMAL(12,0) DEFAULT 0' },
+    { name: 'cost_allocation_plant', type: 'DECIMAL(12,0) DEFAULT 0' },
+    { name: 'cost_allocation_hq', type: 'DECIMAL(12,0) DEFAULT 0' },
+    { name: 'blame_party', type: 'VARCHAR(50)' },
+    { name: 'blame_percentage', type: 'INTEGER DEFAULT 100' },
+    { name: 'blame_reason', type: 'TEXT' },
+    { name: 'blame_confirmed', type: 'BOOLEAN DEFAULT false' },
+    { name: 'blame_confirmed_by', type: 'INTEGER' },
+    { name: 'blame_confirmed_at', type: 'TIMESTAMP' }
   ];
 
   for (const col of columnsToAdd) {
@@ -475,6 +502,135 @@ const runMasterDataMigration = async () => {
   logger.info('Master data migration completed.');
 };
 
+// GPS 위치 및 알람 테이블 마이그레이션
+const runGpsAlertsMigration = async () => {
+  // gps_locations 테이블 생성
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS gps_locations (
+        id SERIAL PRIMARY KEY,
+        mold_id INTEGER REFERENCES molds(id),
+        user_id INTEGER REFERENCES users(id),
+        latitude DECIMAL(10, 8),
+        longitude DECIMAL(11, 8),
+        accuracy DECIMAL(6, 2),
+        action_type VARCHAR(50),
+        recorded_at TIMESTAMP DEFAULT NOW(),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_gps_locations_mold ON gps_locations(mold_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_gps_locations_user ON gps_locations(user_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_gps_locations_recorded ON gps_locations(recorded_at);`);
+    logger.info('gps_locations table created/verified.');
+  } catch (err) {
+    logger.warn('gps_locations table:', err.message);
+  }
+
+  // alerts 테이블 생성
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS alerts (
+        id SERIAL PRIMARY KEY,
+        mold_id INTEGER REFERENCES molds(id),
+        user_id INTEGER REFERENCES users(id),
+        alert_type VARCHAR(50) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        message TEXT,
+        priority VARCHAR(20) DEFAULT 'medium',
+        status VARCHAR(20) DEFAULT 'active',
+        read_at TIMESTAMP,
+        resolved_at TIMESTAMP,
+        resolved_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_alerts_mold ON alerts(mold_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_alerts_priority ON alerts(priority);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_alerts_type ON alerts(alert_type);`);
+    logger.info('alerts table created/verified.');
+  } catch (err) {
+    logger.warn('alerts table:', err.message);
+  }
+
+  // production_quantities 테이블 생성
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS production_quantities (
+        id SERIAL PRIMARY KEY,
+        mold_id INTEGER NOT NULL REFERENCES molds(id),
+        daily_check_id INTEGER,
+        production_date DATE NOT NULL,
+        shift VARCHAR(20),
+        quantity INTEGER NOT NULL DEFAULT 0,
+        shots_increment INTEGER DEFAULT 0,
+        cavity_count INTEGER DEFAULT 1,
+        previous_shots INTEGER DEFAULT 0,
+        current_shots INTEGER DEFAULT 0,
+        recorded_by INTEGER REFERENCES users(id),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_production_quantities_mold ON production_quantities(mold_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_production_quantities_date ON production_quantities(production_date);`);
+    logger.info('production_quantities table created/verified.');
+  } catch (err) {
+    logger.warn('production_quantities table:', err.message);
+  }
+
+  // stage_change_history 테이블 생성 (단계 변경 이력)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS stage_change_history (
+        id SERIAL PRIMARY KEY,
+        mold_id INTEGER NOT NULL REFERENCES molds(id),
+        from_stage VARCHAR(50),
+        to_stage VARCHAR(50) NOT NULL,
+        changed_by INTEGER REFERENCES users(id),
+        change_reason TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_stage_change_mold ON stage_change_history(mold_id);`);
+    logger.info('stage_change_history table created/verified.');
+  } catch (err) {
+    logger.warn('stage_change_history table:', err.message);
+  }
+
+  // plant_molds 테이블 생성 (생산처 금형 자동 연동)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS plant_molds (
+        id SERIAL PRIMARY KEY,
+        mold_id INTEGER NOT NULL REFERENCES molds(id),
+        specification_id INTEGER REFERENCES mold_specifications(id),
+        plant_id INTEGER REFERENCES users(id),
+        plant_code VARCHAR(50),
+        plant_name VARCHAR(200),
+        received_date DATE,
+        current_shots INTEGER DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'active',
+        location VARCHAR(200),
+        production_line VARCHAR(100),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_plant_molds_mold ON plant_molds(mold_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_plant_molds_plant ON plant_molds(plant_id);`);
+    logger.info('plant_molds table created/verified.');
+  } catch (err) {
+    logger.warn('plant_molds table:', err.message);
+  }
+
+  logger.info('GPS and alerts migration completed.');
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -487,6 +643,7 @@ const startServer = async () => {
     await runInjectionConditionsMigration();
     await runRawMaterialsMigration();
     await runMasterDataMigration();
+    await runGpsAlertsMigration();
     
     // Sync database (only in development)
     if (process.env.NODE_ENV === 'development') {

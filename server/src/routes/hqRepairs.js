@@ -148,4 +148,55 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/v1/hq/repairs/:id/liability/initiate
+ * 1차 귀책 협의 시작
+ */
+router.post('/:id/liability/initiate', async (req, res) => {
+  try {
+    const { initiateFirstLiabilityNegotiation } = require('../controllers/repairController');
+    return initiateFirstLiabilityNegotiation(req, res);
+  } catch (err) {
+    console.error('Initiate liability error:', err);
+    res.status(500).json({
+      success: false,
+      error: { message: '귀책 협의 시작 중 오류가 발생했습니다.' }
+    });
+  }
+});
+
+/**
+ * POST /api/v1/hq/repairs/:id/liability/respond
+ * 1차 귀책 협의 응답
+ */
+router.post('/:id/liability/respond', async (req, res) => {
+  try {
+    const { respondFirstLiabilityNegotiation } = require('../controllers/repairController');
+    return respondFirstLiabilityNegotiation(req, res);
+  } catch (err) {
+    console.error('Respond liability error:', err);
+    res.status(500).json({
+      success: false,
+      error: { message: '귀책 협의 응답 중 오류가 발생했습니다.' }
+    });
+  }
+});
+
+/**
+ * POST /api/v1/hq/repairs/:id/liability/finalize
+ * 2차 귀책 협의 확정 (본사)
+ */
+router.post('/:id/liability/finalize', async (req, res) => {
+  try {
+    const { finalizeSecondLiabilityNegotiation } = require('../controllers/repairController');
+    return finalizeSecondLiabilityNegotiation(req, res);
+  } catch (err) {
+    console.error('Finalize liability error:', err);
+    res.status(500).json({
+      success: false,
+      error: { message: '귀책 협의 확정 중 오류가 발생했습니다.' }
+    });
+  }
+});
+
 module.exports = router;
