@@ -96,6 +96,9 @@
 | 알림 목록 | /alerts | ✅ |
 | 알림 설정 | /notification-settings | ✅ |
 | 통계 리포트 | /reports | ✅ |
+| 금형 이력 | /mold-history/:id | ✅ |
+| 금형 이관 | /transfers | ✅ |
+| 이관 요청 | /transfers/new | ✅ |
 
 ### 2. 모바일 페이지
 | 페이지 | 경로 | 상태 |
@@ -118,6 +121,24 @@
 | ScrappingWidget | 금형 폐기 현황 | ✅ |
 | AlertSummaryWidget | 최근 알림 | ✅ |
 | InspectionDueWidget | 점검 예정 | ✅ |
+
+### 4. 사이드바 메뉴
+| 사용자 유형 | 메뉴 항목 |
+|-------------|-----------|
+| 시스템 관리자 | 대시보드, 금형개발, 사용자 관리, 알림, 통계 리포트, 제작전 체크리스트, 유지보전, 금형 폐기, 금형 이관 |
+| 금형개발 담당 | 대시보드, 금형개발, 사용자 관리, 알림, 통계 리포트, 제작전 체크리스트, 유지보전, 금형 폐기, 금형 이관 |
+| 제작처 | 대시보드, 담당 금형, QR 코드 관리, 수리 현황, 알림 |
+| 생산처 | 대시보드, 보유 금형, 일상점검, 정기점검, 수리 요청, 알림, 금형 이관 |
+
+### 5. 금형 상세 바로가기 (6개)
+| 버튼 | 경로 |
+|------|------|
+| 일상점검 | /checklist/daily?moldId= |
+| 정기점검 | /inspection/periodic?moldId= |
+| 유지보전 | /maintenance?moldId= |
+| 폐기요청 | /scrapping?moldId= |
+| 변경이력 | /mold-history/:id |
+| 이관관리 | /mobile/mold/:id/transfer |
 
 ---
 
