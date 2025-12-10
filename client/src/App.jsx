@@ -64,6 +64,9 @@ import MobileInspectionApproval from './pages/mobile/MobileInspectionApproval'
 import MobileRepairRequestForm from './pages/mobile/MobileRepairRequestForm'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
+import PreProductionChecklist from './pages/PreProductionChecklist'
+import ScrappingManagement from './pages/ScrappingManagement'
+import MaintenanceManagement from './pages/MaintenanceManagement'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -195,6 +198,18 @@ function App() {
         <Route path="injection-condition" element={<InjectionCondition />} />
         <Route path="inspection-approval" element={<InspectionApproval />} />
         <Route path="repair-request-form" element={<RepairRequestForm />} />
+        
+        {/* 제작전 체크리스트 */}
+        <Route path="pre-production-checklist" element={<PreProductionChecklist />} />
+        <Route path="pre-production-checklist/:id" element={<PreProductionChecklist />} />
+        
+        {/* 금형 폐기 관리 */}
+        <Route path="scrapping" element={<ScrappingManagement />} />
+        <Route path="scrapping/:id" element={<ScrappingManagement />} />
+        
+        {/* 유지보전 관리 */}
+        <Route path="maintenance" element={<MaintenanceManagement />} />
+        <Route path="maintenance/:id" element={<MaintenanceManagement />} />
       </Route>
     </Routes>
   )

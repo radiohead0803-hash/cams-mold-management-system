@@ -36,6 +36,73 @@ const NOTIFICATION_CONFIG = {
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     label: '점검 예정'
+  },
+  // 새로운 알림 타입들
+  inspection_due_shots: {
+    icon: Calendar,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    label: '타수 점검'
+  },
+  inspection_due_date: {
+    icon: Calendar,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-50',
+    label: '일자 점검'
+  },
+  pre_production_checklist_reminder: {
+    icon: AlertTriangle,
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+    label: '제작전 체크리스트'
+  },
+  pre_production_checklist_submitted: {
+    icon: Bell,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    label: '체크리스트 제출'
+  },
+  pre_production_checklist_approved: {
+    icon: Bell,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    label: '체크리스트 승인'
+  },
+  pre_production_checklist_rejected: {
+    icon: AlertTriangle,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+    label: '체크리스트 반려'
+  },
+  scrapping_requested: {
+    icon: AlertTriangle,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50',
+    label: '폐기 요청'
+  },
+  scrapping_approved: {
+    icon: Bell,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50',
+    label: '폐기 승인'
+  },
+  maintenance_due: {
+    icon: Wrench,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    label: '유지보전 예정'
+  },
+  transfer_4m_required: {
+    icon: AlertTriangle,
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-50',
+    label: '4M 체크리스트'
+  },
+  liability_negotiation: {
+    icon: AlertTriangle,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50',
+    label: '귀책 협의'
   }
 };
 

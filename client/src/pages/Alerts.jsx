@@ -64,9 +64,20 @@ export default function Alerts() {
     const labels = {
       shot_milestone: 'Shot 마일스톤',
       inspection_due: '점검 예정',
+      inspection_due_shots: '타수 점검',
+      inspection_due_date: '일자 점검',
       inspection_overdue: '점검 지연',
       transfer_request: '이관 요청',
-      issue_reported: '이슈 발생'
+      transfer_4m_required: '4M 체크리스트',
+      issue_reported: '이슈 발생',
+      pre_production_checklist_reminder: '제작전 체크리스트',
+      pre_production_checklist_submitted: '체크리스트 제출',
+      pre_production_checklist_approved: '체크리스트 승인',
+      pre_production_checklist_rejected: '체크리스트 반려',
+      scrapping_requested: '폐기 요청',
+      scrapping_approved: '폐기 승인',
+      maintenance_due: '유지보전 예정',
+      liability_negotiation: '귀책 협의'
     }
     return labels[type] || type
   }
