@@ -1,7 +1,18 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { moldSpecificationAPI } from '../lib/api'
-import { Package, Search, Filter, Edit, Image as ImageIcon, X, ArrowLeft } from 'lucide-react'
+import { Package, Search, Filter, Edit, Image as ImageIcon, X, ArrowLeft, Download } from 'lucide-react'
+
+// CSV 다운로드 유틸리티
+const downloadCSV = (data, filename) => {
+  const BOM = '\uFEFF';
+  const csv = BOM + data;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+};
 
 // KPI 필터 타입 정의
 const KPI_FILTERS = {
@@ -192,6 +203,31 @@ export default function MoldList() {
     return labels[status] || status
   }
 
+  // 엑셀(CSV) 내보내기
+  const handleExportCSV = () => {
+    const headers = ['금형코드', '품번', '품명', '차종', '상태', '제작처', '생산처', '캐비티', '톤수', '현재타수'];
+    const rows = sortedMolds.map(mold => [
+      mold.mold_code || '',
+      mold.part_number || '',
+      mold.part_name || '',
+      mold.car_model || '',
+      getStatusLabel(mold.status),
+      mold.maker || '',
+      mold.plant || '',
+      mold.cavity || '',
+      mold.tonnage || '',
+      mold.current_shots || ''
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+    
+    const today = new Date().toISOString().split('T')[0];
+    downloadCSV(csvContent, `금형목록_${today}.csv`);
+  };
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -234,6 +270,13 @@ export default function MoldList() {
             </>
           ) : (
             <>
+              <button
+                onClick={handleExportCSV}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center space-x-2"
+              >
+                <Download size={18} />
+                <span>엑셀 내보내기</span>
+              </button>
               <button
                 onClick={() => setBulkEditMode(true)}
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors flex items-center space-x-2"
