@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
 import NaverMoldLocationMap from '../../components/NaverMoldLocationMap';
-import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget, InspectionDueWidget, ApprovalPendingWidget, DevelopmentProgressWidget } from '../../components/DashboardWidgets';
+import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget, InspectionDueWidget, ApprovalPendingWidget, DevelopmentProgressWidget, RepairWidget, TransferWidget } from '../../components/DashboardWidgets';
 import { useDashboardKpi, useDashboardActivities } from '../../hooks/useDashboardKpi';
 import { useMoldLocations } from '../../hooks/useMoldLocations';
 
@@ -216,10 +216,12 @@ export default function SystemAdminDashboard() {
             <PreProductionChecklistWidget />
             <MaintenanceWidget />
             <ScrappingWidget />
+            <RepairWidget />
+            <TransferWidget />
             <AlertSummaryWidget />
             <InspectionDueWidget />
-            {/* 추가 위젯: 승인 대기 현황 */}
             <ApprovalPendingWidget />
+            <DevelopmentProgressWidget />
           </div>
           )}
         </section>
