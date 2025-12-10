@@ -70,6 +70,7 @@ import PreProductionChecklist from './pages/PreProductionChecklist'
 import ScrappingManagement from './pages/ScrappingManagement'
 import MaintenanceManagement from './pages/MaintenanceManagement'
 import NotificationSettings from './pages/NotificationSettings'
+import Reports from './pages/Reports'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -225,6 +226,10 @@ function App() {
         {/* 알림 설정 */}
         <Route path="notifications" element={<Alerts />} />
         <Route path="notification-settings" element={<NotificationSettings />} />
+        
+        {/* 통계 리포트 */}
+        <Route path="reports" element={<Reports />} />
+        <Route path="reports/:tab" element={<Reports />} />
       </Route>
     </Routes>
   )
