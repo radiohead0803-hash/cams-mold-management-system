@@ -64,6 +64,7 @@ import MobileInspectionApproval from './pages/mobile/MobileInspectionApproval'
 import MobileRepairRequestForm from './pages/mobile/MobileRepairRequestForm'
 import MobileMaintenancePage from './pages/mobile/MobileMaintenancePage'
 import MobilePreProductionChecklist from './pages/mobile/MobilePreProductionChecklist'
+import MobileScrappingPage from './pages/mobile/MobileScrappingPage'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
 import PreProductionChecklist from './pages/PreProductionChecklist'
@@ -138,6 +139,11 @@ function App() {
       {/* Mobile - 제작전 체크리스트 */}
       <Route path="/mobile/pre-production-checklist" element={<MobilePreProductionChecklist />} />
       <Route path="/mobile/pre-production-checklist/:id" element={<MobilePreProductionChecklist />} />
+      
+      {/* Mobile - 금형 폐기 */}
+      <Route path="/mobile/scrapping" element={<MobileScrappingPage />} />
+      <Route path="/mobile/scrapping/new" element={<MobileScrappingPage />} />
+      <Route path="/mobile/scrapping/:id" element={<MobileScrappingPage />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
