@@ -84,6 +84,8 @@ app.use('/api/v1/reports', require('./routes/reports'));
 app.use('/api/v1/periodic-inspection', require('./routes/periodicInspection'));
 app.use('/api/v1/production', require('./routes/production'));
 app.use('/api/v1/pre-production-checklist', require('./routes/preProductionChecklist'));
+app.use('/api/v1/scrapping', require('./routes/scrapping'));
+app.use('/api/v1/maintenance', require('./routes/maintenance'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
