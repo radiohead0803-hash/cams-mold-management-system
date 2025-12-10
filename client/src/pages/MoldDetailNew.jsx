@@ -4,7 +4,7 @@ import {
   ArrowLeft, Settings, ChevronDown, Upload, Eye, 
   CheckCircle, MapPin, TrendingUp, User, AlertTriangle,
   Thermometer, Gauge, Clock, Box, Wrench, FileText,
-  ClipboardCheck, Calendar, Activity, Camera, Shield, X
+  ClipboardCheck, Calendar, Activity, Camera, Shield, X, History
 } from 'lucide-react';
 import { moldSpecificationAPI, moldAPI, moldImageAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
@@ -79,6 +79,12 @@ export default function MoldDetailNew() {
       color: 'bg-red-400',
       hoverColor: 'hover:bg-red-500',
       items: ['폐기 요청', '폐기 현황']
+    },
+    history: { 
+      label: '변경이력', 
+      color: 'bg-gray-400',
+      hoverColor: 'hover:bg-gray-500',
+      items: ['전체 이력', '사양 변경', '상태 변경']
     }
   };
 
@@ -699,9 +705,9 @@ export default function MoldDetailNew() {
                 <ClipboardCheck className="text-green-600" size={20} />
                 <h3 className="font-semibold text-gray-800">금형점검 바로가기</h3>
               </div>
-              <div className="p-4 grid grid-cols-2 gap-3">
-                {/* 점검 버튼 (상하 배치) */}
-                <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 grid grid-cols-2 gap-4">
+                {/* 바로가기 버튼 */}
+                <div className="grid grid-cols-3 gap-2">
                   <button 
                     onClick={() => navigate(`/checklist/daily?moldId=${id}`)}
                     className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl hover:shadow-md transition-shadow text-center"
@@ -729,6 +735,20 @@ export default function MoldDetailNew() {
                   >
                     <AlertTriangle className="mx-auto mb-1 text-red-600" size={20} />
                     <span className="text-xs font-medium text-gray-700">폐기요청</span>
+                  </button>
+                  <button 
+                    onClick={() => navigate(`/mold-history/${id}`)}
+                    className="p-3 bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl hover:shadow-md transition-shadow text-center"
+                  >
+                    <History className="mx-auto mb-1 text-gray-600" size={20} />
+                    <span className="text-xs font-medium text-gray-700">변경이력</span>
+                  </button>
+                  <button 
+                    onClick={() => navigate(`/mobile/mold/${id}/transfer`)}
+                    className="p-3 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl hover:shadow-md transition-shadow text-center"
+                  >
+                    <MapPin className="mx-auto mb-1 text-purple-600" size={20} />
+                    <span className="text-xs font-medium text-gray-700">이관관리</span>
                   </button>
                 </div>
                 {/* QR 코드 - 스캔 시 모바일 페이지로 이동 */}
