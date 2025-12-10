@@ -1,12 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2, Trash2, Cog, FileCheck } from 'lucide-react'
+import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2, Trash2, Cog, FileCheck, Keyboard } from 'lucide-react'
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const [showShortcuts, setShowShortcuts] = useState(false)
+
+  // 키보드 단축키
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl/Cmd + 키 조합
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 'h':
+            e.preventDefault()
+            navigate('/')
+            break
+          case 'm':
+            e.preventDefault()
+            navigate('/molds')
+            break
+          case 'r':
+            e.preventDefault()
+            navigate('/reports')
+            break
+          case 'k':
+            e.preventDefault()
+            setShowShortcuts(prev => !prev)
+            break
+        }
+      }
+      // ESC로 단축키 도움말 닫기
+      if (e.key === 'Escape') {
+        setShowShortcuts(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [navigate])
 
   const handleLogout = () => {
     logout()
@@ -506,6 +541,45 @@ export default function Layout() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />
       </main>
+
+      {/* 키보드 단축키 도움말 모달 */}
+      {showShortcuts && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowShortcuts(false)}>
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Keyboard size={20} className="text-blue-600" />
+                키보드 단축키
+              </h3>
+              <button onClick={() => setShowShortcuts(false)} className="text-gray-400 hover:text-gray-600">
+                ✕
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">대시보드</span>
+                <kbd className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">Ctrl + H</kbd>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">금형 목록</span>
+                <kbd className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">Ctrl + M</kbd>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">리포트</span>
+                <kbd className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">Ctrl + R</kbd>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-gray-600">단축키 도움말</span>
+                <kbd className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">Ctrl + K</kbd>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-gray-600">닫기</span>
+                <kbd className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">ESC</kbd>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
