@@ -758,17 +758,20 @@ export default function MobileInjectionCondition() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {!isEditing && canEdit && (
+              {isEditing ? (
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium"
+                >
+                  취소
+                </button>
+              ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="p-2 bg-blue-50 text-blue-600 rounded-lg"
+                  className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium flex items-center gap-1"
                 >
-                  <Edit3 size={20} />
-                </button>
-              )}
-              {condition && (
-                <button className="p-2 bg-gray-100 text-gray-600 rounded-lg">
-                  <History size={20} />
+                  <Edit3 size={16} />
+                  {condition ? '수정' : '작성'}
                 </button>
               )}
             </div>
@@ -982,8 +985,68 @@ export default function MobileInjectionCondition() {
           </div>
         )}
 
+        {/* 작성/수정/승인 정보 */}
+        {condition && (
+          <div className="bg-white rounded-xl p-4 shadow-sm">
+            <h3 className="font-semibold text-gray-800 mb-3">작성/승인 정보</h3>
+            <div className="space-y-3 text-sm">
+              {/* 작성 정보 */}
+              <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Edit3 size={16} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-blue-800">작성</p>
+                  <p className="text-blue-600">{condition.created_by_name || '-'}</p>
+                  <p className="text-xs text-blue-500">{condition.created_at ? new Date(condition.created_at).toLocaleString('ko-KR') : '-'}</p>
+                </div>
+              </div>
+              
+              {/* 수정 정보 */}
+              {condition.updated_at && condition.updated_at !== condition.created_at && (
+                <div className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg">
+                  <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Edit3 size={16} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-amber-800">최종 수정</p>
+                    <p className="text-amber-600">{condition.updated_by_name || '-'}</p>
+                    <p className="text-xs text-amber-500">{new Date(condition.updated_at).toLocaleString('ko-KR')}</p>
+                    {condition.change_reason && (
+                      <p className="text-xs text-amber-600 mt-1">사유: {condition.change_reason}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* 승인/반려 정보 */}
+              {(condition.status === 'approved' || condition.status === 'rejected') && (
+                <div className={`flex items-start gap-3 p-3 rounded-lg ${condition.status === 'approved' ? 'bg-green-50' : 'bg-red-50'}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${condition.status === 'approved' ? 'bg-green-500' : 'bg-red-500'}`}>
+                    {condition.status === 'approved' ? <CheckCircle size={16} className="text-white" /> : <AlertCircle size={16} className="text-white" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className={`font-medium ${condition.status === 'approved' ? 'text-green-800' : 'text-red-800'}`}>
+                      {condition.status === 'approved' ? '승인' : '반려'}
+                    </p>
+                    <p className={condition.status === 'approved' ? 'text-green-600' : 'text-red-600'}>
+                      {condition.approved_by_name || '-'}
+                    </p>
+                    <p className={`text-xs ${condition.status === 'approved' ? 'text-green-500' : 'text-red-500'}`}>
+                      {condition.approved_at ? new Date(condition.approved_at).toLocaleString('ko-KR') : '-'}
+                    </p>
+                    {condition.rejection_reason && (
+                      <p className="text-xs text-red-600 mt-1">사유: {condition.rejection_reason}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 개발담당자 승인 버튼 */}
-        {isDeveloper && condition?.status === 'pending' && (
+        {isDeveloper && condition?.status === 'pending' && !isEditing && (
           <div className="flex gap-3">
             <button
               onClick={() => handleApprove('reject')}
@@ -1003,16 +1066,16 @@ export default function MobileInjectionCondition() {
         )}
       </div>
 
-      {/* 하단 저장 버튼 */}
+      {/* 하단 저장/제출 버튼 */}
       {isEditing && !activeCategory && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 space-y-2">
           <button
             onClick={handleSave}
             disabled={saving}
             className="w-full bg-blue-500 text-white py-3 rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"
           >
             <Save size={20} />
-            {saving ? '저장 중...' : '저장하기'}
+            {saving ? '저장 중...' : (condition ? '수정 완료' : '작성 완료')}
           </button>
         </div>
       )}
