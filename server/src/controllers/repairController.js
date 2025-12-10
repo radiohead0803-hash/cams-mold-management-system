@@ -73,8 +73,14 @@ const createRepairRequest = async (req, res) => {
       });
     }
 
-    // 2. 금형 조회
-    const mold = await Mold.findByPk(mold_id, { transaction });
+    // 2. 금형 조회 (연관 정보 포함)
+    const mold = await Mold.findByPk(mold_id, { 
+      transaction,
+      include: [
+        { model: User, as: 'maker', attributes: ['id', 'name', 'company_name'] },
+        { model: User, as: 'plant', attributes: ['id', 'name', 'company_name'] }
+      ]
+    });
     
     if (!mold) {
       await transaction.rollback();
@@ -84,8 +90,25 @@ const createRepairRequest = async (req, res) => {
       });
     }
 
+    // 2-1. 금형사양 조회 (mold_spec_id가 있는 경우)
+    let moldSpec = null;
+    if (mold_spec_id) {
+      const MoldSpecification = require('../models/newIndex').MoldSpecification;
+      moldSpec = await MoldSpecification.findByPk(mold_spec_id, { transaction });
+    }
+
     // 3. 요청자 정보 조회
     const requester = await User.findByPk(userId);
+    
+    // 4. 금형정보에서 자동 연동 데이터 추출
+    const autoLinkedData = {
+      car_model: car_model || moldSpec?.car_model || mold.car_model || null,
+      part_number: part_number || moldSpec?.part_number || null,
+      part_name: part_name || moldSpec?.part_name || mold.part_name || null,
+      maker: maker || mold.maker?.company_name || null,
+      production_site: production_site || mold.plant?.company_name || null,
+      production_shot: production_shot || mold.current_shots || null
+    };
 
     // 4. 수리요청 번호 생성 (RR-YYYYMMDD-XXX)
     const today = new Date();
@@ -117,7 +140,7 @@ const createRepairRequest = async (req, res) => {
       estimated_cost: estimated_cost || null,
       status: 'requested',
       requested_at: new Date(),
-      // 새로운 협력사 작성항목
+      // 새로운 협력사 작성항목 (금형정보 자동 연동 포함)
       problem: problem || null,
       cause_and_reason: cause_and_reason || null,
       priority: priority || '보통',
@@ -125,15 +148,17 @@ const createRepairRequest = async (req, res) => {
       occurred_date: occurred_date || null,
       manager_name: manager_name || null,
       requester_name: requester_name || requester?.name || null,
-      car_model: car_model || null,
-      part_number: part_number || null,
-      part_name: part_name || null,
+      // 금형정보 자동 연동 필드
+      car_model: autoLinkedData.car_model,
+      part_number: autoLinkedData.part_number,
+      part_name: autoLinkedData.part_name,
+      maker: autoLinkedData.maker,
+      production_site: autoLinkedData.production_site,
+      production_shot: autoLinkedData.production_shot,
+      // 사용자 입력 필드
       occurrence_type: occurrence_type || '신규',
-      production_site: production_site || null,
       production_manager: production_manager || null,
       contact: contact || null,
-      production_shot: production_shot || null,
-      maker: maker || null,
       operation_type: operation_type || '양산',
       problem_type: problem_type || null,
       repair_cost: repair_cost || null,

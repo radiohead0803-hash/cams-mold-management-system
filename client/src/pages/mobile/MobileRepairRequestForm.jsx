@@ -33,17 +33,17 @@ export default function MobileRepairRequestForm() {
     problem_source: '',
     images: [],
     
-    // 금형/제품 정보
+    // 금형/제품 정보 (금형정보에서 자동 연동)
     requester_name: user?.name || '',
-    car_model: moldInfo?.car_model || '',
-    part_number: moldInfo?.part_number || '',
-    part_name: moldInfo?.part_name || '',
+    car_model: moldInfo?.car_model || '',           // 자동연동: mold_specifications.car_model
+    part_number: moldInfo?.part_number || '',       // 자동연동: mold_specifications.part_number
+    part_name: moldInfo?.part_name || '',           // 자동연동: mold_specifications.part_name
     occurrence_type: '신규',
-    production_site: '',
+    production_site: moldInfo?.plant_name || '',    // 자동연동: 생산처 (plant)
     production_manager: '',
     contact: '',
-    production_shot: '',
-    maker: '',
+    production_shot: moldInfo?.current_shots || '', // 자동연동: 현재 생산수량
+    maker: moldInfo?.maker_name || '',              // 자동연동: 제작처 (maker)
     operation_type: '양산',
     problem_type: '',
     
@@ -68,8 +68,32 @@ export default function MobileRepairRequestForm() {
   useEffect(() => {
     if (id) {
       loadRepairRequest();
+    } else if (moldInfo?.id) {
+      // 신규 등록 시 금형정보에서 자동 연동
+      loadMoldInfoForAutoLink(moldInfo.id);
     }
-  }, [id]);
+  }, [id, moldInfo?.id]);
+
+  // 금형정보 자동 연동
+  const loadMoldInfoForAutoLink = async (moldSpecId) => {
+    try {
+      const response = await api.get(`/mold-specifications/${moldSpecId}`);
+      if (response.data?.data) {
+        const spec = response.data.data;
+        setFormData(prev => ({
+          ...prev,
+          car_model: spec.car_model || prev.car_model,
+          part_number: spec.part_number || prev.part_number,
+          part_name: spec.part_name || prev.part_name,
+          maker: spec.makerCompany?.company_name || prev.maker,
+          production_site: spec.plantCompany?.company_name || prev.production_site,
+          production_shot: spec.mold?.current_shots || prev.production_shot
+        }));
+      }
+    } catch (error) {
+      console.error('Load mold info error:', error);
+    }
+  };
 
   const loadRepairRequest = async () => {
     try {
@@ -289,10 +313,20 @@ export default function MobileRepairRequestForm() {
               />
             </div>
 
-            {/* 대상차종 & 품번 */}
+            {/* 자동연동 안내 */}
+            {moldInfo?.id && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                <span className="font-medium">📋 금형정보 자동연동</span>
+                <p className="text-xs mt-1">차종, 품번, 품명, 제작처, 생산처, 생산수량이 금형정보에서 자동으로 가져왔습니다.</p>
+              </div>
+            )}
+
+            {/* 대상차종 & 품번 (자동연동) */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">대상차종 *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  대상차종 * {moldInfo?.id && <span className="text-blue-500 text-xs">(자동연동)</span>}
+                </label>
                 <input
                   type="text"
                   value={formData.car_model}
@@ -303,7 +337,9 @@ export default function MobileRepairRequestForm() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">품번 *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  품번 * {moldInfo?.id && <span className="text-blue-500 text-xs">(자동연동)</span>}
+                </label>
                 <input
                   type="text"
                   value={formData.part_number}
@@ -315,9 +351,11 @@ export default function MobileRepairRequestForm() {
               </div>
             </div>
 
-            {/* 품명 */}
+            {/* 품명 (자동연동) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">품명 *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                품명 * {moldInfo?.id && <span className="text-blue-500 text-xs">(자동연동)</span>}
+              </label>
               <input
                 type="text"
                 value={formData.part_name}
@@ -349,7 +387,9 @@ export default function MobileRepairRequestForm() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">생산처 *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  생산처 * {moldInfo?.id && <span className="text-blue-500 text-xs">(자동연동)</span>}
+                </label>
                 <input
                   type="text"
                   value={formData.production_site}
@@ -389,9 +429,11 @@ export default function MobileRepairRequestForm() {
               </div>
             </div>
 
-            {/* 생산수량(SHOT) */}
+            {/* 생산수량(SHOT) (자동연동) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">생산수량(SHOT) *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                생산수량(SHOT) * {moldInfo?.id && <span className="text-blue-500 text-xs">(자동연동)</span>}
+              </label>
               <div className="flex items-center gap-2">
                 <input
                   type="number"
@@ -405,11 +447,11 @@ export default function MobileRepairRequestForm() {
               </div>
             </div>
 
-            {/* 제작처 & 운영구분 */}
+            {/* 제작처 & 운영구분 (자동연동) */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  <Building size={14} className="inline mr-1" />제작처
+                  <Building size={14} className="inline mr-1" />제작처 {moldInfo?.id && <span className="text-blue-500 text-xs">(자동연동)</span>}
                 </label>
                 <input
                   type="text"
