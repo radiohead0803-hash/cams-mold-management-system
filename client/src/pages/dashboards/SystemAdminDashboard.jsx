@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp, Eye, ChevronDown, ChevronUp, Maximize2 } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
 import NaverMoldLocationMap from '../../components/NaverMoldLocationMap';
 import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget, InspectionDueWidget, ApprovalPendingWidget, DevelopmentProgressWidget, RepairWidget, TransferWidget } from '../../components/DashboardWidgets';
@@ -228,7 +228,17 @@ export default function SystemAdminDashboard() {
 
         {/* 금형 위치 현황 카드 */}
         <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">📍 금형 위치 현황</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">📍 금형 위치 현황</h2>
+            <button
+              onClick={() => navigate('/mold-location-map')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition"
+              title="전체화면 지도 보기"
+            >
+              <Maximize2 className="w-4 h-4" />
+              전체화면
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <button
               type="button"

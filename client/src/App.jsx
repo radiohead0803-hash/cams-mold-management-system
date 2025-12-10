@@ -75,6 +75,7 @@ import NotificationSettings from './pages/NotificationSettings'
 import Reports from './pages/Reports'
 import MoldHistory from './pages/MoldHistory'
 import QRSessionsPage from './pages/QRSessionsPage'
+import MoldLocationMapPage from './pages/MoldLocationMapPage'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -250,6 +251,9 @@ function App() {
         
         {/* QR 세션 */}
         <Route path="qr-sessions" element={<QRSessionsPage />} />
+        
+        {/* 금형 위치 지도 (전체화면) */}
+        <Route path="mold-location-map" element={<MoldLocationMapPage />} />
       </Route>
     </Routes>
   )
