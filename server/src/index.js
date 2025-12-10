@@ -267,13 +267,16 @@ const runRawMaterialsMigration = async () => {
     await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_raw_materials_category ON raw_materials(category);`);
     await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_raw_materials_is_active ON raw_materials(is_active);`);
   } catch (err) {
-    // 기존 빈 데이터 삭제 후 MS SPEC 기준 원재료 기본 데이터 삽입
-    try {
-      // 빈 데이터(material_grade가 null인 데이터) 삭제
-      await db.sequelize.query(`DELETE FROM raw_materials WHERE material_grade IS NULL OR material_grade = ''`);
-      
-      const [existing] = await db.sequelize.query(`SELECT COUNT(*) as count FROM raw_materials WHERE material_grade IS NOT NULL`);
-      if (parseInt(existing[0].count) < 10) {
+    // 무시
+  }
+  
+  // 기존 빈 데이터 삭제 후 MS SPEC 기준 원재료 기본 데이터 삽입
+  try {
+    // 빈 데이터(material_grade가 null인 데이터) 삭제
+    await db.sequelize.query(`DELETE FROM raw_materials WHERE material_grade IS NULL OR material_grade = ''`);
+    
+    const [existing] = await db.sequelize.query(`SELECT COUNT(*) as count FROM raw_materials WHERE material_grade IS NOT NULL`);
+    if (parseInt(existing[0].count) < 10) {
         // 기존 데이터 모두 삭제 후 새로 삽입
         await db.sequelize.query(`DELETE FROM raw_materials`);
         const rawMaterialsData = [
@@ -331,13 +334,145 @@ const runRawMaterialsMigration = async () => {
           });
         }
         logger.info('MS SPEC raw materials data inserted: ' + rawMaterialsData.length + ' items');
-      }
-    } catch (err) {
-      logger.warn('Raw materials seed data:', err.message);
     }
+  } catch (err) {
+    logger.warn('Raw materials seed data:', err.message);
   }
 
   logger.info('raw_materials migration completed.');
+};
+
+// 기초정보 테이블 시드 데이터 마이그레이션
+const runMasterDataMigration = async () => {
+  // 차종 기본 데이터
+  try {
+    const [carModels] = await db.sequelize.query(`SELECT COUNT(*) as count FROM car_models`);
+    if (parseInt(carModels[0].count) === 0) {
+      const carModelData = [
+        { model_name: 'GV70', model_code: 'JK1', description: '제네시스 GV70', sort_order: 1 },
+        { model_name: 'GV80', model_code: 'JX1', description: '제네시스 GV80', sort_order: 2 },
+        { model_name: 'G80', model_code: 'RG3', description: '제네시스 G80', sort_order: 3 },
+        { model_name: 'G90', model_code: 'RS4', description: '제네시스 G90', sort_order: 4 },
+        { model_name: '아반떼', model_code: 'CN7', description: '현대 아반떼', sort_order: 5 },
+        { model_name: '쏘나타', model_code: 'DN8', description: '현대 쏘나타', sort_order: 6 },
+        { model_name: '그랜저', model_code: 'GN7', description: '현대 그랜저', sort_order: 7 },
+        { model_name: '투싼', model_code: 'NX4', description: '현대 투싼', sort_order: 8 },
+        { model_name: '싼타페', model_code: 'MX5', description: '현대 싼타페', sort_order: 9 },
+        { model_name: '팰리세이드', model_code: 'LX2', description: '현대 팰리세이드', sort_order: 10 },
+        { model_name: 'K5', model_code: 'DL3', description: '기아 K5', sort_order: 11 },
+        { model_name: 'K8', model_code: 'GL3', description: '기아 K8', sort_order: 12 },
+        { model_name: 'K9', model_code: 'RJ', description: '기아 K9', sort_order: 13 },
+        { model_name: '스포티지', model_code: 'NQ5', description: '기아 스포티지', sort_order: 14 },
+        { model_name: '쏘렌토', model_code: 'MQ4', description: '기아 쏘렌토', sort_order: 15 },
+        { model_name: '카니발', model_code: 'KA4', description: '기아 카니발', sort_order: 16 },
+        { model_name: 'EV6', model_code: 'CV', description: '기아 EV6', sort_order: 17 },
+        { model_name: 'EV9', model_code: 'MV', description: '기아 EV9', sort_order: 18 },
+        { model_name: '아이오닉5', model_code: 'NE', description: '현대 아이오닉5', sort_order: 19 },
+        { model_name: '아이오닉6', model_code: 'CE', description: '현대 아이오닉6', sort_order: 20 }
+      ];
+      for (const c of carModelData) {
+        await db.sequelize.query(`INSERT INTO car_models (model_name, model_code, description, sort_order, is_active, created_at, updated_at) VALUES (:model_name, :model_code, :description, :sort_order, true, NOW(), NOW())`, { replacements: c });
+      }
+      logger.info('Car models seed data inserted: ' + carModelData.length + ' items');
+    }
+  } catch (err) {
+    logger.warn('Car models seed:', err.message);
+  }
+
+  // 재질 기본 데이터
+  try {
+    const [materials] = await db.sequelize.query(`SELECT COUNT(*) as count FROM materials`);
+    if (parseInt(materials[0].count) === 0) {
+      const materialData = [
+        { material_name: 'ABS', description: 'Acrylonitrile Butadiene Styrene', sort_order: 1 },
+        { material_name: 'ABS+PC', description: 'ABS + Polycarbonate Blend', sort_order: 2 },
+        { material_name: 'PP', description: 'Polypropylene', sort_order: 3 },
+        { material_name: 'PP-TD20', description: 'Polypropylene + Talc 20%', sort_order: 4 },
+        { material_name: 'PP-GF30', description: 'Polypropylene + Glass Fiber 30%', sort_order: 5 },
+        { material_name: 'PC', description: 'Polycarbonate', sort_order: 6 },
+        { material_name: 'PA6', description: 'Polyamide 6 (Nylon 6)', sort_order: 7 },
+        { material_name: 'PA6-GF30', description: 'Polyamide 6 + Glass Fiber 30%', sort_order: 8 },
+        { material_name: 'PA66', description: 'Polyamide 66 (Nylon 66)', sort_order: 9 },
+        { material_name: 'PA66-GF30', description: 'Polyamide 66 + Glass Fiber 30%', sort_order: 10 },
+        { material_name: 'POM', description: 'Polyoxymethylene (Acetal)', sort_order: 11 },
+        { material_name: 'PBT', description: 'Polybutylene Terephthalate', sort_order: 12 },
+        { material_name: 'PBT-GF30', description: 'PBT + Glass Fiber 30%', sort_order: 13 },
+        { material_name: 'PMMA', description: 'Polymethyl Methacrylate (Acrylic)', sort_order: 14 },
+        { material_name: 'TPO', description: 'Thermoplastic Polyolefin', sort_order: 15 },
+        { material_name: 'TPE', description: 'Thermoplastic Elastomer', sort_order: 16 },
+        { material_name: 'ASA', description: 'Acrylonitrile Styrene Acrylate', sort_order: 17 },
+        { material_name: 'ASA+PC', description: 'ASA + Polycarbonate Blend', sort_order: 18 },
+        { material_name: 'PPS-GF40', description: 'Polyphenylene Sulfide + GF 40%', sort_order: 19 },
+        { material_name: 'PEEK', description: 'Polyether Ether Ketone', sort_order: 20 }
+      ];
+      for (const m of materialData) {
+        await db.sequelize.query(`INSERT INTO materials (material_name, description, sort_order, is_active, created_at, updated_at) VALUES (:material_name, :description, :sort_order, true, NOW(), NOW())`, { replacements: m });
+      }
+      logger.info('Materials seed data inserted: ' + materialData.length + ' items');
+    }
+  } catch (err) {
+    logger.warn('Materials seed:', err.message);
+  }
+
+  // 금형타입 기본 데이터
+  try {
+    const [moldTypes] = await db.sequelize.query(`SELECT COUNT(*) as count FROM mold_types`);
+    if (parseInt(moldTypes[0].count) === 0) {
+      const moldTypeData = [
+        { type_name: '2단금형', description: '2 Plate Mold', sort_order: 1 },
+        { type_name: '3단금형', description: '3 Plate Mold', sort_order: 2 },
+        { type_name: '핫런너', description: 'Hot Runner Mold', sort_order: 3 },
+        { type_name: '콜드런너', description: 'Cold Runner Mold', sort_order: 4 },
+        { type_name: '슬라이드', description: 'Slide Core Mold', sort_order: 5 },
+        { type_name: '언더컷', description: 'Undercut Mold', sort_order: 6 },
+        { type_name: '스택', description: 'Stack Mold', sort_order: 7 },
+        { type_name: '인서트', description: 'Insert Mold', sort_order: 8 },
+        { type_name: '오버몰드', description: 'Overmold', sort_order: 9 },
+        { type_name: '가스사출', description: 'Gas Injection Mold', sort_order: 10 }
+      ];
+      for (const t of moldTypeData) {
+        await db.sequelize.query(`INSERT INTO mold_types (type_name, description, sort_order, is_active, created_at, updated_at) VALUES (:type_name, :description, :sort_order, true, NOW(), NOW())`, { replacements: t });
+      }
+      logger.info('Mold types seed data inserted: ' + moldTypeData.length + ' items');
+    }
+  } catch (err) {
+    logger.warn('Mold types seed:', err.message);
+  }
+
+  // 톤수 기본 데이터
+  try {
+    const [tonnages] = await db.sequelize.query(`SELECT COUNT(*) as count FROM tonnages`);
+    if (parseInt(tonnages[0].count) === 0) {
+      const tonnageData = [
+        { tonnage_value: 80, description: '80톤 사출기', sort_order: 1 },
+        { tonnage_value: 120, description: '120톤 사출기', sort_order: 2 },
+        { tonnage_value: 150, description: '150톤 사출기', sort_order: 3 },
+        { tonnage_value: 180, description: '180톤 사출기', sort_order: 4 },
+        { tonnage_value: 220, description: '220톤 사출기', sort_order: 5 },
+        { tonnage_value: 280, description: '280톤 사출기', sort_order: 6 },
+        { tonnage_value: 350, description: '350톤 사출기', sort_order: 7 },
+        { tonnage_value: 450, description: '450톤 사출기', sort_order: 8 },
+        { tonnage_value: 550, description: '550톤 사출기', sort_order: 9 },
+        { tonnage_value: 650, description: '650톤 사출기', sort_order: 10 },
+        { tonnage_value: 850, description: '850톤 사출기', sort_order: 11 },
+        { tonnage_value: 1000, description: '1000톤 사출기', sort_order: 12 },
+        { tonnage_value: 1300, description: '1300톤 사출기', sort_order: 13 },
+        { tonnage_value: 1600, description: '1600톤 사출기', sort_order: 14 },
+        { tonnage_value: 2000, description: '2000톤 사출기', sort_order: 15 },
+        { tonnage_value: 2500, description: '2500톤 사출기', sort_order: 16 },
+        { tonnage_value: 3000, description: '3000톤 사출기', sort_order: 17 },
+        { tonnage_value: 3500, description: '3500톤 사출기', sort_order: 18 }
+      ];
+      for (const t of tonnageData) {
+        await db.sequelize.query(`INSERT INTO tonnages (tonnage_value, description, sort_order, is_active, created_at, updated_at) VALUES (:tonnage_value, :description, :sort_order, true, NOW(), NOW())`, { replacements: t });
+      }
+      logger.info('Tonnages seed data inserted: ' + tonnageData.length + ' items');
+    }
+  } catch (err) {
+    logger.warn('Tonnages seed:', err.message);
+  }
+
+  logger.info('Master data migration completed.');
 };
 
 // Database connection and server start
@@ -351,6 +486,7 @@ const startServer = async () => {
     await runRepairRequestsMigration();
     await runInjectionConditionsMigration();
     await runRawMaterialsMigration();
+    await runMasterDataMigration();
     
     // Sync database (only in development)
     if (process.env.NODE_ENV === 'development') {
