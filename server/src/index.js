@@ -83,6 +83,7 @@ app.use('/api/v1/alerts', require('./routes/alerts'));
 app.use('/api/v1/reports', require('./routes/reports'));
 app.use('/api/v1/periodic-inspection', require('./routes/periodicInspection'));
 app.use('/api/v1/production', require('./routes/production'));
+app.use('/api/v1/pre-production-checklist', require('./routes/preProductionChecklist'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -1058,6 +1059,256 @@ const runTransfer4MMigration = async () => {
   logger.info('Transfer 4M and maintenance migration completed.');
 };
 
+// 제작전 체크리스트 마이그레이션 (81개 항목, 9개 카테고리)
+const runPreProductionChecklistMigration = async () => {
+  // pre_production_checklists 테이블 생성
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS pre_production_checklists (
+        id SERIAL PRIMARY KEY,
+        checklist_number VARCHAR(50) UNIQUE,
+        mold_specification_id INTEGER REFERENCES mold_specifications(id),
+        maker_id INTEGER REFERENCES users(id),
+        
+        -- 기본 정보 (자동 연계)
+        car_model VARCHAR(100),
+        part_number VARCHAR(100),
+        part_name VARCHAR(200),
+        production_plant VARCHAR(200),
+        maker_name VARCHAR(200),
+        injection_machine_tonnage VARCHAR(50),
+        clamping_force VARCHAR(50),
+        eo_cut_date DATE,
+        trial_order_date DATE,
+        
+        -- 부품 이미지
+        part_images JSONB DEFAULT '[]'::jsonb,
+        
+        -- 상태
+        status VARCHAR(30) DEFAULT 'draft',
+        progress_rate INTEGER DEFAULT 0,
+        total_items INTEGER DEFAULT 81,
+        checked_items INTEGER DEFAULT 0,
+        rejected_items INTEGER DEFAULT 0,
+        
+        -- 작성/승인 정보
+        created_by INTEGER REFERENCES users(id),
+        submitted_at TIMESTAMP,
+        reviewed_by INTEGER REFERENCES users(id),
+        reviewed_at TIMESTAMP,
+        review_notes TEXT,
+        approved_by INTEGER REFERENCES users(id),
+        approved_at TIMESTAMP,
+        rejected_by INTEGER REFERENCES users(id),
+        rejected_at TIMESTAMP,
+        rejection_reason TEXT,
+        
+        -- 도면검토회 연동
+        drawing_review_date DATE,
+        
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_preproduction_mold_spec ON pre_production_checklists(mold_specification_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_preproduction_status ON pre_production_checklists(status);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_preproduction_maker ON pre_production_checklists(maker_id);`);
+    logger.info('pre_production_checklists table created/verified.');
+  } catch (err) {
+    logger.warn('pre_production_checklists table:', err.message);
+  }
+
+  // pre_production_checklist_items 테이블 생성 (마스터 항목)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS pre_production_checklist_items (
+        id SERIAL PRIMARY KEY,
+        category_code VARCHAR(20) NOT NULL,
+        category_name VARCHAR(100) NOT NULL,
+        item_no INTEGER NOT NULL,
+        item_name VARCHAR(200) NOT NULL,
+        item_description TEXT,
+        input_type VARCHAR(30) DEFAULT 'checkbox',
+        input_options JSONB,
+        default_spec VARCHAR(200),
+        is_required BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_preproduction_items_category ON pre_production_checklist_items(category_code);`);
+    logger.info('pre_production_checklist_items table created/verified.');
+  } catch (err) {
+    logger.warn('pre_production_checklist_items table:', err.message);
+  }
+
+  // pre_production_checklist_results 테이블 생성 (점검 결과)
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS pre_production_checklist_results (
+        id SERIAL PRIMARY KEY,
+        checklist_id INTEGER NOT NULL REFERENCES pre_production_checklists(id),
+        item_id INTEGER NOT NULL REFERENCES pre_production_checklist_items(id),
+        is_applicable BOOLEAN DEFAULT true,
+        spec_value VARCHAR(500),
+        is_checked BOOLEAN DEFAULT false,
+        result_value VARCHAR(500),
+        notes TEXT,
+        attachments JSONB DEFAULT '[]'::jsonb,
+        checked_by INTEGER REFERENCES users(id),
+        checked_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_preproduction_results_checklist ON pre_production_checklist_results(checklist_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_preproduction_results_item ON pre_production_checklist_results(item_id);`);
+    logger.info('pre_production_checklist_results table created/verified.');
+  } catch (err) {
+    logger.warn('pre_production_checklist_results table:', err.message);
+  }
+
+  // 제작전 체크리스트 81개 항목 시드 데이터
+  try {
+    const [existing] = await db.sequelize.query(`SELECT COUNT(*) as count FROM pre_production_checklist_items`);
+    if (parseInt(existing[0].count) === 0) {
+      const items = [
+        // I. 원재료 (Material) - 3개
+        { category_code: 'I', category_name: '원재료 (Material)', item_no: 1, item_name: '수축률', input_type: 'text', default_spec: '6/1000', sort_order: 1 },
+        { category_code: 'I', category_name: '원재료 (Material)', item_no: 2, item_name: '소재 (MS SPEC)', input_type: 'text', default_spec: '', sort_order: 2 },
+        { category_code: 'I', category_name: '원재료 (Material)', item_no: 3, item_name: '공급 업체', input_type: 'text', default_spec: '', sort_order: 3 },
+        
+        // II. 금형 (Mold) - 34개
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 1, item_name: '금형 번호 윤반·본형 아이템 사양 입지', input_type: 'select', input_options: JSON.stringify(['확인', '미확인']), sort_order: 4 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 2, item_name: '양산시 조건 제약 사양 반영', input_type: 'select', input_options: JSON.stringify(['무', '부']), sort_order: 5 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 3, item_name: '수축률', input_type: 'text', default_spec: '6/1000', sort_order: 6 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 4, item_name: '금형 중량', input_type: 'text', default_spec: '', sort_order: 7 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 5, item_name: '벤팅 히트파팅 적용', input_type: 'select', input_options: JSON.stringify(['적용', '미적용', '사양 상이']), sort_order: 8 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 6, item_name: '캐비티 재질', input_type: 'select', input_options: JSON.stringify(['NAK80', 'S45C', 'SKD61', 'P20', 'KP-4', '기타']), sort_order: 9 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 7, item_name: '코어 재질', input_type: 'select', input_options: JSON.stringify(['NAK80', 'S45C', 'SKD61', 'P20', 'KP-4', '기타']), sort_order: 10 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 8, item_name: '캐비티 수', input_type: 'select', input_options: JSON.stringify(['1', '2', '3', '4', '5', '6', '8']), sort_order: 11 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 9, item_name: '게이트 형식', input_type: 'select', input_options: JSON.stringify(['오픈', '밸브']), sort_order: 12 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 10, item_name: '게이트 수', input_type: 'number', sort_order: 13 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 11, item_name: '런너 형식', input_type: 'select', input_options: JSON.stringify(['핫런너', '콜드런너', '세미핫런너']), sort_order: 14 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 12, item_name: '냉각라인 수', input_type: 'number', sort_order: 15 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 13, item_name: '냉각라인 배치', input_type: 'text', sort_order: 16 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 14, item_name: '온도센서 위치', input_type: 'text', sort_order: 17 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 15, item_name: '온도센서 수량', input_type: 'number', sort_order: 18 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 16, item_name: '이젝터 형식', input_type: 'select', input_options: JSON.stringify(['핀', '슬리브', '블레이드', '에어']), sort_order: 19 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 17, item_name: '이젝터 핀 수량', input_type: 'number', sort_order: 20 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 18, item_name: '슬라이드 수량', input_type: 'number', sort_order: 21 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 19, item_name: '금형 스페어 리스트 검수', input_type: 'select', input_options: JSON.stringify(['반영', '미반영']), sort_order: 22 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 20, item_name: '금형 사이즈 (가로)', input_type: 'number', sort_order: 23 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 21, item_name: '금형 사이즈 (세로)', input_type: 'number', sort_order: 24 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 22, item_name: '금형 사이즈 (높이)', input_type: 'number', sort_order: 25 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 23, item_name: '로케이팅링 규격', input_type: 'text', sort_order: 26 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 24, item_name: '스프루 부시 규격', input_type: 'text', sort_order: 27 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 25, item_name: '가이드핀 규격', input_type: 'text', sort_order: 28 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 26, item_name: '가이드부시 규격', input_type: 'text', sort_order: 29 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 27, item_name: '아이볼트 규격', input_type: 'text', sort_order: 30 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 28, item_name: '클램프 홈 규격', input_type: 'text', sort_order: 31 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 29, item_name: '금형 표면처리', input_type: 'select', input_options: JSON.stringify(['경면', '텍스처', '방전', '기타']), sort_order: 32 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 30, item_name: '기타 특이사항 1', input_type: 'textarea', sort_order: 33 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 31, item_name: '기타 특이사항 2', input_type: 'textarea', sort_order: 34 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 32, item_name: '기타 특이사항 3', input_type: 'textarea', sort_order: 35 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 33, item_name: '기타 특이사항 4', input_type: 'textarea', sort_order: 36 },
+        { category_code: 'II', category_name: '금형 (Mold)', item_no: 34, item_name: '기타 특이사항 5', input_type: 'textarea', sort_order: 37 },
+        
+        // III. 가스 배기 (Gas Vent) - 6개
+        { category_code: 'III', category_name: '가스 배기 (Gas Vent)', item_no: 1, item_name: '가스 배기 금형 전반 반영', input_type: 'select', input_options: JSON.stringify(['반영', '미반영']), sort_order: 38 },
+        { category_code: 'III', category_name: '가스 배기 (Gas Vent)', item_no: 2, item_name: '가스 배기 2/100 또는 3/100 반영', input_type: 'select', input_options: JSON.stringify(['반영', '미반영']), sort_order: 39 },
+        { category_code: 'III', category_name: '가스 배기 (Gas Vent)', item_no: 3, item_name: '파팅간 거리', input_type: 'text', sort_order: 40 },
+        { category_code: 'III', category_name: '가스 배기 (Gas Vent)', item_no: 4, item_name: '벤트 깊이', input_type: 'text', sort_order: 41 },
+        { category_code: 'III', category_name: '가스 배기 (Gas Vent)', item_no: 5, item_name: '벤트 위치', input_type: 'text', sort_order: 42 },
+        { category_code: 'III', category_name: '가스 배기 (Gas Vent)', item_no: 6, item_name: '벤트 수량', input_type: 'number', sort_order: 43 },
+        
+        // IV. 성형 해석 (Molding Analysis) - 6개
+        { category_code: 'IV', category_name: '성형 해석 (Molding Analysis)', item_no: 1, item_name: '성형 해석 실행', input_type: 'select', input_options: JSON.stringify(['완료', '미완료', '해당없음']), sort_order: 44 },
+        { category_code: 'IV', category_name: '성형 해석 (Molding Analysis)', item_no: 2, item_name: '성형성 확인', input_type: 'select', input_options: JSON.stringify(['양호', '주의', '불량']), sort_order: 45 },
+        { category_code: 'IV', category_name: '성형 해석 (Molding Analysis)', item_no: 3, item_name: '변형발생 예측', input_type: 'select', input_options: JSON.stringify(['없음', '경미', '심각']), sort_order: 46 },
+        { category_code: 'IV', category_name: '성형 해석 (Molding Analysis)', item_no: 4, item_name: '웰드라인 위치', input_type: 'text', sort_order: 47 },
+        { category_code: 'IV', category_name: '성형 해석 (Molding Analysis)', item_no: 5, item_name: '가스 발생 부위', input_type: 'text', sort_order: 48 },
+        { category_code: 'IV', category_name: '성형 해석 (Molding Analysis)', item_no: 6, item_name: '충전 시간', input_type: 'text', sort_order: 49 },
+        
+        // V. 싱크마크 (Sink Mark) - 3개
+        { category_code: 'V', category_name: '싱크마크 (Sink Mark)', item_no: 1, item_name: '리브 0.6t 반영', input_type: 'select', input_options: JSON.stringify(['반영', '미반영']), sort_order: 50 },
+        { category_code: 'V', category_name: '싱크마크 (Sink Mark)', item_no: 2, item_name: '싱크 발생 구조', input_type: 'text', sort_order: 51 },
+        { category_code: 'V', category_name: '싱크마크 (Sink Mark)', item_no: 3, item_name: '예각 부위 구조', input_type: 'text', sort_order: 52 },
+        
+        // VI. 취출 (Ejection) - 7개
+        { category_code: 'VI', category_name: '취출 (Ejection)', item_no: 1, item_name: '취출 구조', input_type: 'select', input_options: JSON.stringify(['핀취출', '슬리브취출', '에어취출', '복합']), sort_order: 53 },
+        { category_code: 'VI', category_name: '취출 (Ejection)', item_no: 2, item_name: '언더컷 처리', input_type: 'select', input_options: JSON.stringify(['슬라이드', '경사핀', '유압실린더', '없음']), sort_order: 54 },
+        { category_code: 'VI', category_name: '취출 (Ejection)', item_no: 3, item_name: '핵기 구배', input_type: 'text', sort_order: 55 },
+        { category_code: 'VI', category_name: '취출 (Ejection)', item_no: 4, item_name: '보스 구배', input_type: 'text', sort_order: 56 },
+        { category_code: 'VI', category_name: '취출 (Ejection)', item_no: 5, item_name: '취출 스트로크', input_type: 'number', sort_order: 57 },
+        { category_code: 'VI', category_name: '취출 (Ejection)', item_no: 6, item_name: '취출 방향', input_type: 'select', input_options: JSON.stringify(['상', '하', '측면']), sort_order: 58 },
+        { category_code: 'VI', category_name: '취출 (Ejection)', item_no: 7, item_name: '취출 핀 배치', input_type: 'text', sort_order: 59 },
+        
+        // VII. MIC 제품 - 4개
+        { category_code: 'VII', category_name: 'MIC 제품', item_no: 1, item_name: 'MIC 사양 게이트', input_type: 'select', input_options: JSON.stringify(['적용', '미적용', '해당없음']), sort_order: 60 },
+        { category_code: 'VII', category_name: 'MIC 제품', item_no: 2, item_name: 'MIC 성형해석', input_type: 'select', input_options: JSON.stringify(['완료', '미완료', '해당없음']), sort_order: 61 },
+        { category_code: 'VII', category_name: 'MIC 제품', item_no: 3, item_name: 'MIC 웰드라인', input_type: 'text', sort_order: 62 },
+        { category_code: 'VII', category_name: 'MIC 제품', item_no: 4, item_name: 'A면 외관', input_type: 'select', input_options: JSON.stringify(['양호', '주의', '불량']), sort_order: 63 },
+        
+        // VIII. 도금 (Plating) - 12개
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 1, item_name: '게이트 위치', input_type: 'text', sort_order: 64 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 2, item_name: '게이트 개수', input_type: 'number', sort_order: 65 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 3, item_name: '도금용 수축률', input_type: 'text', sort_order: 66 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 4, item_name: '보스 조립부', input_type: 'text', sort_order: 67 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 5, item_name: '제품 두께', input_type: 'text', sort_order: 68 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 6, item_name: '치페막', input_type: 'select', input_options: JSON.stringify(['적용', '미적용']), sort_order: 69 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 7, item_name: '도금 두께', input_type: 'text', sort_order: 70 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 8, item_name: '도금 종류', input_type: 'select', input_options: JSON.stringify(['크롬', '니켈', '아연', '기타']), sort_order: 71 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 9, item_name: '도금 면적', input_type: 'text', sort_order: 72 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 10, item_name: '도금 부위', input_type: 'text', sort_order: 73 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 11, item_name: '도금 전처리', input_type: 'select', input_options: JSON.stringify(['필요', '불필요']), sort_order: 74 },
+        { category_code: 'VIII', category_name: '도금 (Plating)', item_no: 12, item_name: '도금 특이사항', input_type: 'textarea', sort_order: 75 },
+        
+        // IX. 리어 백빔 (Rear Back Beam) - 6개
+        { category_code: 'IX', category_name: '리어 백빔 (Rear Back Beam)', item_no: 1, item_name: '금형구배', input_type: 'text', sort_order: 76 },
+        { category_code: 'IX', category_name: '리어 백빔 (Rear Back Beam)', item_no: 2, item_name: '제품 변산부 두께', input_type: 'text', sort_order: 77 },
+        { category_code: 'IX', category_name: '리어 백빔 (Rear Back Beam)', item_no: 3, item_name: '후기공 볼', input_type: 'select', input_options: JSON.stringify(['적용', '미적용']), sort_order: 78 },
+        { category_code: 'IX', category_name: '리어 백빔 (Rear Back Beam)', item_no: 4, item_name: '가이드핀 규격', input_type: 'text', sort_order: 79 },
+        { category_code: 'IX', category_name: '리어 백빔 (Rear Back Beam)', item_no: 5, item_name: '백빔 두께', input_type: 'text', sort_order: 80 },
+        { category_code: 'IX', category_name: '리어 백빔 (Rear Back Beam)', item_no: 6, item_name: '백빔 특이사항', input_type: 'textarea', sort_order: 81 }
+      ];
+      
+      for (const item of items) {
+        await db.sequelize.query(`
+          INSERT INTO pre_production_checklist_items (
+            category_code, category_name, item_no, item_name, item_description,
+            input_type, input_options, default_spec, is_required, sort_order, is_active,
+            created_at, updated_at
+          ) VALUES (
+            :category_code, :category_name, :item_no, :item_name, :item_description,
+            :input_type, :input_options::jsonb, :default_spec, true, :sort_order, true,
+            NOW(), NOW()
+          )
+        `, {
+          replacements: {
+            category_code: item.category_code,
+            category_name: item.category_name,
+            item_no: item.item_no,
+            item_name: item.item_name,
+            item_description: item.item_description || null,
+            input_type: item.input_type || 'checkbox',
+            input_options: item.input_options || null,
+            default_spec: item.default_spec || null,
+            sort_order: item.sort_order
+          }
+        });
+      }
+      logger.info('Pre-production checklist items seed data inserted: ' + items.length + ' items');
+    }
+  } catch (err) {
+    logger.warn('Pre-production checklist items seed:', err.message);
+  }
+
+  logger.info('Pre-production checklist migration completed.');
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -1073,6 +1324,7 @@ const startServer = async () => {
     await runGpsAlertsMigration();
     await runChecklistTemplateMigration();
     await runTransfer4MMigration();
+    await runPreProductionChecklistMigration();
     
     // Sync database (only in development)
     if (process.env.NODE_ENV === 'development') {
