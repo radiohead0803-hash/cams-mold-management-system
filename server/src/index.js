@@ -87,6 +87,14 @@ app.use('/api/v1/pre-production-checklist', require('./routes/preProductionCheck
 app.use('/api/v1/scrapping', require('./routes/scrapping'));
 app.use('/api/v1/maintenance', require('./routes/maintenance'));
 app.use('/api/v1/statistics', require('./routes/statistics'));
+app.use('/api/v1/mold-images', require('./routes/moldImages'));
+app.use('/api/v1/daily-checks', require('./routes/dailyChecks'));
+app.use('/api/v1/repair-requests', require('./routes/repairRequests'));
+app.use('/api/v1/injection-conditions', require('./routes/injectionConditions'));
+app.use('/api/v1/notifications', require('./routes/notifications'));
+app.use('/api/v1/dashboard', require('./routes/dashboard'));
+app.use('/api/v1/companies', require('./routes/companies'));
+app.use('/api/v1/master-data', require('./routes/masterData'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
