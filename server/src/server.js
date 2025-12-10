@@ -208,6 +208,72 @@ const runWeightColumnsMigration = async () => {
   }
 };
 
+// Run repair_requests columns migration
+const runRepairRequestsMigration = async () => {
+  console.log('🔄 Running repair_requests columns migration...');
+  try {
+    const columns = [
+      // 기본 정보
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS problem TEXT' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS cause_and_reason TEXT' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS problem_source TEXT' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS occurred_date DATE' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS manager_id INTEGER' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS manager_name VARCHAR(100)' },
+      // 금형/제품 정보
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS requester_id INTEGER' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS requester_name VARCHAR(100)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS car_model VARCHAR(100)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS part_number VARCHAR(100)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS part_name VARCHAR(200)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS occurrence_type VARCHAR(50)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS production_site VARCHAR(200)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS production_manager VARCHAR(100)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS contact VARCHAR(50)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS production_shot INTEGER' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS maker VARCHAR(200)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS operation_type VARCHAR(50)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS problem_type VARCHAR(100)' },
+      // 수리 정보
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS repair_cost DECIMAL(12,0)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS completion_date DATE' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS temporary_action TEXT' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS root_cause_action TEXT' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS mold_arrival_date DATE' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS stock_schedule_date DATE' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS stock_quantity INTEGER' },
+      { sql: "ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS stock_unit VARCHAR(20) DEFAULT 'EA'" },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS repair_company VARCHAR(200)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS repair_duration INTEGER' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS management_type VARCHAR(50)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS sign_off_status VARCHAR(100)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS representative_part_number VARCHAR(100)' },
+      { sql: 'ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS order_company VARCHAR(200)' },
+      { sql: "ALTER TABLE repair_requests ADD COLUMN IF NOT EXISTS related_files JSONB DEFAULT '[]'::jsonb" }
+    ];
+    
+    for (const col of columns) {
+      try { await sequelize.query(col.sql); } catch (e) { }
+    }
+    console.log('✅ Repair requests columns added.');
+
+    // 인덱스 생성
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_occurred_date ON repair_requests(occurred_date)',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_car_model ON repair_requests(car_model)',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_part_number ON repair_requests(part_number)',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_occurrence_type ON repair_requests(occurrence_type)',
+      'CREATE INDEX IF NOT EXISTS idx_repair_requests_problem_type ON repair_requests(problem_type)'
+    ];
+    for (const idx of indexes) {
+      try { await sequelize.query(idx); } catch (e) { }
+    }
+    console.log('✅ Repair requests indexes created/verified.');
+  } catch (error) {
+    console.error('⚠️ Repair requests migration warning:', error.message);
+  }
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -226,6 +292,9 @@ const startServer = async () => {
     
     // Run weight columns migration
     await runWeightColumnsMigration();
+    
+    // Run repair_requests columns migration
+    await runRepairRequestsMigration();
     
     // Sync models (development only)
     if (process.env.NODE_ENV === 'development') {
