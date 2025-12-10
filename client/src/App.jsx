@@ -58,6 +58,8 @@ import MobileMoldSpecification from './pages/mobile/MobileMoldSpecification'
 import MobileInjectionCondition from './pages/mobile/MobileInjectionCondition'
 import MobileInjectionHistory from './pages/mobile/MobileInjectionHistory'
 import MobileInjectionStats from './pages/mobile/MobileInjectionStats'
+import MobileTransferRequest from './pages/mobile/MobileTransferRequest'
+import MobileTransferList from './pages/mobile/MobileTransferList'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -110,6 +112,10 @@ function App() {
       <Route path="/mobile/mold/:moldId/injection-condition" element={<MobileInjectionCondition />} />
       <Route path="/mobile/mold/:moldId/injection-history" element={<MobileInjectionHistory />} />
       <Route path="/mobile/mold/:moldId/injection-stats" element={<MobileInjectionStats />} />
+      <Route path="/mobile/mold/:moldId/transfer" element={<MobileTransferList />} />
+      <Route path="/mobile/mold/:moldId/transfer/new" element={<MobileTransferRequest />} />
+      <Route path="/mobile/mold/:moldId/transfer/list" element={<MobileTransferList />} />
+      <Route path="/mobile/transfer/:id" element={<MobileTransferList />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />

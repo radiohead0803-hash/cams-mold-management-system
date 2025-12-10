@@ -223,9 +223,9 @@ export default function MobileMoldDetailNew() {
       icon: Truck,
       color: 'bg-sky-400',
       items: [
-        { label: '이관요청' },
-        { label: '이관현황' },
-        { label: '이관 체크리스트' }
+        { label: '이관요청', action: () => navigate(`/mobile/mold/${moldId}/transfer/new`) },
+        { label: '이관현황', action: () => navigate(`/mobile/mold/${moldId}/transfer`) },
+        { label: '이관 체크리스트', action: () => navigate(`/mobile/mold/${moldId}/transfer/list`) }
       ]
     }
   }
