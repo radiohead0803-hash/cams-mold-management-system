@@ -3,17 +3,28 @@ const { sequelize } = require('../models/newIndex');
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const fs = require('fs');
 
-// S3 클라이언트 설정
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'ap-northeast-2',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
-  }
-});
+// S3 환경변수 체크
+const S3_ENABLED = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
+
+// S3 클라이언트 설정 (환경변수가 있을 때만)
+let s3Client = null;
+if (S3_ENABLED) {
+  s3Client = new S3Client({
+    region: process.env.AWS_REGION || 'ap-northeast-2',
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    }
+  });
+  logger.info('S3 client initialized successfully');
+} else {
+  logger.warn('S3 credentials not configured - image upload will use local storage');
+}
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'cams-mold-images';
+const LOCAL_UPLOAD_DIR = path.join(__dirname, '../../uploads');
 
 /**
  * 금형/제품 이미지 업로드

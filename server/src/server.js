@@ -274,6 +274,48 @@ const runRepairRequestsMigration = async () => {
   }
 };
 
+// Run transfer_requests table migration
+const runTransferRequestsMigration = async () => {
+  console.log('🔄 Running transfer_requests table migration...');
+  try {
+    // 테이블 생성 (없으면)
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS transfer_requests (
+        id SERIAL PRIMARY KEY,
+        transfer_number VARCHAR(50) UNIQUE,
+        mold_id INTEGER,
+        status VARCHAR(30) DEFAULT 'pending',
+        from_company_id INTEGER,
+        to_company_id INTEGER,
+        requested_by INTEGER,
+        request_date DATE,
+        planned_transfer_date DATE,
+        actual_transfer_date DATE,
+        reason TEXT,
+        current_shots INTEGER,
+        mold_info_snapshot JSONB,
+        all_approvals_completed BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ transfer_requests table created/verified.');
+
+    // 인덱스 생성
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_transfer_requests_mold_id ON transfer_requests(mold_id)',
+      'CREATE INDEX IF NOT EXISTS idx_transfer_requests_status ON transfer_requests(status)',
+      'CREATE INDEX IF NOT EXISTS idx_transfer_requests_created_at ON transfer_requests(created_at DESC)'
+    ];
+    for (const idx of indexes) {
+      try { await sequelize.query(idx); } catch (e) { }
+    }
+    console.log('✅ transfer_requests indexes created/verified.');
+  } catch (error) {
+    console.error('⚠️ Transfer requests migration warning:', error.message);
+  }
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -295,6 +337,9 @@ const startServer = async () => {
     
     // Run repair_requests columns migration
     await runRepairRequestsMigration();
+    
+    // Run transfer_requests table migration
+    await runTransferRequestsMigration();
     
     // Sync models (development only)
     if (process.env.NODE_ENV === 'development') {
