@@ -105,14 +105,16 @@ const uploadMoldImage = async (req, res) => {
       });
     }
 
-    // S3 업로드 키 생성
+    // 이미지 저장 방식 결정
     const fileExtension = path.extname(file.originalname);
-    const fileName = `${image_type}/${mold_spec_id || mold_id}/${uuidv4()}${fileExtension}`;
+    const fileId = uuidv4();
+    const fileName = `${image_type}/${mold_spec_id || mold_id}/${fileId}${fileExtension}`;
 
     let imageUrl;
+    let imageData = null;
 
-    // S3 업로드 시도
-    if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    // S3 업로드 시도 (환경변수가 있을 때만)
+    if (S3_ENABLED && s3Client) {
       try {
         const uploadParams = {
           Bucket: BUCKET_NAME,
@@ -124,14 +126,18 @@ const uploadMoldImage = async (req, res) => {
 
         await s3Client.send(new PutObjectCommand(uploadParams));
         imageUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'ap-northeast-2'}.amazonaws.com/${fileName}`;
+        logger.info('Image uploaded to S3:', imageUrl);
       } catch (s3Error) {
-        logger.error('S3 upload error:', s3Error);
-        // S3 실패 시 Base64로 저장
-        imageUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+        logger.error('S3 upload error, falling back to DB storage:', s3Error.message);
+        // S3 실패 시 DB에 직접 저장
+        imageData = file.buffer;
+        imageUrl = `/api/v1/mold-images/file/${fileId}`;
       }
     } else {
-      // S3 설정이 없으면 Base64로 저장 (개발용)
-      imageUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+      // S3 설정이 없으면 PostgreSQL BYTEA에 직접 저장
+      imageData = file.buffer;
+      imageUrl = `/api/v1/mold-images/file/${fileId}`;
+      logger.info('Image will be stored in PostgreSQL BYTEA');
     }
 
     // is_primary가 true이면 기존 대표 이미지 해제
@@ -146,18 +152,18 @@ const uploadMoldImage = async (req, res) => {
     // DB에 이미지 정보 저장
     let result;
     
-    // 먼저 확장 컬럼으로 시도, 실패하면 기본 컬럼으로 재시도
+    // 먼저 확장 컬럼(image_data 포함)으로 시도, 실패하면 기본 컬럼으로 재시도
     try {
       const insertQuery = `
         INSERT INTO mold_images (
-          mold_id, mold_spec_id, image_type, image_url, 
+          mold_id, mold_spec_id, image_type, image_url, image_data,
           original_filename, file_size, mime_type,
           description, is_primary, uploaded_by,
           reference_type, reference_id, checklist_id, checklist_item_id,
           repair_id, transfer_id, maker_spec_id,
           created_at, updated_at
         ) VALUES (
-          :mold_id, :mold_spec_id, :image_type, :image_url,
+          :mold_id, :mold_spec_id, :image_type, :image_url, :image_data,
           :original_filename, :file_size, :mime_type,
           :description, :is_primary, :uploaded_by,
           :reference_type, :reference_id, :checklist_id, :checklist_item_id,
@@ -172,6 +178,7 @@ const uploadMoldImage = async (req, res) => {
           mold_spec_id: mold_spec_id || null,
           image_type,
           image_url: imageUrl,
+          image_data: imageData, // BYTEA로 저장
           original_filename: file.originalname,
           file_size: file.size,
           mime_type: file.mimetype,
@@ -189,16 +196,16 @@ const uploadMoldImage = async (req, res) => {
       });
       result = { rows };
     } catch (extendedError) {
-      // 확장 컬럼이 없으면 기본 컬럼만 사용
+      // 확장 컬럼이 없으면 기본 컬럼만 사용 (image_data 포함)
       logger.warn('Extended columns not available, using basic columns:', extendedError.message);
       const basicInsertQuery = `
         INSERT INTO mold_images (
-          mold_id, mold_spec_id, image_type, image_url, 
+          mold_id, mold_spec_id, image_type, image_url, image_data,
           original_filename, file_size, mime_type,
           description, is_primary, uploaded_by,
           created_at, updated_at
         ) VALUES (
-          :mold_id, :mold_spec_id, :image_type, :image_url,
+          :mold_id, :mold_spec_id, :image_type, :image_url, :image_data,
           :original_filename, :file_size, :mime_type,
           :description, :is_primary, :uploaded_by,
           NOW(), NOW()
@@ -211,6 +218,7 @@ const uploadMoldImage = async (req, res) => {
           mold_spec_id: mold_spec_id || null,
           image_type,
           image_url: imageUrl,
+          image_data: imageData, // BYTEA로 저장
           original_filename: file.originalname,
           file_size: file.size,
           mime_type: file.mimetype,
@@ -501,9 +509,85 @@ const deleteMoldImage = async (req, res) => {
   }
 };
 
+/**
+ * DB에 저장된 이미지 파일 조회 (BYTEA)
+ * GET /api/v1/mold-images/file/:id
+ */
+const getImageFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // ID로 이미지 조회 (image_url에서 ID 추출하거나 직접 ID로 조회)
+    let image;
+    
+    // UUID 형식인지 확인
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    if (isUUID) {
+      // image_url에 UUID가 포함된 경우
+      const [rows] = await sequelize.query(
+        `SELECT * FROM mold_images WHERE image_url LIKE :pattern LIMIT 1`,
+        { replacements: { pattern: `%${id}%` } }
+      );
+      image = rows[0];
+    } else {
+      // 숫자 ID인 경우
+      const [rows] = await sequelize.query(
+        `SELECT * FROM mold_images WHERE id = :id`,
+        { replacements: { id: parseInt(id) } }
+      );
+      image = rows[0];
+    }
+    
+    if (!image) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '이미지를 찾을 수 없습니다.' }
+      });
+    }
+    
+    // image_data가 있으면 BYTEA에서 직접 반환
+    if (image.image_data) {
+      res.set('Content-Type', image.mime_type || 'image/jpeg');
+      res.set('Cache-Control', 'public, max-age=31536000'); // 1년 캐시
+      return res.send(image.image_data);
+    }
+    
+    // image_data가 없고 image_url이 외부 URL이면 리다이렉트
+    if (image.image_url && image.image_url.startsWith('http')) {
+      return res.redirect(image.image_url);
+    }
+    
+    // image_url이 Base64인 경우
+    if (image.image_url && image.image_url.startsWith('data:')) {
+      const matches = image.image_url.match(/^data:([^;]+);base64,(.+)$/);
+      if (matches) {
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        res.set('Content-Type', mimeType);
+        res.set('Cache-Control', 'public, max-age=31536000');
+        return res.send(buffer);
+      }
+    }
+    
+    res.status(404).json({
+      success: false,
+      error: { message: '이미지 데이터를 찾을 수 없습니다.' }
+    });
+  } catch (error) {
+    logger.error('Get image file error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '이미지 조회 실패', details: error.message }
+    });
+  }
+};
+
 module.exports = {
   uploadMoldImage,
   getMoldImages,
   setPrimaryImage,
-  deleteMoldImage
+  deleteMoldImage,
+  getImageFile
 };

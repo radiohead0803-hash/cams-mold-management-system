@@ -26,6 +26,9 @@ router.post('/', authenticate, upload.single('image'), moldImageController.uploa
 // GET /api/v1/mold-images - 이미지 목록 조회
 router.get('/', authenticate, moldImageController.getMoldImages);
 
+// GET /api/v1/mold-images/file/:id - DB에 저장된 이미지 파일 조회 (인증 불필요)
+router.get('/file/:id', moldImageController.getImageFile);
+
 // PATCH /api/v1/mold-images/:id/primary - 대표 이미지 설정
 router.patch('/:id/primary', authenticate, moldImageController.setPrimaryImage);
 

@@ -56,6 +56,14 @@ const runMoldImagesMigration = async () => {
     `);
     console.log('✅ mold_images table created/verified.');
 
+    // image_data 컬럼 추가 (BYTEA - PostgreSQL에 직접 이미지 저장용)
+    try {
+      await sequelize.query(`ALTER TABLE mold_images ADD COLUMN IF NOT EXISTS image_data BYTEA`);
+      console.log('✅ mold_images.image_data column added/verified.');
+    } catch (e) {
+      console.log('⚠️ image_data column may already exist');
+    }
+
     // 인덱스 생성 (없으면)
     const indexes = [
       'CREATE INDEX IF NOT EXISTS idx_mold_images_mold_id ON mold_images(mold_id)',
