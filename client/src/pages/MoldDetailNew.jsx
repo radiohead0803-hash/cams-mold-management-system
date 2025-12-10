@@ -425,6 +425,22 @@ export default function MoldDetailNew() {
                                   navigate(`/injection-history?moldId=${id}`);
                                 } else if (item === '변경관리 통계') {
                                   navigate(`/injection-stats?moldId=${id}`);
+                                } 
+                                // 금형수리 메뉴
+                                else if (item === '수리요청') {
+                                  navigate(`/hq/repair-requests?moldId=${id}`);
+                                } else if (item === '금형수리 현황표') {
+                                  navigate(`/hq/repair-requests?moldId=${id}&view=status`);
+                                } else if (item === '금형수리 진행현황') {
+                                  navigate(`/hq/repair-requests?moldId=${id}&view=progress`);
+                                }
+                                // 금형이관 메뉴
+                                else if (item === '이관요청') {
+                                  navigate(`/transfers/new?moldId=${id}`);
+                                } else if (item === '이관현황') {
+                                  navigate(`/transfers?moldId=${id}`);
+                                } else if (item === '이관 체크리스트') {
+                                  navigate(`/transfers?moldId=${id}&view=checklist`);
                                 }
                               }}
                             >
