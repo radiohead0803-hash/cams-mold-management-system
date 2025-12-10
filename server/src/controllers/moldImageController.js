@@ -32,6 +32,9 @@ const LOCAL_UPLOAD_DIR = path.join(__dirname, '../../uploads');
  */
 const uploadMoldImage = async (req, res) => {
   try {
+    logger.info('uploadMoldImage called with body:', JSON.stringify(req.body));
+    logger.info('uploadMoldImage file:', req.file ? { name: req.file.originalname, size: req.file.size, mimetype: req.file.mimetype } : 'no file');
+    
     // 먼저 테이블 존재 여부 확인 및 생성
     try {
       await sequelize.query(`
@@ -40,7 +43,8 @@ const uploadMoldImage = async (req, res) => {
           mold_id INTEGER,
           mold_spec_id INTEGER,
           image_type VARCHAR(50) NOT NULL DEFAULT 'mold',
-          image_url TEXT NOT NULL,
+          image_url TEXT,
+          image_data BYTEA,
           original_filename VARCHAR(255),
           file_size INTEGER,
           mime_type VARCHAR(100),
@@ -59,6 +63,10 @@ const uploadMoldImage = async (req, res) => {
           updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         )
       `);
+      // image_url NOT NULL 제약 제거 (이미 있는 테이블의 경우)
+      try {
+        await sequelize.query(`ALTER TABLE mold_images ALTER COLUMN image_url DROP NOT NULL`);
+      } catch (e) { /* 이미 NULL 허용이면 무시 */ }
     } catch (tableError) {
       logger.warn('Table creation check:', tableError.message);
     }
@@ -279,9 +287,15 @@ const uploadMoldImage = async (req, res) => {
     });
   } catch (error) {
     logger.error('Upload mold image error:', error);
+    logger.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
-      error: { message: '이미지 업로드 실패', details: error.message }
+      error: { 
+        message: '이미지 업로드 실패', 
+        details: error.message,
+        code: error.code || 'UNKNOWN',
+        hint: error.hint || null
+      }
     });
   }
 };
