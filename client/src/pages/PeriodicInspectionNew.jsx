@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin, ArrowLeft } from 'lucide-react'
+import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin, ArrowLeft, Loader2, Info, Hash } from 'lucide-react'
+import api from '../lib/api'
 
-// PERIODIC_INSPECTION_CHECKLIST.md 기준 주기별 점검 항목
+// 정기점검 대항목/소항목 구조 (템플릿 마스터 + 기존 항목 통합)
 const INSPECTION_TYPES = [
   {
     id: '20k',
@@ -212,6 +213,14 @@ const INSPECTION_TYPES = [
         items: [
           { id: 35, name: '정밀 윤활', description: '마모 예측치, 교체 시점 산정', required: true, checkPoints: ['마모 예측치 분석', '교체 시점 산정', '윤활 상태 기록'] }
         ]
+      },
+      {
+        id: 7,
+        name: '생산 정보',
+        icon: '📊',
+        items: [
+          { id: 36, name: '생산수량', description: '금일 생산수량 입력 (숏수 자동 누적)', required: false, fieldType: 'number', isShotLinked: true, checkPoints: ['생산수량 정확히 입력', '숏수 자동 누적 확인', '보증숏수 90% 도달 시 경고', '100% 도달 시 긴급 알림'] }
+        ]
       }
     ]
   }
@@ -220,7 +229,7 @@ const INSPECTION_TYPES = [
 export default function PeriodicInspectionNew() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const moldId = searchParams.get('mold')
+  const moldId = searchParams.get('moldId') || searchParams.get('mold')
 
   const [selectedType, setSelectedType] = useState(null)
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0)
@@ -230,18 +239,55 @@ export default function PeriodicInspectionNew() {
   const [gpsLocation, setGpsLocation] = useState(null)
   const [mold, setMold] = useState(null)
   const [showGuide, setShowGuide] = useState(null)
+  const [loading, setLoading] = useState(true)
 
+  // 금형 정보 로드
   useEffect(() => {
-    // 금형 정보 로드
-    setMold({
-      id: moldId || 1,
-      mold_code: 'M-2024-001',
-      mold_name: '도어 트림 금형',
-      car_model: 'K5',
-      current_shots: 152238,
-      target_shots: 500000,
-      location: '생산 1공장'
-    })
+    const loadMoldData = async () => {
+      setLoading(true)
+      try {
+        if (moldId) {
+          const res = await api.get(`/mold-specifications/${moldId}`)
+          if (res.data.success && res.data.data) {
+            setMold(res.data.data)
+          } else {
+            setMold({
+              id: moldId,
+              mold_code: `MOLD-${moldId}`,
+              mold_name: '금형',
+              car_model: '-',
+              current_shots: 0,
+              guarantee_shots: 500000,
+              location: '-'
+            })
+          }
+        } else {
+          setMold({
+            id: 1,
+            mold_code: 'SAMPLE-001',
+            mold_name: '샘플 금형',
+            car_model: '-',
+            current_shots: 0,
+            guarantee_shots: 500000,
+            location: '-'
+          })
+        }
+      } catch (error) {
+        console.error('금형 정보 로드 실패:', error)
+        setMold({
+          id: moldId || 1,
+          mold_code: 'UNKNOWN',
+          mold_name: '알 수 없음',
+          car_model: '-',
+          current_shots: 0,
+          guarantee_shots: 500000,
+          location: '-'
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadMoldData()
 
     // GPS 위치 캡처
     if (navigator.geolocation) {
@@ -353,8 +399,25 @@ export default function PeriodicInspectionNew() {
     return null
   }
 
+  // 숏수 비율 계산
+  const getShotPercentage = () => {
+    if (!mold) return 0
+    const guarantee = mold.guarantee_shots || mold.target_shots || 500000
+    const current = mold.current_shots || 0
+    return Math.round((current / guarantee) * 100)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+        <span className="ml-2 text-gray-600">로딩 중...</span>
+      </div>
+    )
+  }
+
   if (!mold) {
-    return <div className="card text-center py-12">로딩 중...</div>
+    return <div className="card text-center py-12">금형 정보를 불러올 수 없습니다.</div>
   }
 
   // 점검 유형 선택 화면
@@ -597,6 +660,7 @@ export default function PeriodicInspectionNew() {
         <div className="space-y-6">
           {currentCategory.items.map((item) => {
             const result = checkResults[item.id] || {}
+            const isNumberField = item.fieldType === 'number'
             
             return (
               <div key={item.id} className="border border-gray-200 rounded-lg p-4">
@@ -604,8 +668,14 @@ export default function PeriodicInspectionNew() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      {currentCategory.icon && <span>{currentCategory.icon}</span>}
                       {item.name}
                       {item.required && <span className="text-red-500 text-sm">*</span>}
+                      {item.isShotLinked && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full flex items-center gap-1">
+                          <Hash size={10} /> 숏수연동
+                        </span>
+                      )}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">{item.description}</p>
                   </div>
@@ -630,45 +700,94 @@ export default function PeriodicInspectionNew() {
                   </div>
                 )}
 
-                {/* 상태 선택 */}
-                <div className="mb-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    상태 선택 {item.required && <span className="text-red-500">*</span>}
-                  </label>
-                  <div className="flex gap-3">
-                    {['양호', '정비 필요', '수리 필요'].map((status) => (
-                      <label key={status} className="flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          name={`status-${item.id}`}
-                          value={status}
-                          checked={result.status === status}
-                          onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                          className="mr-2"
-                        />
-                        <span className={`text-sm ${
-                          status === '양호' ? 'text-green-700' :
-                          status === '정비 필요' ? 'text-yellow-700' :
-                          'text-red-700'
-                        }`}>
-                          {status}
-                        </span>
-                      </label>
-                    ))}
+                {/* 숫자 입력 필드 (생산수량 등) */}
+                {isNumberField ? (
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {item.name} 입력 {item.required && <span className="text-red-500">*</span>}
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        value={result.value || ''}
+                        onChange={(e) => setCheckResults(prev => ({
+                          ...prev,
+                          [item.id]: { ...prev[item.id], value: e.target.value, timestamp: new Date().toISOString() }
+                        }))}
+                        className="input w-40"
+                        placeholder="수량 입력"
+                        min="0"
+                      />
+                      <span className="text-sm text-gray-500">개</span>
+                      {item.isShotLinked && mold && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-gray-500">|</span>
+                          <span className="text-gray-600">현재 숏수:</span>
+                          <span className="font-semibold text-primary-600">
+                            {(mold.current_shots || 0).toLocaleString()}
+                          </span>
+                          <span className="text-gray-500">/</span>
+                          <span className="text-gray-600">
+                            {(mold.guarantee_shots || mold.target_shots || 500000).toLocaleString()}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            getShotPercentage() >= 100 ? 'bg-red-100 text-red-700' :
+                            getShotPercentage() >= 90 ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            {getShotPercentage()}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {item.isShotLinked && (
+                      <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                        <Info size={12} />
+                        생산수량 입력 시 숏수가 자동으로 누적됩니다. 보증숏수 90% 도달 시 경고, 100% 도달 시 긴급 알림이 발송됩니다.
+                      </p>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  /* 상태 선택 (양호/정비 필요/수리 필요) */
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      상태 선택 {item.required && <span className="text-red-500">*</span>}
+                    </label>
+                    <div className="flex gap-3">
+                      {['양호', '정비 필요', '수리 필요'].map((status) => (
+                        <label key={status} className="flex items-center cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`status-${item.id}`}
+                            value={status}
+                            checked={result.status === status}
+                            onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                            className="mr-2"
+                          />
+                          <span className={`text-sm ${
+                            status === '양호' ? 'text-green-700' :
+                            status === '정비 필요' ? 'text-yellow-700' :
+                            'text-red-700'
+                          }`}>
+                            {status}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                {/* 특이사항 */}
+                {/* 비고란 (체크포인트 기반 placeholder) */}
                 <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    특이사항 (선택)
+                    비고 (선택)
                   </label>
                   <textarea
                     value={result.notes || ''}
                     onChange={(e) => handleNotesChange(item.id, e.target.value)}
                     className="input resize-none"
                     rows="2"
-                    placeholder="특이사항을 입력하세요"
+                    placeholder={item.checkPoints ? `점검 포인트: ${item.checkPoints.join(', ')}` : '특이사항을 입력하세요'}
                   />
                 </div>
 

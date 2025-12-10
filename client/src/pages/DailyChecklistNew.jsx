@@ -1,255 +1,128 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, ArrowLeft } from 'lucide-react'
+import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, ArrowLeft, Loader2, Info, Hash } from 'lucide-react'
+import api from '../lib/api'
 
-// DAILY_CHECK_ITEMS.md 기준 10개 카테고리, 17개 항목
+// 일상점검 대항목/소항목 구조 (템플릿 마스터 + 기존 항목 통합)
 const CHECK_CATEGORIES = [
   {
     id: 1,
-    name: '정결관리',
+    name: '금형 외관 점검',
+    icon: '🔍',
     items: [
-      {
-        id: 1,
-        name: '성형물 청결',
-        description: '캐비티, 코어, 파팅면, 게이트, 벤트부 이물(수지, 가스, 오일 등) 확인',
-        required: true,
-        checkPoints: [
-          '캐비티 표면에 수지 잔류 확인',
-          '게이트 부위 막힘 여부',
-          '벤트 구멍 막힘 확인',
-          '파팅면 이물질 제거 상태'
-        ]
-      },
-      {
-        id: 2,
-        name: '파팅면 상태',
-        description: '파팅면이 수지간섭, 찌꺼기 등 無',
-        required: true,
-        checkPoints: [
-          '파팅면 청결 상태 확인',
-          '수지 간섭 흔적 확인',
-          '찌꺼기 제거 상태'
-        ]
-      }
+      { id: 101, name: '금형 외관 상태', description: '금형 외관의 손상, 변형, 부식 여부 확인', required: true, fieldType: 'yes_no',
+        checkPoints: ['금형 표면 스크래치 확인', '찌그러짐/변형 여부', '녹/부식 발생 여부', '외관 청결 상태'] },
+      { id: 102, name: '금형 명판 상태', description: '명판 식별 가능 여부 확인', required: true, fieldType: 'yes_no',
+        checkPoints: ['금형 번호 식별 가능', '제작일자 확인 가능', '명판 손상 여부'] },
+      { id: 103, name: '파팅라인 상태', description: '파팅라인 밀착 상태 및 버 발생 여부', required: true, fieldType: 'yes_no',
+        checkPoints: ['상/하형 접합부 밀착도', '버(Burr) 발생 여부', '수지 간섭 흔적 확인', '찌꺼기 제거 상태'] }
     ]
   },
   {
     id: 2,
-    name: '작동부 점검',
+    name: '냉각 시스템',
+    icon: '💧',
     items: [
-      {
-        id: 3,
-        name: '슬라이드 작동상태',
-        description: '슬라이드 이동 시 걸림/이상음 無',
-        required: true,
-        checkPoints: [
-          '슬라이드 이동 시 걸림 확인',
-          '이상음 발생 여부',
-          '작동 속도 정상 여부'
-        ]
-      },
-      {
-        id: 4,
-        name: '가이드핀/리테이너',
-        description: '핀손, 마모, 운동상태 확인',
-        required: true,
-        checkPoints: [
-          '가이드핀 손상 확인',
-          '마모 상태 점검',
-          '운동 상태 확인'
-        ]
-      },
-      {
-        id: 5,
-        name: '밀핀/제품핀',
-        description: '작동 시 걸림, 파손, 변형 無',
-        required: true,
-        checkPoints: [
-          '밀핀 작동 확인',
-          '파손 여부 점검',
-          '변형 상태 확인'
-        ]
-      }
+      { id: 201, name: '냉각수 연결 상태', description: '냉각수 라인 연결 및 누수 여부', required: true, fieldType: 'yes_no',
+        checkPoints: ['입/출구 호스 연결 상태', '누수 여부 확인', '커플링 체결 상태'] },
+      { id: 202, name: '냉각수 유량', description: '냉각수 흐름 원활 여부 (온도차 5℃ 이하)', required: true, fieldType: 'yes_no',
+        checkPoints: ['입구 온도 측정', '출구 온도 측정', '온도차 5℃ 이하 확인', '유량 정상 여부'] },
+      { id: 203, name: '냉각 채널 막힘', description: '냉각 채널 스케일/이물질 막힘', required: false, fieldType: 'yes_no',
+        checkPoints: ['채널 막힘 여부', '스케일 축적 상태', '냉각 효율 저하 여부'] }
     ]
   },
   {
     id: 3,
-    name: '냉각관리',
+    name: '작동부 점검',
+    icon: '⚙️',
     items: [
-      {
-        id: 6,
-        name: '냉각라인 상태',
-        description: '입출수 라인 연결불 누수/막힘 無',
-        required: true,
-        checkPoints: [
-          '입출수 라인 연결 상태',
-          '누수 여부 확인',
-          '막힘 상태 점검'
-        ]
-      },
-      {
-        id: 7,
-        name: '냉각수 유량',
-        description: '적/우 온도차 5℃ 이하',
-        required: true,
-        checkPoints: [
-          '입구 온도 측정',
-          '출구 온도 측정',
-          '온도차 5℃ 이하 확인'
-        ]
-      }
+      { id: 301, name: '이젝터 작동 상태', description: '이젝터 핀 작동 원활성', required: true, fieldType: 'yes_no',
+        checkPoints: ['이젝터 핀 걸림 없음', '부드러운 작동 확인', '복귀 동작 정상'] },
+      { id: 302, name: '슬라이드 작동 상태', description: '슬라이드 코어 작동 상태', required: false, fieldType: 'yes_no',
+        checkPoints: ['슬라이드 이동 시 걸림 확인', '이상음 발생 여부', '작동 속도 정상 여부'] },
+      { id: 303, name: '가이드 핀/부시 상태', description: '가이드 핀 마모 및 유격', required: true, fieldType: 'yes_no',
+        checkPoints: ['가이드핀 손상 확인', '마모 상태 점검', '유격 정상 여부'] },
+      { id: 304, name: '밀핀/제품핀', description: '작동 시 걸림, 파손, 변형 無', required: true, fieldType: 'yes_no',
+        checkPoints: ['밀핀 작동 확인', '파손 여부 점검', '변형 상태 확인'] },
+      { id: 305, name: '리턴 핀/스프링', description: '리턴 핀 작동 및 스프링 탄성', required: true, fieldType: 'yes_no',
+        checkPoints: ['리턴 핀 복귀 동작', '스프링 탄성 상태', '정상 작동 확인'] }
     ]
   },
   {
     id: 4,
-    name: '온도·전기·계통',
+    name: '게이트/런너/벤트',
+    icon: '🔄',
     items: [
-      {
-        id: 8,
-        name: '히터/온도센서 작동',
-        description: '단선, 접촉불량, 과열 無',
-        required: true,
-        checkPoints: [
-          '히터 작동 확인',
-          '온도센서 정상 작동',
-          '과열 여부 점검'
-        ]
-      },
-      {
-        id: 9,
-        name: '배선/커넥터',
-        description: '피복 손상, 접촉불량 無',
-        required: true,
-        checkPoints: [
-          '배선 피복 상태',
-          '커넥터 접촉 상태',
-          '단선 여부 확인'
-        ]
-      }
+      { id: 401, name: '게이트 상태', description: '게이트 마모 및 손상 여부', required: true, fieldType: 'yes_no',
+        checkPoints: ['게이트 마모 확인', '변형/손상 여부', '막힘 상태 점검'] },
+      { id: 402, name: '런너 상태', description: '런너 청결 및 막힘 여부', required: true, fieldType: 'yes_no',
+        checkPoints: ['잔류 수지 확인', '이물질 여부', '청결 상태'] },
+      { id: 403, name: '벤트 상태', description: '가스 벤트 막힘 여부', required: true, fieldType: 'yes_no',
+        checkPoints: ['벤트 구멍 막힘 확인', '가스 배출 원활성', '이물질 제거 상태'] }
     ]
   },
   {
     id: 5,
-    name: '재결상태',
+    name: '히터/센서/전기',
+    icon: '🌡️',
     items: [
-      {
-        id: 10,
-        name: '금형 체결볼트',
-        description: '풀림, 균열, 아이마킹 틀어짐 유무 無',
-        required: true,
-        checkPoints: [
-          '볼트 풀림 확인',
-          '균열 발생 여부',
-          '아이마킹 상태'
-        ]
-      },
-      {
-        id: 11,
-        name: '로케이트링/스프루부',
-        description: '위치이탈, 손상 無',
-        required: true,
-        checkPoints: [
-          '로케이트링 위치',
-          '스프루부 손상 여부',
-          '고정 상태 확인'
-        ]
-      }
+      { id: 501, name: '히터/온도센서 상태', description: '히터 작동 및 센서 정상 여부', required: false, fieldType: 'yes_no',
+        checkPoints: ['히터 작동 확인', '온도센서 정상 작동', '과열 여부 점검', '단선/접촉불량 확인'] },
+      { id: 502, name: '배선/커넥터 상태', description: '전기 배선 손상 여부', required: false, fieldType: 'yes_no',
+        checkPoints: ['배선 피복 상태', '커넥터 접촉 상태', '단선 여부 확인'] }
     ]
   },
   {
     id: 6,
-    name: '취출계통',
+    name: '체결/취출 계통',
+    icon: '🔧',
     items: [
-      {
-        id: 12,
-        name: '취출핀/스프링',
-        description: '정상작동, 파손·마모 無',
-        required: true,
-        checkPoints: [
-          '취출핀 작동 확인',
-          '스프링 탄성 상태',
-          '파손/마모 여부'
-        ]
-      }
+      { id: 601, name: '금형 체결볼트', description: '풀림, 균열, 아이마킹 상태', required: true, fieldType: 'yes_no',
+        checkPoints: ['볼트 풀림 확인', '균열 발생 여부', '아이마킹 상태'] },
+      { id: 602, name: '로케이트링/스프루부', description: '위치이탈, 손상 無', required: true, fieldType: 'yes_no',
+        checkPoints: ['로케이트링 위치', '스프루부 손상 여부', '고정 상태 확인'] },
+      { id: 603, name: '취출핀/스프링', description: '정상작동, 파손·마모 無', required: true, fieldType: 'yes_no',
+        checkPoints: ['취출핀 작동 확인', '스프링 탄성 상태', '파손/마모 여부'] }
     ]
   },
   {
     id: 7,
-    name: '윤활관리',
+    name: '윤활/청결 관리',
+    icon: '🧴',
     items: [
-      {
-        id: 13,
-        name: '슬라이드, 핀류',
-        description: '그리스 도포 상태 양호',
-        required: true,
-        checkPoints: [
-          '슬라이드 그리스 상태',
-          '핀류 윤활 상태',
-          '그리스 도포량 적정'
-        ]
-      },
-      {
-        id: 14,
-        name: '엘글라/리프트핀',
-        description: '그리스 도포 상태 양호',
-        required: true,
-        checkPoints: [
-          '엘글라 그리스 상태',
-          '리프트핀 윤활 상태',
-          '도포 상태 확인'
-        ]
-      }
+      { id: 701, name: '슬라이드/핀류 윤활', description: '그리스 도포 상태 양호', required: true, fieldType: 'yes_no',
+        checkPoints: ['슬라이드 그리스 상태', '핀류 윤활 상태', '그리스 도포량 적정'] },
+      { id: 702, name: '엘글라/리프트핀 윤활', description: '그리스 도포 상태 양호', required: true, fieldType: 'yes_no',
+        checkPoints: ['엘글라 그리스 상태', '리프트핀 윤활 상태', '도포 상태 확인'] },
+      { id: 703, name: '성형면 청결', description: '캐비티/코어 이물질 제거', required: true, fieldType: 'yes_no',
+        checkPoints: ['캐비티 표면 수지 잔류 확인', '코어 청결 상태', '이물질 제거 완료'] }
     ]
   },
   {
     id: 8,
-    name: '이상유무',
+    name: '이상/누출 점검',
+    icon: '⚠️',
     items: [
-      {
-        id: 15,
-        name: '누유/누수 여부',
-        description: '냉각수, 오일, 에어라인 이상 無',
-        required: true,
-        checkPoints: [
-          '냉각수 누수 확인',
-          '오일 누유 확인',
-          '에어라인 이상 확인'
-        ]
-      }
+      { id: 801, name: '누유/누수 여부', description: '냉각수, 오일, 에어라인 이상 無', required: true, fieldType: 'yes_no',
+        checkPoints: ['냉각수 누수 확인', '오일 누유 확인', '에어라인 이상 확인'] }
     ]
   },
   {
     id: 9,
-    name: '외관상태',
+    name: '방청 관리',
+    icon: '🛡️',
     items: [
-      {
-        id: 16,
-        name: '금형 외관/명판',
-        description: '찌손, 식별불가 無',
-        required: true,
-        checkPoints: [
-          '외관 손상 확인',
-          '명판 식별 가능 여부',
-          '찌손 상태 점검'
-        ]
-      }
+      { id: 901, name: '방청유 도포', description: '보관 시 성형면 방청처리 (비가동 시)', required: false, fieldType: 'yes_no',
+        checkPoints: ['방청유 도포 상태', '성형면 처리 확인', '보관 환경 적정'] }
     ]
   },
   {
     id: 10,
-    name: '방청관리(비가동 시)',
+    name: '생산 정보',
+    icon: '📊',
     items: [
-      {
-        id: 17,
-        name: '방청유 도포',
-        description: '보관 시 성형면 방청처리',
-        required: false,
-        checkPoints: [
-          '방청유 도포 상태',
-          '성형면 처리 확인',
-          '보관 환경 적정'
-        ]
-      }
+      { id: 1001, name: '생산수량', description: '금일 생산수량 입력 (숏수 자동 누적)', required: false, fieldType: 'number', isShotLinked: true,
+        checkPoints: ['생산수량 정확히 입력', '숏수 자동 누적 확인', '보증숏수 90% 도달 시 경고', '100% 도달 시 긴급 알림'] }
     ]
   }
 ]
@@ -257,29 +130,66 @@ const CHECK_CATEGORIES = [
 export default function DailyChecklistNew() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const moldId = searchParams.get('mold')
+  const moldId = searchParams.get('moldId') || searchParams.get('mold')
 
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0)
   const [checkResults, setCheckResults] = useState({})
   const [showGuide, setShowGuide] = useState(null)
   const [mold, setMold] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [productionQty, setProductionQty] = useState('')
 
   const currentCategory = CHECK_CATEGORIES[currentCategoryIndex]
   const totalCategories = CHECK_CATEGORIES.length
   const totalItems = CHECK_CATEGORIES.reduce((sum, cat) => sum + cat.items.length, 0)
-  const completedItems = Object.keys(checkResults).filter(key => checkResults[key]?.status).length
+  const completedItems = Object.keys(checkResults).filter(key => checkResults[key]?.status || checkResults[key]?.value !== undefined).length
   const progress = Math.round((completedItems / totalItems) * 100)
 
+  // 금형 정보 로드
   useEffect(() => {
-    // 금형 정보 로드 (임시 데이터)
-    setMold({
-      id: moldId || 1,
-      mold_code: 'M-2024-001',
-      mold_name: '도어 트림 금형',
-      car_model: 'K5',
-      current_shots: 152238,
-      target_shots: 500000
-    })
+    const loadMoldData = async () => {
+      setLoading(true)
+      try {
+        if (moldId) {
+          const res = await api.get(`/mold-specifications/${moldId}`)
+          if (res.data.success && res.data.data) {
+            setMold(res.data.data)
+          } else {
+            // 기본값 설정
+            setMold({
+              id: moldId,
+              mold_code: `MOLD-${moldId}`,
+              mold_name: '금형',
+              car_model: '-',
+              current_shots: 0,
+              guarantee_shots: 500000
+            })
+          }
+        } else {
+          setMold({
+            id: 1,
+            mold_code: 'SAMPLE-001',
+            mold_name: '샘플 금형',
+            car_model: '-',
+            current_shots: 0,
+            guarantee_shots: 500000
+          })
+        }
+      } catch (error) {
+        console.error('금형 정보 로드 실패:', error)
+        setMold({
+          id: moldId || 1,
+          mold_code: 'UNKNOWN',
+          mold_name: '알 수 없음',
+          car_model: '-',
+          current_shots: 0,
+          guarantee_shots: 500000
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadMoldData()
   }, [moldId])
 
   const handleStatusChange = (itemId, status) => {
@@ -351,13 +261,41 @@ export default function DailyChecklistNew() {
   }
 
   const getCategoryProgress = (category) => {
-    const completed = category.items.filter(item => checkResults[item.id]?.status).length
+    const completed = category.items.filter(item => checkResults[item.id]?.status || checkResults[item.id]?.value !== undefined).length
     const total = category.items.length
     return { completed, total, percentage: Math.round((completed / total) * 100) }
   }
 
+  const handleValueChange = (itemId, value) => {
+    setCheckResults(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        value,
+        timestamp: new Date().toISOString()
+      }
+    }))
+  }
+
+  // 숏수 비율 계산
+  const getShotPercentage = () => {
+    if (!mold) return 0
+    const guarantee = mold.guarantee_shots || mold.target_shots || 500000
+    const current = mold.current_shots || 0
+    return Math.round((current / guarantee) * 100)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
+        <span className="ml-2 text-gray-600">로딩 중...</span>
+      </div>
+    )
+  }
+
   if (!mold) {
-    return <div className="card text-center py-12">로딩 중...</div>
+    return <div className="card text-center py-12">금형 정보를 불러올 수 없습니다.</div>
   }
 
   return (
@@ -457,6 +395,7 @@ export default function DailyChecklistNew() {
         <div className="space-y-6">
           {currentCategory.items.map((item) => {
             const result = checkResults[item.id] || {}
+            const isNumberField = item.fieldType === 'number'
             
             return (
               <div key={item.id} className="border border-gray-200 rounded-lg p-4">
@@ -464,8 +403,14 @@ export default function DailyChecklistNew() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      {currentCategory.icon && <span>{currentCategory.icon}</span>}
                       {item.name}
                       {item.required && <span className="text-red-500 text-sm">*</span>}
+                      {item.isShotLinked && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full flex items-center gap-1">
+                          <Hash size={10} /> 숏수연동
+                        </span>
+                      )}
                     </h3>
                     <p className="text-sm text-gray-600 mt-1">{item.description}</p>
                   </div>
@@ -490,45 +435,91 @@ export default function DailyChecklistNew() {
                   </div>
                 )}
 
-                {/* 상태 선택 */}
-                <div className="mb-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    상태 선택 {item.required && <span className="text-red-500">*</span>}
-                  </label>
-                  <div className="flex gap-3">
-                    {['양호', '주의', '불량'].map((status) => (
-                      <label key={status} className="flex items-center cursor-pointer">
-                        <input
-                          type="radio"
-                          name={`status-${item.id}`}
-                          value={status}
-                          checked={result.status === status}
-                          onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                          className="mr-2"
-                        />
-                        <span className={`text-sm ${
-                          status === '양호' ? 'text-green-700' :
-                          status === '주의' ? 'text-yellow-700' :
-                          'text-red-700'
-                        }`}>
-                          {status}
-                        </span>
-                      </label>
-                    ))}
+                {/* 숫자 입력 필드 (생산수량 등) */}
+                {isNumberField ? (
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {item.name} 입력 {item.required && <span className="text-red-500">*</span>}
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        value={result.value || ''}
+                        onChange={(e) => handleValueChange(item.id, e.target.value)}
+                        className="input w-40"
+                        placeholder="수량 입력"
+                        min="0"
+                      />
+                      <span className="text-sm text-gray-500">개</span>
+                      {item.isShotLinked && mold && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-gray-500">|</span>
+                          <span className="text-gray-600">현재 숏수:</span>
+                          <span className="font-semibold text-primary-600">
+                            {(mold.current_shots || 0).toLocaleString()}
+                          </span>
+                          <span className="text-gray-500">/</span>
+                          <span className="text-gray-600">
+                            {(mold.guarantee_shots || mold.target_shots || 500000).toLocaleString()}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            getShotPercentage() >= 100 ? 'bg-red-100 text-red-700' :
+                            getShotPercentage() >= 90 ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>
+                            {getShotPercentage()}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {item.isShotLinked && (
+                      <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                        <Info size={12} />
+                        생산수량 입력 시 숏수가 자동으로 누적됩니다. 보증숏수 90% 도달 시 경고, 100% 도달 시 긴급 알림이 발송됩니다.
+                      </p>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  /* 상태 선택 (양호/주의/불량) */
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      상태 선택 {item.required && <span className="text-red-500">*</span>}
+                    </label>
+                    <div className="flex gap-3">
+                      {['양호', '주의', '불량'].map((status) => (
+                        <label key={status} className="flex items-center cursor-pointer">
+                          <input
+                            type="radio"
+                            name={`status-${item.id}`}
+                            value={status}
+                            checked={result.status === status}
+                            onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                            className="mr-2"
+                          />
+                          <span className={`text-sm ${
+                            status === '양호' ? 'text-green-700' :
+                            status === '주의' ? 'text-yellow-700' :
+                            'text-red-700'
+                          }`}>
+                            {status}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                {/* 특이사항 */}
+                {/* 비고란 (체크포인트 기반 placeholder) */}
                 <div className="mb-3">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    특이사항 (선택)
+                    비고 (선택)
                   </label>
                   <textarea
                     value={result.notes || ''}
                     onChange={(e) => handleNotesChange(item.id, e.target.value)}
                     className="input resize-none"
                     rows="2"
-                    placeholder="특이사항을 입력하세요"
+                    placeholder={item.checkPoints ? `점검 포인트: ${item.checkPoints.join(', ')}` : '특이사항을 입력하세요'}
                   />
                 </div>
 
