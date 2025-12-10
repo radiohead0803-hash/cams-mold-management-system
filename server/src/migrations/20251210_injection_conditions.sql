@@ -54,14 +54,14 @@ CREATE TABLE IF NOT EXISTS injection_conditions (
   metering_pressure_3 DECIMAL(6,1),   -- 압력 3
   metering_pressure_4 DECIMAL(6,1),   -- 압력 4
   
-  -- ========== 만압 설정 ==========
-  full_pressure_1 DECIMAL(6,1),       -- 만압 1차
-  full_pressure_2 DECIMAL(6,1),       -- 만압 2차
-  full_pressure_3 DECIMAL(6,1),       -- 만압 3차
-  full_pressure_4 DECIMAL(6,1),       -- 만압 4차
-  full_pressure_1h DECIMAL(6,1),      -- 만압 1H
-  full_pressure_2h DECIMAL(6,1),      -- 만압 2H
-  full_pressure_3h DECIMAL(6,1),      -- 만압 3H
+  -- ========== 보압 설정 ==========
+  holding_pressure_1 DECIMAL(6,1),    -- 보압 1차
+  holding_pressure_2 DECIMAL(6,1),    -- 보압 2차
+  holding_pressure_3 DECIMAL(6,1),    -- 보압 3차
+  holding_pressure_4 DECIMAL(6,1),    -- 보압 4차
+  holding_pressure_1h DECIMAL(6,1),   -- 보압 1H
+  holding_pressure_2h DECIMAL(6,1),   -- 보압 2H
+  holding_pressure_3h DECIMAL(6,1),   -- 보압 3H
   
   -- ========== BARREL 온도 ==========
   barrel_temp_1 DECIMAL(6,1),         -- BARREL 1

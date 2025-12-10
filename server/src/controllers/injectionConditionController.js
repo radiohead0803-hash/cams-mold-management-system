@@ -168,9 +168,9 @@ const updateInjectionCondition = async (req, res) => {
       metering_position_1: '계량위치 1', metering_position_2: '계량위치 2',
       // 계량 압력
       metering_pressure_2: '계량압력 계2', metering_pressure_3: '계량압력 3', metering_pressure_4: '계량압력 4',
-      // 만압
-      full_pressure_1: '만압 1차', full_pressure_2: '만압 2차', full_pressure_3: '만압 3차', full_pressure_4: '만압 4차',
-      full_pressure_1h: '만압 1H', full_pressure_2h: '만압 2H', full_pressure_3h: '만압 3H',
+      // 보압
+      holding_pressure_1: '보압 1차', holding_pressure_2: '보압 2차', holding_pressure_3: '보압 3차', holding_pressure_4: '보압 4차',
+      holding_pressure_1h: '보압 1H', holding_pressure_2h: '보압 2H', holding_pressure_3h: '보압 3H',
       // BARREL
       barrel_temp_1: 'BARREL 1', barrel_temp_2: 'BARREL 2', barrel_temp_3: 'BARREL 3', barrel_temp_4: 'BARREL 4', barrel_temp_5: 'BARREL 5',
       barrel_temp_6: 'BARREL 6', barrel_temp_7: 'BARREL 7', barrel_temp_8: 'BARREL 8', barrel_temp_9: 'BARREL 9',
@@ -197,9 +197,9 @@ const updateInjectionCondition = async (req, res) => {
       metering_speed_vp: 'metering', metering_speed_1: 'metering', metering_speed_2: 'metering', metering_speed_3: 'metering',
       metering_position_1: 'metering', metering_position_2: 'metering',
       metering_pressure_2: 'metering', metering_pressure_3: 'metering', metering_pressure_4: 'metering',
-      // 만압
-      full_pressure_1: 'pressure', full_pressure_2: 'pressure', full_pressure_3: 'pressure', full_pressure_4: 'pressure',
-      full_pressure_1h: 'pressure', full_pressure_2h: 'pressure', full_pressure_3h: 'pressure',
+      // 보압
+      holding_pressure_1: 'pressure', holding_pressure_2: 'pressure', holding_pressure_3: 'pressure', holding_pressure_4: 'pressure',
+      holding_pressure_1h: 'pressure', holding_pressure_2h: 'pressure', holding_pressure_3h: 'pressure',
       // 온도
       barrel_temp_1: 'temperature', barrel_temp_2: 'temperature', barrel_temp_3: 'temperature', barrel_temp_4: 'temperature', barrel_temp_5: 'temperature',
       barrel_temp_6: 'temperature', barrel_temp_7: 'temperature', barrel_temp_8: 'temperature', barrel_temp_9: 'temperature',

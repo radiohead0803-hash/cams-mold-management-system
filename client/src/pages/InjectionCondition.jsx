@@ -33,7 +33,7 @@ export default function InjectionCondition() {
     metering_speed: false,
     metering_position: false,
     metering_pressure: false,
-    full_pressure: false,
+    holding_pressure: false,
     barrel: false,
     hot_runner: true,
     chiller: true,
@@ -572,18 +572,18 @@ export default function InjectionCondition() {
               )}
             </div>
 
-            {/* 만압 */}
+            {/* 보압 */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <SectionHeader icon={Gauge} title="만압" section="full_pressure" color="bg-rose-500" />
-              {expandedSections.full_pressure && (
+              <SectionHeader icon={Gauge} title="보압" section="holding_pressure" color="bg-rose-500" />
+              {expandedSections.holding_pressure && (
                 <div className="p-4 grid grid-cols-7 gap-3">
-                  <InputField label="1차" field="full_pressure_1" unit="" />
-                  <InputField label="2차" field="full_pressure_2" unit="" />
-                  <InputField label="3차" field="full_pressure_3" unit="" />
-                  <InputField label="4차" field="full_pressure_4" unit="" />
-                  <InputField label="1H" field="full_pressure_1h" unit="" />
-                  <InputField label="2H" field="full_pressure_2h" unit="" />
-                  <InputField label="3H" field="full_pressure_3h" unit="" />
+                  <InputField label="1차" field="holding_pressure_1" unit="" />
+                  <InputField label="2차" field="holding_pressure_2" unit="" />
+                  <InputField label="3차" field="holding_pressure_3" unit="" />
+                  <InputField label="4차" field="holding_pressure_4" unit="" />
+                  <InputField label="1H" field="holding_pressure_1h" unit="" />
+                  <InputField label="2H" field="holding_pressure_2h" unit="" />
+                  <InputField label="3H" field="holding_pressure_3h" unit="" />
                 </div>
               )}
             </div>

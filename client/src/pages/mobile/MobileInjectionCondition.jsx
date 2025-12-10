@@ -39,9 +39,9 @@ export default function MobileInjectionCondition() {
     metering_position_1: '', metering_position_2: '',
     // 계량 압력
     metering_pressure_2: '', metering_pressure_3: '', metering_pressure_4: '',
-    // 만압 설정
-    full_pressure_1: '', full_pressure_2: '', full_pressure_3: '', full_pressure_4: '',
-    full_pressure_1h: '', full_pressure_2h: '', full_pressure_3h: '',
+    // 보압 설정
+    holding_pressure_1: '', holding_pressure_2: '', holding_pressure_3: '', holding_pressure_4: '',
+    holding_pressure_1h: '', holding_pressure_2h: '', holding_pressure_3h: '',
     // BARREL 온도
     barrel_temp_1: '', barrel_temp_2: '', barrel_temp_3: '', barrel_temp_4: '', barrel_temp_5: '',
     barrel_temp_6: '', barrel_temp_7: '', barrel_temp_8: '', barrel_temp_9: '',
@@ -322,19 +322,19 @@ export default function MobileInjectionCondition() {
       ]
     },
     {
-      id: 'full_pressure',
-      title: '만압',
+      id: 'holding_pressure',
+      title: '보압',
       icon: Gauge,
       color: 'from-rose-50 to-pink-50',
       iconColor: 'text-rose-600',
       fields: [
-        { key: 'full_pressure_1', label: '1차', suffix: '' },
-        { key: 'full_pressure_2', label: '2차', suffix: '' },
-        { key: 'full_pressure_3', label: '3차', suffix: '' },
-        { key: 'full_pressure_4', label: '4차', suffix: '' },
-        { key: 'full_pressure_1h', label: '1H', suffix: '' },
-        { key: 'full_pressure_2h', label: '2H', suffix: '' },
-        { key: 'full_pressure_3h', label: '3H', suffix: '' }
+        { key: 'holding_pressure_1', label: '1차', suffix: '' },
+        { key: 'holding_pressure_2', label: '2차', suffix: '' },
+        { key: 'holding_pressure_3', label: '3차', suffix: '' },
+        { key: 'holding_pressure_4', label: '4차', suffix: '' },
+        { key: 'holding_pressure_1h', label: '1H', suffix: '' },
+        { key: 'holding_pressure_2h', label: '2H', suffix: '' },
+        { key: 'holding_pressure_3h', label: '3H', suffix: '' }
       ]
     },
     {
