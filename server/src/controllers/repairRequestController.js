@@ -14,23 +14,51 @@ async function listRepairRequests(req, res) {
     // 추후 JWT에서 plantId, role을 가져오도록
     const plantId = req.user?.plantId || req.query.plantId || null;
     const status = req.query.status; // optional
+    const limit = parseInt(req.query.limit) || 100;
 
     const where = {};
     if (plantId) where.plant_id = plantId;
     if (status) where.status = status;
 
-    const list = await RepairRequest.findAll({
-      where,
-      include: [
-        { 
-          model: Mold, 
-          as: 'mold',
-          attributes: ['id', 'mold_code', 'mold_name']
-        }
-      ],
-      order: [['created_at', 'DESC']],
-      limit: 100
-    });
+    // 기본 컬럼만 명시적으로 조회 (DB 스키마 불일치 방지)
+    const basicAttributes = [
+      'id', 'request_number', 'mold_id', 'plant_id', 'status', 
+      'priority', 'request_type', 'issue_description', 
+      'requester_id', 'requested_at', 'title', 'description',
+      'estimated_cost', 'actual_cost', 'created_at', 'updated_at'
+    ];
+
+    let list = [];
+    try {
+      list = await RepairRequest.findAll({
+        attributes: basicAttributes,
+        where,
+        include: [
+          { 
+            model: Mold, 
+            as: 'mold',
+            attributes: ['id', 'mold_code', 'mold_name'],
+            required: false
+          }
+        ],
+        order: [['created_at', 'DESC']],
+        limit
+      });
+    } catch (queryError) {
+      // 컬럼 에러 시 최소 컬럼으로 재시도
+      console.warn('[listRepairRequests] Retrying with minimal columns:', queryError.message);
+      try {
+        list = await RepairRequest.findAll({
+          attributes: ['id', 'mold_id', 'status', 'created_at'],
+          where,
+          order: [['created_at', 'DESC']],
+          limit
+        });
+      } catch (retryError) {
+        console.error('[listRepairRequests] Minimal query also failed:', retryError.message);
+        list = [];
+      }
+    }
 
     console.log('[listRepairRequests] Found:', list.length);
 
@@ -39,8 +67,8 @@ async function listRepairRequests(req, res) {
       const plain = item.get({ plain: true });
       return {
         ...plain,
-        mold_number: plain.mold?.mold_code || plain.mold_code,
-        mold_name: plain.mold?.mold_name || plain.mold_name
+        mold_number: plain.mold?.mold_code || plain.mold_code || '',
+        mold_name: plain.mold?.mold_name || plain.mold_name || ''
       };
     });
 

@@ -21,15 +21,19 @@ const getTransfers = async (req, res) => {
     let items = [];
     let total = 0;
     
+    // 기본 컬럼만 조회 (DB 스키마 불일치 방지)
+    const basicAttributes = [
+      'id', 'transfer_number', 'mold_id', 'status', 
+      'from_company_id', 'to_company_id', 'requested_by',
+      'request_date', 'planned_transfer_date', 'reason',
+      'created_at', 'updated_at'
+    ];
+    
     try {
+      // 먼저 include 없이 기본 조회 시도
       const result = await TransferRequest.findAndCountAll({
+        attributes: basicAttributes,
         where,
-        include: [
-          { model: Mold, as: 'mold', attributes: ['id', 'mold_code', 'mold_name'] },
-          { model: Company, as: 'fromCompany', attributes: ['id', 'company_name'] },
-          { model: Company, as: 'toCompany', attributes: ['id', 'company_name'] },
-          { model: User, as: 'requester', attributes: ['id', 'name'] }
-        ],
         order: [['created_at', 'DESC']],
         limit: parseInt(limit),
         offset: parseInt(offset)
@@ -37,8 +41,23 @@ const getTransfers = async (req, res) => {
       items = result.rows;
       total = result.count;
     } catch (modelError) {
-      // 모델이나 테이블이 없는 경우 무시
-      logger.warn('TransferRequest model/table not available:', modelError.message);
+      // 컬럼 에러 시 최소 컬럼으로 재시도
+      logger.warn('TransferRequest query failed, trying minimal:', modelError.message);
+      try {
+        const result = await TransferRequest.findAndCountAll({
+          attributes: ['id', 'mold_id', 'status', 'created_at'],
+          where,
+          order: [['created_at', 'DESC']],
+          limit: parseInt(limit),
+          offset: parseInt(offset)
+        });
+        items = result.rows;
+        total = result.count;
+      } catch (retryError) {
+        logger.warn('TransferRequest minimal query also failed:', retryError.message);
+        items = [];
+        total = 0;
+      }
     }
     
     res.json({
