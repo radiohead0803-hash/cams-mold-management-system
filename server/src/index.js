@@ -95,6 +95,10 @@ app.use('/api/v1/notifications', require('./routes/notifications'));
 app.use('/api/v1/dashboard', require('./routes/dashboard'));
 app.use('/api/v1/companies', require('./routes/companies'));
 app.use('/api/v1/master-data', require('./routes/masterData'));
+app.use('/api/v1/hq', require('./routes/hqDashboard'));
+app.use('/api/v1/dash', require('./routes/dashRoutes'));
+app.use('/api/v1/mobile', require('./routes/mobileDashboard'));
+app.use('/api/v1/plant', require('./routes/plantDashboard'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
