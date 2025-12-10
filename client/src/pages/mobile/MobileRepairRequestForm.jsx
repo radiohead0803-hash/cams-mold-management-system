@@ -1,6 +1,6 @@
-DLimport { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle, Clock, Calendar, FileText, Package, Wrench, Building, ClipboardList, Scale, Link2 } from 'lucide-react';
+import { ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle, Clock, Calendar, FileText, Package, Wrench, Building, ClipboardList, Scale, Link2, User } from 'lucide-react';
 import { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 
@@ -19,6 +19,7 @@ export default function MobileRepairRequestForm() {
   const [inspectionInfo, setInspectionInfo] = useState({ lastDailyCheck: null, lastPeriodicCheck: null, loading: false });
   const [injectionCondition, setInjectionCondition] = useState(null);
   const [moldSpec, setMoldSpec] = useState(null);
+  const [repairProgress, setRepairProgress] = useState(null);
   const moldInfo = location.state?.moldInfo || { id: moldId };
   
   const [formData, setFormData] = useState({
@@ -35,7 +36,7 @@ export default function MobileRepairRequestForm() {
   });
 
   useEffect(() => { if (id) loadRepairRequest(); else if (moldInfo?.id || moldId) loadMoldInfo(moldInfo?.id || moldId); }, [id, moldInfo?.id, moldId]);
-  useEffect(() => { if (moldId || moldInfo?.id) { loadInspectionInfo(moldId || moldInfo?.id); loadInjectionCondition(moldId || moldInfo?.id); } }, [moldId, moldInfo?.id]);
+  useEffect(() => { if (moldId || moldInfo?.id) { loadInspectionInfo(moldId || moldInfo?.id); loadInjectionCondition(moldId || moldInfo?.id); loadRepairProgress(moldId || moldInfo?.id); } }, [moldId, moldInfo?.id]);
 
   const loadMoldInfo = async (specId) => {
     try {
@@ -66,6 +67,23 @@ export default function MobileRepairRequestForm() {
     try {
       const res = await injectionConditionAPI.get({ mold_spec_id: specId });
       if (res.data?.data) setInjectionCondition(res.data.data);
+    } catch (e) { console.error(e); }
+  };
+
+  const loadRepairProgress = async (specId) => {
+    try {
+      const res = await repairRequestAPI.getAll({ mold_spec_id: specId });
+      if (res.data?.data) {
+        const requests = res.data.data;
+        setRepairProgress({
+          total: requests.length,
+          requested: requests.filter(r => r.status === '요청접수').length,
+          assigned: requests.filter(r => ['수리처선정', '수리처승인대기', '귀책협의'].includes(r.status)).length,
+          inProgress: requests.filter(r => r.status === '수리진행').length,
+          inspection: requests.filter(r => r.status === '검수중').length,
+          completed: requests.filter(r => r.status === '완료').length
+        });
+      }
     } catch (e) { console.error(e); }
   };
 
@@ -151,6 +169,21 @@ export default function MobileRepairRequestForm() {
             <div className="p-2 bg-gray-50 rounded-lg border border-gray-200"><p className="text-xs text-gray-500">중량</p><p className="text-base font-bold text-gray-700">{moldSpec?.mold?.weight || '-'}kg</p></div>
             <div className="p-2 bg-gray-50 rounded-lg border border-gray-200"><p className="text-xs text-gray-500">치수</p><p className="text-base font-bold text-gray-700">{moldSpec?.mold?.dimensions || '-'}mm</p></div>
             <div className="p-2 bg-gray-50 rounded-lg border border-gray-200"><p className="text-xs text-gray-500">캐비티</p><p className="text-base font-bold text-gray-700">{moldSpec?.cavity_count || '-'}개</p></div>
+          </div>
+        </div>
+
+        {/* 금형수리 진행현황 */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2"><Wrench size={14} className="text-amber-500" />금형수리 진행현황</h4>
+            <button onClick={() => navigate(`/mobile/repair-requests?moldId=${moldId || moldInfo?.id}`)} className="px-3 py-1 bg-amber-500 text-white text-xs rounded-full">상세보기</button>
+          </div>
+          <div className="grid grid-cols-5 gap-1">
+            <div onClick={() => repairProgress?.requested > 0 && navigate(`/mobile/repair-requests?moldId=${moldId || moldInfo?.id}&status=요청접수`)} className={`p-2 rounded-lg border text-center ${repairProgress?.requested > 0 ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`}><div className={`w-6 h-6 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.requested > 0 ? 'bg-blue-500 text-white' : 'bg-gray-300 text-white'}`}><FileText size={10} /></div><p className="text-xs text-gray-600">요청접수</p></div>
+            <div onClick={() => repairProgress?.assigned > 0 && navigate(`/mobile/repair-requests?moldId=${moldId || moldInfo?.id}&status=작업배정`)} className={`p-2 rounded-lg border text-center ${repairProgress?.assigned > 0 ? 'bg-cyan-50 border-cyan-200' : 'bg-gray-50 border-gray-200'}`}><div className={`w-6 h-6 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.assigned > 0 ? 'bg-cyan-500 text-white' : 'bg-gray-300 text-white'}`}><User size={10} /></div><p className="text-xs text-gray-600">작업배정</p></div>
+            <div onClick={() => repairProgress?.inProgress > 0 && navigate(`/mobile/repair-requests?moldId=${moldId || moldInfo?.id}&status=수리진행`)} className={`p-2 rounded-lg border text-center ${repairProgress?.inProgress > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}><div className={`w-6 h-6 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.inProgress > 0 ? 'bg-amber-500 text-white' : 'bg-gray-300 text-white'}`}><Wrench size={10} /></div><p className="text-xs text-gray-600">수리진행</p></div>
+            <div onClick={() => repairProgress?.inspection > 0 && navigate(`/mobile/repair-requests?moldId=${moldId || moldInfo?.id}&status=검수중`)} className={`p-2 rounded-lg border text-center ${repairProgress?.inspection > 0 ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}><div className={`w-6 h-6 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.inspection > 0 ? 'bg-purple-500 text-white' : 'bg-gray-300 text-white'}`}><CheckCircle size={10} /></div><p className="text-xs text-gray-600">검수완료</p></div>
+            <div onClick={() => repairProgress?.completed > 0 && navigate(`/mobile/repair-requests?moldId=${moldId || moldInfo?.id}&status=완료`)} className={`p-2 rounded-lg border text-center ${repairProgress?.completed > 0 ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}><div className={`w-6 h-6 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.completed > 0 ? 'bg-green-500 text-white' : 'bg-gray-300 text-white'}`}><CheckCircle size={10} /></div><p className="text-xs text-gray-600">최종승인</p></div>
           </div>
         </div>
 

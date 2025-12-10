@@ -39,6 +39,7 @@ export default function RepairRequestForm() {
   });
   const [injectionCondition, setInjectionCondition] = useState(null);
   const [moldSpec, setMoldSpec] = useState(null);
+  const [repairProgress, setRepairProgress] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
     request: true,    // 요청 단계
     product: true,    // 제품/금형 정보
@@ -144,6 +145,8 @@ export default function RepairRequestForm() {
         
         // 사출조건 정보 로드
         loadInjectionCondition(moldId);
+        // 수리 진행현황 로드
+        loadRepairProgress(moldId);
       }
     } catch (error) {
       console.error('Load mold info error:', error);
@@ -161,6 +164,29 @@ export default function RepairRequestForm() {
       }
     } catch (error) {
       console.error('Load injection condition error:', error);
+    }
+  };
+
+  // 수리 진행현황 로드
+  const loadRepairProgress = async (specId) => {
+    try {
+      const response = await repairRequestAPI.getAll({ mold_spec_id: specId });
+      if (response.data?.data) {
+        const requests = response.data.data;
+        // 상태별 카운트
+        const statusCounts = {
+          total: requests.length,
+          requested: requests.filter(r => r.status === '요청접수').length,
+          assigned: requests.filter(r => ['수리처선정', '수리처승인대기', '귀책협의'].includes(r.status)).length,
+          inProgress: requests.filter(r => r.status === '수리진행').length,
+          inspection: requests.filter(r => r.status === '검수중').length,
+          completed: requests.filter(r => r.status === '완료').length,
+          latestRequest: requests[0] || null
+        };
+        setRepairProgress(statusCounts);
+      }
+    } catch (error) {
+      console.error('Load repair progress error:', error);
     }
   };
 
@@ -790,6 +816,74 @@ export default function RepairRequestForm() {
                     <p className="text-lg font-bold text-slate-700">
                       {moldSpec?.cavity_count || '-'}개
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 금형수리 진행현황 */}
+              <div className="mt-6 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <Wrench size={16} className="text-amber-500" />
+                    금형수리 진행현황
+                  </h4>
+                  <button
+                    onClick={() => navigate(`/repair-requests?moldId=${moldId}`)}
+                    className="px-3 py-1 bg-amber-500 text-white text-xs rounded-full hover:bg-amber-600"
+                  >
+                    상세보기
+                  </button>
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  <div 
+                    onClick={() => repairProgress?.requested > 0 && navigate(`/repair-requests?moldId=${moldId}&status=요청접수`)}
+                    className={`p-3 rounded-lg border text-center ${repairProgress?.requested > 0 ? 'bg-blue-50 border-blue-200 cursor-pointer hover:bg-blue-100' : 'bg-slate-50 border-slate-200'}`}
+                  >
+                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.requested > 0 ? 'bg-blue-500 text-white' : 'bg-slate-300 text-white'}`}>
+                      <FileText size={14} />
+                    </div>
+                    <p className="text-xs text-slate-600">요청접수</p>
+                    <p className={`text-sm font-bold ${repairProgress?.requested > 0 ? 'text-blue-600' : 'text-slate-400'}`}>{repairProgress?.requested || 0}</p>
+                  </div>
+                  <div 
+                    onClick={() => repairProgress?.assigned > 0 && navigate(`/repair-requests?moldId=${moldId}&status=작업배정`)}
+                    className={`p-3 rounded-lg border text-center ${repairProgress?.assigned > 0 ? 'bg-cyan-50 border-cyan-200 cursor-pointer hover:bg-cyan-100' : 'bg-slate-50 border-slate-200'}`}
+                  >
+                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.assigned > 0 ? 'bg-cyan-500 text-white' : 'bg-slate-300 text-white'}`}>
+                      <User size={14} />
+                    </div>
+                    <p className="text-xs text-slate-600">작업배정</p>
+                    <p className={`text-sm font-bold ${repairProgress?.assigned > 0 ? 'text-cyan-600' : 'text-slate-400'}`}>{repairProgress?.assigned || 0}</p>
+                  </div>
+                  <div 
+                    onClick={() => repairProgress?.inProgress > 0 && navigate(`/repair-requests?moldId=${moldId}&status=수리진행`)}
+                    className={`p-3 rounded-lg border text-center ${repairProgress?.inProgress > 0 ? 'bg-amber-50 border-amber-200 cursor-pointer hover:bg-amber-100' : 'bg-slate-50 border-slate-200'}`}
+                  >
+                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.inProgress > 0 ? 'bg-amber-500 text-white' : 'bg-slate-300 text-white'}`}>
+                      <Wrench size={14} />
+                    </div>
+                    <p className="text-xs text-slate-600">수리진행</p>
+                    <p className={`text-sm font-bold ${repairProgress?.inProgress > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{repairProgress?.inProgress || 0}</p>
+                  </div>
+                  <div 
+                    onClick={() => repairProgress?.inspection > 0 && navigate(`/repair-requests?moldId=${moldId}&status=검수중`)}
+                    className={`p-3 rounded-lg border text-center ${repairProgress?.inspection > 0 ? 'bg-purple-50 border-purple-200 cursor-pointer hover:bg-purple-100' : 'bg-slate-50 border-slate-200'}`}
+                  >
+                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.inspection > 0 ? 'bg-purple-500 text-white' : 'bg-slate-300 text-white'}`}>
+                      <CheckCircle size={14} />
+                    </div>
+                    <p className="text-xs text-slate-600">검수완료</p>
+                    <p className={`text-sm font-bold ${repairProgress?.inspection > 0 ? 'text-purple-600' : 'text-slate-400'}`}>{repairProgress?.inspection || 0}</p>
+                  </div>
+                  <div 
+                    onClick={() => repairProgress?.completed > 0 && navigate(`/repair-requests?moldId=${moldId}&status=완료`)}
+                    className={`p-3 rounded-lg border text-center ${repairProgress?.completed > 0 ? 'bg-green-50 border-green-200 cursor-pointer hover:bg-green-100' : 'bg-slate-50 border-slate-200'}`}
+                  >
+                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.completed > 0 ? 'bg-green-500 text-white' : 'bg-slate-300 text-white'}`}>
+                      <CheckCircle size={14} />
+                    </div>
+                    <p className="text-xs text-slate-600">최종승인</p>
+                    <p className={`text-sm font-bold ${repairProgress?.completed > 0 ? 'text-green-600' : 'text-slate-400'}`}>{repairProgress?.completed || 0}</p>
                   </div>
                 </div>
               </div>
