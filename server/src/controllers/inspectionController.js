@@ -1,32 +1,373 @@
 const { Mold, DailyCheck, ChecklistAnswer, QrSession, User, sequelize } = require('../models/newIndex');
 const logger = require('../utils/logger');
 
+/**
+ * 점검 목록 조회
+ */
 const getInspections = async (req, res) => {
   try {
+    const { type, status, mold_id, limit = 50, offset = 0 } = req.query;
+    
+    const where = {};
+    if (status) where.status = status;
+    if (mold_id) where.mold_id = mold_id;
+    
+    let inspections = [];
+    
+    // 일상점검 조회
+    if (!type || type === 'daily') {
+      const dailyChecks = await DailyCheck.findAll({
+        where,
+        include: [
+          { model: Mold, as: 'mold', attributes: ['id', 'mold_code', 'mold_name', 'car_model'] },
+          { model: User, as: 'user', attributes: ['id', 'name', 'user_type'] },
+          { model: User, as: 'approver', attributes: ['id', 'name', 'user_type'] }
+        ],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['created_at', 'DESC']]
+      });
+      
+      inspections = dailyChecks.map(check => ({
+        ...check.toJSON(),
+        inspection_type: 'daily',
+        inspection_type_label: '일상점검'
+      }));
+    }
+    
+    // 정기점검 조회
+    if (!type || type === 'periodic') {
+      const PeriodicInspection = require('../models/newIndex').PeriodicInspection;
+      if (PeriodicInspection) {
+        const periodicChecks = await PeriodicInspection.findAll({
+          where,
+          include: [
+            { model: Mold, as: 'mold', attributes: ['id', 'mold_code', 'mold_name', 'car_model'] },
+            { model: User, as: 'user', attributes: ['id', 'name', 'user_type'] }
+          ],
+          limit: parseInt(limit),
+          offset: parseInt(offset),
+          order: [['created_at', 'DESC']]
+        });
+        
+        const periodicData = periodicChecks.map(check => ({
+          ...check.toJSON(),
+          inspection_type: 'periodic',
+          inspection_type_label: '정기점검'
+        }));
+        
+        inspections = [...inspections, ...periodicData];
+      }
+    }
+    
+    // 날짜순 정렬
+    inspections.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
     res.json({
       success: true,
-      data: { message: 'Get inspections - To be implemented' }
+      data: inspections.slice(0, parseInt(limit)),
+      total: inspections.length
     });
   } catch (error) {
     logger.error('Get inspections error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to get inspections' }
+      error: { message: 'Failed to get inspections', details: error.message }
     });
   }
 };
 
-const getInspectionById = async (req, res) => {
+/**
+ * 승인 대기 점검 목록 조회
+ */
+const getPendingInspections = async (req, res) => {
   try {
+    const { type, limit = 50, offset = 0 } = req.query;
+    
+    let inspections = [];
+    
+    // 일상점검 승인 대기
+    if (!type || type === 'daily') {
+      const dailyChecks = await DailyCheck.findAll({
+        where: { status: 'pending_approval' },
+        include: [
+          { model: Mold, as: 'mold', attributes: ['id', 'mold_code', 'mold_name', 'car_model'] },
+          { model: User, as: 'user', attributes: ['id', 'name', 'user_type'] }
+        ],
+        order: [['created_at', 'DESC']]
+      });
+      
+      inspections = dailyChecks.map(check => ({
+        ...check.toJSON(),
+        inspection_type: 'daily',
+        inspection_type_label: '일상점검'
+      }));
+    }
+    
+    // 정기점검 승인 대기
+    if (!type || type === 'periodic') {
+      const PeriodicInspection = require('../models/newIndex').PeriodicInspection;
+      if (PeriodicInspection) {
+        const periodicChecks = await PeriodicInspection.findAll({
+          where: { status: 'pending_approval' },
+          include: [
+            { model: Mold, as: 'mold', attributes: ['id', 'mold_code', 'mold_name', 'car_model'] },
+            { model: User, as: 'user', attributes: ['id', 'name', 'user_type'] }
+          ],
+          order: [['created_at', 'DESC']]
+        });
+        
+        const periodicData = periodicChecks.map(check => ({
+          ...check.toJSON(),
+          inspection_type: 'periodic',
+          inspection_type_label: '정기점검'
+        }));
+        
+        inspections = [...inspections, ...periodicData];
+      }
+    }
+    
+    // 날짜순 정렬
+    inspections.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
     res.json({
       success: true,
-      data: { message: 'Get inspection by ID - To be implemented' }
+      data: inspections.slice(parseInt(offset), parseInt(offset) + parseInt(limit)),
+      total: inspections.length
+    });
+  } catch (error) {
+    logger.error('Get pending inspections error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to get pending inspections', details: error.message }
+    });
+  }
+};
+
+/**
+ * 점검 상세 조회
+ */
+const getInspectionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type } = req.query;
+    
+    let inspection = null;
+    
+    // 일상점검에서 먼저 조회
+    if (!type || type === 'daily') {
+      inspection = await DailyCheck.findByPk(id, {
+        include: [
+          { model: Mold, as: 'mold' },
+          { model: User, as: 'user', attributes: ['id', 'name', 'user_type'] },
+          { model: User, as: 'approver', attributes: ['id', 'name', 'user_type'] },
+          { model: ChecklistAnswer, as: 'answers' }
+        ]
+      });
+      
+      if (inspection) {
+        return res.json({
+          success: true,
+          data: {
+            ...inspection.toJSON(),
+            inspection_type: 'daily',
+            inspection_type_label: '일상점검'
+          }
+        });
+      }
+    }
+    
+    // 정기점검에서 조회
+    if (!type || type === 'periodic') {
+      const PeriodicInspection = require('../models/newIndex').PeriodicInspection;
+      if (PeriodicInspection) {
+        inspection = await PeriodicInspection.findByPk(id, {
+          include: [
+            { model: Mold, as: 'mold' },
+            { model: User, as: 'user', attributes: ['id', 'name', 'user_type'] },
+            { model: ChecklistAnswer, as: 'answers' }
+          ]
+        });
+        
+        if (inspection) {
+          return res.json({
+            success: true,
+            data: {
+              ...inspection.toJSON(),
+              inspection_type: 'periodic',
+              inspection_type_label: '정기점검'
+            }
+          });
+        }
+      }
+    }
+    
+    res.status(404).json({
+      success: false,
+      error: { message: 'Inspection not found' }
     });
   } catch (error) {
     logger.error('Get inspection by ID error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to get inspection' }
+      error: { message: 'Failed to get inspection', details: error.message }
+    });
+  }
+};
+
+/**
+ * 점검 승인
+ */
+const approveInspection = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    const { type, comments } = req.body;
+    const approverId = req.user.id;
+    
+    let inspection = null;
+    
+    // 일상점검 승인
+    if (type === 'daily') {
+      inspection = await DailyCheck.findByPk(id, { transaction });
+      
+      if (!inspection) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          error: { message: 'Daily inspection not found' }
+        });
+      }
+      
+      await inspection.update({
+        status: 'approved',
+        approved_by: approverId,
+        approved_at: new Date(),
+        approval_comments: comments
+      }, { transaction });
+    }
+    
+    // 정기점검 승인
+    if (type === 'periodic') {
+      const PeriodicInspection = require('../models/newIndex').PeriodicInspection;
+      inspection = await PeriodicInspection.findByPk(id, { transaction });
+      
+      if (!inspection) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          error: { message: 'Periodic inspection not found' }
+        });
+      }
+      
+      await inspection.update({
+        status: 'approved',
+        approved_by: approverId,
+        approved_at: new Date(),
+        approval_comments: comments
+      }, { transaction });
+    }
+    
+    await transaction.commit();
+    
+    res.json({
+      success: true,
+      data: {
+        message: '점검이 승인되었습니다.',
+        inspection_id: id,
+        approved_at: new Date()
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Approve inspection error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to approve inspection', details: error.message }
+    });
+  }
+};
+
+/**
+ * 점검 반려
+ */
+const rejectInspection = async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    const { type, reason } = req.body;
+    const approverId = req.user.id;
+    
+    if (!reason) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: { message: '반려 사유를 입력해주세요.' }
+      });
+    }
+    
+    let inspection = null;
+    
+    // 일상점검 반려
+    if (type === 'daily') {
+      inspection = await DailyCheck.findByPk(id, { transaction });
+      
+      if (!inspection) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          error: { message: 'Daily inspection not found' }
+        });
+      }
+      
+      await inspection.update({
+        status: 'rejected',
+        approved_by: approverId,
+        approved_at: new Date(),
+        rejection_reason: reason
+      }, { transaction });
+    }
+    
+    // 정기점검 반려
+    if (type === 'periodic') {
+      const PeriodicInspection = require('../models/newIndex').PeriodicInspection;
+      inspection = await PeriodicInspection.findByPk(id, { transaction });
+      
+      if (!inspection) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          error: { message: 'Periodic inspection not found' }
+        });
+      }
+      
+      await inspection.update({
+        status: 'rejected',
+        approved_by: approverId,
+        approved_at: new Date(),
+        rejection_reason: reason
+      }, { transaction });
+    }
+    
+    await transaction.commit();
+    
+    res.json({
+      success: true,
+      data: {
+        message: '점검이 반려되었습니다.',
+        inspection_id: id,
+        rejected_at: new Date(),
+        reason
+      }
+    });
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Reject inspection error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to reject inspection', details: error.message }
     });
   }
 };
@@ -393,7 +734,10 @@ const createDailyInspection = async (req, res) => {
 module.exports = {
   getInspections,
   getInspectionById,
+  getPendingInspections,
   createDailyInspection,
   createPeriodicInspection,
-  updateInspection
+  updateInspection,
+  approveInspection,
+  rejectInspection
 };

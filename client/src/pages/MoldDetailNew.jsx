@@ -66,7 +66,7 @@ export default function MoldDetailNew() {
       label: '금형이관', 
       color: 'bg-sky-400',
       hoverColor: 'hover:bg-sky-500',
-      items: ['이관요청', '이관현황', '이관 체크리스트']
+      items: ['이관현황']
     }
   };
 
@@ -419,6 +419,8 @@ export default function MoldDetailNew() {
                                   navigate(`/checklist/daily?mold=${id}`);
                                 } else if (item === '정기점검') {
                                   navigate(`/inspection/periodic?mold=${id}`);
+                                } else if (item === '승인') {
+                                  navigate(`/inspection-approval?moldId=${id}`);
                                 } else if (item === '사출조건 관리') {
                                   navigate(`/injection-condition?moldId=${id}`);
                                 } else if (item === '이력관리') {

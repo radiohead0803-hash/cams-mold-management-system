@@ -95,6 +95,26 @@ export const checklistAPI = {
   }),
 }
 
+// Inspection API (점검 승인 관리)
+export const inspectionAPI = {
+  // 점검 목록 조회
+  getAll: (params) => api.get('/inspections', { params }),
+  // 승인 대기 목록
+  getPending: (params) => api.get('/inspections/pending', { params }),
+  // 점검 상세 조회
+  getById: (id, params) => api.get(`/inspections/${id}`, { params }),
+  // 일상점검 제출
+  createDaily: (data) => api.post('/inspections/daily', data),
+  // 정기점검 제출
+  createPeriodic: (data) => api.post('/inspections/periodic', data),
+  // 점검 수정
+  update: (id, data) => api.patch(`/inspections/${id}`, data),
+  // 점검 승인
+  approve: (id, data) => api.post(`/inspections/${id}/approve`, data),
+  // 점검 반려
+  reject: (id, data) => api.post(`/inspections/${id}/reject`, data),
+}
+
 // Alert/Notification API - 서버의 /notifications 라우트에 맞춤
 export const alertAPI = {
   getAll: (params) => api.get('/notifications', { params }),

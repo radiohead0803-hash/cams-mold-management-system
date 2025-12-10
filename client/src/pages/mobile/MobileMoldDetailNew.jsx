@@ -215,7 +215,7 @@ export default function MobileMoldDetailNew() {
       items: [
         { label: '일상점검', action: () => navigate(`/mobile/mold/${moldId}/daily-check`) },
         { label: '정기점검', action: () => navigate(`/mobile/mold/${moldId}/periodic-check`) },
-        { label: '승인' }
+        { label: '승인', action: () => navigate(`/mobile/mold/${moldId}/inspection-approval`) }
       ]
     },
     transfer: {
@@ -223,9 +223,7 @@ export default function MobileMoldDetailNew() {
       icon: Truck,
       color: 'bg-sky-400',
       items: [
-        { label: '이관요청', action: () => navigate(`/mobile/mold/${moldId}/transfer/new`) },
-        { label: '이관현황', action: () => navigate(`/mobile/mold/${moldId}/transfer`) },
-        { label: '이관 체크리스트', action: () => navigate(`/mobile/mold/${moldId}/transfer/list`) }
+        { label: '이관현황', action: () => navigate(`/mobile/mold/${moldId}/transfer`) }
       ]
     }
   }
