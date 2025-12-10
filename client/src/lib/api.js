@@ -260,6 +260,12 @@ export const masterDataAPI = {
   createTonnage: (data) => api.post('/master-data/tonnages', data),
   updateTonnage: (id, data) => api.patch(`/master-data/tonnages/${id}`, data),
   deleteTonnage: (id) => api.delete(`/master-data/tonnages/${id}`),
+  
+  // 원재료
+  getRawMaterials: (params) => api.get('/master-data/raw-materials', { params }),
+  createRawMaterial: (data) => api.post('/master-data/raw-materials', data),
+  updateRawMaterial: (id, data) => api.patch(`/master-data/raw-materials/${id}`, data),
+  deleteRawMaterial: (id) => api.delete(`/master-data/raw-materials/${id}`),
 }
 
 export default api

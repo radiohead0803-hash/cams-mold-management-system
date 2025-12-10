@@ -17,7 +17,11 @@ const {
   getTonnages,
   createTonnage,
   updateTonnage,
-  deleteTonnage
+  deleteTonnage,
+  getRawMaterials,
+  createRawMaterial,
+  updateRawMaterial,
+  deleteRawMaterial
 } = require('../controllers/masterDataController');
 
 // 모든 라우트에 인증 미들웨어 적용
@@ -46,5 +50,11 @@ router.get('/tonnages', getTonnages);
 router.post('/tonnages', authorize(['mold_developer', 'system_admin']), createTonnage);
 router.patch('/tonnages/:id', authorize(['mold_developer', 'system_admin']), updateTonnage);
 router.delete('/tonnages/:id', authorize(['mold_developer', 'system_admin']), deleteTonnage);
+
+// ===== 원재료 관리 =====
+router.get('/raw-materials', getRawMaterials);
+router.post('/raw-materials', authorize(['mold_developer', 'system_admin']), createRawMaterial);
+router.patch('/raw-materials/:id', authorize(['mold_developer', 'system_admin']), updateRawMaterial);
+router.delete('/raw-materials/:id', authorize(['mold_developer', 'system_admin']), deleteRawMaterial);
 
 module.exports = router;

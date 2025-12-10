@@ -1,4 +1,4 @@
-const { CarModel, Material, MoldType, Tonnage } = require('../models/newIndex');
+const { CarModel, Material, MoldType, Tonnage, sequelize } = require('../models/newIndex');
 const logger = require('../utils/logger');
 
 // ===== 차종 관리 =====
@@ -443,6 +443,177 @@ const deleteTonnage = async (req, res) => {
   }
 };
 
+// ===== 원재료 관리 =====
+const getRawMaterials = async (req, res) => {
+  try {
+    const { is_active, category } = req.query;
+    let whereClause = '';
+    const replacements = {};
+    
+    if (is_active !== undefined) {
+      whereClause += ' WHERE is_active = :is_active';
+      replacements.is_active = is_active === 'true';
+    }
+    if (category) {
+      whereClause += whereClause ? ' AND category = :category' : ' WHERE category = :category';
+      replacements.category = category;
+    }
+
+    const [rawMaterials] = await sequelize.query(
+      `SELECT * FROM raw_materials${whereClause} ORDER BY sort_order ASC, material_name ASC`,
+      { replacements }
+    );
+
+    res.json({
+      success: true,
+      data: rawMaterials
+    });
+  } catch (error) {
+    logger.error('Get raw materials error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '원재료 목록 조회 실패' }
+    });
+  }
+};
+
+const createRawMaterial = async (req, res) => {
+  try {
+    const {
+      material_name, material_code, material_grade, supplier, category, color,
+      shrinkage_rate, melt_temp_min, melt_temp_max, mold_temp_min, mold_temp_max,
+      drying_temp, drying_time, density, mfi, tensile_strength, flexural_modulus,
+      impact_strength, hdt, description, sort_order
+    } = req.body;
+
+    const [result] = await sequelize.query(`
+      INSERT INTO raw_materials (
+        material_name, material_code, material_grade, supplier, category, color,
+        shrinkage_rate, melt_temp_min, melt_temp_max, mold_temp_min, mold_temp_max,
+        drying_temp, drying_time, density, mfi, tensile_strength, flexural_modulus,
+        impact_strength, hdt, description, sort_order, is_active, created_at, updated_at
+      ) VALUES (
+        :material_name, :material_code, :material_grade, :supplier, :category, :color,
+        :shrinkage_rate, :melt_temp_min, :melt_temp_max, :mold_temp_min, :mold_temp_max,
+        :drying_temp, :drying_time, :density, :mfi, :tensile_strength, :flexural_modulus,
+        :impact_strength, :hdt, :description, :sort_order, true, NOW(), NOW()
+      ) RETURNING *
+    `, {
+      replacements: {
+        material_name, material_code: material_code || null, material_grade: material_grade || null,
+        supplier: supplier || null, category: category || null, color: color || null,
+        shrinkage_rate: shrinkage_rate || null, melt_temp_min: melt_temp_min || null,
+        melt_temp_max: melt_temp_max || null, mold_temp_min: mold_temp_min || null,
+        mold_temp_max: mold_temp_max || null, drying_temp: drying_temp || null,
+        drying_time: drying_time || null, density: density || null, mfi: mfi || null,
+        tensile_strength: tensile_strength || null, flexural_modulus: flexural_modulus || null,
+        impact_strength: impact_strength || null, hdt: hdt || null,
+        description: description || null, sort_order: sort_order || 0
+      }
+    });
+
+    logger.info(`Raw material created: ${result[0].id} by user ${req.user.id}`);
+
+    res.status(201).json({
+      success: true,
+      data: result[0]
+    });
+  } catch (error) {
+    logger.error('Create raw material error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '원재료 등록 실패', details: error.message }
+    });
+  }
+};
+
+const updateRawMaterial = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateFields = [];
+    const replacements = { id };
+
+    const allowedFields = [
+      'material_name', 'material_code', 'material_grade', 'supplier', 'category', 'color',
+      'shrinkage_rate', 'melt_temp_min', 'melt_temp_max', 'mold_temp_min', 'mold_temp_max',
+      'drying_temp', 'drying_time', 'density', 'mfi', 'tensile_strength', 'flexural_modulus',
+      'impact_strength', 'hdt', 'description', 'sort_order', 'is_active'
+    ];
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateFields.push(`${field} = :${field}`);
+        replacements[field] = req.body[field];
+      }
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: '수정할 필드가 없습니다' }
+      });
+    }
+
+    updateFields.push('updated_at = NOW()');
+
+    const [result] = await sequelize.query(
+      `UPDATE raw_materials SET ${updateFields.join(', ')} WHERE id = :id RETURNING *`,
+      { replacements }
+    );
+
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '원재료를 찾을 수 없습니다' }
+      });
+    }
+
+    logger.info(`Raw material updated: ${id} by user ${req.user.id}`);
+
+    res.json({
+      success: true,
+      data: result[0]
+    });
+  } catch (error) {
+    logger.error('Update raw material error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '원재료 수정 실패' }
+    });
+  }
+};
+
+const deleteRawMaterial = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [result] = await sequelize.query(
+      'DELETE FROM raw_materials WHERE id = :id RETURNING id',
+      { replacements: { id } }
+    );
+
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '원재료를 찾을 수 없습니다' }
+      });
+    }
+
+    logger.info(`Raw material deleted: ${id} by user ${req.user.id}`);
+
+    res.json({
+      success: true,
+      message: '원재료가 삭제되었습니다'
+    });
+  } catch (error) {
+    logger.error('Delete raw material error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '원재료 삭제 실패' }
+    });
+  }
+};
+
 module.exports = {
   // 차종
   getCarModels,
@@ -463,5 +634,10 @@ module.exports = {
   getTonnages,
   createTonnage,
   updateTonnage,
-  deleteTonnage
+  deleteTonnage,
+  // 원재료
+  getRawMaterials,
+  createRawMaterial,
+  updateRawMaterial,
+  deleteRawMaterial
 };

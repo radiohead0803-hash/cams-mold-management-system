@@ -16,7 +16,8 @@ export default function MasterData() {
     { id: 'car-models', label: '차종' },
     { id: 'materials', label: '재질' },
     { id: 'mold-types', label: '금형타입' },
-    { id: 'tonnages', label: '톤수' }
+    { id: 'tonnages', label: '톤수' },
+    { id: 'raw-materials', label: '원재료' }
   ];
 
   useEffect(() => {
@@ -40,6 +41,9 @@ export default function MasterData() {
           break;
         case 'tonnages':
           response = await masterDataAPI.getTonnages({ is_active: true });
+          break;
+        case 'raw-materials':
+          response = await masterDataAPI.getRawMaterials({ is_active: true });
           break;
       }
       
@@ -85,6 +89,9 @@ export default function MasterData() {
           case 'tonnages':
             await masterDataAPI.createTonnage(formData);
             break;
+          case 'raw-materials':
+            await masterDataAPI.createRawMaterial(formData);
+            break;
         }
       } else {
         switch (activeTab) {
@@ -99,6 +106,9 @@ export default function MasterData() {
             break;
           case 'tonnages':
             await masterDataAPI.updateTonnage(editingId, formData);
+            break;
+          case 'raw-materials':
+            await masterDataAPI.updateRawMaterial(editingId, formData);
             break;
         }
       }
@@ -130,6 +140,9 @@ export default function MasterData() {
           break;
         case 'tonnages':
           await masterDataAPI.deleteTonnage(id);
+          break;
+        case 'raw-materials':
+          await masterDataAPI.deleteRawMaterial(id);
           break;
       }
       
@@ -260,6 +273,108 @@ export default function MasterData() {
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="input"
+            />
+          </div>
+        );
+      
+      case 'raw-materials':
+        return (
+          <div className="grid grid-cols-3 gap-4">
+            <input
+              type="text"
+              placeholder="원재료명 (예: ABS, PP, PC)"
+              value={formData.material_name || ''}
+              onChange={(e) => setFormData({ ...formData, material_name: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="원재료 코드"
+              value={formData.material_code || ''}
+              onChange={(e) => setFormData({ ...formData, material_code: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="등급/그레이드"
+              value={formData.material_grade || ''}
+              onChange={(e) => setFormData({ ...formData, material_grade: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="공급업체"
+              value={formData.supplier || ''}
+              onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              className="input"
+            />
+            <select
+              value={formData.category || ''}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="input"
+            >
+              <option value="">분류 선택</option>
+              <option value="범용수지">범용수지</option>
+              <option value="엔지니어링수지">엔지니어링수지</option>
+              <option value="슈퍼엔지니어링수지">슈퍼엔지니어링수지</option>
+              <option value="기타">기타</option>
+            </select>
+            <input
+              type="text"
+              placeholder="색상"
+              value={formData.color || ''}
+              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              step="0.001"
+              placeholder="수축률 (%)"
+              value={formData.shrinkage_rate || ''}
+              onChange={(e) => setFormData({ ...formData, shrinkage_rate: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="용융온도 최소 (°C)"
+              value={formData.melt_temp_min || ''}
+              onChange={(e) => setFormData({ ...formData, melt_temp_min: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="용융온도 최대 (°C)"
+              value={formData.melt_temp_max || ''}
+              onChange={(e) => setFormData({ ...formData, melt_temp_max: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="금형온도 최소 (°C)"
+              value={formData.mold_temp_min || ''}
+              onChange={(e) => setFormData({ ...formData, mold_temp_min: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="금형온도 최대 (°C)"
+              value={formData.mold_temp_max || ''}
+              onChange={(e) => setFormData({ ...formData, mold_temp_max: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="건조온도 (°C)"
+              value={formData.drying_temp || ''}
+              onChange={(e) => setFormData({ ...formData, drying_temp: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="설명/비고"
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="input col-span-3"
             />
           </div>
         );
@@ -395,6 +510,45 @@ export default function MasterData() {
                   <td className="px-6 py-4 whitespace-nowrap">{item.tonnage_value}T</td>
                   <td className="px-6 py-4">{item.description || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
+                      <Edit2 size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900">
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+      
+      case 'raw-materials':
+        return (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">순서</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">원재료명</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">코드</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">등급</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">분류</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">공급업체</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">수축률</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {data.map((item, index) => (
+                <tr key={item.id}>
+                  <td className="px-4 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
+                  <td className="px-4 py-4 whitespace-nowrap font-medium">{item.material_name}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.material_code || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.material_grade || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.category || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.supplier || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.shrinkage_rate ? `${item.shrinkage_rate}%` : '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
                       <Edit2 size={16} />
                     </button>

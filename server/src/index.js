@@ -224,6 +224,53 @@ const runInjectionConditionsMigration = async () => {
   logger.info('injection_conditions migration completed.');
 };
 
+// raw_materials 테이블 마이그레이션
+const runRawMaterialsMigration = async () => {
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS raw_materials (
+        id SERIAL PRIMARY KEY,
+        material_name VARCHAR(100) NOT NULL,
+        material_code VARCHAR(50),
+        material_grade VARCHAR(100),
+        supplier VARCHAR(200),
+        category VARCHAR(50),
+        color VARCHAR(50),
+        shrinkage_rate DECIMAL(5,3),
+        melt_temp_min INTEGER,
+        melt_temp_max INTEGER,
+        mold_temp_min INTEGER,
+        mold_temp_max INTEGER,
+        drying_temp INTEGER,
+        drying_time INTEGER,
+        density DECIMAL(5,3),
+        mfi DECIMAL(6,2),
+        tensile_strength DECIMAL(6,2),
+        flexural_modulus DECIMAL(8,2),
+        impact_strength DECIMAL(6,2),
+        hdt INTEGER,
+        description TEXT,
+        is_active BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    logger.info('raw_materials table created/verified.');
+  } catch (err) {
+    logger.warn('raw_materials table creation:', err.message);
+  }
+
+  // 인덱스 생성
+  try {
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_raw_materials_category ON raw_materials(category);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_raw_materials_is_active ON raw_materials(is_active);`);
+  } catch (err) {
+    // 무시
+  }
+  logger.info('raw_materials migration completed.');
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -234,6 +281,7 @@ const startServer = async () => {
     // 마이그레이션 실행
     await runRepairRequestsMigration();
     await runInjectionConditionsMigration();
+    await runRawMaterialsMigration();
     
     // Sync database (only in development)
     if (process.env.NODE_ENV === 'development') {
