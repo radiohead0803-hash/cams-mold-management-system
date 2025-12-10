@@ -177,6 +177,51 @@ router.get('/dashboard/recent-activities', async (req, res) => {
 });
 
 /**
+ * GET /api/v1/hq/dashboard/recent-activities/statistics
+ * 최근 활동 통계
+ */
+router.get('/dashboard/recent-activities/statistics', async (req, res) => {
+  try {
+    // 안전한 카운트 함수
+    const safeCount = async (tableName, whereClause = '') => {
+      try {
+        const query = `SELECT COUNT(*) as count FROM ${tableName} ${whereClause}`;
+        const [result] = await sequelize.query(query);
+        return parseInt(result[0]?.count || 0);
+      } catch (e) {
+        return 0;
+      }
+    };
+
+    const todayRepairs = await safeCount('repair_requests', "WHERE created_at >= CURRENT_DATE");
+    const todayInspections = await safeCount('inspections', "WHERE created_at >= CURRENT_DATE");
+    const todayScans = await safeCount('qr_sessions', "WHERE created_at >= CURRENT_DATE");
+    const pendingApprovals = await safeCount('repair_requests', "WHERE status = 'pending'");
+
+    return res.json({
+      success: true,
+      data: {
+        todayRepairs,
+        todayInspections,
+        todayScans,
+        pendingApprovals
+      }
+    });
+  } catch (error) {
+    logger.error('Recent activities statistics error:', error);
+    return res.json({
+      success: true,
+      data: {
+        todayRepairs: 0,
+        todayInspections: 0,
+        todayScans: 0,
+        pendingApprovals: 0
+      }
+    });
+  }
+});
+
+/**
  * GET /api/v1/hq/repair-requests
  * HQ 수리요청 목록 조회
  */
