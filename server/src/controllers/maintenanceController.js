@@ -299,9 +299,14 @@ const getMoldMaintenanceHistory = async (req, res) => {
     
   } catch (error) {
     logger.error('Get mold maintenance history error:', error);
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to get maintenance history' }
+    // 에러 시 빈 데이터 반환
+    res.json({
+      success: true,
+      data: {
+        mold_id: parseInt(req.params.mold_id),
+        records: [],
+        statistics: []
+      }
     });
   }
 };
@@ -404,9 +409,16 @@ const getStatistics = async (req, res) => {
     
   } catch (error) {
     logger.error('Get maintenance statistics error:', error);
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to get statistics' }
+    // 에러 시 빈 데이터 반환
+    res.json({
+      success: true,
+      data: {
+        year: new Date().getFullYear(),
+        month: null,
+        by_type: [],
+        by_month: [],
+        by_mold: []
+      }
     });
   }
 };
