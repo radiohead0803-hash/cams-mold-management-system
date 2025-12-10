@@ -7,6 +7,24 @@ import {
 } from 'lucide-react';
 import api from '../lib/api';
 
+// CSV 다운로드 유틸리티
+const downloadCSV = (data, filename) => {
+  const BOM = '\uFEFF';
+  const csv = BOM + data;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+};
+
+// 데이터를 CSV 형식으로 변환
+const convertToCSV = (headers, rows) => {
+  const headerRow = headers.join(',');
+  const dataRows = rows.map(row => row.map(cell => `"${cell || ''}"`).join(','));
+  return [headerRow, ...dataRows].join('\n');
+};
+
 // 간단한 바 차트 컴포넌트
 const SimpleBarChart = ({ data, labelKey, valueKey, color = 'blue' }) => {
   const maxValue = Math.max(...data.map(d => parseInt(d[valueKey]) || 0), 1);
@@ -131,6 +149,56 @@ export default function Reports() {
     }
   };
 
+  // 리포트 다운로드 핸들러
+  const handleDownloadReport = () => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (activeTab === 'overview' || activeTab === 'molds') {
+      // 금형 통계 CSV
+      const headers = ['구분', '값'];
+      const rows = [
+        ['전체 금형', moldStats?.total || 0],
+        ['양산 중', moldStats?.active || 0],
+        ['개발 중', moldStats?.development || 0],
+        ['제작 중', moldStats?.manufacturing || 0],
+        ['폐기', moldStats?.scrapped || 0],
+        [''],
+        ['차종별 금형'],
+        ...(moldStats?.byCarModel || []).map(item => [item.name, item.count]),
+        [''],
+        ['제작처별 금형'],
+        ...(moldStats?.byMaker || []).map(item => [item.name, item.count])
+      ];
+      const csv = convertToCSV(headers, rows);
+      downloadCSV(csv, `금형통계_${year}년_${today}.csv`);
+    } else if (activeTab === 'maintenance') {
+      // 유지보전 통계 CSV
+      const headers = ['유형', '건수', '비용'];
+      const rows = (maintenanceStats?.by_type || []).map(item => [
+        item.maintenance_type,
+        item.count,
+        item.total_cost || 0
+      ]);
+      const csv = convertToCSV(headers, rows);
+      downloadCSV(csv, `유지보전통계_${year}년_${today}.csv`);
+    } else if (activeTab === 'checklists') {
+      // 체크리스트 통계 CSV
+      const headers = ['상태', '건수'];
+      const rows = [
+        ['전체', checklistStats?.total || 0],
+        ['작성중', checklistStats?.draft || 0],
+        ['제출됨', checklistStats?.submitted || 0],
+        ['승인됨', checklistStats?.approved || 0],
+        ['반려됨', checklistStats?.rejected || 0],
+        ['완료율', `${checklistStats?.completionRate || 0}%`]
+      ];
+      const csv = convertToCSV(headers, rows);
+      downloadCSV(csv, `체크리스트통계_${year}년_${today}.csv`);
+    }
+    
+    alert('리포트가 다운로드되었습니다.');
+  };
+
   const tabs = [
     { id: 'overview', label: '전체 현황', icon: BarChart3 },
     { id: 'molds', label: '금형 통계', icon: Package },
@@ -184,6 +252,7 @@ export default function Reports() {
             새로고침
           </button>
           <button
+            onClick={handleDownloadReport}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Download size={18} />
