@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { moldSpecificationAPI } from '../lib/api'
-import { Package, Search, Filter, Edit, Image as ImageIcon, X, ArrowLeft, Download } from 'lucide-react'
+import { Package, Search, Filter, Edit, Image as ImageIcon, X, ArrowLeft, Download, Star } from 'lucide-react'
 
 // CSV 다운로드 유틸리티
 const downloadCSV = (data, filename) => {
@@ -17,6 +17,7 @@ const downloadCSV = (data, filename) => {
 // KPI 필터 타입 정의
 const KPI_FILTERS = {
   all: { label: '전체 금형', color: 'gray' },
+  favorites: { label: '즐겨찾기', color: 'yellow' },
   active: { label: '양산 중 금형', color: 'green' },
   repair: { label: '수리 중 금형', color: 'orange' },
   overshot: { label: '타수 초과 금형', color: 'red' },
@@ -111,12 +112,20 @@ export default function MoldList() {
     }
   }
 
+  // 즐겨찾기 목록 가져오기
+  const favorites = JSON.parse(localStorage.getItem('moldFavorites') || '[]');
+
   const filteredMolds = molds.filter(mold => {
     const matchesSearch = 
       mold.mold_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mold.part_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mold.part_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       mold.car_model?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // 즐겨찾기 필터
+    if (statusFilter === 'favorites') {
+      return matchesSearch && favorites.includes(String(mold.id));
+    }
     
     const matchesStatus = statusFilter === 'all' || mold.status === statusFilter
     

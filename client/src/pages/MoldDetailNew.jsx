@@ -4,7 +4,7 @@ import {
   ArrowLeft, Settings, ChevronDown, Upload, Eye, 
   CheckCircle, MapPin, TrendingUp, User, AlertTriangle,
   Thermometer, Gauge, Clock, Box, Wrench, FileText,
-  ClipboardCheck, Calendar, Activity, Camera, Shield, X, History, Printer
+  ClipboardCheck, Calendar, Activity, Camera, Shield, X, History, Printer, Star
 } from 'lucide-react';
 import { moldSpecificationAPI, moldAPI, moldImageAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
@@ -28,6 +28,26 @@ export default function MoldDetailNew() {
   const [moldLocationPopup, setMoldLocationPopup] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(null); // 'mold' | 'product' | null
   const [moldImages, setMoldImages] = useState({ mold: null, product: null });
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  // 즐겨찾기 로드
+  useEffect(() => {
+    const favorites = JSON.parse(localStorage.getItem('moldFavorites') || '[]');
+    setIsFavorite(favorites.includes(id));
+  }, [id]);
+
+  // 즐겨찾기 토글
+  const toggleFavorite = () => {
+    const favorites = JSON.parse(localStorage.getItem('moldFavorites') || '[]');
+    let newFavorites;
+    if (isFavorite) {
+      newFavorites = favorites.filter(fav => fav !== id);
+    } else {
+      newFavorites = [...favorites, id];
+    }
+    localStorage.setItem('moldFavorites', JSON.stringify(newFavorites));
+    setIsFavorite(!isFavorite);
+  };
 
   // 드롭다운 메뉴 정의 (계층형 구조 지원) - 연한 색상
   const menuItems = {
@@ -541,6 +561,16 @@ export default function MoldDetailNew() {
 
             {/* Right: User Info & Actions */}
             <div className="flex items-center gap-2">
+              <button 
+                onClick={toggleFavorite}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                title={isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+              >
+                <Star 
+                  size={20} 
+                  className={isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} 
+                />
+              </button>
               <button 
                 onClick={handlePrint}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
