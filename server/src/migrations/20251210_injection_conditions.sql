@@ -13,45 +13,84 @@ CREATE TABLE IF NOT EXISTS injection_conditions (
   part_name VARCHAR(200),
   material VARCHAR(100),
   
-  -- 온도 설정
-  nozzle_temp DECIMAL(6,1),           -- 노즐 온도 (°C)
-  cylinder_temp_1 DECIMAL(6,1),       -- 실린더 온도 1존
-  cylinder_temp_2 DECIMAL(6,1),       -- 실린더 온도 2존
-  cylinder_temp_3 DECIMAL(6,1),       -- 실린더 온도 3존
-  cylinder_temp_4 DECIMAL(6,1),       -- 실린더 온도 4존
-  mold_temp_fixed DECIMAL(6,1),       -- 금형 온도 (고정측)
-  mold_temp_moving DECIMAL(6,1),      -- 금형 온도 (가동측)
+  -- ========== 속도 설정 ==========
+  speed_1 DECIMAL(6,1),               -- 속도 1차
+  speed_2 DECIMAL(6,1),               -- 속도 2차
+  speed_3 DECIMAL(6,1),               -- 속도 3차
+  speed_4 DECIMAL(6,1),               -- 속도 4차
+  speed_cooling DECIMAL(6,1),         -- 속도 냉각
   
-  -- 압력 설정
-  injection_pressure_1 DECIMAL(6,1),  -- 사출 압력 1단 (MPa)
-  injection_pressure_2 DECIMAL(6,1),  -- 사출 압력 2단
-  injection_pressure_3 DECIMAL(6,1),  -- 사출 압력 3단
-  holding_pressure_1 DECIMAL(6,1),    -- 보압 1단
-  holding_pressure_2 DECIMAL(6,1),    -- 보압 2단
-  holding_pressure_3 DECIMAL(6,1),    -- 보압 3단
-  back_pressure DECIMAL(6,1),         -- 배압
+  -- ========== 위치 설정 ==========
+  position_pv DECIMAL(6,1),           -- 위치 PV
+  position_1 DECIMAL(6,1),            -- 위치 #
+  position_2 DECIMAL(6,1),            -- 위치 43
+  position_3 DECIMAL(6,1),            -- 위치 21
   
-  -- 속도 설정
-  injection_speed_1 DECIMAL(6,1),     -- 사출 속도 1단 (%)
-  injection_speed_2 DECIMAL(6,1),     -- 사출 속도 2단
-  injection_speed_3 DECIMAL(6,1),     -- 사출 속도 3단
-  screw_rpm DECIMAL(6,1),             -- 스크류 회전수 (rpm)
+  -- ========== 압력 설정 ==========
+  pressure_1 DECIMAL(6,1),            -- 압력 1차
+  pressure_2 DECIMAL(6,1),            -- 압력 2차
+  pressure_3 DECIMAL(6,1),            -- 압력 3차
+  pressure_4 DECIMAL(6,1),            -- 압력 4차
   
-  -- 시간 설정
-  injection_time DECIMAL(6,2),        -- 사출 시간 (sec)
-  holding_time DECIMAL(6,2),          -- 보압 시간
-  cooling_time DECIMAL(6,2),          -- 냉각 시간
+  -- ========== 시간 설정 ==========
+  time_injection DECIMAL(6,2),        -- 시간 사출
+  time_holding DECIMAL(6,2),          -- 시간 보압
+  time_holding_3 DECIMAL(6,2),        -- 시간 보3
+  time_holding_4 DECIMAL(6,2),        -- 시간 보4
+  time_cooling DECIMAL(6,2),          -- 시간 냉각
+  
+  -- ========== 계량 속도 ==========
+  metering_speed_vp DECIMAL(6,1),     -- 속도 VP
+  metering_speed_1 DECIMAL(6,1),      -- 속도 계1
+  metering_speed_2 DECIMAL(6,1),      -- 속도 계2
+  metering_speed_3 DECIMAL(6,1),      -- 속도 계3
+  
+  -- ========== 계량 위치 ==========
+  metering_position_1 DECIMAL(6,1),   -- 위치 1
+  metering_position_2 DECIMAL(6,1),   -- 위치 2
+  
+  -- ========== 계량 압력 ==========
+  metering_pressure_2 DECIMAL(6,1),   -- 압력 계2
+  metering_pressure_3 DECIMAL(6,1),   -- 압력 3
+  metering_pressure_4 DECIMAL(6,1),   -- 압력 4
+  
+  -- ========== 만압 설정 ==========
+  full_pressure_1 DECIMAL(6,1),       -- 만압 1차
+  full_pressure_2 DECIMAL(6,1),       -- 만압 2차
+  full_pressure_3 DECIMAL(6,1),       -- 만압 3차
+  full_pressure_4 DECIMAL(6,1),       -- 만압 4차
+  full_pressure_1h DECIMAL(6,1),      -- 만압 1H
+  full_pressure_2h DECIMAL(6,1),      -- 만압 2H
+  full_pressure_3h DECIMAL(6,1),      -- 만압 3H
+  
+  -- ========== BARREL 온도 ==========
+  barrel_temp_1 DECIMAL(6,1),         -- BARREL 1
+  barrel_temp_2 DECIMAL(6,1),         -- BARREL 2
+  barrel_temp_3 DECIMAL(6,1),         -- BARREL 3
+  barrel_temp_4 DECIMAL(6,1),         -- BARREL 4
+  barrel_temp_5 DECIMAL(6,1),         -- BARREL 5
+  barrel_temp_6 DECIMAL(6,1),         -- BARREL 6
+  barrel_temp_7 DECIMAL(6,1),         -- BARREL 7
+  barrel_temp_8 DECIMAL(6,1),         -- BARREL 8
+  barrel_temp_9 DECIMAL(6,1),         -- BARREL 9
+  
+  -- ========== H/R 온도 ==========
+  hr_temp_1 DECIMAL(6,1),             -- H/R 1
+  hr_temp_2 DECIMAL(6,1),             -- H/R 2
+  hr_temp_3 DECIMAL(6,1),             -- H/R 3
+  hr_temp_4 DECIMAL(6,1),             -- H/R 4
+  
+  -- ========== 밸브게이트 ==========
+  valve_gate_moving DECIMAL(6,1),     -- 밸브게이트 가동
+  valve_gate_fixed DECIMAL(6,1),      -- 밸브게이트 고정
+  
+  -- ========== 칠러온도 ==========
+  chiller_temp_main DECIMAL(6,1),     -- 칠러온도 메인
+  chiller_temp_moving DECIMAL(6,1),   -- 칠러온도 가동
+  chiller_temp_fixed DECIMAL(6,1),    -- 칠러온도 고정
+  
+  -- ========== 기타 설정 ==========
   cycle_time DECIMAL(6,2),            -- 사이클 타임
-  
-  -- 계량 설정
-  metering_stroke DECIMAL(6,1),       -- 계량값 (mm)
-  suck_back DECIMAL(6,1),             -- 석백 (mm)
-  cushion DECIMAL(6,1),               -- 쿠션 (mm)
-  
-  -- 기타 설정
-  clamping_force DECIMAL(8,1),        -- 형체력 (ton)
-  ejector_stroke DECIMAL(6,1),        -- 이젝터 스트로크 (mm)
-  ejector_speed DECIMAL(6,1),         -- 이젝터 속도 (%)
   
   -- 승인 관련
   status VARCHAR(20) DEFAULT 'draft', -- draft, pending, approved, rejected

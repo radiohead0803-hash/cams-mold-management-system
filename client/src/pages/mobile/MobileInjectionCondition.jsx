@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Save, Send, ChevronDown, ChevronUp,
-  Thermometer, Gauge, Settings, Droplets, Clock, CheckCircle, AlertCircle, Info
+  Thermometer, Gauge, Settings, Droplets, Clock, CheckCircle, AlertCircle, Info,
+  User, Calendar, FileText, Edit3
 } from 'lucide-react';
 import { moldSpecificationAPI, injectionConditionAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
@@ -24,41 +25,34 @@ export default function MobileInjectionCondition() {
   const canEdit = !isDeveloper || condition?.status === 'draft';
   
   const [conditionData, setConditionData] = useState({
-    // 온도 설정
-    nozzle_temp: '',
-    cylinder_temp_1: '',
-    cylinder_temp_2: '',
-    cylinder_temp_3: '',
-    cylinder_temp_4: '',
-    mold_temp_fixed: '',
-    mold_temp_moving: '',
-    // 압력 설정
-    injection_pressure_1: '',
-    injection_pressure_2: '',
-    injection_pressure_3: '',
-    holding_pressure_1: '',
-    holding_pressure_2: '',
-    holding_pressure_3: '',
-    back_pressure: '',
     // 속도 설정
-    injection_speed_1: '',
-    injection_speed_2: '',
-    injection_speed_3: '',
-    screw_rpm: '',
+    speed_1: '', speed_2: '', speed_3: '', speed_4: '', speed_cooling: '',
+    // 위치 설정
+    position_pv: '', position_1: '', position_2: '', position_3: '',
+    // 압력 설정
+    pressure_1: '', pressure_2: '', pressure_3: '', pressure_4: '',
     // 시간 설정
-    injection_time: '',
-    holding_time: '',
-    cooling_time: '',
-    cycle_time: '',
-    // 계량 설정
-    metering_stroke: '',
-    suck_back: '',
-    cushion: '',
-    // 기타 설정
-    clamping_force: '',
-    ejector_stroke: '',
-    ejector_speed: '',
-    remarks: ''
+    time_injection: '', time_holding: '', time_holding_3: '', time_holding_4: '', time_cooling: '',
+    // 계량 속도
+    metering_speed_vp: '', metering_speed_1: '', metering_speed_2: '', metering_speed_3: '',
+    // 계량 위치
+    metering_position_1: '', metering_position_2: '',
+    // 계량 압력
+    metering_pressure_2: '', metering_pressure_3: '', metering_pressure_4: '',
+    // 만압 설정
+    full_pressure_1: '', full_pressure_2: '', full_pressure_3: '', full_pressure_4: '',
+    full_pressure_1h: '', full_pressure_2h: '', full_pressure_3h: '',
+    // BARREL 온도
+    barrel_temp_1: '', barrel_temp_2: '', barrel_temp_3: '', barrel_temp_4: '', barrel_temp_5: '',
+    barrel_temp_6: '', barrel_temp_7: '', barrel_temp_8: '', barrel_temp_9: '',
+    // H/R 온도
+    hr_temp_1: '', hr_temp_2: '', hr_temp_3: '', hr_temp_4: '',
+    // 밸브게이트
+    valve_gate_moving: '', valve_gate_fixed: '',
+    // 칠러온도
+    chiller_temp_main: '', chiller_temp_moving: '', chiller_temp_fixed: '',
+    // 기타
+    cycle_time: '', remarks: ''
   });
 
   useEffect(() => {
@@ -175,85 +169,173 @@ export default function MobileInjectionCondition() {
 
   const sections = [
     {
-      id: 'temperature',
-      title: '온도 설정',
-      icon: Thermometer,
-      color: 'from-red-50 to-orange-50',
-      iconColor: 'text-red-600',
-      fields: [
-        { key: 'nozzle_temp', label: '노즐 온도', suffix: '°C' },
-        { key: 'cylinder_temp_1', label: '실린더 온도 1존', suffix: '°C' },
-        { key: 'cylinder_temp_2', label: '실린더 온도 2존', suffix: '°C' },
-        { key: 'cylinder_temp_3', label: '실린더 온도 3존', suffix: '°C' },
-        { key: 'cylinder_temp_4', label: '실린더 온도 4존', suffix: '°C' },
-        { key: 'mold_temp_fixed', label: '금형 온도 (고정측)', suffix: '°C' },
-        { key: 'mold_temp_moving', label: '금형 온도 (가동측)', suffix: '°C' }
-      ]
-    },
-    {
-      id: 'pressure',
-      title: '압력 설정',
+      id: 'speed',
+      title: '속도',
       icon: Gauge,
       color: 'from-blue-50 to-indigo-50',
       iconColor: 'text-blue-600',
       fields: [
-        { key: 'injection_pressure_1', label: '사출 압력 1단', suffix: 'MPa' },
-        { key: 'injection_pressure_2', label: '사출 압력 2단', suffix: 'MPa' },
-        { key: 'injection_pressure_3', label: '사출 압력 3단', suffix: 'MPa' },
-        { key: 'holding_pressure_1', label: '보압 1단', suffix: 'MPa' },
-        { key: 'holding_pressure_2', label: '보압 2단', suffix: 'MPa' },
-        { key: 'holding_pressure_3', label: '보압 3단', suffix: 'MPa' },
-        { key: 'back_pressure', label: '배압', suffix: 'MPa' }
+        { key: 'speed_1', label: '1차', suffix: '' },
+        { key: 'speed_2', label: '2차', suffix: '' },
+        { key: 'speed_3', label: '3차', suffix: '' },
+        { key: 'speed_4', label: '4차', suffix: '' },
+        { key: 'speed_cooling', label: '냉', suffix: '' }
       ]
     },
     {
-      id: 'speed',
-      title: '속도 설정',
+      id: 'position',
+      title: '위치',
       icon: Settings,
       color: 'from-green-50 to-emerald-50',
       iconColor: 'text-green-600',
       fields: [
-        { key: 'injection_speed_1', label: '사출 속도 1단', suffix: '%' },
-        { key: 'injection_speed_2', label: '사출 속도 2단', suffix: '%' },
-        { key: 'injection_speed_3', label: '사출 속도 3단', suffix: '%' },
-        { key: 'screw_rpm', label: '스크류 회전수', suffix: 'rpm' }
+        { key: 'position_pv', label: 'PV', suffix: '' },
+        { key: 'position_1', label: '#', suffix: '' },
+        { key: 'position_2', label: '43', suffix: '' },
+        { key: 'position_3', label: '21', suffix: '' }
+      ]
+    },
+    {
+      id: 'pressure',
+      title: '압력',
+      icon: Gauge,
+      color: 'from-red-50 to-orange-50',
+      iconColor: 'text-red-600',
+      fields: [
+        { key: 'pressure_1', label: '1차', suffix: '' },
+        { key: 'pressure_2', label: '2차', suffix: '' },
+        { key: 'pressure_3', label: '3차', suffix: '' },
+        { key: 'pressure_4', label: '4차', suffix: '' }
       ]
     },
     {
       id: 'time',
-      title: '시간 설정',
+      title: '시간',
       icon: Clock,
       color: 'from-purple-50 to-violet-50',
       iconColor: 'text-purple-600',
       fields: [
-        { key: 'injection_time', label: '사출 시간', suffix: 'sec' },
-        { key: 'holding_time', label: '보압 시간', suffix: 'sec' },
-        { key: 'cooling_time', label: '냉각 시간', suffix: 'sec' },
-        { key: 'cycle_time', label: '사이클 타임', suffix: 'sec' }
+        { key: 'time_injection', label: '사출', suffix: 'sec' },
+        { key: 'time_holding', label: '보압', suffix: 'sec' },
+        { key: 'time_holding_3', label: '보3', suffix: 'sec' },
+        { key: 'time_holding_4', label: '보4', suffix: 'sec' },
+        { key: 'time_cooling', label: '냉각', suffix: 'sec' }
       ]
     },
     {
-      id: 'metering',
-      title: '계량 설정',
-      icon: Droplets,
-      color: 'from-orange-50 to-amber-50',
+      id: 'metering_speed',
+      title: '계량 속도',
+      icon: Gauge,
+      color: 'from-cyan-50 to-teal-50',
+      iconColor: 'text-cyan-600',
+      fields: [
+        { key: 'metering_speed_vp', label: 'VP', suffix: '' },
+        { key: 'metering_speed_1', label: '계1', suffix: '' },
+        { key: 'metering_speed_2', label: '계2', suffix: '' },
+        { key: 'metering_speed_3', label: '계3', suffix: '' }
+      ]
+    },
+    {
+      id: 'metering_position',
+      title: '계량 위치',
+      icon: Settings,
+      color: 'from-lime-50 to-green-50',
+      iconColor: 'text-lime-600',
+      fields: [
+        { key: 'metering_position_1', label: '1', suffix: '' },
+        { key: 'metering_position_2', label: '2', suffix: '' }
+      ]
+    },
+    {
+      id: 'metering_pressure',
+      title: '계량 압력',
+      icon: Gauge,
+      color: 'from-amber-50 to-yellow-50',
+      iconColor: 'text-amber-600',
+      fields: [
+        { key: 'metering_pressure_2', label: '계2', suffix: '' },
+        { key: 'metering_pressure_3', label: '3', suffix: '' },
+        { key: 'metering_pressure_4', label: '4', suffix: '' }
+      ]
+    },
+    {
+      id: 'full_pressure',
+      title: '만압',
+      icon: Gauge,
+      color: 'from-rose-50 to-pink-50',
+      iconColor: 'text-rose-600',
+      fields: [
+        { key: 'full_pressure_1', label: '1차', suffix: '' },
+        { key: 'full_pressure_2', label: '2차', suffix: '' },
+        { key: 'full_pressure_3', label: '3차', suffix: '' },
+        { key: 'full_pressure_4', label: '4차', suffix: '' },
+        { key: 'full_pressure_1h', label: '1H', suffix: '' },
+        { key: 'full_pressure_2h', label: '2H', suffix: '' },
+        { key: 'full_pressure_3h', label: '3H', suffix: '' }
+      ]
+    },
+    {
+      id: 'barrel',
+      title: 'BARREL',
+      icon: Thermometer,
+      color: 'from-orange-50 to-red-50',
       iconColor: 'text-orange-600',
       fields: [
-        { key: 'metering_stroke', label: '계량값', suffix: 'mm' },
-        { key: 'suck_back', label: '석백', suffix: 'mm' },
-        { key: 'cushion', label: '쿠션', suffix: 'mm' }
+        { key: 'barrel_temp_1', label: '1', suffix: '°C' },
+        { key: 'barrel_temp_2', label: '2', suffix: '°C' },
+        { key: 'barrel_temp_3', label: '3', suffix: '°C' },
+        { key: 'barrel_temp_4', label: '4', suffix: '°C' },
+        { key: 'barrel_temp_5', label: '5', suffix: '°C' },
+        { key: 'barrel_temp_6', label: '6', suffix: '°C' },
+        { key: 'barrel_temp_7', label: '7', suffix: '°C' },
+        { key: 'barrel_temp_8', label: '8', suffix: '°C' },
+        { key: 'barrel_temp_9', label: '9', suffix: '°C' }
+      ]
+    },
+    {
+      id: 'hr',
+      title: 'H/R',
+      icon: Thermometer,
+      color: 'from-violet-50 to-purple-50',
+      iconColor: 'text-violet-600',
+      fields: [
+        { key: 'hr_temp_1', label: '1', suffix: '°C' },
+        { key: 'hr_temp_2', label: '2', suffix: '°C' },
+        { key: 'hr_temp_3', label: '3', suffix: '°C' },
+        { key: 'hr_temp_4', label: '4', suffix: '°C' }
+      ]
+    },
+    {
+      id: 'valve_gate',
+      title: '밸브게이트',
+      icon: Settings,
+      color: 'from-slate-50 to-gray-50',
+      iconColor: 'text-slate-600',
+      fields: [
+        { key: 'valve_gate_moving', label: '가동', suffix: '' },
+        { key: 'valve_gate_fixed', label: '고정', suffix: '' }
+      ]
+    },
+    {
+      id: 'chiller',
+      title: '칠러온도',
+      icon: Droplets,
+      color: 'from-sky-50 to-blue-50',
+      iconColor: 'text-sky-600',
+      fields: [
+        { key: 'chiller_temp_main', label: '메인', suffix: '°C' },
+        { key: 'chiller_temp_moving', label: '가동', suffix: '°C' },
+        { key: 'chiller_temp_fixed', label: '고정', suffix: '°C' }
       ]
     },
     {
       id: 'other',
-      title: '기타 설정',
+      title: '기타',
       icon: Settings,
       color: 'from-gray-50 to-slate-50',
       iconColor: 'text-gray-600',
       fields: [
-        { key: 'clamping_force', label: '형체력', suffix: 'ton' },
-        { key: 'ejector_stroke', label: '이젝터 스트로크', suffix: 'mm' },
-        { key: 'ejector_speed', label: '이젝터 속도', suffix: '%' }
+        { key: 'cycle_time', label: '사이클타임', suffix: 'sec' }
       ]
     }
   ];
@@ -293,6 +375,147 @@ export default function MobileInjectionCondition() {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* 작성/수정/승인 정보 */}
+        {condition && (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(expandedSection === 'processInfo' ? null : 'processInfo')}
+              className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50"
+            >
+              <div className="flex items-center gap-2">
+                <FileText size={18} className="text-indigo-600" />
+                <span className="font-semibold text-gray-800">작성/수정/승인 정보</span>
+              </div>
+              {expandedSection === 'processInfo' ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+            {expandedSection === 'processInfo' && (
+              <div className="p-4 space-y-3">
+                {/* 현재 상태 */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm text-gray-600">현재 상태</span>
+                  {getStatusBadge(condition.status)}
+                </div>
+
+                {/* 작성 정보 */}
+                <div className="border-l-4 border-blue-400 pl-3 py-2">
+                  <div className="flex items-center gap-2 text-blue-600 mb-1">
+                    <Edit3 size={14} />
+                    <span className="text-sm font-medium">작성</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">작성자: </span>
+                      <span className="font-medium">{condition.registered_by_name || '-'}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">작성일: </span>
+                      <span className="font-medium">
+                        {condition.registered_at 
+                          ? new Date(condition.registered_at).toLocaleDateString('ko-KR') 
+                          : '-'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 수정 정보 */}
+                {condition.updated_at && condition.updated_at !== condition.registered_at && (
+                  <div className="border-l-4 border-yellow-400 pl-3 py-2">
+                    <div className="flex items-center gap-2 text-yellow-600 mb-1">
+                      <Edit3 size={14} />
+                      <span className="text-sm font-medium">최종 수정</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-gray-500">수정자: </span>
+                        <span className="font-medium">{condition.updated_by_name || condition.registered_by_name || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">수정일: </span>
+                        <span className="font-medium">
+                          {new Date(condition.updated_at).toLocaleDateString('ko-KR')}
+                        </span>
+                      </div>
+                    </div>
+                    {condition.version > 1 && (
+                      <div className="mt-1 text-xs text-gray-500">
+                        버전: v{condition.version}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 승인 정보 */}
+                {condition.status === 'approved' && (
+                  <div className="border-l-4 border-green-400 pl-3 py-2">
+                    <div className="flex items-center gap-2 text-green-600 mb-1">
+                      <CheckCircle size={14} />
+                      <span className="text-sm font-medium">승인</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-gray-500">승인자: </span>
+                        <span className="font-medium">{condition.approved_by_name || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">승인일: </span>
+                        <span className="font-medium">
+                          {condition.approved_at 
+                            ? new Date(condition.approved_at).toLocaleDateString('ko-KR') 
+                            : '-'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 반려 정보 */}
+                {condition.status === 'rejected' && (
+                  <div className="border-l-4 border-red-400 pl-3 py-2">
+                    <div className="flex items-center gap-2 text-red-600 mb-1">
+                      <AlertCircle size={14} />
+                      <span className="text-sm font-medium">반려</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-gray-500">반려자: </span>
+                        <span className="font-medium">{condition.approved_by_name || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">반려일: </span>
+                        <span className="font-medium">
+                          {condition.approved_at 
+                            ? new Date(condition.approved_at).toLocaleDateString('ko-KR') 
+                            : '-'}
+                        </span>
+                      </div>
+                    </div>
+                    {condition.rejection_reason && (
+                      <div className="mt-2 p-2 bg-red-50 rounded text-sm text-red-700">
+                        <span className="font-medium">반려 사유: </span>
+                        {condition.rejection_reason}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 승인 대기 중 */}
+                {condition.status === 'pending' && (
+                  <div className="border-l-4 border-yellow-400 pl-3 py-2">
+                    <div className="flex items-center gap-2 text-yellow-600 mb-1">
+                      <Clock size={14} />
+                      <span className="text-sm font-medium">승인 대기 중</span>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      개발담당자의 승인을 기다리고 있습니다.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 금형 기본정보 (자동 연결) */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <button
