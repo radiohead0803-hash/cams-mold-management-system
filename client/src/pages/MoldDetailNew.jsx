@@ -750,6 +750,13 @@ export default function MoldDetailNew() {
                     <MapPin className="mx-auto mb-1 text-purple-600" size={20} />
                     <span className="text-xs font-medium text-gray-700">이관관리</span>
                   </button>
+                  <button 
+                    onClick={() => navigate(`/repairs/new?moldId=${id}`)}
+                    className="p-3 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl hover:shadow-md transition-shadow text-center"
+                  >
+                    <Wrench className="mx-auto mb-1 text-yellow-600" size={20} />
+                    <span className="text-xs font-medium text-gray-700">수리요청</span>
+                  </button>
                 </div>
                 {/* QR 코드 - 스캔 시 모바일 페이지로 이동 */}
                 <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-xl p-4 flex flex-col items-center justify-center">
