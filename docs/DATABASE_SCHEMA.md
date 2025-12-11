@@ -2141,8 +2141,7 @@ CREATE TABLE production_transfer_requests (
   -- 'draft': 작성중
   -- 'checklist_in_progress': 체크리스트 작성중
   -- 'pending_plant_approval': 1차 승인대기 (생산처)
-  -- 'pending_quality_approval': 2차 승인대기 (품질팀)
-  -- 'pending_final_approval': 3차 최종승인대기 (금형개발담당)
+  -- 'pending_final_approval': 2차 최종승인대기 (금형개발담당)
   -- 'approved': 승인완료
   -- 'rejected': 반려
   -- 'transferred': 이관완료
