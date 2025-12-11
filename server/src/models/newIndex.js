@@ -46,6 +46,10 @@ const CarModel = require('./CarModel');
 const Material = require('./Material');
 const MoldType = require('./MoldType');
 const Tonnage = require('./Tonnage');
+const ProductionTransferChecklistMaster = require('./ProductionTransferChecklistMaster');
+const ProductionTransferRequest = require('./ProductionTransferRequest');
+const ProductionTransferChecklistItem = require('./ProductionTransferChecklistItem');
+const ProductionTransferApproval = require('./ProductionTransferApproval');
 
 // Helper function to initialize models
 const initModel = (ModelClass, sequelize) => {
@@ -97,7 +101,11 @@ const models = {
   CarModel: initModel(CarModel, sequelize),
   Material: initModel(Material, sequelize),
   MoldType: initModel(MoldType, sequelize),
-  Tonnage: initModel(Tonnage, sequelize)
+  Tonnage: initModel(Tonnage, sequelize),
+  ProductionTransferChecklistMaster: initModel(ProductionTransferChecklistMaster, sequelize),
+  ProductionTransferRequest: initModel(ProductionTransferRequest, sequelize),
+  ProductionTransferChecklistItem: initModel(ProductionTransferChecklistItem, sequelize),
+  ProductionTransferApproval: initModel(ProductionTransferApproval, sequelize)
 };
 
 // Setup associations

@@ -2095,6 +2095,122 @@ CREATE INDEX idx_gps_locations_date ON gps_locations(recorded_at);
 
 ---
 
+## 11. 양산이관 (Production Transfer)
+
+### 11.1 production_transfer_checklist_master (양산이관 체크리스트 마스터)
+```sql
+CREATE TABLE production_transfer_checklist_master (
+  id SERIAL PRIMARY KEY,
+  category VARCHAR(100) NOT NULL,           -- 카테고리 (금형상태, 서류, 시운전결과 등)
+  item_code VARCHAR(50) NOT NULL,           -- 항목 코드
+  item_name VARCHAR(200) NOT NULL,          -- 항목명
+  description TEXT,                          -- 상세 설명
+  is_required BOOLEAN DEFAULT TRUE,          -- 필수 여부
+  requires_attachment BOOLEAN DEFAULT FALSE, -- 첨부파일 필요 여부
+  attachment_type VARCHAR(50),               -- 첨부파일 유형 (image, document)
+  display_order INTEGER DEFAULT 0,           -- 표시 순서
+  is_active BOOLEAN DEFAULT TRUE,            -- 활성화 여부
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_transfer_checklist_master_category ON production_transfer_checklist_master(category);
+CREATE INDEX idx_transfer_checklist_master_active ON production_transfer_checklist_master(is_active);
+```
+
+### 11.2 production_transfer_requests (양산이관 신청)
+```sql
+CREATE TABLE production_transfer_requests (
+  id SERIAL PRIMARY KEY,
+  request_number VARCHAR(50) UNIQUE NOT NULL, -- 신청번호 (자동생성)
+  mold_id INTEGER REFERENCES molds(id),
+  mold_spec_id INTEGER REFERENCES mold_specifications(id),
+  
+  -- 이관 정보
+  from_maker_id INTEGER REFERENCES users(id),  -- 제작처
+  to_plant_id INTEGER REFERENCES users(id),    -- 이관 대상 생산처
+  
+  -- 일정
+  requested_date DATE NOT NULL,                -- 신청일
+  planned_transfer_date DATE,                  -- 예정 이관일
+  actual_transfer_date DATE,                   -- 실제 이관일
+  
+  -- 상태
+  status VARCHAR(30) NOT NULL DEFAULT 'draft',
+  -- 'draft': 작성중
+  -- 'checklist_in_progress': 체크리스트 작성중
+  -- 'pending_approval': 승인대기
+  -- 'approved': 승인완료
+  -- 'rejected': 반려
+  -- 'transferred': 이관완료
+  -- 'cancelled': 취소
+  
+  -- 승인 정보
+  approved_by INTEGER REFERENCES users(id),
+  approved_at TIMESTAMP,
+  rejection_reason TEXT,
+  
+  notes TEXT,
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_transfer_requests_mold ON production_transfer_requests(mold_id);
+CREATE INDEX idx_transfer_requests_status ON production_transfer_requests(status);
+```
+
+### 11.3 production_transfer_checklist_items (양산이관 체크리스트 항목)
+```sql
+CREATE TABLE production_transfer_checklist_items (
+  id SERIAL PRIMARY KEY,
+  transfer_request_id INTEGER NOT NULL REFERENCES production_transfer_requests(id),
+  master_item_id INTEGER NOT NULL REFERENCES production_transfer_checklist_master(id),
+  
+  is_checked BOOLEAN DEFAULT FALSE,
+  check_result VARCHAR(20),                   -- 'pass', 'fail', 'na'
+  check_value TEXT,
+  remarks TEXT,
+  
+  attachment_url TEXT,
+  attachment_filename VARCHAR(255),
+  
+  checked_by INTEGER REFERENCES users(id),
+  checked_at TIMESTAMP,
+  
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_transfer_checklist_items_request ON production_transfer_checklist_items(transfer_request_id);
+```
+
+### 11.4 production_transfer_approvals (양산이관 승인 이력)
+```sql
+CREATE TABLE production_transfer_approvals (
+  id SERIAL PRIMARY KEY,
+  transfer_request_id INTEGER NOT NULL REFERENCES production_transfer_requests(id),
+  
+  approval_step INTEGER DEFAULT 1,            -- 승인 단계
+  approval_type VARCHAR(30) NOT NULL,         -- 'submit', 'approve', 'reject', 'cancel'
+  
+  approver_id INTEGER REFERENCES users(id),
+  approver_name VARCHAR(100),
+  approver_role VARCHAR(50),
+  
+  decision VARCHAR(20),                       -- 'approved', 'rejected', 'pending'
+  comments TEXT,
+  
+  action_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_transfer_approvals_request ON production_transfer_approvals(transfer_request_id);
+```
+
+---
+
 ## 🔗 테이블 관계도
 
 ### 핵심 관계
