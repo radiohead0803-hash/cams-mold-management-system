@@ -507,29 +507,13 @@ export default function MoldRegistration() {
           </div>
         </section>
 
-        {/* 개발사양 및 단계 */}
+        {/* 개발사양 */}
         <section className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 개발사양 및 단계</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 개발사양</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                개발사양 <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="mold_spec_type"
-                value={formData.mold_spec_type}
-                onChange={handleChange}
-                className="input"
-              >
-                <option value="시작금형">시작금형</option>
-                <option value="양산금형">양산금형</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-1">시작금형: 개발/시제용, 양산금형: 양산용</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                단계 <span className="text-red-500">*</span>
+                진행단계 <span className="text-red-500">*</span>
               </label>
               <select
                 name="development_stage"
@@ -541,6 +525,22 @@ export default function MoldRegistration() {
                 <option value="양산">양산</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">현재 금형의 진행 단계</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                제작사양 <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="mold_spec_type"
+                value={formData.mold_spec_type}
+                onChange={handleChange}
+                className="input"
+              >
+                <option value="시작금형">시작금형</option>
+                <option value="양산금형">양산금형</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">시작금형: 개발/시제용, 양산금형: 양산용</p>
             </div>
 
             <div>
