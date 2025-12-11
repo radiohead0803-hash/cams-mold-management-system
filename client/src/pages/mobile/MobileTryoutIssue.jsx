@@ -17,7 +17,7 @@ import {
   Image,
   Trash2
 } from 'lucide-react';
-import api from '../../utils/api';
+import api from '../../lib/api';
 
 const MobileTryoutIssue = () => {
   const { moldId } = useParams();
