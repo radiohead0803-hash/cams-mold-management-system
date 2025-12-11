@@ -213,8 +213,8 @@ export default function MoldLocationMapPage() {
               </div>
             </div>
             
-            {/* 금형 목록 */}
-            <div className="flex-1 overflow-y-auto">
+            {/* 금형 목록 - 최대 10개만 표시 */}
+            <div className="flex-1 overflow-y-auto max-h-[400px]">
               {filteredLocations.length === 0 ? (
                 <div className="p-8 text-center">
                   <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -222,7 +222,7 @@ export default function MoldLocationMapPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {filteredLocations.map((loc) => {
+                  {filteredLocations.slice(0, 10).map((loc) => {
                     const isSelected = selectedMoldId === loc.id;
                     const isMoved = loc.hasDrift || loc.status === 'moved';
                     
@@ -304,12 +304,17 @@ export default function MoldLocationMapPage() {
                   })}
                 </div>
               )}
+              {filteredLocations.length > 10 && (
+                <div className="p-3 text-center text-sm text-gray-500 border-t">
+                  외 {filteredLocations.length - 10}개 더 (검색으로 필터링 가능)
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* 오른쪽 - 지도 */}
-        <div className="flex-1 relative min-h-0">
+        <div className="flex-1 relative min-h-[400px]">
           {error ? (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
               <div className="text-center">
