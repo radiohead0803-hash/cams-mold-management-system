@@ -6,7 +6,7 @@ import {
   Thermometer, Gauge, Clock, Box, Wrench, FileText,
   ClipboardCheck, Calendar, Activity, Camera, Shield, X, History, Printer, Star
 } from 'lucide-react';
-import { moldSpecificationAPI, moldAPI, moldImageAPI } from '../lib/api';
+import { moldSpecificationAPI, moldAPI, moldImageAPI, getImageUrl } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import NaverMoldLocationMap from '../components/NaverMoldLocationMap';
 
@@ -611,7 +611,7 @@ export default function MoldDetailNew() {
               <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center relative cursor-pointer hover:bg-gray-150 transition-colors">
                 {moldImages.mold || mold.part_images?.url || mold.mold_image_url ? (
                   <img 
-                    src={moldImages.mold || mold.part_images?.url || mold.mold_image_url} 
+                    src={getImageUrl(moldImages.mold || mold.part_images?.url || mold.mold_image_url)} 
                     alt="금형" 
                     className="w-full h-full object-cover" 
                   />
@@ -663,7 +663,7 @@ export default function MoldDetailNew() {
               <div className="aspect-video bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center relative cursor-pointer hover:bg-blue-100/50 transition-colors">
                 {moldImages.product || mold.product_image_url ? (
                   <img 
-                    src={moldImages.product || mold.product_image_url} 
+                    src={getImageUrl(moldImages.product || mold.product_image_url)} 
                     alt="제품" 
                     className="w-full h-full object-cover" 
                   />

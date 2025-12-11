@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
-import { moldSpecificationAPI, moldImageAPI } from '../../lib/api'
+import { moldSpecificationAPI, moldImageAPI, getImageUrl } from '../../lib/api'
 import api from '../../lib/api'
 import {
   ArrowLeft, Settings, ChevronDown, ChevronRight, Upload, Eye,
@@ -427,12 +427,12 @@ export default function MobileMoldDetailNew() {
                   <div 
                     className="aspect-square bg-gray-100 flex items-center justify-center relative cursor-pointer"
                     onClick={() => moldImages.mold 
-                      ? setImagePreview({ type: 'mold', url: moldImages.mold })
+                      ? setImagePreview({ type: 'mold', url: getImageUrl(moldImages.mold) })
                       : moldImageRef.current?.click()
                     }
                   >
                     {moldImages.mold ? (
-                      <img src={moldImages.mold} alt="금형" className="w-full h-full object-cover" />
+                      <img src={getImageUrl(moldImages.mold)} alt="금형" className="w-full h-full object-cover" />
                     ) : (
                       <div className="text-center">
                         <Camera size={32} className="text-gray-300 mx-auto" />
@@ -482,12 +482,12 @@ export default function MobileMoldDetailNew() {
                   <div 
                     className="aspect-square bg-gray-100 flex items-center justify-center relative cursor-pointer"
                     onClick={() => moldImages.product 
-                      ? setImagePreview({ type: 'product', url: moldImages.product })
+                      ? setImagePreview({ type: 'product', url: getImageUrl(moldImages.product) })
                       : productImageRef.current?.click()
                     }
                   >
                     {moldImages.product ? (
-                      <img src={moldImages.product} alt="제품" className="w-full h-full object-cover" />
+                      <img src={getImageUrl(moldImages.product)} alt="제품" className="w-full h-full object-cover" />
                     ) : (
                       <div className="text-center">
                         <Box size={32} className="text-gray-300 mx-auto" />
@@ -986,7 +986,7 @@ export default function MobileMoldDetailNew() {
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
                   {moldImages.mold ? (
-                    <img src={moldImages.mold} alt="" className="w-full h-full object-cover rounded-lg" />
+                    <img src={getImageUrl(moldImages.mold)} alt="" className="w-full h-full object-cover rounded-lg" />
                   ) : (
                     <Box size={24} className="text-gray-400" />
                   )}

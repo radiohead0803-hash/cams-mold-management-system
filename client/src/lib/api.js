@@ -5,6 +5,33 @@ const PRODUCTION_API_URL = 'https://cams-mold-management-system-production-b7d0.
 // VITE_API_URL이 이미 /api/v1을 포함하면 그대로 사용, 아니면 /api/v1 추가
 const API_URL = import.meta.env.VITE_API_URL || PRODUCTION_API_URL || 'http://localhost:3001/api/v1'
 
+// 백엔드 기본 URL (이미지 등 정적 파일용)
+const API_BASE_URL = API_URL.replace('/api/v1', '')
+
+/**
+ * 이미지 URL을 전체 URL로 변환
+ * - http/https로 시작하면 그대로 반환
+ * - /api/v1/mold-images/file/로 시작하면 백엔드 URL 붙임
+ * - /uploads/로 시작하면 백엔드 URL 붙임
+ * - data:로 시작하면 (Base64) 그대로 반환
+ */
+export const getImageUrl = (imageUrl) => {
+  if (!imageUrl) return null;
+  
+  // 이미 전체 URL이면 그대로 반환
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  
+  // Base64 데이터면 그대로 반환
+  if (imageUrl.startsWith('data:')) {
+    return imageUrl;
+  }
+  
+  // 상대 경로면 백엔드 URL 붙임
+  return `${API_BASE_URL}${imageUrl}`;
+}
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
