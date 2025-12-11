@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, AlertCircle, CheckCircle, Factory, Building2, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Save, AlertCircle, CheckCircle, Factory, Building2, Upload, X, Image as ImageIcon, FileText } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { masterDataAPI } from '../lib/api';
 
@@ -239,6 +239,70 @@ export default function MoldNew() {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  // 임시저장 핸들러
+  const handleSaveDraft = async () => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      if (!token) {
+        setError('로그인이 필요합니다.');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      const submitData = {
+        ...formData,
+        status: '임시저장',
+        cavity_count: parseInt(formData.cavity_count) || 1,
+        tonnage: formData.tonnage ? parseInt(formData.tonnage) : null,
+        estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
+        maker_company_id: formData.maker_company_id ? parseInt(formData.maker_company_id) : null,
+        plant_company_id: formData.plant_company_id ? parseInt(formData.plant_company_id) : null,
+        target_delivery_date: formData.target_delivery_date || null,
+        order_date: formData.order_date || null
+      };
+
+      const response = await fetch(`${API_BASE_URL}/mold-specifications`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(submitData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || '임시저장 실패');
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (partImage) {
+          await uploadPartImage(data.data.specification.id);
+        }
+        
+        setSuccess({
+          message: '임시저장되었습니다. 나중에 수정하여 등록할 수 있습니다.',
+          moldCode: data.data.mold?.mold_code,
+          qrToken: data.data.mold?.qr_token
+        });
+        
+        setTimeout(() => {
+          navigate('/molds');
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Failed to save draft:', err);
+      setError(err.message || '임시저장에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -255,6 +319,7 @@ export default function MoldNew() {
       // 숫자 필드 변환
       const submitData = {
         ...formData,
+        status: '등록',
         cavity_count: parseInt(formData.cavity_count) || 1,
         tonnage: formData.tonnage ? parseInt(formData.tonnage) : null,
         estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
@@ -943,6 +1008,24 @@ export default function MoldNew() {
             disabled={loading}
           >
             취소
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center transition-colors"
+            disabled={loading || uploadingImage}
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                저장 중...
+              </>
+            ) : (
+              <>
+                <FileText size={18} className="mr-2" />
+                임시저장
+              </>
+            )}
           </button>
           <button
             type="submit"
