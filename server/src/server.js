@@ -88,6 +88,17 @@ const runMoldImagesMigration = async () => {
       console.log('⚠️ mold_specifications columns may already exist:', e.message);
     }
 
+    // mold_specifications에 비용 컬럼 추가 (ICMS 비용, 업체 견적가)
+    try {
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS icms_cost DECIMAL(12, 2)`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS vendor_quote_cost DECIMAL(12, 2)`);
+      // 기존 estimated_cost 데이터를 icms_cost로 복사
+      await sequelize.query(`UPDATE mold_specifications SET icms_cost = estimated_cost WHERE icms_cost IS NULL AND estimated_cost IS NOT NULL`);
+      console.log('✅ mold_specifications cost columns added/verified.');
+    } catch (e) {
+      console.log('⚠️ mold_specifications cost columns may already exist:', e.message);
+    }
+
   } catch (error) {
     console.error('⚠️ mold_images migration warning:', error.message);
     // Don't throw - table might already exist with correct structure

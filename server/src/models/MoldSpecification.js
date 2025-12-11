@@ -57,7 +57,16 @@ class MoldSpecification extends Model {
           type: DataTypes.DATEONLY
         },
         estimated_cost: {
-          type: DataTypes.DECIMAL(12, 2)
+          type: DataTypes.DECIMAL(12, 2),
+          comment: '예상 비용 (기존 호환용)'
+        },
+        icms_cost: {
+          type: DataTypes.DECIMAL(12, 2),
+          comment: 'ICMS 비용 (원)'
+        },
+        vendor_quote_cost: {
+          type: DataTypes.DECIMAL(12, 2),
+          comment: '업체 견적가 (원)'
         },
         status: {
           type: DataTypes.STRING(20),

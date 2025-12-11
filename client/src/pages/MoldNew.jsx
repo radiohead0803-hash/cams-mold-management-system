@@ -34,7 +34,8 @@ export default function MoldNew() {
     production_stage: '시제',
     order_date: new Date().toISOString().split('T')[0],
     target_delivery_date: '',
-    estimated_cost: '',
+    icms_cost: '',
+    vendor_quote_cost: '',
     notes: '',
     part_images: []
   });
@@ -755,17 +756,30 @@ export default function MoldNew() {
                 className="input"
               />
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                예상 비용 (원)
+                ICMS 비용 (원)
               </label>
               <input
                 type="number"
-                name="estimated_cost"
-                value={formData.estimated_cost}
+                name="icms_cost"
+                value={formData.icms_cost}
                 onChange={handleChange}
                 className="input"
                 placeholder="50000000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                업체 견적가 (원)
+              </label>
+              <input
+                type="number"
+                name="vendor_quote_cost"
+                value={formData.vendor_quote_cost}
+                onChange={handleChange}
+                className="input"
+                placeholder="45000000"
               />
             </div>
           </div>
