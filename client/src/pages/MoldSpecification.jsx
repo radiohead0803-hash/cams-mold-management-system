@@ -130,8 +130,8 @@ export default function MoldSpecification() {
         <div className="bg-white rounded-2xl shadow-sm border p-6">
           <div className="flex items-center gap-2 mb-4"><Clock className="text-gray-400" size={20} /><h3 className="font-semibold">수정 이력</h3></div>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between py-2 border-b"><span className="text-gray-600">최초 등록</span><span>{moldData?.created_at ? new Date(moldData.created_at).toLocaleString('ko-KR') : '-'}</span></div>
-            <div className="flex justify-between py-2"><span className="text-gray-600">최종 수정</span><span>{moldData?.updated_at ? new Date(moldData.updated_at).toLocaleString('ko-KR') : '-'}</span></div>
+            <div className="flex justify-between py-2 border-b"><span className="text-gray-600">최초 등록</span><span>{moldData?.createdAt || moldData?.created_at ? new Date(moldData.createdAt || moldData.created_at).toLocaleString('ko-KR') : '-'}</span></div>
+            <div className="flex justify-between py-2"><span className="text-gray-600">최종 수정</span><span>{moldData?.updatedAt || moldData?.updated_at ? new Date(moldData.updatedAt || moldData.updated_at).toLocaleString('ko-KR') : '-'}</span></div>
           </div>
         </div>
       </div>
