@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
-import { moldSpecificationAPI } from '../lib/api'
+import { moldSpecificationAPI, getImageUrl } from '../lib/api'
 import { Package, Search, Filter, Edit, Image as ImageIcon, X, ArrowLeft, Download, Star } from 'lucide-react'
 import { TableSkeleton } from '../components/Skeleton'
 
@@ -93,9 +93,11 @@ export default function MoldList() {
       const specifications = response.data.data.items || []
 
       const transformedMolds = specifications.map(spec => {
-        // part_images JSONB에서 첫 번째 이미지 URL 추출
-        let imageUrl = null;
-        if (spec.part_images) {
+        // 이미지 URL 추출 (우선순위: mold_image_url > part_images)
+        let imageUrl = spec.mold_image_url || null;
+        
+        // mold_image_url이 없으면 part_images에서 추출
+        if (!imageUrl && spec.part_images) {
           if (typeof spec.part_images === 'string') {
             try {
               const parsed = JSON.parse(spec.part_images);
@@ -541,7 +543,7 @@ export default function MoldList() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {mold.image_url ? (
                         <img
-                          src={mold.image_url}
+                          src={getImageUrl(mold.image_url)}
                           alt={mold.part_name}
                           className="w-12 h-12 object-cover rounded border border-gray-200"
                         />
