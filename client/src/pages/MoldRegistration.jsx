@@ -11,7 +11,7 @@ export default function MoldRegistration() {
   const [formData, setFormData] = useState({
     // 기본 정보
     part_number: '',
-    representative_part_number: '', // 대표품번 추가
+    primary_part_name: '', // 대표품명
     part_name: '',
     car_model: '',
     car_year: new Date().getFullYear().toString(),
@@ -154,7 +154,7 @@ export default function MoldRegistration() {
 
     setFormData({
       part_number: `P-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`,
-      representative_part_number: `RP-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
+      primary_part_name: '도어 트림',
       part_name: '도어 트림 LH',
       car_model: firstCarModel,
       car_year: today.getFullYear().toString(),
@@ -280,17 +280,17 @@ export default function MoldRegistration() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                대표품번
+                대표품명
               </label>
               <input
                 type="text"
-                name="representative_part_number"
-                value={formData.representative_part_number}
+                name="primary_part_name"
+                value={formData.primary_part_name}
                 onChange={handleChange}
                 className="input"
-                placeholder="대표품번 입력 (예: RP-2024-001)"
+                placeholder="대표품명 입력 (예: 도어 트림)"
               />
-              <p className="text-xs text-gray-500 mt-1">동일 금형으로 생산되는 부품들의 대표 품번</p>
+              <p className="text-xs text-gray-500 mt-1">동일 금형으로 생산되는 부품들의 대표 품명</p>
             </div>
 
             <div>

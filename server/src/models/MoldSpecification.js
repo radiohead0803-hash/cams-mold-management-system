@@ -17,6 +17,11 @@ class MoldSpecification extends Model {
           type: DataTypes.STRING(200),
           allowNull: false
         },
+        primary_part_name: {
+          type: DataTypes.STRING(200),
+          allowNull: true,
+          comment: '대표품명'
+        },
         car_model: {
           type: DataTypes.STRING(100)
         },
