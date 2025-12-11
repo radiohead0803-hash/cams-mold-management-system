@@ -93,10 +93,10 @@ export default function MoldList() {
       const specifications = response.data.data.items || []
 
       const transformedMolds = specifications.map(spec => {
-        // 이미지 URL 추출 (우선순위: mold_image_url > part_images)
-        let imageUrl = spec.mold_image_url || null;
+        // 이미지 URL 추출 (우선순위: mold_image_url > product_image_url > part_images)
+        let imageUrl = spec.mold_image_url || spec.product_image_url || null;
         
-        // mold_image_url이 없으면 part_images에서 추출
+        // 둘 다 없으면 part_images에서 추출
         if (!imageUrl && spec.part_images) {
           if (typeof spec.part_images === 'string') {
             try {

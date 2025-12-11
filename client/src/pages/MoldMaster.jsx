@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { moldSpecificationAPI } from '../lib/api';
+import { moldSpecificationAPI, getImageUrl } from '../lib/api';
 import { Search, Filter, Eye, FileText, BarChart3, TrendingUp, CheckCircle, Clock, Image as ImageIcon, X, Building2, Factory, Wrench, ClipboardCheck, MapPin, Calendar, DollarSign, Package, AlertTriangle } from 'lucide-react';
 
 export default function MoldMaster() {
@@ -29,9 +29,11 @@ export default function MoldMaster() {
 
       // API 응답 데이터를 화면 표시 형식으로 변환
       const transformedMolds = specifications.map(spec => {
-        // part_images JSONB에서 첫 번째 이미지 URL 추출
-        let imageUrl = null;
-        if (spec.part_images) {
+        // 이미지 URL 추출 (우선순위: mold_image_url > product_image_url > part_images)
+        let imageUrl = spec.mold_image_url || spec.product_image_url || null;
+        
+        // 둘 다 없으면 part_images에서 추출
+        if (!imageUrl && spec.part_images) {
           if (typeof spec.part_images === 'string') {
             try {
               const parsed = JSON.parse(spec.part_images);
@@ -681,7 +683,7 @@ export default function MoldMaster() {
                     <td className="px-4 py-4 whitespace-nowrap">
                       {mold.image_url ? (
                         <img
-                          src={mold.image_url}
+                          src={getImageUrl(mold.image_url)}
                           alt={mold.part_name}
                           className="w-12 h-12 object-cover rounded border border-gray-200"
                         />
