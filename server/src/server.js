@@ -99,6 +99,14 @@ const runMoldImagesMigration = async () => {
       console.log('⚠️ mold_specifications cost columns may already exist:', e.message);
     }
 
+    // mold_specifications에 대표품명 컬럼 추가
+    try {
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS primary_part_name VARCHAR(200)`);
+      console.log('✅ mold_specifications.primary_part_name column added/verified.');
+    } catch (e) {
+      console.log('⚠️ primary_part_name column may already exist:', e.message);
+    }
+
   } catch (error) {
     console.error('⚠️ mold_images migration warning:', error.message);
     // Don't throw - table might already exist with correct structure
