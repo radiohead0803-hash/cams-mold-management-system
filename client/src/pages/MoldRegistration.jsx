@@ -22,22 +22,33 @@ export default function MoldRegistration() {
     cavity_count: 1,
     material: '',
     tonnage: '',
+    dimensions: '', // 치수 (LxWxH)
+    weight: '', // 중량 (kg)
     
     // 제작 정보
     target_maker_id: '', // 제작처 업체
     target_plant_id: '', // 생산처 업체
+    manager_name: '', // 담당자명
     
     // 개발사양 및 단계
-    mold_spec_type: '시작금형', // 개발사양: 시작금형, 양산금형
-    development_stage: '개발', // 단계: 개발, 양산
+    mold_spec_type: '시작금형', // 제작사양: 시작금형, 양산금형
+    development_stage: '개발', // 진행단계: 개발, 양산
+    production_stage: '시제', // 생산단계: 시제, P1, P2, M, SOP
     
     // 제작 일정
     order_date: new Date().toISOString().split('T')[0],
     target_delivery_date: '',
+    drawing_review_date: '', // 도면검토회 일정
     
     // 예산
-    estimated_cost: '', // ICMS 비용
-    maker_estimated_cost: '', // 업체 견적가
+    icms_cost: '', // ICMS 비용 (원)
+    vendor_quote_cost: '', // 업체 견적가 (원)
+    
+    // 사출 조건 (선택)
+    cycle_time: '', // 사이클 타임 (초)
+    injection_temp: '', // 사출 온도 (°C)
+    injection_pressure: '', // 사출 압력 (bar)
+    injection_speed: '', // 사출 속도 (mm/s)
     
     // 비고
     notes: ''
@@ -162,6 +173,10 @@ export default function MoldRegistration() {
     const firstMaker = makers[0]?.id || '';
     const firstPlant = plants[0]?.id || '';
 
+    // 도면검토회 일정 (발주일 + 1개월)
+    const reviewDate = new Date(today);
+    reviewDate.setMonth(reviewDate.getMonth() + 1);
+
     setFormData({
       primary_part_number: `RP-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
       primary_part_name: '도어 트림',
@@ -173,14 +188,23 @@ export default function MoldRegistration() {
       cavity_count: 2,
       material: firstMaterial,
       tonnage: firstTonnage,
+      dimensions: '800x600x500',
+      weight: '1500',
       target_maker_id: firstMaker.toString(),
       target_plant_id: firstPlant.toString(),
+      manager_name: '홍길동',
       mold_spec_type: '시작금형',
       development_stage: '개발',
+      production_stage: '시제',
       order_date: today.toISOString().split('T')[0],
       target_delivery_date: futureDate.toISOString().split('T')[0],
-      estimated_cost: '50000000',
-      maker_estimated_cost: '45000000',
+      drawing_review_date: reviewDate.toISOString().split('T')[0],
+      icms_cost: '50000000',
+      vendor_quote_cost: '45000000',
+      cycle_time: '60',
+      injection_temp: '220',
+      injection_pressure: '1200',
+      injection_speed: '80',
       notes: '샘플 테스트 금형 - 자동 생성된 데이터입니다.'
     });
 
@@ -486,6 +510,34 @@ export default function MoldRegistration() {
                 <p className="text-sm text-red-500 mt-1">{errors.tonnage}</p>
               )}
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                치수 (LxWxH)
+              </label>
+              <input
+                type="text"
+                name="dimensions"
+                value={formData.dimensions}
+                onChange={handleChange}
+                className="input"
+                placeholder="800x600x500 (mm)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                중량 (kg)
+              </label>
+              <input
+                type="number"
+                name="weight"
+                value={formData.weight}
+                onChange={handleChange}
+                className="input"
+                placeholder="1500"
+              />
+            </div>
           </div>
         </section>
 
@@ -536,6 +588,20 @@ export default function MoldRegistration() {
               </select>
               <p className="text-xs text-gray-500 mt-1">💡 양산을 진행할 업체를 선택하세요 (총 {plants.length}개)</p>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                담당자명
+              </label>
+              <input
+                type="text"
+                name="manager_name"
+                value={formData.manager_name}
+                onChange={handleChange}
+                className="input"
+                placeholder="홍길동"
+              />
+            </div>
           </div>
         </section>
 
@@ -577,6 +643,25 @@ export default function MoldRegistration() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                생산단계
+              </label>
+              <select
+                name="production_stage"
+                value={formData.production_stage}
+                onChange={handleChange}
+                className="input"
+              >
+                <option value="시제">시제</option>
+                <option value="P1">P1</option>
+                <option value="P2">P2</option>
+                <option value="M">M</option>
+                <option value="SOP">SOP</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">현재 생산 단계 (T/O 단계)</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 발주일
               </label>
               <input
@@ -603,6 +688,20 @@ export default function MoldRegistration() {
                 <p className="text-sm text-red-500 mt-1">{errors.target_delivery_date}</p>
               )}
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                도면검토회 일정
+              </label>
+              <input
+                type="date"
+                name="drawing_review_date"
+                value={formData.drawing_review_date}
+                onChange={handleChange}
+                className="input"
+              />
+              <p className="text-xs text-gray-500 mt-1">제작전 체크리스트 알림 기준일</p>
+            </div>
           </div>
         </section>
 
@@ -616,8 +715,8 @@ export default function MoldRegistration() {
               </label>
               <input
                 type="number"
-                name="estimated_cost"
-                value={formData.estimated_cost}
+                name="icms_cost"
+                value={formData.icms_cost}
                 onChange={handleChange}
                 className="input"
                 placeholder="50000000"
@@ -629,14 +728,74 @@ export default function MoldRegistration() {
               </label>
               <input
                 type="number"
-                name="maker_estimated_cost"
-                value={formData.maker_estimated_cost}
+                name="vendor_quote_cost"
+                value={formData.vendor_quote_cost}
                 onChange={handleChange}
                 className="input"
                 placeholder="45000000"
               />
             </div>
           </div>
+        </section>
+
+        {/* 사출 조건 (선택) */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">⚙️ 사출 조건 (선택)</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                사이클 타임 (초)
+              </label>
+              <input
+                type="number"
+                name="cycle_time"
+                value={formData.cycle_time}
+                onChange={handleChange}
+                className="input"
+                placeholder="60"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                사출 온도 (°C)
+              </label>
+              <input
+                type="number"
+                name="injection_temp"
+                value={formData.injection_temp}
+                onChange={handleChange}
+                className="input"
+                placeholder="220"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                사출 압력 (bar)
+              </label>
+              <input
+                type="number"
+                name="injection_pressure"
+                value={formData.injection_pressure}
+                onChange={handleChange}
+                className="input"
+                placeholder="1200"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                사출 속도 (mm/s)
+              </label>
+              <input
+                type="number"
+                name="injection_speed"
+                value={formData.injection_speed}
+                onChange={handleChange}
+                className="input"
+                placeholder="80"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">💡 사출 조건은 선택 사항입니다. 제작 완료 후 입력할 수 있습니다.</p>
         </section>
 
         {/* 비고 */}
