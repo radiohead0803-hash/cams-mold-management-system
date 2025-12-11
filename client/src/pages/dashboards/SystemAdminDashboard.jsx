@@ -404,11 +404,13 @@ export default function SystemAdminDashboard() {
               </div>
             )}
             {!locLoading && !locError && (
-              <NaverMoldLocationMap 
-                locations={filteredLocations} 
-                selectedMoldId={selectedMoldId}
-                onMoldDoubleClick={handleMoldDoubleClick}
-              />
+              <div className="bg-white rounded-xl shadow" style={{ height: '500px' }}>
+                <NaverMoldLocationMap 
+                  locations={filteredLocations} 
+                  selectedMoldId={selectedMoldId}
+                  onMoldDoubleClick={handleMoldDoubleClick}
+                />
+              </div>
             )}
           </section>
         )}
