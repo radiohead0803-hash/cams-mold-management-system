@@ -32,7 +32,7 @@ export default function MoldNew() {
     maker_company_id: '',
     plant_company_id: '',
     development_stage: '개발',
-    production_stage: '시작',
+    production_stage: '시작금형',
     order_date: new Date().toISOString().split('T')[0],
     target_delivery_date: '',
     icms_cost: '',
@@ -703,12 +703,26 @@ export default function MoldNew() {
           </div>
         </div>
 
-        {/* 사양 및 진행단계 */}
+        {/* 제작사양 및 진행단계 */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-            사양 및 진행단계
+            제작사양 및 진행단계
           </h2>
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                제작사양
+              </label>
+              <select
+                name="production_stage"
+                value={formData.production_stage}
+                onChange={handleChange}
+                className="input"
+              >
+                <option value="시작금형">시작금형</option>
+                <option value="양산금형">양산금형</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 진행단계
@@ -723,20 +737,6 @@ export default function MoldNew() {
                 <option value="양산">양산</option>
               </select>
               <p className="text-xs text-gray-500 mt-1">💡 양산이관 승인 시 자동으로 '양산'으로 변경됩니다</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                제작사양
-              </label>
-              <select
-                name="production_stage"
-                value={formData.production_stage}
-                onChange={handleChange}
-                className="input"
-              >
-                <option value="시작">시작</option>
-                <option value="양산">양산</option>
-              </select>
             </div>
           </div>
         </div>
