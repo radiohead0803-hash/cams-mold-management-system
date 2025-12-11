@@ -179,10 +179,10 @@ export default function MoldRegistration() {
     const newErrors = {};
 
     if (!formData.part_number.trim()) {
-      newErrors.part_number = '부품번호는 필수입니다';
+      newErrors.part_number = '품번은 필수입니다';
     }
     if (!formData.part_name.trim()) {
-      newErrors.part_name = '부품명은 필수입니다';
+      newErrors.part_name = '품명은 필수입니다';
     }
     if (!formData.car_model.trim()) {
       newErrors.car_model = '차종은 필수입니다';
@@ -295,7 +295,7 @@ export default function MoldRegistration() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                부품번호 <span className="text-red-500">*</span>
+                품번 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -312,7 +312,7 @@ export default function MoldRegistration() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                부품명 <span className="text-red-500">*</span>
+                품명 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
