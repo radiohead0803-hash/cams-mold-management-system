@@ -112,9 +112,10 @@ const runMoldImagesMigration = async () => {
     try {
       await sequelize.query(`ALTER TABLE maker_specifications ADD COLUMN IF NOT EXISTS primary_part_number VARCHAR(50)`);
       await sequelize.query(`ALTER TABLE maker_specifications ADD COLUMN IF NOT EXISTS primary_part_name VARCHAR(200)`);
-      console.log('✅ maker_specifications.primary_part_number/primary_part_name columns added/verified.');
+      await sequelize.query(`ALTER TABLE maker_specifications ADD COLUMN IF NOT EXISTS mold_spec_type VARCHAR(20)`);
+      console.log('✅ maker_specifications 연동 컬럼 추가/확인 완료.');
     } catch (e) {
-      console.log('⚠️ maker_specifications primary_part columns may already exist:', e.message);
+      console.log('⚠️ maker_specifications columns may already exist:', e.message);
     }
 
   } catch (error) {

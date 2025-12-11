@@ -95,10 +95,10 @@ CREATE TABLE mold_specifications (
   material VARCHAR(100),
   tonnage INTEGER,
   
-  -- 제작 정보
+  -- 개발사양
   target_maker_id INTEGER REFERENCES users(id),
-  development_stage VARCHAR(20), -- '개발', '양산'
-  production_stage VARCHAR(20),
+  development_stage VARCHAR(20),          -- 진행단계: '개발', '양산'
+  mold_spec_type VARCHAR(20),             -- 제작사양: '시작금형', '양산금형'
   
   -- 제작 일정
   order_date DATE,
@@ -148,7 +148,8 @@ CREATE TABLE maker_specifications (
   cavity_count INTEGER,
   material VARCHAR(100),
   tonnage INTEGER,
-  development_stage VARCHAR(20),
+  development_stage VARCHAR(20),          -- 진행단계 (본사 연동)
+  mold_spec_type VARCHAR(20),             -- 제작사양 (본사 연동)
   
   -- 제작처 입력 항목
   actual_material VARCHAR(100),

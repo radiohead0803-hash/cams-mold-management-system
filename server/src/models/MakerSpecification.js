@@ -55,7 +55,12 @@ class MakerSpecification extends Model {
           type: DataTypes.INTEGER
         },
         development_stage: {
-          type: DataTypes.STRING(20)
+          type: DataTypes.STRING(20),
+          comment: '진행단계 (본사 연동)'
+        },
+        mold_spec_type: {
+          type: DataTypes.STRING(20),
+          comment: '제작사양 (본사 연동)'
         },
         actual_material: {
           type: DataTypes.STRING(100)
