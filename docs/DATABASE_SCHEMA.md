@@ -139,6 +139,8 @@ CREATE TABLE maker_specifications (
   maker_id INTEGER NOT NULL REFERENCES users(id),
   
   -- 본사 입력 항목 (읽기 전용, 자동 연동)
+  primary_part_number VARCHAR(50),       -- 대표품번 (본사 연동)
+  primary_part_name VARCHAR(200),        -- 대표품명 (본사 연동)
   part_number VARCHAR(50),
   part_name VARCHAR(200),
   car_model VARCHAR(100),
@@ -223,6 +225,8 @@ CREATE TABLE plant_molds (
   -- 금형 마스터 정보 (읽기 전용, 자동 연동)
   mold_code VARCHAR(50),
   mold_name VARCHAR(200),
+  primary_part_number VARCHAR(50),       -- 대표품번 (본사 연동)
+  primary_part_name VARCHAR(200),        -- 대표품명 (본사 연동)
   part_number VARCHAR(50),
   part_name VARCHAR(200),
   car_model VARCHAR(100),

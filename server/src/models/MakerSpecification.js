@@ -25,6 +25,14 @@ class MakerSpecification extends Model {
             key: 'id'
           }
         },
+        primary_part_number: {
+          type: DataTypes.STRING(50),
+          comment: '대표품번 (본사 연동)'
+        },
+        primary_part_name: {
+          type: DataTypes.STRING(200),
+          comment: '대표품명 (본사 연동)'
+        },
         part_number: {
           type: DataTypes.STRING(50)
         },

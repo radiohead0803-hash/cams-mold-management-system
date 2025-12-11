@@ -108,6 +108,15 @@ const runMoldImagesMigration = async () => {
       console.log('⚠️ primary_part columns may already exist:', e.message);
     }
 
+    // maker_specifications에 대표품번/대표품명 컬럼 추가 (본사 연동용)
+    try {
+      await sequelize.query(`ALTER TABLE maker_specifications ADD COLUMN IF NOT EXISTS primary_part_number VARCHAR(50)`);
+      await sequelize.query(`ALTER TABLE maker_specifications ADD COLUMN IF NOT EXISTS primary_part_name VARCHAR(200)`);
+      console.log('✅ maker_specifications.primary_part_number/primary_part_name columns added/verified.');
+    } catch (e) {
+      console.log('⚠️ maker_specifications primary_part columns may already exist:', e.message);
+    }
+
   } catch (error) {
     console.error('⚠️ mold_images migration warning:', error.message);
     // Don't throw - table might already exist with correct structure
