@@ -83,10 +83,30 @@ export default function MoldNew() {
         masterDataAPI.getMoldTypes(),
         masterDataAPI.getTonnages()
       ]);
-      setCarModels(carModelsRes.data.data?.length > 0 ? carModelsRes.data.data : []);
-      setMaterials(materialsRes.data.data?.length > 0 ? materialsRes.data.data : defaultMaterials);
-      setMoldTypes(moldTypesRes.data.data?.length > 0 ? moldTypesRes.data.data : defaultMoldTypes);
-      setTonnages(tonnagesRes.data.data?.length > 0 ? tonnagesRes.data.data : defaultTonnages);
+      
+      // 백엔드 응답 필드명을 프론트엔드 형식으로 변환
+      const carModelsData = (carModelsRes.data.data || []).map(item => ({
+        id: item.id,
+        name: item.model_name || item.name
+      }));
+      const materialsData = (materialsRes.data.data || []).map(item => ({
+        id: item.id,
+        name: item.material_name || item.name
+      }));
+      const moldTypesData = (moldTypesRes.data.data || []).map(item => ({
+        id: item.id,
+        name: item.type_name || item.name
+      }));
+      const tonnagesData = (tonnagesRes.data.data || []).map(item => ({
+        id: item.id,
+        name: item.value ? `${item.value}T` : item.name,
+        value: item.value
+      }));
+      
+      setCarModels(carModelsData.length > 0 ? carModelsData : []);
+      setMaterials(materialsData.length > 0 ? materialsData : defaultMaterials);
+      setMoldTypes(moldTypesData.length > 0 ? moldTypesData : defaultMoldTypes);
+      setTonnages(tonnagesData.length > 0 ? tonnagesData : defaultTonnages);
     } catch (error) {
       console.error('Failed to load master data:', error);
       // API 실패 시 기본값 사용
@@ -521,9 +541,9 @@ export default function MoldNew() {
                 className="input"
                 disabled={masterDataLoading}
               >
-                <option value="">{masterDataLoading ? '로딩 중...' : '톤수 선택'}</option>
+                <option value="">{masterDataLoading ? '로딩 중...' : 'ton'}</option>
                 {tonnages.map(item => (
-                  <option key={item.id} value={item.value}>{item.value} ton</option>
+                  <option key={item.id} value={item.value || item.name}>{item.name || `${item.value}T`}</option>
                 ))}
               </select>
             </div>
