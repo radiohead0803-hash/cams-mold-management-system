@@ -89,9 +89,9 @@ export default function MoldLocationMapPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
       {/* 헤더 */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
+      <header className="flex-shrink-0 bg-white shadow-sm border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -143,12 +143,12 @@ export default function MoldLocationMapPage() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-h-0">
         {/* 왼쪽 패널 - 금형 목록 */}
         {showList && (
-          <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
+          <div className="w-96 bg-white border-r border-gray-200 flex flex-col min-h-0">
             {/* 검색 및 필터 */}
-            <div className="p-4 border-b border-gray-200 space-y-3">
+            <div className="flex-shrink-0 p-4 border-b border-gray-200 space-y-3">
               {/* 검색 */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -309,7 +309,7 @@ export default function MoldLocationMapPage() {
         )}
 
         {/* 오른쪽 - 지도 */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-h-0">
           {error ? (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
               <div className="text-center">
