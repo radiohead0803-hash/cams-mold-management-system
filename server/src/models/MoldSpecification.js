@@ -78,6 +78,35 @@ class MoldSpecification extends Model {
           type: DataTypes.DECIMAL(12, 2),
           comment: '업체 견적가 (원)'
         },
+        maker_estimated_cost: {
+          type: DataTypes.DECIMAL(12, 2),
+          comment: '업체 견적가 (원) - vendor_quote_cost와 동일'
+        },
+        mold_spec_type: {
+          type: DataTypes.STRING(50),
+          defaultValue: '시작금형',
+          comment: '제작사양: 시작금형, 양산금형'
+        },
+        target_plant_id: {
+          type: DataTypes.INTEGER,
+          references: {
+            model: 'companies',
+            key: 'id'
+          },
+          comment: '목표 생산처 회사 ID'
+        },
+        drawing_review_date: {
+          type: DataTypes.DATEONLY,
+          comment: '도면검토회 일정'
+        },
+        actual_delivery_date: {
+          type: DataTypes.DATEONLY,
+          comment: '실제 납기일'
+        },
+        actual_cost: {
+          type: DataTypes.DECIMAL(12, 2),
+          comment: '실제 비용'
+        },
         status: {
           type: DataTypes.STRING(20),
           comment: 'draft, sent_to_maker, in_production, completed'

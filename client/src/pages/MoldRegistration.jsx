@@ -24,7 +24,8 @@ export default function MoldRegistration() {
     tonnage: '',
     
     // 제작 정보
-    target_maker_id: '3', // 기본값으로 maker1 설정
+    target_maker_id: '', // 제작처 업체
+    target_plant_id: '', // 생산처 업체
     
     // 개발사양 및 단계
     mold_spec_type: '시작금형', // 개발사양: 시작금형, 양산금형
@@ -35,7 +36,8 @@ export default function MoldRegistration() {
     target_delivery_date: '',
     
     // 예산
-    estimated_cost: '',
+    estimated_cost: '', // ICMS 비용
+    maker_estimated_cost: '', // 업체 견적가
     
     // 비고
     notes: ''
@@ -46,11 +48,9 @@ export default function MoldRegistration() {
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
   
-  // 제작처 목록 (추후 API에서 가져오기)
-  const [makers] = useState([
-    { id: 3, name: 'A제작소', company_name: 'A제작소' },
-    { id: 5, name: 'B제작소', company_name: 'B제작소' }
-  ]);
+  // 제작처/생산처 목록
+  const [makers, setMakers] = useState([]);
+  const [plants, setPlants] = useState([]);
 
   // 기초정보 (마스터 데이터)
   const [carModels, setCarModels] = useState([]);
@@ -68,24 +68,31 @@ export default function MoldRegistration() {
     try {
       setMasterDataLoading(true);
       console.log('Loading master data...');
-      const [carModelsRes, materialsRes, moldTypesRes, tonnagesRes] = await Promise.all([
+      const [carModelsRes, materialsRes, moldTypesRes, tonnagesRes, companiesRes] = await Promise.all([
         masterDataAPI.getCarModels(),
         masterDataAPI.getMaterials(),
         masterDataAPI.getMoldTypes(),
-        masterDataAPI.getTonnages()
+        masterDataAPI.getTonnages(),
+        masterDataAPI.getCompanies()
       ]);
 
       console.log('Master data loaded:', {
         carModels: carModelsRes.data.data,
         materials: materialsRes.data.data,
         moldTypes: moldTypesRes.data.data,
-        tonnages: tonnagesRes.data.data
+        tonnages: tonnagesRes.data.data,
+        companies: companiesRes.data.data
       });
 
       setCarModels(carModelsRes.data.data || []);
       setMaterials(materialsRes.data.data || []);
       setMoldTypes(moldTypesRes.data.data || []);
       setTonnages(tonnagesRes.data.data || []);
+      
+      // 회사 목록에서 제작처/생산처 분리
+      const companies = companiesRes.data.data || [];
+      setMakers(companies.filter(c => c.company_type === 'maker'));
+      setPlants(companies.filter(c => c.company_type === 'plant'));
     } catch (error) {
       console.error('Failed to load master data:', error);
       alert('기초정보 로드 실패: ' + error.message);
@@ -152,6 +159,8 @@ export default function MoldRegistration() {
     const firstMoldType = moldTypes[0]?.type_name || '사출금형';
     const firstMaterial = materials[0]?.material_name || 'NAK80';
     const firstTonnage = tonnages[0]?.tonnage_value || 350;
+    const firstMaker = makers[0]?.id || '';
+    const firstPlant = plants[0]?.id || '';
 
     setFormData({
       primary_part_number: `RP-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
@@ -164,12 +173,14 @@ export default function MoldRegistration() {
       cavity_count: 2,
       material: firstMaterial,
       tonnage: firstTonnage,
-      target_maker_id: '3',
+      target_maker_id: firstMaker.toString(),
+      target_plant_id: firstPlant.toString(),
       mold_spec_type: '시작금형',
       development_stage: '개발',
       order_date: today.toISOString().split('T')[0],
       target_delivery_date: futureDate.toISOString().split('T')[0],
       estimated_cost: '50000000',
+      maker_estimated_cost: '45000000',
       notes: '샘플 테스트 금형 - 자동 생성된 데이터입니다.'
     });
 
@@ -502,8 +513,29 @@ export default function MoldRegistration() {
               {errors.target_maker_id && (
                 <p className="text-sm text-red-500 mt-1">{errors.target_maker_id}</p>
               )}
+              <p className="text-xs text-gray-500 mt-1">💡 금형을 제작할 업체를 선택하세요 (총 {makers.length}개)</p>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                목표 생산처
+              </label>
+              <select
+                name="target_plant_id"
+                value={formData.target_plant_id}
+                onChange={handleChange}
+                className="input"
+                disabled={masterDataLoading}
+              >
+                <option value="">-- 생산처를 선택하세요 --</option>
+                {plants.map(plant => (
+                  <option key={plant.id} value={plant.id}>
+                    {plant.company_name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">💡 양산을 진행할 업체를 선택하세요 (총 {plants.length}개)</p>
+            </div>
           </div>
         </section>
 
@@ -574,13 +606,13 @@ export default function MoldRegistration() {
           </div>
         </section>
 
-        {/* 예산 정보 */}
+        {/* 일정 및 예산 */}
         <section className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">💰 예산 정보</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">💰 일정 및 예산</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                예상 비용 (원)
+                ICMS 비용 (원)
               </label>
               <input
                 type="number"
@@ -589,6 +621,19 @@ export default function MoldRegistration() {
                 onChange={handleChange}
                 className="input"
                 placeholder="50000000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                업체 견적가 (원)
+              </label>
+              <input
+                type="number"
+                name="maker_estimated_cost"
+                value={formData.maker_estimated_cost}
+                onChange={handleChange}
+                className="input"
+                placeholder="45000000"
               />
             </div>
           </div>

@@ -293,6 +293,9 @@ export const masterDataAPI = {
   createRawMaterial: (data) => api.post('/master-data/raw-materials', data),
   updateRawMaterial: (id, data) => api.patch(`/master-data/raw-materials/${id}`, data),
   deleteRawMaterial: (id) => api.delete(`/master-data/raw-materials/${id}`),
+  
+  // 회사 (제작처/생산처)
+  getCompanies: (params) => api.get('/companies', { params }),
 }
 
 export default api
