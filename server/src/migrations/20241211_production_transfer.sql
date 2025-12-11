@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS production_transfer_checklist_master (
 CREATE INDEX IF NOT EXISTS idx_transfer_checklist_master_category ON production_transfer_checklist_master(category);
 CREATE INDEX IF NOT EXISTS idx_transfer_checklist_master_active ON production_transfer_checklist_master(is_active);
 
--- 양산이관 신청 테이블
+-- 양산이관 신청 테이블 (다단계 승인)
 CREATE TABLE IF NOT EXISTS production_transfer_requests (
   id SERIAL PRIMARY KEY,
   request_number VARCHAR(50) UNIQUE NOT NULL,
@@ -30,9 +30,26 @@ CREATE TABLE IF NOT EXISTS production_transfer_requests (
   planned_transfer_date DATE,
   actual_transfer_date DATE,
   status VARCHAR(30) NOT NULL DEFAULT 'draft',
-  approved_by INTEGER REFERENCES users(id),
-  approved_at TIMESTAMP WITH TIME ZONE,
-  rejection_reason TEXT,
+  current_approval_step INTEGER DEFAULT 0,
+  
+  -- 1차 승인 (생산처)
+  plant_approved_by INTEGER REFERENCES users(id),
+  plant_approved_at TIMESTAMP WITH TIME ZONE,
+  plant_approval_status VARCHAR(20),
+  plant_rejection_reason TEXT,
+  
+  -- 2차 승인 (본사 품질팀)
+  quality_approved_by INTEGER REFERENCES users(id),
+  quality_approved_at TIMESTAMP WITH TIME ZONE,
+  quality_approval_status VARCHAR(20),
+  quality_rejection_reason TEXT,
+  
+  -- 3차 최종 승인 (금형개발 담당)
+  final_approved_by INTEGER REFERENCES users(id),
+  final_approved_at TIMESTAMP WITH TIME ZONE,
+  final_approval_status VARCHAR(20),
+  final_rejection_reason TEXT,
+  
   notes TEXT,
   created_by INTEGER REFERENCES users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

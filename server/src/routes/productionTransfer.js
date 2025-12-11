@@ -340,7 +340,7 @@ router.put('/requests/:requestId/checklist/:itemId', async (req, res) => {
   }
 });
 
-// 승인 요청
+// 제작처 → 생산처로 승인 요청 (체크리스트 완료 후)
 router.post('/requests/:id/submit', async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -381,24 +381,30 @@ router.post('/requests/:id/submit', async (req, res) => {
       });
     }
 
-    // 상태 업데이트
-    await request.update({ status: 'pending_approval' }, { transaction });
+    // 상태 업데이트 - 1차 승인(생산처) 대기
+    await request.update({ 
+      status: 'pending_plant_approval',
+      current_approval_step: 1,
+      plant_approval_status: 'pending'
+    }, { transaction });
 
     // 승인 이력 추가
     await ProductionTransferApproval.create({
       transfer_request_id: id,
+      approval_step: 1,
       approval_type: 'submit',
       approver_id: req.user?.id,
       approver_name: req.user?.name,
+      approver_role: 'maker',
       decision: 'pending',
-      comments: '승인 요청'
+      comments: '체크리스트 완료 - 생산처 점검 요청'
     }, { transaction });
 
     await transaction.commit();
 
     res.json({
       success: true,
-      message: '승인 요청이 완료되었습니다.'
+      message: '생산처 점검 요청이 완료되었습니다. (1차 승인 대기)'
     });
   } catch (error) {
     await transaction.rollback();
@@ -410,8 +416,136 @@ router.post('/requests/:id/submit', async (req, res) => {
   }
 });
 
-// 승인 처리
-router.post('/requests/:id/approve', async (req, res) => {
+// 1차 승인 - 생산처 점검/승인
+router.post('/requests/:id/approve/plant', async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    const { comments } = req.body;
+
+    const request = await ProductionTransferRequest.findByPk(id);
+
+    if (!request) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: { message: '양산이관 신청을 찾을 수 없습니다.' }
+      });
+    }
+
+    if (request.status !== 'pending_plant_approval') {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: { message: '생산처 승인 대기 상태가 아닙니다.' }
+      });
+    }
+
+    // 상태 업데이트 - 2차 승인(품질팀) 대기
+    await request.update({
+      status: 'pending_quality_approval',
+      current_approval_step: 2,
+      plant_approved_by: req.user?.id,
+      plant_approved_at: new Date(),
+      plant_approval_status: 'approved',
+      quality_approval_status: 'pending'
+    }, { transaction });
+
+    // 승인 이력 추가
+    await ProductionTransferApproval.create({
+      transfer_request_id: id,
+      approval_step: 1,
+      approval_type: 'approve',
+      approver_id: req.user?.id,
+      approver_name: req.user?.name,
+      approver_role: 'plant',
+      decision: 'approved',
+      comments: comments || '1차 승인 (생산처 점검 완료)'
+    }, { transaction });
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: '1차 승인(생산처)이 완료되었습니다. 본사 품질팀 승인 대기 중입니다.'
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('1차 승인 처리 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '1차 승인 처리 중 오류가 발생했습니다.' }
+    });
+  }
+});
+
+// 2차 승인 - 본사 품질팀 승인
+router.post('/requests/:id/approve/quality', async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    const { comments } = req.body;
+
+    const request = await ProductionTransferRequest.findByPk(id);
+
+    if (!request) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: { message: '양산이관 신청을 찾을 수 없습니다.' }
+      });
+    }
+
+    if (request.status !== 'pending_quality_approval') {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: { message: '품질팀 승인 대기 상태가 아닙니다.' }
+      });
+    }
+
+    // 상태 업데이트 - 3차 최종 승인(금형개발담당) 대기
+    await request.update({
+      status: 'pending_final_approval',
+      current_approval_step: 3,
+      quality_approved_by: req.user?.id,
+      quality_approved_at: new Date(),
+      quality_approval_status: 'approved',
+      final_approval_status: 'pending'
+    }, { transaction });
+
+    // 승인 이력 추가
+    await ProductionTransferApproval.create({
+      transfer_request_id: id,
+      approval_step: 2,
+      approval_type: 'approve',
+      approver_id: req.user?.id,
+      approver_name: req.user?.name,
+      approver_role: 'quality_team',
+      decision: 'approved',
+      comments: comments || '2차 승인 (본사 품질팀)'
+    }, { transaction });
+
+    await transaction.commit();
+
+    res.json({
+      success: true,
+      message: '2차 승인(품질팀)이 완료되었습니다. 금형개발 담당 최종 승인 대기 중입니다.'
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('2차 승인 처리 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '2차 승인 처리 중 오류가 발생했습니다.' }
+    });
+  }
+});
+
+// 3차 최종 승인 - 금형개발 담당
+router.post('/requests/:id/approve/final', async (req, res) => {
   const transaction = await sequelize.transaction();
   
   try {
@@ -432,30 +566,33 @@ router.post('/requests/:id/approve', async (req, res) => {
       });
     }
 
-    if (request.status !== 'pending_approval') {
+    if (request.status !== 'pending_final_approval') {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        error: { message: '승인 대기 상태가 아닙니다.' }
+        error: { message: '최종 승인 대기 상태가 아닙니다.' }
       });
     }
 
-    // 상태 업데이트
+    // 상태 업데이트 - 최종 승인 완료
     await request.update({
       status: 'approved',
-      approved_by: req.user?.id,
-      approved_at: new Date()
+      current_approval_step: 4,
+      final_approved_by: req.user?.id,
+      final_approved_at: new Date(),
+      final_approval_status: 'approved'
     }, { transaction });
 
     // 승인 이력 추가
     await ProductionTransferApproval.create({
       transfer_request_id: id,
+      approval_step: 3,
       approval_type: 'approve',
       approver_id: req.user?.id,
       approver_name: req.user?.name,
-      approver_role: req.user?.user_type,
+      approver_role: 'mold_developer',
       decision: 'approved',
-      comments
+      comments: comments || '3차 최종 승인 (금형개발 담당)'
     }, { transaction });
 
     // 금형 사양의 진행단계를 '양산'으로 변경
@@ -476,19 +613,19 @@ router.post('/requests/:id/approve', async (req, res) => {
 
     res.json({
       success: true,
-      message: '승인이 완료되었습니다. 진행단계가 양산으로 변경되었습니다.'
+      message: '최종 승인이 완료되었습니다. 진행단계가 양산으로 변경되었습니다.'
     });
   } catch (error) {
     await transaction.rollback();
-    console.error('승인 처리 오류:', error);
+    console.error('최종 승인 처리 오류:', error);
     res.status(500).json({
       success: false,
-      error: { message: '승인 처리 중 오류가 발생했습니다.' }
+      error: { message: '최종 승인 처리 중 오류가 발생했습니다.' }
     });
   }
 });
 
-// 반려 처리
+// 반려 처리 (모든 단계에서 사용)
 router.post('/requests/:id/reject', async (req, res) => {
   const transaction = await sequelize.transaction();
   
@@ -513,19 +650,55 @@ router.post('/requests/:id/reject', async (req, res) => {
       });
     }
 
-    // 상태 업데이트
-    await request.update({
-      status: 'rejected',
-      rejection_reason
-    }, { transaction });
+    const currentStep = request.current_approval_step;
+    let rejectionField = '';
+    let approverRole = '';
+
+    // 현재 단계에 따른 반려 필드 설정
+    switch (request.status) {
+      case 'pending_plant_approval':
+        rejectionField = 'plant_rejection_reason';
+        approverRole = 'plant';
+        await request.update({
+          plant_approval_status: 'rejected',
+          [rejectionField]: rejection_reason
+        }, { transaction });
+        break;
+      case 'pending_quality_approval':
+        rejectionField = 'quality_rejection_reason';
+        approverRole = 'quality_team';
+        await request.update({
+          quality_approval_status: 'rejected',
+          [rejectionField]: rejection_reason
+        }, { transaction });
+        break;
+      case 'pending_final_approval':
+        rejectionField = 'final_rejection_reason';
+        approverRole = 'mold_developer';
+        await request.update({
+          final_approval_status: 'rejected',
+          [rejectionField]: rejection_reason
+        }, { transaction });
+        break;
+      default:
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          error: { message: '반려할 수 있는 상태가 아닙니다.' }
+        });
+    }
+
+    // 상태를 rejected로 변경
+    await request.update({ status: 'rejected' }, { transaction });
 
     // 승인 이력 추가
     await ProductionTransferApproval.create({
       transfer_request_id: id,
+      approval_step: currentStep,
       approval_type: 'reject',
       approver_id: req.user?.id,
       approver_name: req.user?.name,
-      approver_role: req.user?.user_type,
+      approver_role: approverRole,
       decision: 'rejected',
       comments: comments || rejection_reason
     }, { transaction });
@@ -534,7 +707,7 @@ router.post('/requests/:id/reject', async (req, res) => {
 
     res.json({
       success: true,
-      message: '반려 처리가 완료되었습니다.'
+      message: `${currentStep}차 승인에서 반려되었습니다.`
     });
   } catch (error) {
     await transaction.rollback();

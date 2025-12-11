@@ -63,19 +63,59 @@ class ProductionTransferRequest extends Model {
           type: DataTypes.STRING(30),
           allowNull: false,
           defaultValue: 'draft',
-          comment: 'draft, checklist_in_progress, pending_approval, approved, rejected, transferred, cancelled'
+          comment: 'draft, checklist_in_progress, pending_plant_approval, pending_quality_approval, pending_final_approval, approved, rejected, transferred, cancelled'
         },
-        approved_by: {
+        current_approval_step: {
           type: DataTypes.INTEGER,
-          references: {
-            model: 'users',
-            key: 'id'
-          }
+          defaultValue: 0,
+          comment: '현재 승인 단계: 0=작성중, 1=생산처승인대기, 2=품질팀승인대기, 3=최종승인대기, 4=승인완료'
         },
-        approved_at: {
+        // 1차 승인 (생산처)
+        plant_approved_by: {
+          type: DataTypes.INTEGER,
+          references: { model: 'users', key: 'id' },
+          comment: '1차 승인자 (생산처)'
+        },
+        plant_approved_at: {
           type: DataTypes.DATE
         },
-        rejection_reason: {
+        plant_approval_status: {
+          type: DataTypes.STRING(20),
+          comment: 'pending, approved, rejected'
+        },
+        plant_rejection_reason: {
+          type: DataTypes.TEXT
+        },
+        // 2차 승인 (본사 품질팀)
+        quality_approved_by: {
+          type: DataTypes.INTEGER,
+          references: { model: 'users', key: 'id' },
+          comment: '2차 승인자 (본사 품질팀)'
+        },
+        quality_approved_at: {
+          type: DataTypes.DATE
+        },
+        quality_approval_status: {
+          type: DataTypes.STRING(20),
+          comment: 'pending, approved, rejected'
+        },
+        quality_rejection_reason: {
+          type: DataTypes.TEXT
+        },
+        // 3차 최종 승인 (금형개발 담당)
+        final_approved_by: {
+          type: DataTypes.INTEGER,
+          references: { model: 'users', key: 'id' },
+          comment: '3차 최종 승인자 (금형개발 담당)'
+        },
+        final_approved_at: {
+          type: DataTypes.DATE
+        },
+        final_approval_status: {
+          type: DataTypes.STRING(20),
+          comment: 'pending, approved, rejected'
+        },
+        final_rejection_reason: {
           type: DataTypes.TEXT
         },
         notes: {

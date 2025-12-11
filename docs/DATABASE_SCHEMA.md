@@ -2119,7 +2119,7 @@ CREATE INDEX idx_transfer_checklist_master_category ON production_transfer_check
 CREATE INDEX idx_transfer_checklist_master_active ON production_transfer_checklist_master(is_active);
 ```
 
-### 11.2 production_transfer_requests (양산이관 신청)
+### 11.2 production_transfer_requests (양산이관 신청 - 다단계 승인)
 ```sql
 CREATE TABLE production_transfer_requests (
   id SERIAL PRIMARY KEY,
@@ -2140,16 +2140,33 @@ CREATE TABLE production_transfer_requests (
   status VARCHAR(30) NOT NULL DEFAULT 'draft',
   -- 'draft': 작성중
   -- 'checklist_in_progress': 체크리스트 작성중
-  -- 'pending_approval': 승인대기
+  -- 'pending_plant_approval': 1차 승인대기 (생산처)
+  -- 'pending_quality_approval': 2차 승인대기 (품질팀)
+  -- 'pending_final_approval': 3차 최종승인대기 (금형개발담당)
   -- 'approved': 승인완료
   -- 'rejected': 반려
   -- 'transferred': 이관완료
   -- 'cancelled': 취소
   
-  -- 승인 정보
-  approved_by INTEGER REFERENCES users(id),
-  approved_at TIMESTAMP,
-  rejection_reason TEXT,
+  current_approval_step INTEGER DEFAULT 0,     -- 현재 승인 단계 (0~4)
+  
+  -- 1차 승인 (생산처)
+  plant_approved_by INTEGER REFERENCES users(id),
+  plant_approved_at TIMESTAMP,
+  plant_approval_status VARCHAR(20),           -- pending, approved, rejected
+  plant_rejection_reason TEXT,
+  
+  -- 2차 승인 (본사 품질팀)
+  quality_approved_by INTEGER REFERENCES users(id),
+  quality_approved_at TIMESTAMP,
+  quality_approval_status VARCHAR(20),
+  quality_rejection_reason TEXT,
+  
+  -- 3차 최종 승인 (금형개발 담당)
+  final_approved_by INTEGER REFERENCES users(id),
+  final_approved_at TIMESTAMP,
+  final_approval_status VARCHAR(20),
+  final_rejection_reason TEXT,
   
   notes TEXT,
   created_by INTEGER REFERENCES users(id),
