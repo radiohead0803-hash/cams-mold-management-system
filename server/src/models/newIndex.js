@@ -50,6 +50,7 @@ const ProductionTransferChecklistMaster = require('./ProductionTransferChecklist
 const ProductionTransferRequest = require('./ProductionTransferRequest');
 const ProductionTransferChecklistItem = require('./ProductionTransferChecklistItem');
 const ProductionTransferApproval = require('./ProductionTransferApproval');
+const TryoutIssue = require('./TryoutIssue');
 
 // Helper function to initialize models
 const initModel = (ModelClass, sequelize) => {
@@ -105,7 +106,8 @@ const models = {
   ProductionTransferChecklistMaster: initModel(ProductionTransferChecklistMaster, sequelize),
   ProductionTransferRequest: initModel(ProductionTransferRequest, sequelize),
   ProductionTransferChecklistItem: initModel(ProductionTransferChecklistItem, sequelize),
-  ProductionTransferApproval: initModel(ProductionTransferApproval, sequelize)
+  ProductionTransferApproval: initModel(ProductionTransferApproval, sequelize),
+  TryoutIssue: initModel(TryoutIssue, sequelize)
 };
 
 // Setup associations

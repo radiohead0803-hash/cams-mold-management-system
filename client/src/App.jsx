@@ -60,6 +60,7 @@ import MobileInjectionHistory from './pages/mobile/MobileInjectionHistory'
 import MobileInjectionStats from './pages/mobile/MobileInjectionStats'
 import MobileTransferRequest from './pages/mobile/MobileTransferRequest'
 import MobileTransferList from './pages/mobile/MobileTransferList'
+import MobileTryoutIssue from './pages/mobile/MobileTryoutIssue'
 import MobileInspectionApproval from './pages/mobile/MobileInspectionApproval'
 import MobileRepairRequestForm from './pages/mobile/MobileRepairRequestForm'
 import MobileMaintenancePage from './pages/mobile/MobileMaintenancePage'
@@ -133,6 +134,7 @@ function App() {
       <Route path="/mobile/mold/:moldId/transfer" element={<MobileTransferList />} />
       <Route path="/mobile/mold/:moldId/transfer/new" element={<MobileTransferRequest />} />
       <Route path="/mobile/mold/:moldId/transfer/list" element={<MobileTransferList />} />
+      <Route path="/mobile/mold/:moldId/tryout-issues" element={<MobileTryoutIssue />} />
       <Route path="/mobile/transfer/:id" element={<MobileTransferList />} />
       <Route path="/mobile/mold/:moldId/inspection-approval" element={<MobileInspectionApproval />} />
       <Route path="/mobile/inspection-approval" element={<MobileInspectionApproval />} />

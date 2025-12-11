@@ -158,6 +158,23 @@ const runProductionTransferMigration = async () => {
   }
 };
 
+// Run SQL migrations for tryout issues table
+const runTryoutIssuesMigration = async () => {
+  console.log('🔄 Running tryout_issues table migration...');
+  try {
+    const sqlPath = path.join(__dirname, 'migrations', '20241211_tryout_issues.sql');
+    if (fs.existsSync(sqlPath)) {
+      const sql = fs.readFileSync(sqlPath, 'utf8');
+      await sequelize.query(sql);
+      console.log('✅ tryout_issues table migration completed.');
+    } else {
+      console.log('⚠️ tryout_issues migration file not found, skipping...');
+    }
+  } catch (error) {
+    console.error('⚠️ tryout_issues migration warning:', error.message);
+  }
+};
+
 // Run SQL migrations for weight columns and history table
 const runWeightColumnsMigration = async () => {
   console.log('🔄 Running weight columns migration...');
@@ -398,6 +415,9 @@ const startServer = async () => {
     
     // Run production transfer tables migration
     await runProductionTransferMigration();
+    
+    // Run tryout issues table migration
+    await runTryoutIssuesMigration();
     
     // Sync models (development only)
     if (process.env.NODE_ENV === 'development') {
