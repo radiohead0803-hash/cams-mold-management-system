@@ -105,6 +105,7 @@ const statisticsRouter = require('./routes/statistics');
 const transfersRouter = require('./routes/transfers');
 const productionTransferRouter = require('./routes/productionTransfer');
 const tryoutIssuesRouter = require('./routes/tryoutIssues');
+const fileUploadRouter = require('./routes/fileUpload');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -173,6 +174,8 @@ app.use('/api/v1/transfers', transfersRouter);
 app.use('/api/v1/production-transfer', productionTransferRouter);
 // T/O 문제점 관리
 app.use('/api/v1/tryout-issues', tryoutIssuesRouter);
+// 파일 업로드
+app.use('/api/v1/files', fileUploadRouter);
 
 // Health check
 app.get('/health', (req, res) => {
