@@ -15,9 +15,10 @@ export default function MoldBulkUpload() {
   const downloadSampleExcel = () => {
     const sampleData = [
       {
-        '부품번호': 'P-2024-SAMPLE-001',
         '대표품번': '',
-        '부품명': '프론트 범퍼',
+        '대표품명': '',
+        '품번': 'P-2024-SAMPLE-001',
+        '품명': '프론트 범퍼',
         '차종': 'K5',
         '연식': '2024',
         '금형타입': '사출금형',
@@ -26,8 +27,9 @@ export default function MoldBulkUpload() {
         '톤수': 350,
         '제작처ID': 3,
         '생산처ID': 5,
-        '개발단계': '개발',
-        '생산단계': '시제',
+        '제작사양': '시작금형',
+        '진행단계': '개발',
+        '상태': '임시저장',
         '발주일': '2024-01-15',
         '목표납기일': '2024-03-15',
         'ICMS비용': 45000000,
@@ -35,9 +37,10 @@ export default function MoldBulkUpload() {
         '비고': '샘플 데이터'
       },
       {
-        '부품번호': 'P-2024-SAMPLE-002',
         '대표품번': 'P-2024-SAMPLE-001',
-        '부품명': '도어 트림 RH',
+        '대표품명': '프론트 범퍼',
+        '품번': 'P-2024-SAMPLE-002',
+        '품명': '도어 트림 RH',
         '차종': 'K8',
         '연식': '2024',
         '금형타입': '사출금형',
@@ -46,8 +49,9 @@ export default function MoldBulkUpload() {
         '톤수': 420,
         '제작처ID': 3,
         '생산처ID': 5,
-        '개발단계': '개발',
-        '생산단계': '시제',
+        '제작사양': '양산금형',
+        '진행단계': '개발',
+        '상태': '등록',
         '발주일': '2024-01-20',
         '목표납기일': '2024-03-20',
         'ICMS비용': 48000000,
@@ -62,9 +66,10 @@ export default function MoldBulkUpload() {
 
     // 컬럼 너비 설정
     ws['!cols'] = [
-      { wch: 22 }, // 부품번호
       { wch: 22 }, // 대표품번
-      { wch: 20 }, // 부품명
+      { wch: 20 }, // 대표품명
+      { wch: 22 }, // 품번
+      { wch: 20 }, // 품명
       { wch: 12 }, // 차종
       { wch: 8 },  // 연식
       { wch: 12 }, // 금형타입
@@ -73,8 +78,9 @@ export default function MoldBulkUpload() {
       { wch: 8 },  // 톤수
       { wch: 10 }, // 제작처ID
       { wch: 10 }, // 생산처ID
-      { wch: 10 }, // 개발단계
-      { wch: 10 }, // 생산단계
+      { wch: 12 }, // 제작사양
+      { wch: 10 }, // 진행단계
+      { wch: 10 }, // 상태
       { wch: 12 }, // 발주일
       { wch: 12 }, // 목표납기일
       { wch: 15 }, // ICMS비용
@@ -124,9 +130,10 @@ export default function MoldBulkUpload() {
   const transformData = (row, index) => {
     try {
       return {
-        part_number: row['부품번호'],
         representative_part_number: row['대표품번'] || '',
-        part_name: row['부품명'],
+        representative_part_name: row['대표품명'] || '',
+        part_number: row['품번'] || row['부품번호'],
+        part_name: row['품명'] || row['부품명'],
         car_model: row['차종'],
         car_year: String(row['연식'] || ''),
         mold_type: row['금형타입'],
@@ -135,8 +142,9 @@ export default function MoldBulkUpload() {
         tonnage: Number(row['톤수']) || null,
         maker_company_id: Number(row['제작처ID']) || Number(row['목표제작처ID']) || null,
         plant_company_id: Number(row['생산처ID']) || null,
-        development_stage: row['개발단계'] || '개발',
-        production_stage: row['생산단계'] || '시제',
+        production_stage: row['제작사양'] || row['생산단계'] || '시작금형',
+        development_stage: row['진행단계'] || row['개발단계'] || '개발',
+        status: row['상태'] || '임시저장',
         order_date: row['발주일'],
         target_delivery_date: row['목표납기일'],
         icms_cost: Number(row['ICMS비용']) || Number(row['예상비용']) || null,
@@ -152,10 +160,19 @@ export default function MoldBulkUpload() {
   const validateData = (data) => {
     const errors = [];
     
-    if (!data.part_number) errors.push('부품번호는 필수입니다');
-    if (!data.part_name) errors.push('부품명은 필수입니다');
+    if (!data.part_number) errors.push('품번은 필수입니다');
+    if (!data.part_name) errors.push('품명은 필수입니다');
     if (!data.car_model) errors.push('차종은 필수입니다');
     if (data.cavity_count < 1) errors.push('Cavity수는 1 이상이어야 합니다');
+    if (!['시작금형', '양산금형'].includes(data.production_stage)) {
+      errors.push('제작사양은 시작금형 또는 양산금형이어야 합니다');
+    }
+    if (!['개발', '양산'].includes(data.development_stage)) {
+      errors.push('진행단계는 개발 또는 양산이어야 합니다');
+    }
+    if (!['임시저장', '등록'].includes(data.status)) {
+      errors.push('상태는 임시저장 또는 등록이어야 합니다');
+    }
 
     return errors;
   };
@@ -246,8 +263,10 @@ export default function MoldBulkUpload() {
             <ul className="list-disc list-inside space-y-1">
               <li>엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.</li>
               <li>샘플 엑셀을 다운로드하여 형식에 맞게 작성해주세요.</li>
-              <li>필수 항목: 부품번호, 부품명, 차종, 목표제작처ID, 목표납기일</li>
-              <li>목표제작처ID는 3(A제작소) 또는 5(B제작소)를 입력하세요.</li>
+              <li>필수 항목: 품번, 품명, 차종</li>
+              <li>제작사양: 시작금형 / 양산금형</li>
+              <li>진행단계: 개발 / 양산 (양산이관 승인 시 자동 변경)</li>
+              <li>상태: 임시저장 / 등록</li>
             </ul>
           </div>
         </div>
