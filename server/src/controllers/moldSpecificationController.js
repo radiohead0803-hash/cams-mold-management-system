@@ -13,21 +13,45 @@ const fs = require('fs');
 const createMoldSpecification = async (req, res) => {
   try {
     const {
+      // 기본 정보
+      primary_part_number,
+      primary_part_name,
       part_number,
       part_name,
       car_model,
       car_year,
+      // 금형 사양
       mold_type,
       cavity_count,
       material,
       tonnage,
+      dimensions,
+      weight,
+      // 제작 정보
       maker_company_id,
       plant_company_id,
+      target_maker_id,
+      target_plant_id,
+      manager_name,
+      // 개발사양 및 단계
       development_stage,
       production_stage,
+      mold_spec_type,
+      // 일정
       order_date,
       target_delivery_date,
+      drawing_review_date,
+      // 예산
       estimated_cost,
+      icms_cost,
+      vendor_quote_cost,
+      maker_estimated_cost,
+      // 사출 조건
+      cycle_time,
+      injection_temp,
+      injection_pressure,
+      injection_speed,
+      // 기타
       notes,
       part_images
     } = req.body;
@@ -65,25 +89,48 @@ const createMoldSpecification = async (req, res) => {
 
     // MoldSpecification 먼저 생성
     const specification = await MoldSpecification.create({
+      // 기본 정보
+      primary_part_number: primary_part_number || null,
+      primary_part_name: primary_part_name || null,
       part_number,
       part_name,
       car_model,
       car_year,
+      // 금형 사양
       mold_type,
       cavity_count,
       material,
       tonnage,
-      target_maker_id: null, // User ID가 필요하므로 null로 설정
-      maker_company_id: maker_company_id || null,
-      plant_company_id: plant_company_id || null,
+      dimensions: dimensions || null,
+      weight: weight || null,
+      // 제작 정보
+      target_maker_id: target_maker_id || null,
+      target_plant_id: target_plant_id || null,
+      maker_company_id: maker_company_id || target_maker_id || null,
+      plant_company_id: plant_company_id || target_plant_id || null,
+      manager_name: manager_name || null,
+      // 개발사양 및 단계
       development_stage: development_stage || '개발',
       production_stage: production_stage || '시제',
+      mold_spec_type: mold_spec_type || '시작금형',
+      // 일정
       order_date: order_date || new Date(),
-      target_delivery_date,
-      estimated_cost,
-      notes,
+      target_delivery_date: target_delivery_date || null,
+      drawing_review_date: drawing_review_date || null,
+      // 예산
+      estimated_cost: estimated_cost || null,
+      icms_cost: icms_cost || null,
+      vendor_quote_cost: vendor_quote_cost || null,
+      maker_estimated_cost: maker_estimated_cost || null,
+      // 사출 조건
+      cycle_time: cycle_time || null,
+      injection_temp: injection_temp || null,
+      injection_pressure: injection_pressure || null,
+      injection_speed: injection_speed || null,
+      // 기타
+      notes: notes || null,
       part_images: part_images || null,
-      status: 'draft', // 초안
+      status: 'draft',
       created_by: req.user.id
     });
 

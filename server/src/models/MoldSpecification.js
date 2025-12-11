@@ -45,6 +45,34 @@ class MoldSpecification extends Model {
         tonnage: {
           type: DataTypes.INTEGER
         },
+        dimensions: {
+          type: DataTypes.STRING(100),
+          comment: '치수 (LxWxH mm)'
+        },
+        weight: {
+          type: DataTypes.DECIMAL(10, 2),
+          comment: '중량 (kg)'
+        },
+        manager_name: {
+          type: DataTypes.STRING(100),
+          comment: '담당자명'
+        },
+        cycle_time: {
+          type: DataTypes.INTEGER,
+          comment: '사이클 타임 (초)'
+        },
+        injection_temp: {
+          type: DataTypes.INTEGER,
+          comment: '사출 온도 (°C)'
+        },
+        injection_pressure: {
+          type: DataTypes.INTEGER,
+          comment: '사출 압력 (bar)'
+        },
+        injection_speed: {
+          type: DataTypes.INTEGER,
+          comment: '사출 속도 (mm/s)'
+        },
         target_maker_id: {
           type: DataTypes.INTEGER,
           references: {
