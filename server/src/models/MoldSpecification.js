@@ -9,6 +9,16 @@ class MoldSpecification extends Model {
           primaryKey: true,
           autoIncrement: true
         },
+        primary_part_number: {
+          type: DataTypes.STRING(50),
+          allowNull: true,
+          comment: '대표품번'
+        },
+        primary_part_name: {
+          type: DataTypes.STRING(200),
+          allowNull: true,
+          comment: '대표품명'
+        },
         part_number: {
           type: DataTypes.STRING(50),
           allowNull: false
@@ -16,11 +26,6 @@ class MoldSpecification extends Model {
         part_name: {
           type: DataTypes.STRING(200),
           allowNull: false
-        },
-        primary_part_name: {
-          type: DataTypes.STRING(200),
-          allowNull: true,
-          comment: '대표품명'
         },
         car_model: {
           type: DataTypes.STRING(100)

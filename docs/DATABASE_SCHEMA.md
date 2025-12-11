@@ -82,9 +82,10 @@ CREATE TABLE mold_specifications (
   id SERIAL PRIMARY KEY,
   
   -- 기본 정보 (외부 시스템 연동 가능)
+  primary_part_number VARCHAR(50),       -- 대표품번
+  primary_part_name VARCHAR(200),        -- 대표품명
   part_number VARCHAR(50) NOT NULL,
   part_name VARCHAR(200) NOT NULL,
-  primary_part_name VARCHAR(200),        -- 대표품명
   car_model VARCHAR(100),
   car_year VARCHAR(10),
   

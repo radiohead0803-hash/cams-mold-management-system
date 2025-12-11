@@ -99,12 +99,13 @@ const runMoldImagesMigration = async () => {
       console.log('⚠️ mold_specifications cost columns may already exist:', e.message);
     }
 
-    // mold_specifications에 대표품명 컬럼 추가
+    // mold_specifications에 대표품번/대표품명 컬럼 추가
     try {
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS primary_part_number VARCHAR(50)`);
       await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS primary_part_name VARCHAR(200)`);
-      console.log('✅ mold_specifications.primary_part_name column added/verified.');
+      console.log('✅ mold_specifications.primary_part_number/primary_part_name columns added/verified.');
     } catch (e) {
-      console.log('⚠️ primary_part_name column may already exist:', e.message);
+      console.log('⚠️ primary_part columns may already exist:', e.message);
     }
 
   } catch (error) {

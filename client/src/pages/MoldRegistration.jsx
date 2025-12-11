@@ -10,8 +10,9 @@ export default function MoldRegistration() {
   
   const [formData, setFormData] = useState({
     // 기본 정보
-    part_number: '',
+    primary_part_number: '', // 대표품번
     primary_part_name: '', // 대표품명
+    part_number: '',
     part_name: '',
     car_model: '',
     car_year: new Date().getFullYear().toString(),
@@ -153,8 +154,9 @@ export default function MoldRegistration() {
     const firstTonnage = tonnages[0]?.tonnage_value || 350;
 
     setFormData({
-      part_number: `P-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`,
+      primary_part_number: `RP-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
       primary_part_name: '도어 트림',
+      part_number: `P-${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`,
       part_name: '도어 트림 LH',
       car_model: firstCarModel,
       car_year: today.getFullYear().toString(),
@@ -278,6 +280,21 @@ export default function MoldRegistration() {
         <section className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">📋 기본 정보</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 1행: 대표품번, 대표품명 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                대표품번
+              </label>
+              <input
+                type="text"
+                name="primary_part_number"
+                value={formData.primary_part_number}
+                onChange={handleChange}
+                className="input"
+                placeholder="대표품번 입력 (예: RP-2024-001)"
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 대표품명
@@ -290,9 +307,9 @@ export default function MoldRegistration() {
                 className="input"
                 placeholder="대표품명 입력 (예: 도어 트림)"
               />
-              <p className="text-xs text-gray-500 mt-1">동일 금형으로 생산되는 부품들의 대표 품명</p>
             </div>
 
+            {/* 2행: 품번, 품명 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 품번 <span className="text-red-500">*</span>
@@ -327,6 +344,7 @@ export default function MoldRegistration() {
               )}
             </div>
 
+            {/* 3행: 차종, 연식 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 차종 <span className="text-red-500">*</span>
