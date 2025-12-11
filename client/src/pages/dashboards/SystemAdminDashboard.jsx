@@ -309,7 +309,7 @@ export default function SystemAdminDashboard() {
                 <button
                   key={loc.id}
                   type="button"
-                  onClick={() => setSelectedMoldId(loc.id)}
+                  onClick={() => setSelectedMoldId(selectedMoldId === loc.id ? null : loc.id)}
                   className={`w-full flex items-center justify-between px-2 py-1.5 text-left hover:bg-blue-50 ${
                     selectedMoldId === loc.id ? 'bg-blue-50' : ''
                   }`}
@@ -406,7 +406,7 @@ export default function SystemAdminDashboard() {
             {!locLoading && !locError && (
               <div className="bg-white rounded-xl shadow" style={{ height: '500px' }}>
                 <NaverMoldLocationMap 
-                  locations={filteredLocations} 
+                  locations={selectedMoldId ? filteredLocations.filter(loc => loc.id === selectedMoldId) : filteredLocations} 
                   selectedMoldId={selectedMoldId}
                   onMoldDoubleClick={handleMoldDoubleClick}
                 />
