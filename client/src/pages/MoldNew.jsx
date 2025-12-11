@@ -19,8 +19,9 @@ export default function MoldNew() {
   const [uploadingImage, setUploadingImage] = useState(false);
   
   const [formData, setFormData] = useState({
-    part_number: '',
     representative_part_number: '',
+    representative_part_name: '',
+    part_number: '',
     part_name: '',
     car_model: '',
     car_year: new Date().getFullYear().toString(),
@@ -31,7 +32,7 @@ export default function MoldNew() {
     maker_company_id: '',
     plant_company_id: '',
     development_stage: '개발',
-    production_stage: '시제',
+    production_stage: '시작',
     order_date: new Date().toISOString().split('T')[0],
     target_delivery_date: '',
     icms_cost: '',
@@ -405,20 +406,6 @@ export default function MoldNew() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                부품번호 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="part_number"
-                value={formData.part_number}
-                onChange={handleChange}
-                required
-                className="input"
-                placeholder="P-2024-001"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 대표품번
               </label>
               <input
@@ -432,7 +419,34 @@ export default function MoldNew() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                부품명 <span className="text-red-500">*</span>
+                대표품명
+              </label>
+              <input
+                type="text"
+                name="representative_part_name"
+                value={formData.representative_part_name}
+                onChange={handleChange}
+                className="input"
+                placeholder="대표품명 입력"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                품번 <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="part_number"
+                value={formData.part_number}
+                onChange={handleChange}
+                required
+                className="input"
+                placeholder="P-2024-001"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                품명 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -689,15 +703,15 @@ export default function MoldNew() {
           </div>
         </div>
 
-        {/* 개발 및 생산 단계 */}
+        {/* 사양 및 진행단계 */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-            개발 및 생산 단계
+            사양 및 진행단계
           </h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                개발 단계
+                진행단계
               </label>
               <select
                 name="development_stage"
@@ -708,10 +722,11 @@ export default function MoldNew() {
                 <option value="개발">개발</option>
                 <option value="양산">양산</option>
               </select>
+              <p className="text-xs text-gray-500 mt-1">💡 양산이관 승인 시 자동으로 '양산'으로 변경됩니다</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                생산 단계
+                제작사양
               </label>
               <select
                 name="production_stage"
@@ -719,7 +734,7 @@ export default function MoldNew() {
                 onChange={handleChange}
                 className="input"
               >
-                <option value="시제">시제</option>
+                <option value="시작">시작</option>
                 <option value="양산">양산</option>
               </select>
             </div>
