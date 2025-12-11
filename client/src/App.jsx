@@ -76,6 +76,7 @@ import Reports from './pages/Reports'
 import MoldHistory from './pages/MoldHistory'
 import QRSessionsPage from './pages/QRSessionsPage'
 import MoldLocationMapPage from './pages/MoldLocationMapPage'
+import ProductionTransferChecklistMaster from './pages/ProductionTransferChecklistMaster'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -254,6 +255,9 @@ function App() {
         
         {/* 금형 위치 지도 (전체화면) */}
         <Route path="mold-location-map" element={<MoldLocationMapPage />} />
+        
+        {/* 양산이관 체크리스트 마스터 관리 */}
+        <Route path="production-transfer/checklist-master" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><ProductionTransferChecklistMaster /></ProtectedRoute>} />
       </Route>
     </Routes>
   )

@@ -60,29 +60,42 @@
 
 ---
 
-## 📊 데이터베이스 스키마
+## 데이터베이스 스키마
 
 ### production_transfer_checklist_master (양산이관 체크리스트 마스터)
+
+**8개 카테고리, 52개 항목 표준안**
+
+| 카테고리 | 항목 수 | 설명 |
+|----------|---------|------|
+| 1.금형기본정보 | 6 | 금형코드, QR, 명판, 사양서, 캐비티, 중량 등 |
+| 2.도면문서검증 | 6 | 2D/3D 도면, EO반영, 성형조건서, 승인서명 등 |
+| 3.치수정밀도검사 | 10 | 치수측정, 공차, 파팅라인, 가스벤트, 정밀도 등 |
+| 4.성형면외관상태 | 8 | 흠집, EDM/연마, 오염, 냉각채널, 러너/게이트 등 |
+| 5.성능기능점검 | 8 | 냉각수, 슬라이드, 이젝터, 윤활, 온도균일성 등 |
+| 6.금형안전성확인 | 4 | 클램프, 인양고리, 센서배선, 안전커버 등 |
+| 7.시운전결과 | 8 | Shot기록, 성형조건, NG개선, 외관/치수PASS 등 |
+| 8.금형인계물류 | 6 | 세척/방청, 포장, GPS기록, QR스캔, 서명 등 |
+
 ```sql
 CREATE TABLE production_transfer_checklist_master (
   id SERIAL PRIMARY KEY,
-  category VARCHAR(100) NOT NULL,           -- 카테고리 (금형상태, 서류, 시운전결과 등)
-  item_code VARCHAR(50) NOT NULL,           -- 항목 코드
-  item_name VARCHAR(200) NOT NULL,          -- 항목명
-  description TEXT,                          -- 상세 설명
-  is_required BOOLEAN DEFAULT TRUE,          -- 필수 여부
-  requires_attachment BOOLEAN DEFAULT FALSE, -- 첨부파일 필요 여부
-  attachment_type VARCHAR(50),               -- 첨부파일 유형 (image, document, etc)
-  display_order INTEGER DEFAULT 0,           -- 표시 순서
-  is_active BOOLEAN DEFAULT TRUE,            -- 활성화 여부
+  category VARCHAR(100) NOT NULL,
+  item_code VARCHAR(50) NOT NULL,
+  item_name VARCHAR(200) NOT NULL,
+  description TEXT,
+  is_required BOOLEAN DEFAULT TRUE,
+  requires_attachment BOOLEAN DEFAULT FALSE,
+  attachment_type VARCHAR(50),  -- 'image', 'document'
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
   created_by INTEGER REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
-
+```
 CREATE INDEX idx_transfer_checklist_master_category ON production_transfer_checklist_master(category);
 CREATE INDEX idx_transfer_checklist_master_active ON production_transfer_checklist_master(is_active);
-```
 
 ### production_transfer_requests (양산이관 신청)
 ```sql
