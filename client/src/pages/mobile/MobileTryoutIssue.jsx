@@ -11,7 +11,11 @@ import {
   X,
   ChevronRight,
   AlertCircle,
-  Wrench
+  Wrench,
+  Paperclip,
+  FileText,
+  Image,
+  Trash2
 } from 'lucide-react';
 import api from '../../utils/api';
 
@@ -34,6 +38,8 @@ const MobileTryoutIssue = () => {
     issue_location: '',
     severity: 'medium'
   });
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   const categories = [
     { value: 'dimension', label: '치수', icon: '📏' },
@@ -99,6 +105,42 @@ const MobileTryoutIssue = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await api.post('/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+
+        if (response.data.success) {
+          const fileType = file.type.startsWith('image/') ? 'image' : 'document';
+          setAttachments(prev => [...prev, {
+            type: fileType,
+            url: response.data.url,
+            filename: file.name,
+            uploaded_at: new Date().toISOString()
+          }]);
+        }
+      }
+    } catch (error) {
+      console.error('파일 업로드 오류:', error);
+      alert('파일 업로드 중 오류가 발생했습니다.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -110,7 +152,8 @@ const MobileTryoutIssue = () => {
     try {
       const response = await api.post('/tryout-issues', {
         ...formData,
-        mold_id: moldId
+        mold_id: moldId,
+        attachments: attachments
       });
 
       if (response.data.success) {
@@ -125,6 +168,7 @@ const MobileTryoutIssue = () => {
           issue_location: '',
           severity: 'medium'
         });
+        setAttachments([]);
         fetchData();
       }
     } catch (error) {
@@ -406,9 +450,78 @@ const MobileTryoutIssue = () => {
                 </div>
               </div>
 
+              {/* 첨부파일 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Paperclip size={16} className="inline mr-1" />
+                  첨부파일 (사진/문서)
+                </label>
+                
+                {/* 업로드 버튼 */}
+                <div className="flex space-x-2 mb-3">
+                  <label className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                    <Camera size={20} className="text-gray-400 mr-2" />
+                    <span className="text-sm text-gray-600">사진 추가</span>
+                  </label>
+                  <label className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.hwp"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                    <FileText size={20} className="text-gray-400 mr-2" />
+                    <span className="text-sm text-gray-600">문서 추가</span>
+                  </label>
+                </div>
+
+                {uploading && (
+                  <div className="flex items-center justify-center py-2 text-sm text-blue-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    업로드 중...
+                  </div>
+                )}
+
+                {/* 첨부파일 목록 */}
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <div className="flex items-center flex-1 min-w-0">
+                          {file.type === 'image' ? (
+                            <Image size={16} className="text-blue-500 mr-2 flex-shrink-0" />
+                          ) : (
+                            <FileText size={16} className="text-green-500 mr-2 flex-shrink-0" />
+                          )}
+                          <span className="text-sm text-gray-700 truncate">{file.filename}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(index)}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
-                className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium flex items-center justify-center"
+                disabled={uploading}
+                className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium flex items-center justify-center disabled:bg-gray-400"
               >
                 <Save size={18} className="mr-2" />
                 등록하기

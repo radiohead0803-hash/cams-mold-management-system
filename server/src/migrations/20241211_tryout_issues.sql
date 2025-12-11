@@ -16,9 +16,10 @@ CREATE TABLE IF NOT EXISTS tryout_issues (
   issue_location VARCHAR(200),
   severity VARCHAR(20) DEFAULT 'medium',
   
-  -- 첨부파일
+  -- 첨부파일 (다중 지원)
   issue_image_url TEXT,
   issue_image_filename VARCHAR(255),
+  attachments JSONB DEFAULT '[]',
   
   -- 개선 정보
   improvement_status VARCHAR(30) DEFAULT 'pending',
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS tryout_issues (
   improvement_date DATE,
   improvement_image_url TEXT,
   improvement_image_filename VARCHAR(255),
+  improvement_attachments JSONB DEFAULT '[]',
   improved_by INTEGER REFERENCES users(id),
   
   -- 검증 정보

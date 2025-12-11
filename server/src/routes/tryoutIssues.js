@@ -174,6 +174,7 @@ router.post('/', async (req, res) => {
       severity,
       issue_image_url,
       issue_image_filename,
+      attachments,
       transfer_check_required,
       remarks
     } = req.body;
@@ -197,6 +198,7 @@ router.post('/', async (req, res) => {
       severity: severity || 'medium',
       issue_image_url,
       issue_image_filename,
+      attachments: attachments || [],
       improvement_status: 'pending',
       transfer_check_required: transfer_check_required !== false,
       registered_by: req.user?.id

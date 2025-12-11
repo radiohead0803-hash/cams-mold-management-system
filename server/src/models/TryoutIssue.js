@@ -64,7 +64,7 @@ module.exports = (sequelize) => {
       defaultValue: 'medium',
       comment: '심각도: critical(치명), major(중대), medium(보통), minor(경미)'
     },
-    // 첨부파일
+    // 첨부파일 (다중 지원)
     issue_image_url: {
       type: DataTypes.TEXT,
       comment: '문제점 이미지 URL'
@@ -72,6 +72,11 @@ module.exports = (sequelize) => {
     issue_image_filename: {
       type: DataTypes.STRING(255),
       comment: '문제점 이미지 파일명'
+    },
+    attachments: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
+      comment: '첨부파일 목록 [{type, url, filename, uploaded_at}]'
     },
     // 개선 정보
     improvement_status: {
@@ -94,6 +99,11 @@ module.exports = (sequelize) => {
     improvement_image_filename: {
       type: DataTypes.STRING(255),
       comment: '개선 후 이미지 파일명'
+    },
+    improvement_attachments: {
+      type: DataTypes.JSONB,
+      defaultValue: [],
+      comment: '개선 첨부파일 목록 [{type, url, filename, uploaded_at}]'
     },
     improved_by: {
       type: DataTypes.INTEGER,
