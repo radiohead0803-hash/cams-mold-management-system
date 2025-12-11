@@ -16,6 +16,7 @@ export default function MoldBulkUpload() {
     const sampleData = [
       {
         '부품번호': 'P-2024-SAMPLE-001',
+        '대표품번': '',
         '부품명': '프론트 범퍼',
         '차종': 'K5',
         '연식': '2024',
@@ -23,16 +24,19 @@ export default function MoldBulkUpload() {
         'Cavity수': 1,
         '재질': 'NAK80',
         '톤수': 350,
-        '목표제작처ID': 3,
+        '제작처ID': 3,
+        '생산처ID': 5,
         '개발단계': '개발',
         '생산단계': '시제',
         '발주일': '2024-01-15',
         '목표납기일': '2024-03-15',
-        '예상비용': 45000000,
+        'ICMS비용': 45000000,
+        '업체견적가': 42000000,
         '비고': '샘플 데이터'
       },
       {
         '부품번호': 'P-2024-SAMPLE-002',
+        '대표품번': 'P-2024-SAMPLE-001',
         '부품명': '도어 트림 RH',
         '차종': 'K8',
         '연식': '2024',
@@ -40,12 +44,14 @@ export default function MoldBulkUpload() {
         'Cavity수': 2,
         '재질': 'P20',
         '톤수': 420,
-        '목표제작처ID': 3,
+        '제작처ID': 3,
+        '생산처ID': 5,
         '개발단계': '개발',
         '생산단계': '시제',
         '발주일': '2024-01-20',
         '목표납기일': '2024-03-20',
-        '예상비용': 48000000,
+        'ICMS비용': 48000000,
+        '업체견적가': 45000000,
         '비고': '샘플 데이터'
       }
     ];
@@ -56,20 +62,23 @@ export default function MoldBulkUpload() {
 
     // 컬럼 너비 설정
     ws['!cols'] = [
-      { wch: 20 }, // 부품번호
+      { wch: 22 }, // 부품번호
+      { wch: 22 }, // 대표품번
       { wch: 20 }, // 부품명
-      { wch: 15 }, // 차종
-      { wch: 10 }, // 연식
-      { wch: 15 }, // 금형타입
+      { wch: 12 }, // 차종
+      { wch: 8 },  // 연식
+      { wch: 12 }, // 금형타입
       { wch: 10 }, // Cavity수
       { wch: 10 }, // 재질
-      { wch: 10 }, // 톤수
-      { wch: 15 }, // 목표제작처ID
-      { wch: 12 }, // 개발단계
-      { wch: 12 }, // 생산단계
+      { wch: 8 },  // 톤수
+      { wch: 10 }, // 제작처ID
+      { wch: 10 }, // 생산처ID
+      { wch: 10 }, // 개발단계
+      { wch: 10 }, // 생산단계
       { wch: 12 }, // 발주일
       { wch: 12 }, // 목표납기일
-      { wch: 15 }, // 예상비용
+      { wch: 15 }, // ICMS비용
+      { wch: 15 }, // 업체견적가
       { wch: 20 }  // 비고
     ];
 
@@ -116,19 +125,22 @@ export default function MoldBulkUpload() {
     try {
       return {
         part_number: row['부품번호'],
+        representative_part_number: row['대표품번'] || '',
         part_name: row['부품명'],
         car_model: row['차종'],
-        car_year: String(row['연식']),
+        car_year: String(row['연식'] || ''),
         mold_type: row['금형타입'],
-        cavity_count: Number(row['Cavity수']),
+        cavity_count: Number(row['Cavity수']) || 1,
         material: row['재질'],
-        tonnage: Number(row['톤수']),
-        target_maker_id: Number(row['목표제작처ID']),
-        development_stage: row['개발단계'],
-        production_stage: row['생산단계'],
+        tonnage: Number(row['톤수']) || null,
+        maker_company_id: Number(row['제작처ID']) || Number(row['목표제작처ID']) || null,
+        plant_company_id: Number(row['생산처ID']) || null,
+        development_stage: row['개발단계'] || '개발',
+        production_stage: row['생산단계'] || '시제',
         order_date: row['발주일'],
         target_delivery_date: row['목표납기일'],
-        estimated_cost: Number(row['예상비용']),
+        icms_cost: Number(row['ICMS비용']) || Number(row['예상비용']) || null,
+        vendor_quote_cost: Number(row['업체견적가']) || null,
         notes: row['비고'] || ''
       };
     } catch (error) {
@@ -143,10 +155,7 @@ export default function MoldBulkUpload() {
     if (!data.part_number) errors.push('부품번호는 필수입니다');
     if (!data.part_name) errors.push('부품명은 필수입니다');
     if (!data.car_model) errors.push('차종은 필수입니다');
-    if (!data.target_maker_id) errors.push('목표제작처ID는 필수입니다');
-    if (!data.target_delivery_date) errors.push('목표납기일은 필수입니다');
     if (data.cavity_count < 1) errors.push('Cavity수는 1 이상이어야 합니다');
-    if (data.tonnage < 1) errors.push('톤수는 1 이상이어야 합니다');
 
     return errors;
   };
