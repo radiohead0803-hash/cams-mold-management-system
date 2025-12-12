@@ -143,10 +143,10 @@ export default function MoldLocationMapPage() {
       </header>
 
       {/* 메인 컨텐츠 */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0" style={{ height: 'calc(100vh - 80px)' }}>
         {/* 왼쪽 패널 - 금형 목록 */}
         {showList && (
-          <div className="w-96 bg-white border-r border-gray-200 flex flex-col min-h-0">
+          <div className="w-[420px] bg-white border-r border-gray-200 flex flex-col h-full">
             {/* 검색 및 필터 */}
             <div className="flex-shrink-0 p-4 border-b border-gray-200 space-y-3">
               {/* 검색 */}
@@ -213,8 +213,8 @@ export default function MoldLocationMapPage() {
               </div>
             </div>
             
-            {/* 금형 목록 - 최대 10개만 표시 */}
-            <div className="flex-1 overflow-y-auto max-h-[400px]">
+            {/* 금형 목록 - 화면 높이에 맞게 조정 */}
+            <div className="flex-1 overflow-y-auto">
               {filteredLocations.length === 0 ? (
                 <div className="p-8 text-center">
                   <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -314,7 +314,7 @@ export default function MoldLocationMapPage() {
         )}
 
         {/* 오른쪽 - 지도 */}
-        <div className="flex-1 relative min-h-[400px]">
+        <div className="flex-1 relative" style={{ maxHeight: 'calc(100vh - 80px)' }}>
           {error ? (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
               <div className="text-center">
