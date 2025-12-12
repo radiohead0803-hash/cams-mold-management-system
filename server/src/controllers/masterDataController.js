@@ -119,10 +119,14 @@ const getMaterials = async (req, res) => {
     const where = {};
     if (is_active !== undefined) where.is_active = is_active === 'true';
 
-    const materials = await Material.findAll({
-      where,
-      order: [['sort_order', 'ASC'], ['material_name', 'ASC']]
-    });
+    let whereClause = '';
+    if (is_active !== undefined) {
+      whereClause = `WHERE is_active = ${is_active === 'true'}`;
+    }
+
+    const [materials] = await sequelize.query(`
+      SELECT * FROM materials ${whereClause} ORDER BY sort_order ASC, material_name ASC
+    `);
 
     res.json({
       success: true,
@@ -132,29 +136,42 @@ const getMaterials = async (req, res) => {
     logger.error('Get materials error:', error);
     res.status(500).json({
       success: false,
-      error: { message: '재질 목록 조회 실패' }
+      error: { message: '금형재질 목록 조회 실패' }
     });
   }
 };
 
 const createMaterial = async (req, res) => {
   try {
-    const { material_name, material_code, category, hardness, description, sort_order } = req.body;
+    const { material_name, material_code, category, hardness, description, usage_type, heat_treatment, machinability, weldability, polishability, corrosion_resistance, wear_resistance, sort_order } = req.body;
 
-    const material = await Material.create({
-      material_name,
-      material_code,
-      category,
-      hardness,
-      description,
-      sort_order: sort_order || 0
+    const [result] = await sequelize.query(`
+      INSERT INTO materials (material_name, material_code, category, hardness, description, usage_type, heat_treatment, machinability, weldability, polishability, corrosion_resistance, wear_resistance, sort_order, is_active, created_at, updated_at)
+      VALUES (:material_name, :material_code, :category, :hardness, :description, :usage_type, :heat_treatment, :machinability, :weldability, :polishability, :corrosion_resistance, :wear_resistance, :sort_order, true, NOW(), NOW())
+      RETURNING *
+    `, {
+      replacements: {
+        material_name,
+        material_code: material_code || null,
+        category: category || null,
+        hardness: hardness || null,
+        description: description || null,
+        usage_type: usage_type || null,
+        heat_treatment: heat_treatment || null,
+        machinability: machinability || null,
+        weldability: weldability || null,
+        polishability: polishability || null,
+        corrosion_resistance: corrosion_resistance || null,
+        wear_resistance: wear_resistance || null,
+        sort_order: sort_order || 0
+      }
     });
 
-    logger.info(`Material created: ${material.id} by user ${req.user.id}`);
+    logger.info(`Material created: ${result[0].id} by user ${req.user.id}`);
 
     res.status(201).json({
       success: true,
-      data: material
+      data: result[0]
     });
   } catch (error) {
     logger.error('Create material error:', error);
@@ -168,29 +185,43 @@ const createMaterial = async (req, res) => {
 const updateMaterial = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateFields = [];
+    const replacements = { id };
 
-    const material = await Material.findByPk(id);
-    if (!material) {
-      return res.status(404).json({
-        success: false,
-        error: { message: '재질을 찾을 수 없습니다' }
-      });
+    const allowedFields = ['material_name', 'material_code', 'category', 'hardness', 'description', 'usage_type', 'heat_treatment', 'machinability', 'weldability', 'polishability', 'corrosion_resistance', 'wear_resistance', 'sort_order', 'is_active'];
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateFields.push(`${field} = :${field}`);
+        replacements[field] = req.body[field];
+      }
     }
 
-    await material.update(updateData);
+    if (updateFields.length === 0) {
+      return res.status(400).json({ success: false, error: { message: '수정할 데이터가 없습니다' } });
+    }
+
+    updateFields.push('updated_at = NOW()');
+
+    const [result] = await sequelize.query(`
+      UPDATE materials SET ${updateFields.join(', ')} WHERE id = :id RETURNING *
+    `, { replacements });
+
+    if (result.length === 0) {
+      return res.status(404).json({ success: false, error: { message: '금형재질을 찾을 수 없습니다' } });
+    }
 
     logger.info(`Material updated: ${id} by user ${req.user.id}`);
 
     res.json({
       success: true,
-      data: material
+      data: result[0]
     });
   } catch (error) {
     logger.error('Update material error:', error);
     res.status(500).json({
       success: false,
-      error: { message: '재질 수정 실패' }
+      error: { message: '금형재질 수정 실패' }
     });
   }
 };

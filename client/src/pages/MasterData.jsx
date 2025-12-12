@@ -25,7 +25,7 @@ export default function MasterData() {
 
   const tabs = [
     { id: 'car-models', label: '차종' },
-    { id: 'materials', label: '재질' },
+    { id: 'materials', label: '금형재질' },
     { id: 'mold-types', label: '금형타입' },
     { id: 'tonnages', label: '사출기 사양' },
     { id: 'raw-materials', label: '원재료' }
@@ -227,13 +227,14 @@ export default function MasterData() {
       
       case 'materials':
         return (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-3">
             <input
               type="text"
               placeholder="재질명 (예: NAK80)"
               value={formData.material_name || ''}
               onChange={(e) => setFormData({ ...formData, material_name: e.target.value })}
               className="input"
+              required
             />
             <input
               type="text"
@@ -242,13 +243,20 @@ export default function MasterData() {
               onChange={(e) => setFormData({ ...formData, material_code: e.target.value })}
               className="input"
             />
-            <input
-              type="text"
-              placeholder="분류 (예: 프리하든강)"
+            <select
               value={formData.category || ''}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               className="input"
-            />
+            >
+              <option value="">분류 선택</option>
+              <option value="프리하든강">프리하든강</option>
+              <option value="탄소강">탄소강</option>
+              <option value="합금강">합금강</option>
+              <option value="합금공구강">합금공구강</option>
+              <option value="열간공구강">열간공구강</option>
+              <option value="스테인리스강">스테인리스강</option>
+              <option value="비철금속">비철금속</option>
+            </select>
             <input
               type="text"
               placeholder="경도 (예: HRC 37-43)"
@@ -258,11 +266,40 @@ export default function MasterData() {
             />
             <input
               type="text"
-              placeholder="설명"
-              value={formData.description || ''}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="input col-span-2"
+              placeholder="용도 (예: 코어, 캐비티)"
+              value={formData.usage_type || ''}
+              onChange={(e) => setFormData({ ...formData, usage_type: e.target.value })}
+              className="input"
             />
+            <input
+              type="text"
+              placeholder="열처리 (예: 담금질+뜨임)"
+              value={formData.heat_treatment || ''}
+              onChange={(e) => setFormData({ ...formData, heat_treatment: e.target.value })}
+              className="input"
+            />
+            <select
+              value={formData.machinability || ''}
+              onChange={(e) => setFormData({ ...formData, machinability: e.target.value })}
+              className="input"
+            >
+              <option value="">가공성</option>
+              <option value="우수">우수</option>
+              <option value="양호">양호</option>
+              <option value="보통">보통</option>
+              <option value="어려움">어려움</option>
+            </select>
+            <select
+              value={formData.polishability || ''}
+              onChange={(e) => setFormData({ ...formData, polishability: e.target.value })}
+              className="input"
+            >
+              <option value="">경면가공성</option>
+              <option value="우수">우수</option>
+              <option value="양호">양호</option>
+              <option value="보통">보통</option>
+              <option value="어려움">어려움</option>
+            </select>
           </div>
         );
       
@@ -668,30 +705,46 @@ export default function MasterData() {
       case 'materials':
         return (
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">순서</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">재질명</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">코드</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">분류</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">경도</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">#</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">재질명</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">분류</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">경도</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">용도</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">열처리</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">가공성</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">경면가공</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredData.map((item, index) => (
                 <tr key={item.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.material_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.material_code || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.category || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.hardness || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
-                      <Edit2 size={16} />
+                  <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-xs">{index + 1}</td>
+                  <td className="px-2 py-2 whitespace-nowrap font-medium text-blue-600">{item.material_name}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">
+                    <span className="px-2 py-1 rounded bg-gray-100 text-gray-700">{item.category || '-'}</span>
+                  </td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs text-orange-600">{item.hardness || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[120px] truncate" title={item.usage_type || ''}>{item.usage_type || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.heat_treatment || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">
+                    <span className={`px-2 py-1 rounded text-xs ${item.machinability === '우수' ? 'bg-green-100 text-green-700' : item.machinability === '양호' ? 'bg-blue-100 text-blue-700' : item.machinability === '보통' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                      {item.machinability || '-'}
+                    </span>
+                  </td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">
+                    <span className={`px-2 py-1 rounded text-xs ${item.polishability === '우수' ? 'bg-green-100 text-green-700' : item.polishability === '양호' ? 'bg-blue-100 text-blue-700' : item.polishability === '보통' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+                      {item.polishability || '-'}
+                    </span>
+                  </td>
+                  <td className="px-2 py-2 whitespace-nowrap">
+                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
+                      <Edit2 size={14} />
                     </button>
                     <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900">
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>
