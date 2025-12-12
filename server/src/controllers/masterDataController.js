@@ -486,18 +486,18 @@ const createRawMaterial = async (req, res) => {
     const {
       ms_spec, material_type, grade, supplier,
       shrinkage_rate, specific_gravity, mold_shrinkage,
-      notes, sort_order
+      usage, notes, sort_order
     } = req.body;
 
     const [result] = await sequelize.query(`
       INSERT INTO raw_materials (
         ms_spec, material_type, grade, supplier,
         shrinkage_rate, specific_gravity, mold_shrinkage,
-        notes, sort_order, is_active, created_at, updated_at
+        usage, notes, sort_order, is_active, created_at, updated_at
       ) VALUES (
         :ms_spec, :material_type, :grade, :supplier,
         :shrinkage_rate, :specific_gravity, :mold_shrinkage,
-        :notes, :sort_order, true, NOW(), NOW()
+        :usage, :notes, :sort_order, true, NOW(), NOW()
       ) RETURNING *
     `, {
       replacements: {
@@ -505,7 +505,7 @@ const createRawMaterial = async (req, res) => {
         grade: grade || null, supplier: supplier || null,
         shrinkage_rate: shrinkage_rate || null, specific_gravity: specific_gravity || null,
         mold_shrinkage: mold_shrinkage || null,
-        notes: notes || null, sort_order: sort_order || 0
+        usage: usage || null, notes: notes || null, sort_order: sort_order || 0
       }
     });
 
@@ -533,7 +533,7 @@ const updateRawMaterial = async (req, res) => {
     const allowedFields = [
       'ms_spec', 'material_type', 'grade', 'supplier',
       'shrinkage_rate', 'specific_gravity', 'mold_shrinkage',
-      'notes', 'sort_order', 'is_active'
+      'usage', 'notes', 'sort_order', 'is_active'
     ];
 
     for (const field of allowedFields) {
