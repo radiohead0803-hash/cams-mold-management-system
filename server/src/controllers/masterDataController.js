@@ -228,13 +228,14 @@ const deleteMaterial = async (req, res) => {
 const getMoldTypes = async (req, res) => {
   try {
     const { is_active } = req.query;
-    const where = {};
-    if (is_active !== undefined) where.is_active = is_active === 'true';
+    let whereClause = '';
+    if (is_active !== undefined) {
+      whereClause = `WHERE is_active = ${is_active === 'true'}`;
+    }
 
-    const moldTypes = await MoldType.findAll({
-      where,
-      order: [['sort_order', 'ASC'], ['type_name', 'ASC']]
-    });
+    const [moldTypes] = await sequelize.query(`
+      SELECT * FROM mold_types ${whereClause} ORDER BY sort_order ASC, type_name ASC
+    `);
 
     res.json({
       success: true,
@@ -251,20 +252,30 @@ const getMoldTypes = async (req, res) => {
 
 const createMoldType = async (req, res) => {
   try {
-    const { type_name, type_code, description, sort_order } = req.body;
+    const { type_name, type_code, description, category, sub_category, molding_method, typical_materials, sort_order } = req.body;
 
-    const moldType = await MoldType.create({
-      type_name,
-      type_code,
-      description,
-      sort_order: sort_order || 0
+    const [result] = await sequelize.query(`
+      INSERT INTO mold_types (type_name, type_code, description, category, sub_category, molding_method, typical_materials, sort_order, is_active, created_at, updated_at)
+      VALUES (:type_name, :type_code, :description, :category, :sub_category, :molding_method, :typical_materials, :sort_order, true, NOW(), NOW())
+      RETURNING *
+    `, {
+      replacements: {
+        type_name,
+        type_code: type_code || null,
+        description: description || null,
+        category: category || null,
+        sub_category: sub_category || null,
+        molding_method: molding_method || null,
+        typical_materials: typical_materials || null,
+        sort_order: sort_order || 0
+      }
     });
 
-    logger.info(`Mold type created: ${moldType.id} by user ${req.user.id}`);
+    logger.info(`Mold type created: ${result[0].id} by user ${req.user.id}`);
 
     res.status(201).json({
       success: true,
-      data: moldType
+      data: result[0]
     });
   } catch (error) {
     logger.error('Create mold type error:', error);
@@ -278,23 +289,37 @@ const createMoldType = async (req, res) => {
 const updateMoldType = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateFields = [];
+    const replacements = { id };
 
-    const moldType = await MoldType.findByPk(id);
-    if (!moldType) {
-      return res.status(404).json({
-        success: false,
-        error: { message: '금형타입을 찾을 수 없습니다' }
-      });
+    const allowedFields = ['type_name', 'type_code', 'description', 'category', 'sub_category', 'molding_method', 'typical_materials', 'sort_order', 'is_active'];
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateFields.push(`${field} = :${field}`);
+        replacements[field] = req.body[field];
+      }
     }
 
-    await moldType.update(updateData);
+    if (updateFields.length === 0) {
+      return res.status(400).json({ success: false, error: { message: '수정할 데이터가 없습니다' } });
+    }
+
+    updateFields.push('updated_at = NOW()');
+
+    const [result] = await sequelize.query(`
+      UPDATE mold_types SET ${updateFields.join(', ')} WHERE id = :id RETURNING *
+    `, { replacements });
+
+    if (result.length === 0) {
+      return res.status(404).json({ success: false, error: { message: '금형타입을 찾을 수 없습니다' } });
+    }
 
     logger.info(`Mold type updated: ${id} by user ${req.user.id}`);
 
     res.json({
       success: true,
-      data: moldType
+      data: result[0]
     });
   } catch (error) {
     logger.error('Update mold type error:', error);
