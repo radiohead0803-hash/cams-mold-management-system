@@ -334,17 +334,18 @@ const deleteMoldType = async (req, res) => {
   }
 };
 
-// ===== 톤수 관리 =====
+// ===== 톤수 관리 (사출기 사양) =====
 const getTonnages = async (req, res) => {
   try {
     const { is_active } = req.query;
-    const where = {};
-    if (is_active !== undefined) where.is_active = is_active === 'true';
+    let whereClause = '';
+    if (is_active !== undefined) {
+      whereClause = `WHERE is_active = ${is_active === 'true'}`;
+    }
 
-    const tonnages = await Tonnage.findAll({
-      where,
-      order: [['sort_order', 'ASC'], ['tonnage_value', 'ASC']]
-    });
+    const [tonnages] = await sequelize.query(`
+      SELECT * FROM tonnages ${whereClause} ORDER BY sort_order ASC, tonnage_value ASC
+    `);
 
     res.json({
       success: true,
@@ -354,7 +355,7 @@ const getTonnages = async (req, res) => {
     logger.error('Get tonnages error:', error);
     res.status(500).json({
       success: false,
-      error: { message: '톤수 목록 조회 실패' }
+      error: { message: '사출기 사양 목록 조회 실패' }
     });
   }
 };
