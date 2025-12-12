@@ -371,7 +371,14 @@ export default function MasterData() {
               placeholder="특징 (예: 저온(-30℃) 충격/강성↑, 열변형↓)"
               value={formData.characteristics || ''}
               onChange={(e) => setFormData({ ...formData, characteristics: e.target.value })}
-              className="input col-span-4"
+              className="input col-span-3"
+            />
+            <input
+              type="number"
+              placeholder="예상단가 (원/kg)"
+              value={formData.unit_price || ''}
+              onChange={(e) => setFormData({ ...formData, unit_price: parseInt(e.target.value) || null })}
+              className="input"
             />
           </div>
         );
@@ -530,6 +537,7 @@ export default function MasterData() {
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">타입</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">공급업체</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">수축률</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">단가(kg)</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">용도</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">장점</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">단점</th>
@@ -545,10 +553,11 @@ export default function MasterData() {
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.material_type}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.supplier || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.shrinkage_rate || '-'}</td>
-                  <td className="px-2 py-2 text-xs max-w-[120px] truncate" title={item.usage || ''}>{item.usage || '-'}</td>
-                  <td className="px-2 py-2 text-xs max-w-[150px] truncate text-green-600" title={item.advantages || ''}>{item.advantages || '-'}</td>
-                  <td className="px-2 py-2 text-xs max-w-[150px] truncate text-red-600" title={item.disadvantages || ''}>{item.disadvantages || '-'}</td>
-                  <td className="px-2 py-2 text-xs max-w-[150px] truncate text-purple-600" title={item.characteristics || ''}>{item.characteristics || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-orange-600">{item.unit_price ? `₩${item.unit_price.toLocaleString()}` : '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[100px] truncate" title={item.usage || ''}>{item.usage || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[120px] truncate text-green-600" title={item.advantages || ''}>{item.advantages || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[120px] truncate text-red-600" title={item.disadvantages || ''}>{item.disadvantages || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[120px] truncate text-purple-600" title={item.characteristics || ''}>{item.characteristics || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
                       <Edit2 size={14} />

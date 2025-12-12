@@ -487,7 +487,7 @@ const createRawMaterial = async (req, res) => {
       ms_spec, material_type, grade, supplier,
       shrinkage_rate, specific_gravity, mold_shrinkage,
       usage, advantages, disadvantages, characteristics,
-      notes, sort_order
+      unit_price, notes, sort_order
     } = req.body;
 
     const [result] = await sequelize.query(`
@@ -495,12 +495,12 @@ const createRawMaterial = async (req, res) => {
         ms_spec, material_type, grade, supplier,
         shrinkage_rate, specific_gravity, mold_shrinkage,
         usage, advantages, disadvantages, characteristics,
-        notes, sort_order, is_active, created_at, updated_at
+        unit_price, notes, sort_order, is_active, created_at, updated_at
       ) VALUES (
         :ms_spec, :material_type, :grade, :supplier,
         :shrinkage_rate, :specific_gravity, :mold_shrinkage,
         :usage, :advantages, :disadvantages, :characteristics,
-        :notes, :sort_order, true, NOW(), NOW()
+        :unit_price, :notes, :sort_order, true, NOW(), NOW()
       ) RETURNING *
     `, {
       replacements: {
@@ -510,7 +510,7 @@ const createRawMaterial = async (req, res) => {
         mold_shrinkage: mold_shrinkage || null,
         usage: usage || null, advantages: advantages || null,
         disadvantages: disadvantages || null, characteristics: characteristics || null,
-        notes: notes || null, sort_order: sort_order || 0
+        unit_price: unit_price || null, notes: notes || null, sort_order: sort_order || 0
       }
     });
 
@@ -539,7 +539,7 @@ const updateRawMaterial = async (req, res) => {
       'ms_spec', 'material_type', 'grade', 'supplier',
       'shrinkage_rate', 'specific_gravity', 'mold_shrinkage',
       'usage', 'advantages', 'disadvantages', 'characteristics',
-      'notes', 'sort_order', 'is_active'
+      'unit_price', 'notes', 'sort_order', 'is_active'
     ];
 
     for (const field of allowedFields) {
