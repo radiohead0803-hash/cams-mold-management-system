@@ -1128,8 +1128,8 @@ export default function MasterData() {
       )}
 
       {/* 테이블 */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+      <div className="card overflow-hidden flex-1">
+        <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
           {renderTable()}
         </div>
       </div>
