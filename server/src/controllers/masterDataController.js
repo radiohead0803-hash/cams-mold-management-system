@@ -514,6 +514,58 @@ const deleteTonnage = async (req, res) => {
   }
 };
 
+// 금형사이즈/형체력 기반 사출기 추천 API
+const recommendTonnages = async (req, res) => {
+  try {
+    const { mold_width, mold_height, clamping_force, manufacturer } = req.query;
+    
+    let whereConditions = ['is_active = true'];
+    const replacements = {};
+    
+    // 금형 사이즈 기준 추천 (최대 금형 사이즈보다 큰 사출기)
+    if (mold_width && mold_height) {
+      whereConditions.push('max_mold_width >= :mold_width');
+      whereConditions.push('max_mold_height >= :mold_height');
+      replacements.mold_width = parseInt(mold_width);
+      replacements.mold_height = parseInt(mold_height);
+    }
+    
+    // 형체력 기준 추천
+    if (clamping_force) {
+      whereConditions.push('clamping_force >= :clamping_force');
+      replacements.clamping_force = parseInt(clamping_force);
+    }
+    
+    // 제조처 필터
+    if (manufacturer) {
+      whereConditions.push('manufacturer = :manufacturer');
+      replacements.manufacturer = manufacturer;
+    }
+    
+    const [tonnages] = await sequelize.query(`
+      SELECT * FROM tonnages 
+      WHERE ${whereConditions.join(' AND ')}
+      ORDER BY clamping_force ASC, tonnage_value ASC
+      LIMIT 20
+    `, { replacements });
+    
+    res.json({
+      success: true,
+      data: tonnages,
+      recommendation: tonnages.length > 0 ? {
+        optimal: tonnages[0],
+        message: `금형 사이즈에 적합한 최소 사출기: ${tonnages[0].tonnage_value}T (${tonnages[0].manufacturer})`
+      } : null
+    });
+  } catch (error) {
+    logger.error('Recommend tonnages error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '톤수 삭제 실패' }
+    });
+  }
+};
+
 // ===== 원재료 관리 =====
 const getRawMaterials = async (req, res) => {
   try {
@@ -703,11 +755,12 @@ module.exports = {
   createMoldType,
   updateMoldType,
   deleteMoldType,
-  // 톤수
+  // 톤수 (사출기 사양)
   getTonnages,
   createTonnage,
   updateTonnage,
   deleteTonnage,
+  recommendTonnages,
   // 원재료
   getRawMaterials,
   createRawMaterial,

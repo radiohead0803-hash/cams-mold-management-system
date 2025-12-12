@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { masterDataAPI } from '../lib/api';
-import { Plus, Edit2, Trash2, Save, X, ArrowLeft, Search, Filter } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, ArrowLeft, Search, Filter, Zap } from 'lucide-react';
 
 export default function MasterData() {
   const navigate = useNavigate();
@@ -16,6 +16,12 @@ export default function MasterData() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSupplier, setFilterSupplier] = useState('');
   const [filterMsSpec, setFilterMsSpec] = useState('');
+  
+  // 사출기 추천 상태
+  const [showRecommend, setShowRecommend] = useState(false);
+  const [recommendParams, setRecommendParams] = useState({ mold_width: '', mold_height: '', clamping_force: '', manufacturer: '' });
+  const [recommendResults, setRecommendResults] = useState([]);
+  const [recommendLoading, setRecommendLoading] = useState(false);
 
   const tabs = [
     { id: 'car-models', label: '차종' },
@@ -163,6 +169,31 @@ export default function MasterData() {
     setIsAdding(false);
     setEditingId(null);
     setFormData({});
+  };
+
+  // 사출기 추천 검색
+  const handleRecommendSearch = async () => {
+    if (!recommendParams.mold_width && !recommendParams.mold_height && !recommendParams.clamping_force) {
+      alert('금형 사이즈(가로/세로) 또는 형체력을 입력해주세요');
+      return;
+    }
+    
+    setRecommendLoading(true);
+    try {
+      const params = {};
+      if (recommendParams.mold_width) params.mold_width = recommendParams.mold_width;
+      if (recommendParams.mold_height) params.mold_height = recommendParams.mold_height;
+      if (recommendParams.clamping_force) params.clamping_force = recommendParams.clamping_force;
+      if (recommendParams.manufacturer) params.manufacturer = recommendParams.manufacturer;
+      
+      const response = await masterDataAPI.recommendTonnages(params);
+      setRecommendResults(response.data.data || []);
+    } catch (error) {
+      console.error('Recommend error:', error);
+      alert('추천 검색 실패: ' + (error.response?.data?.error?.message || error.message));
+    } finally {
+      setRecommendLoading(false);
+    }
   };
 
   const renderForm = () => {
@@ -835,6 +866,17 @@ export default function MasterData() {
             새로 추가
           </button>
           
+          {/* 사출기 사양 탭에서 추천 버튼 표시 */}
+          {activeTab === 'tonnages' && (
+            <button 
+              onClick={() => setShowRecommend(!showRecommend)} 
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showRecommend ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
+            >
+              <Zap size={16} />
+              금형사이즈로 추천
+            </button>
+          )}
+          
           {/* 검색 입력 */}
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
             <Search size={18} className="text-gray-400" />
@@ -886,6 +928,104 @@ export default function MasterData() {
                 </button>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* 사출기 추천 패널 */}
+      {showRecommend && activeTab === 'tonnages' && (
+        <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <h3 className="text-lg font-semibold text-orange-800 mb-3 flex items-center gap-2">
+            <Zap size={20} />
+            금형사이즈/형체력 기반 사출기 추천
+          </h3>
+          <div className="grid grid-cols-5 gap-3 mb-3">
+            <input
+              type="number"
+              placeholder="금형 가로(mm)"
+              value={recommendParams.mold_width}
+              onChange={(e) => setRecommendParams({ ...recommendParams, mold_width: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="금형 세로(mm)"
+              value={recommendParams.mold_height}
+              onChange={(e) => setRecommendParams({ ...recommendParams, mold_height: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="형체력(ton)"
+              value={recommendParams.clamping_force}
+              onChange={(e) => setRecommendParams({ ...recommendParams, clamping_force: e.target.value })}
+              className="input"
+            />
+            <select
+              value={recommendParams.manufacturer}
+              onChange={(e) => setRecommendParams({ ...recommendParams, manufacturer: e.target.value })}
+              className="input"
+            >
+              <option value="">제조처 전체</option>
+              <option value="LS엠트론">LS엠트론</option>
+              <option value="우진플라임">우진플라임</option>
+              <option value="엥겔">엥겔</option>
+              <option value="크라우스마파이">크라우스마파이</option>
+              <option value="동성화인">동성화인</option>
+            </select>
+            <button
+              onClick={handleRecommendSearch}
+              disabled={recommendLoading}
+              className="btn-primary"
+            >
+              {recommendLoading ? '검색중...' : '추천 검색'}
+            </button>
+          </div>
+          
+          {/* 추천 결과 */}
+          {recommendResults.length > 0 && (
+            <div className="mt-3">
+              <p className="text-sm text-orange-700 mb-2">
+                <strong>추천 결과:</strong> {recommendResults.length}개의 적합한 사출기를 찾았습니다.
+                {recommendResults[0] && (
+                  <span className="ml-2 px-2 py-1 bg-orange-200 rounded text-orange-800">
+                    최적 추천: {recommendResults[0].tonnage_value}T ({recommendResults[0].manufacturer}) - 최대금형 {recommendResults[0].max_mold_width}x{recommendResults[0].max_mold_height}mm
+                  </span>
+                )}
+              </p>
+              <div className="overflow-x-auto max-h-[200px] overflow-y-auto">
+                <table className="min-w-full divide-y divide-orange-200 text-sm">
+                  <thead className="bg-orange-100 sticky top-0">
+                    <tr>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-orange-700">톤수</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-orange-700">형체력</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-orange-700">제조처</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-orange-700">모델명</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-orange-700">최대금형(mm)</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-orange-700">타이바간격(mm)</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-orange-700">사출용량</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-orange-100">
+                    {recommendResults.map((item, index) => (
+                      <tr key={item.id} className={index === 0 ? 'bg-orange-50 font-medium' : ''}>
+                        <td className="px-2 py-2 text-blue-600 font-bold">{item.tonnage_value}T</td>
+                        <td className="px-2 py-2 text-orange-600">{item.clamping_force}ton</td>
+                        <td className="px-2 py-2">{item.manufacturer}</td>
+                        <td className="px-2 py-2">{item.model_name || '-'}</td>
+                        <td className="px-2 py-2 text-green-600 font-medium">{item.max_mold_width}x{item.max_mold_height}</td>
+                        <td className="px-2 py-2">{item.tiebar_spacing_h}x{item.tiebar_spacing_v}</td>
+                        <td className="px-2 py-2">{item.shot_volume}cm³</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          
+          {recommendResults.length === 0 && recommendLoading === false && recommendParams.mold_width && (
+            <p className="text-sm text-orange-600 mt-2">입력한 조건에 맞는 사출기가 없습니다. 조건을 조정해주세요.</p>
           )}
         </div>
       )}

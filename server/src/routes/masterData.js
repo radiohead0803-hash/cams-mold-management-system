@@ -18,6 +18,7 @@ const {
   createTonnage,
   updateTonnage,
   deleteTonnage,
+  recommendTonnages,
   getRawMaterials,
   createRawMaterial,
   updateRawMaterial,
@@ -45,8 +46,9 @@ router.post('/mold-types', authorize(['mold_developer', 'system_admin']), create
 router.patch('/mold-types/:id', authorize(['mold_developer', 'system_admin']), updateMoldType);
 router.delete('/mold-types/:id', authorize(['mold_developer', 'system_admin']), deleteMoldType);
 
-// ===== 톤수 관리 =====
+// ===== 톤수 (사출기 사양) 관리 =====
 router.get('/tonnages', getTonnages);
+router.get('/tonnages/recommend', recommendTonnages);
 router.post('/tonnages', authorize(['mold_developer', 'system_admin']), createTonnage);
 router.patch('/tonnages/:id', authorize(['mold_developer', 'system_admin']), updateTonnage);
 router.delete('/tonnages/:id', authorize(['mold_developer', 'system_admin']), deleteTonnage);

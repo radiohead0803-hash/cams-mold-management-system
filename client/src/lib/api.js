@@ -282,11 +282,13 @@ export const masterDataAPI = {
   updateMoldType: (id, data) => api.patch(`/master-data/mold-types/${id}`, data),
   deleteMoldType: (id) => api.delete(`/master-data/mold-types/${id}`),
   
-  // 톤수
+  // 톤수 (사출기 사양)
   getTonnages: (params) => api.get('/master-data/tonnages', { params }),
   createTonnage: (data) => api.post('/master-data/tonnages', data),
   updateTonnage: (id, data) => api.patch(`/master-data/tonnages/${id}`, data),
   deleteTonnage: (id) => api.delete(`/master-data/tonnages/${id}`),
+  // 금형사이즈/형체력 기반 사출기 추천
+  recommendTonnages: (params) => api.get('/master-data/tonnages/recommend', { params }),
   
   // 원재료
   getRawMaterials: (params) => api.get('/master-data/raw-materials', { params }),
