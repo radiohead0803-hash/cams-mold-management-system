@@ -222,7 +222,7 @@ export default function MoldLocationMapPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {filteredLocations.slice(0, 10).map((loc) => {
+                  {filteredLocations.map((loc) => {
                     const isSelected = selectedMoldId === loc.id;
                     const isMoved = loc.hasDrift || loc.status === 'moved';
                     
@@ -304,11 +304,6 @@ export default function MoldLocationMapPage() {
                   })}
                 </div>
               )}
-              {filteredLocations.length > 10 && (
-                <div className="p-3 text-center text-sm text-gray-500 border-t">
-                  외 {filteredLocations.length - 10}개 더 (검색으로 필터링 가능)
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -331,7 +326,7 @@ export default function MoldLocationMapPage() {
             </div>
           ) : (
             <NaverMoldLocationMap 
-              locations={filteredLocations}
+              locations={selectedMoldId ? filteredLocations.filter(loc => loc.id === selectedMoldId) : filteredLocations}
               selectedMoldId={selectedMoldId}
               onMoldDoubleClick={handleMoldDoubleClick}
               className="w-full h-full"
