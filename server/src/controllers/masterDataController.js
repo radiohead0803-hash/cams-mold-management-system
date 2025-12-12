@@ -446,7 +446,7 @@ const deleteTonnage = async (req, res) => {
 // ===== 원재료 관리 =====
 const getRawMaterials = async (req, res) => {
   try {
-    const { is_active, category } = req.query;
+    const { is_active, supplier, ms_spec } = req.query;
     let whereClause = '';
     const replacements = {};
     
@@ -454,13 +454,17 @@ const getRawMaterials = async (req, res) => {
       whereClause += ' WHERE is_active = :is_active';
       replacements.is_active = is_active === 'true';
     }
-    if (category) {
-      whereClause += whereClause ? ' AND category = :category' : ' WHERE category = :category';
-      replacements.category = category;
+    if (supplier) {
+      whereClause += whereClause ? ' AND supplier = :supplier' : ' WHERE supplier = :supplier';
+      replacements.supplier = supplier;
+    }
+    if (ms_spec) {
+      whereClause += whereClause ? ' AND ms_spec = :ms_spec' : ' WHERE ms_spec = :ms_spec';
+      replacements.ms_spec = ms_spec;
     }
 
     const [rawMaterials] = await sequelize.query(
-      `SELECT * FROM raw_materials${whereClause} ORDER BY sort_order ASC, material_name ASC`,
+      `SELECT * FROM raw_materials${whereClause} ORDER BY sort_order ASC, ms_spec ASC`,
       { replacements }
     );
 
@@ -480,36 +484,28 @@ const getRawMaterials = async (req, res) => {
 const createRawMaterial = async (req, res) => {
   try {
     const {
-      material_name, material_code, material_grade, supplier, category, color,
-      shrinkage_rate, mold_shrinkage, melt_temp_min, melt_temp_max, mold_temp_min, mold_temp_max,
-      drying_temp, drying_time, density, mfi, tensile_strength, flexural_modulus,
-      impact_strength, hdt, description, sort_order
+      ms_spec, material_type, grade, supplier,
+      shrinkage_rate, specific_gravity, mold_shrinkage,
+      notes, sort_order
     } = req.body;
 
     const [result] = await sequelize.query(`
       INSERT INTO raw_materials (
-        material_name, material_code, material_grade, supplier, category, color,
-        shrinkage_rate, mold_shrinkage, melt_temp_min, melt_temp_max, mold_temp_min, mold_temp_max,
-        drying_temp, drying_time, density, mfi, tensile_strength, flexural_modulus,
-        impact_strength, hdt, description, sort_order, is_active, created_at, updated_at
+        ms_spec, material_type, grade, supplier,
+        shrinkage_rate, specific_gravity, mold_shrinkage,
+        notes, sort_order, is_active, created_at, updated_at
       ) VALUES (
-        :material_name, :material_code, :material_grade, :supplier, :category, :color,
-        :shrinkage_rate, :mold_shrinkage, :melt_temp_min, :melt_temp_max, :mold_temp_min, :mold_temp_max,
-        :drying_temp, :drying_time, :density, :mfi, :tensile_strength, :flexural_modulus,
-        :impact_strength, :hdt, :description, :sort_order, true, NOW(), NOW()
+        :ms_spec, :material_type, :grade, :supplier,
+        :shrinkage_rate, :specific_gravity, :mold_shrinkage,
+        :notes, :sort_order, true, NOW(), NOW()
       ) RETURNING *
     `, {
       replacements: {
-        material_name, material_code: material_code || null, material_grade: material_grade || null,
-        supplier: supplier || null, category: category || null, color: color || null,
-        shrinkage_rate: shrinkage_rate || null, mold_shrinkage: mold_shrinkage || null,
-        melt_temp_min: melt_temp_min || null, melt_temp_max: melt_temp_max || null,
-        mold_temp_min: mold_temp_min || null, mold_temp_max: mold_temp_max || null,
-        drying_temp: drying_temp || null, drying_time: drying_time || null,
-        density: density || null, mfi: mfi || null,
-        tensile_strength: tensile_strength || null, flexural_modulus: flexural_modulus || null,
-        impact_strength: impact_strength || null, hdt: hdt || null,
-        description: description || null, sort_order: sort_order || 0
+        ms_spec, material_type,
+        grade: grade || null, supplier: supplier || null,
+        shrinkage_rate: shrinkage_rate || null, specific_gravity: specific_gravity || null,
+        mold_shrinkage: mold_shrinkage || null,
+        notes: notes || null, sort_order: sort_order || 0
       }
     });
 
@@ -535,10 +531,9 @@ const updateRawMaterial = async (req, res) => {
     const replacements = { id };
 
     const allowedFields = [
-      'material_name', 'material_code', 'material_grade', 'supplier', 'category', 'color',
-      'shrinkage_rate', 'mold_shrinkage', 'melt_temp_min', 'melt_temp_max', 'mold_temp_min', 'mold_temp_max',
-      'drying_temp', 'drying_time', 'density', 'mfi', 'tensile_strength', 'flexural_modulus',
-      'impact_strength', 'hdt', 'description', 'sort_order', 'is_active'
+      'ms_spec', 'material_type', 'grade', 'supplier',
+      'shrinkage_rate', 'specific_gravity', 'mold_shrinkage',
+      'notes', 'sort_order', 'is_active'
     ];
 
     for (const field of allowedFields) {

@@ -279,57 +279,48 @@ export default function MasterData() {
       
       case 'raw-materials':
         return (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <input
               type="text"
-              placeholder="원재료명 (예: ABS, PP, PC)"
-              value={formData.material_name || ''}
-              onChange={(e) => setFormData({ ...formData, material_name: e.target.value })}
+              placeholder="MS SPEC (예: MS213-67)"
+              value={formData.ms_spec || ''}
+              onChange={(e) => setFormData({ ...formData, ms_spec: e.target.value })}
               className="input"
+              required
             />
             <input
               type="text"
-              placeholder="원재료 코드"
-              value={formData.material_code || ''}
-              onChange={(e) => setFormData({ ...formData, material_code: e.target.value })}
+              placeholder="타입 (예: PP-GF20-067 TYPE B-1)"
+              value={formData.material_type || ''}
+              onChange={(e) => setFormData({ ...formData, material_type: e.target.value })}
               className="input"
+              required
             />
             <input
               type="text"
-              placeholder="등급/그레이드"
-              value={formData.material_grade || ''}
-              onChange={(e) => setFormData({ ...formData, material_grade: e.target.value })}
-              className="input"
-            />
-            <input
-              type="text"
-              placeholder="공급업체"
-              value={formData.supplier || ''}
-              onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              placeholder="그레이드 (예: H2202)"
+              value={formData.grade || ''}
+              onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
               className="input"
             />
             <select
-              value={formData.category || ''}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              value={formData.supplier || ''}
+              onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
               className="input"
             >
-              <option value="">분류 선택</option>
-              <option value="범용수지">범용수지</option>
-              <option value="엔지니어링수지">엔지니어링수지</option>
-              <option value="슈퍼엔지니어링수지">슈퍼엔지니어링수지</option>
-              <option value="기타">기타</option>
+              <option value="">공급업체 선택</option>
+              <option value="몰딩케미칼">몰딩케미칼</option>
+              <option value="GSS플라스틱">GSS플라스틱</option>
+              <option value="금호석유화학">금호석유화학</option>
+              <option value="LG화학">LG화학</option>
+              <option value="롯데케미칼">롯데케미칼</option>
+              <option value="SABIC">SABIC</option>
+              <option value="등록업체">등록업체</option>
+              <option value="신규업체확인필요">신규업체확인필요</option>
             </select>
             <input
               type="text"
-              placeholder="색상"
-              value={formData.color || ''}
-              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-              className="input"
-            />
-            <input
-              type="number"
-              step="0.001"
-              placeholder="원재료 수축률 (%)"
+              placeholder="원재료 수축률 (예: 6/1000)"
               value={formData.shrinkage_rate || ''}
               onChange={(e) => setFormData({ ...formData, shrinkage_rate: e.target.value })}
               className="input"
@@ -337,60 +328,24 @@ export default function MasterData() {
             <input
               type="number"
               step="0.001"
-              placeholder="금형 수축률 (%)"
+              placeholder="비중 (예: 1.04)"
+              value={formData.specific_gravity || ''}
+              onChange={(e) => setFormData({ ...formData, specific_gravity: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="금형수축률 (예: 6/1000)"
               value={formData.mold_shrinkage || ''}
               onChange={(e) => setFormData({ ...formData, mold_shrinkage: e.target.value })}
               className="input"
             />
             <input
-              type="number"
-              step="0.001"
-              placeholder="비중 (g/cm³)"
-              value={formData.density || ''}
-              onChange={(e) => setFormData({ ...formData, density: e.target.value })}
-              className="input"
-            />
-            <input
-              type="number"
-              placeholder="용융온도 최소 (°C)"
-              value={formData.melt_temp_min || ''}
-              onChange={(e) => setFormData({ ...formData, melt_temp_min: e.target.value })}
-              className="input"
-            />
-            <input
-              type="number"
-              placeholder="용융온도 최대 (°C)"
-              value={formData.melt_temp_max || ''}
-              onChange={(e) => setFormData({ ...formData, melt_temp_max: e.target.value })}
-              className="input"
-            />
-            <input
-              type="number"
-              placeholder="금형온도 최소 (°C)"
-              value={formData.mold_temp_min || ''}
-              onChange={(e) => setFormData({ ...formData, mold_temp_min: e.target.value })}
-              className="input"
-            />
-            <input
-              type="number"
-              placeholder="금형온도 최대 (°C)"
-              value={formData.mold_temp_max || ''}
-              onChange={(e) => setFormData({ ...formData, mold_temp_max: e.target.value })}
-              className="input"
-            />
-            <input
-              type="number"
-              placeholder="건조온도 (°C)"
-              value={formData.drying_temp || ''}
-              onChange={(e) => setFormData({ ...formData, drying_temp: e.target.value })}
-              className="input"
-            />
-            <input
               type="text"
-              placeholder="설명/비고"
-              value={formData.description || ''}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="input col-span-3"
+              placeholder="비고"
+              value={formData.notes || ''}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="input"
             />
           </div>
         );
@@ -545,10 +500,10 @@ export default function MasterData() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-10">순서</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">원재료</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">MS SPEC</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">타입</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">그레이드</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">공급업체</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">분류</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">원재료수축률</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">비중</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">금형수축률</th>
@@ -559,13 +514,13 @@ export default function MasterData() {
               {data.map((item, index) => (
                 <tr key={item.id}>
                   <td className="px-3 py-3 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
-                  <td className="px-3 py-3 whitespace-nowrap font-medium">{item.material_name}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.material_grade || '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap font-medium text-blue-600">{item.ms_spec}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.material_type}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.grade || '-'}</td>
                   <td className="px-3 py-3 whitespace-nowrap text-sm">{item.supplier || '-'}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.category || '-'}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.shrinkage_rate ? `${item.shrinkage_rate}%` : '-'}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.density || '-'}</td>
-                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.mold_shrinkage ? `${item.mold_shrinkage}%` : '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.shrinkage_rate || '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.specific_gravity || '-'}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-sm">{item.mold_shrinkage || '-'}</td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
                       <Edit2 size={16} />
