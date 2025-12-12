@@ -106,6 +106,7 @@ const transfersRouter = require('./routes/transfers');
 const productionTransferRouter = require('./routes/productionTransfer');
 const tryoutIssuesRouter = require('./routes/tryoutIssues');
 const fileUploadRouter = require('./routes/fileUpload');
+const userManagementRouter = require('./routes/userManagement');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -176,6 +177,8 @@ app.use('/api/v1/production-transfer', productionTransferRouter);
 app.use('/api/v1/tryout-issues', tryoutIssuesRouter);
 // 파일 업로드
 app.use('/api/v1/files', fileUploadRouter);
+// 사용자 관리
+app.use('/api/v1/user-management', userManagementRouter);
 
 // Health check
 app.get('/health', (req, res) => {

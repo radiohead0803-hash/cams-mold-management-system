@@ -78,6 +78,8 @@ import MoldHistory from './pages/MoldHistory'
 import QRSessionsPage from './pages/QRSessionsPage'
 import MoldLocationMapPage from './pages/MoldLocationMapPage'
 import ProductionTransferChecklistMaster from './pages/ProductionTransferChecklistMaster'
+import InternalUsers from './pages/InternalUsers'
+import PartnerUsers from './pages/PartnerUsers'
 import QrScanPage from './pages/qr/QrScanPage'
 import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
 import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
@@ -260,6 +262,10 @@ function App() {
         
         {/* 양산이관 체크리스트 마스터 관리 */}
         <Route path="production-transfer/checklist-master" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><ProductionTransferChecklistMaster /></ProtectedRoute>} />
+        
+        {/* 사용자 관리 */}
+        <Route path="users/internal" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><InternalUsers /></ProtectedRoute>} />
+        <Route path="users/partner" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><PartnerUsers /></ProtectedRoute>} />
       </Route>
     </Routes>
   )

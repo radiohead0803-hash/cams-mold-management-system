@@ -115,6 +115,8 @@ export default function Layout() {
           icon: Users, 
           label: '사용자 관리',
           subMenus: [
+            { to: '/users/internal', label: '사내 사용자 현황' },
+            { to: '/users/partner', label: '협력사 사용자 현황' },
             { to: '/user-requests', label: '계정 요청 관리' }
           ]
         },
@@ -238,6 +240,8 @@ export default function Layout() {
           icon: Users, 
           label: '사용자 관리',
           subMenus: [
+            { to: '/users/internal', label: '사내 사용자 현황' },
+            { to: '/users/partner', label: '협력사 사용자 현황' },
             { to: '/user-requests', label: '계정 요청 관리' }
           ]
         },

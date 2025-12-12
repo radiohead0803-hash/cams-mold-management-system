@@ -300,4 +300,29 @@ export const masterDataAPI = {
   getCompanies: (params) => api.get('/companies', { params }),
 }
 
+// User Management API (사용자 관리)
+export const userManagementAPI = {
+  // 사내 사용자
+  getInternalUsers: (params) => api.get('/user-management/internal', { params }),
+  createInternalUser: (data) => api.post('/user-management/internal', data),
+  updateInternalUser: (id, data) => api.put(`/user-management/internal/${id}`, data),
+  resetInternalPassword: (id) => api.post(`/user-management/internal/${id}/reset-password`),
+  
+  // 협력사 사용자
+  getPartnerUsers: (params) => api.get('/user-management/partner', { params }),
+  createPartnerUser: (data) => api.post('/user-management/partner', data),
+  updatePartnerUser: (id, data) => api.put(`/user-management/partner/${id}`, data),
+  resetPartnerPassword: (id) => api.post(`/user-management/partner/${id}/reset-password`),
+  
+  // 승인 관리
+  getPendingApprovals: () => api.get('/user-management/approvals/pending'),
+  approveUser: (id) => api.post(`/user-management/approvals/${id}/approve`),
+  rejectUser: (id, reason) => api.post(`/user-management/approvals/${id}/reject`, { reason }),
+  
+  // 공통
+  getPermissionClasses: () => api.get('/user-management/permission-classes'),
+  getDepartments: () => api.get('/user-management/departments'),
+  deleteUser: (id) => api.delete(`/user-management/${id}`),
+}
+
 export default api
