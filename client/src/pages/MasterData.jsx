@@ -21,7 +21,7 @@ export default function MasterData() {
     { id: 'car-models', label: '차종' },
     { id: 'materials', label: '재질' },
     { id: 'mold-types', label: '금형타입' },
-    { id: 'tonnages', label: '톤수' },
+    { id: 'tonnages', label: '사출기 사양' },
     { id: 'raw-materials', label: '원재료' }
   ];
 
