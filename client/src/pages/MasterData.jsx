@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { masterDataAPI } from '../lib/api';
-import { Plus, Edit2, Trash2, Save, X, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, ArrowLeft, Search, Filter } from 'lucide-react';
 
 export default function MasterData() {
   const navigate = useNavigate();
@@ -11,6 +11,11 @@ export default function MasterData() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({});
   const [isAdding, setIsAdding] = useState(false);
+  
+  // 검색 및 필터 상태
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterSupplier, setFilterSupplier] = useState('');
+  const [filterMsSpec, setFilterMsSpec] = useState('');
 
   const tabs = [
     { id: 'car-models', label: '차종' },
@@ -385,6 +390,57 @@ export default function MasterData() {
     }
   };
 
+  // 필터링된 데이터
+  const filteredData = useMemo(() => {
+    let result = [...data];
+    
+    // 검색어 필터링
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(item => {
+        // 각 탭별로 검색 필드 지정
+        switch (activeTab) {
+          case 'car-models':
+            return (item.model_name?.toLowerCase().includes(term) ||
+                    item.model_code?.toLowerCase().includes(term) ||
+                    item.manufacturer?.toLowerCase().includes(term));
+          case 'materials':
+            return (item.material_name?.toLowerCase().includes(term) ||
+                    item.material_code?.toLowerCase().includes(term) ||
+                    item.category?.toLowerCase().includes(term));
+          case 'mold-types':
+            return (item.type_name?.toLowerCase().includes(term) ||
+                    item.type_code?.toLowerCase().includes(term));
+          case 'tonnages':
+            return item.tonnage_value?.toString().includes(term);
+          case 'raw-materials':
+            return (item.ms_spec?.toLowerCase().includes(term) ||
+                    item.material_type?.toLowerCase().includes(term) ||
+                    item.grade?.toLowerCase().includes(term) ||
+                    item.supplier?.toLowerCase().includes(term) ||
+                    item.usage?.toLowerCase().includes(term) ||
+                    item.advantages?.toLowerCase().includes(term) ||
+                    item.disadvantages?.toLowerCase().includes(term) ||
+                    item.characteristics?.toLowerCase().includes(term));
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // 원재료 탭 추가 필터
+    if (activeTab === 'raw-materials') {
+      if (filterMsSpec) {
+        result = result.filter(item => item.ms_spec === filterMsSpec);
+      }
+      if (filterSupplier) {
+        result = result.filter(item => item.supplier === filterSupplier);
+      }
+    }
+    
+    return result;
+  }, [data, searchTerm, filterMsSpec, filterSupplier, activeTab]);
+
   const renderTable = () => {
     if (loading) {
       return <div className="text-center py-8">로딩 중...</div>;
@@ -392,6 +448,10 @@ export default function MasterData() {
 
     if (data.length === 0) {
       return <div className="text-center py-8 text-gray-500">데이터가 없습니다</div>;
+    }
+
+    if (filteredData.length === 0) {
+      return <div className="text-center py-8 text-gray-500">검색 결과가 없습니다</div>;
     }
 
     switch (activeTab) {
@@ -408,7 +468,7 @@ export default function MasterData() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item, index) => (
+              {filteredData.map((item, index) => (
                 <tr key={item.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.model_name}</td>
@@ -442,7 +502,7 @@ export default function MasterData() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item, index) => (
+              {filteredData.map((item, index) => (
                 <tr key={item.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.material_name}</td>
@@ -476,7 +536,7 @@ export default function MasterData() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item, index) => (
+              {filteredData.map((item, index) => (
                 <tr key={item.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.type_name}</td>
@@ -508,7 +568,7 @@ export default function MasterData() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item, index) => (
+              {filteredData.map((item, index) => (
                 <tr key={item.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-6 py-4 whitespace-nowrap">{item.tonnage_value}T</td>
@@ -546,7 +606,7 @@ export default function MasterData() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {data.map((item, index) => (
+              {filteredData.map((item, index) => (
                 <tr key={item.id}>
                   <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-xs">{index + 1}</td>
                   <td className="px-2 py-2 whitespace-nowrap font-medium text-blue-600 text-xs">{item.ms_spec}</td>
@@ -599,6 +659,9 @@ export default function MasterData() {
                 setActiveTab(tab.id);
                 setIsAdding(false);
                 setEditingId(null);
+                setSearchTerm('');
+                setFilterSupplier('');
+                setFilterMsSpec('');
               }}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === tab.id
@@ -634,13 +697,66 @@ export default function MasterData() {
         </div>
       )}
 
-      {/* 추가 버튼 */}
+      {/* 추가 버튼 및 검색/필터 */}
       {!isAdding && !editingId && (
-        <div className="mb-4">
+        <div className="mb-4 flex flex-wrap items-center gap-4">
           <button onClick={handleAdd} className="btn-primary flex items-center gap-2">
             <Plus size={16} />
             새로 추가
           </button>
+          
+          {/* 검색 입력 */}
+          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+            <Search size={18} className="text-gray-400" />
+            <input
+              type="text"
+              placeholder="검색어 입력..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input flex-1"
+            />
+          </div>
+          
+          {/* 원재료 탭에서만 필터 표시 */}
+          {activeTab === 'raw-materials' && (
+            <>
+              <div className="flex items-center gap-2">
+                <Filter size={18} className="text-gray-400" />
+                <select
+                  value={filterMsSpec}
+                  onChange={(e) => setFilterMsSpec(e.target.value)}
+                  className="input min-w-[150px]"
+                >
+                  <option value="">MS SPEC 전체</option>
+                  {[...new Set(data.map(item => item.ms_spec))].sort().map(spec => (
+                    <option key={spec} value={spec}>{spec}</option>
+                  ))}
+                </select>
+              </div>
+              <select
+                value={filterSupplier}
+                onChange={(e) => setFilterSupplier(e.target.value)}
+                className="input min-w-[150px]"
+              >
+                <option value="">공급업체 전체</option>
+                {[...new Set(data.map(item => item.supplier).filter(Boolean))].sort().map(supplier => (
+                  <option key={supplier} value={supplier}>{supplier}</option>
+                ))}
+              </select>
+              {(searchTerm || filterSupplier || filterMsSpec) && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setFilterSupplier('');
+                    setFilterMsSpec('');
+                  }}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  필터 초기화
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
 
