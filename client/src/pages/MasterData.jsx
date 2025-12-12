@@ -892,7 +892,7 @@ export default function MasterData() {
 
       {/* 테이블 */}
       <div className="card overflow-hidden">
-        <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
+        <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
           {renderTable()}
         </div>
       </div>
