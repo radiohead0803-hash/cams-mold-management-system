@@ -673,10 +673,11 @@ export default function MasterData() {
       case 'tonnages':
         return (
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">#</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">톤수</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">형체력(ton)</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">제조처</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">모델명</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">형개폐(mm)</th>
@@ -693,6 +694,7 @@ export default function MasterData() {
                 <tr key={item.id}>
                   <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-xs">{index + 1}</td>
                   <td className="px-2 py-2 whitespace-nowrap font-bold text-blue-600">{item.tonnage_value}T</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs text-orange-600 font-medium">{item.clamping_force || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.manufacturer || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.model_name || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.clamping_stroke || '-'}</td>
@@ -700,7 +702,7 @@ export default function MasterData() {
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.min_mold_thickness && item.max_mold_thickness ? `${item.min_mold_thickness}~${item.max_mold_thickness}` : '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs text-green-600 font-medium">{item.max_mold_width && item.max_mold_height ? `${item.max_mold_width}x${item.max_mold_height}` : '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.shot_volume ? `${item.shot_volume}cm³` : '-'}</td>
-                  <td className="px-2 py-2 text-xs max-w-[120px] truncate" title={item.description || ''}>{item.description || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[100px] truncate" title={item.description || ''}>{item.description || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
                       <Edit2 size={14} />
