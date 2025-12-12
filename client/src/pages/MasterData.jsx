@@ -200,7 +200,7 @@ export default function MasterData() {
     switch (activeTab) {
       case 'car-models':
         return (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-5 gap-3">
             <input
               type="text"
               placeholder="차종명 (예: K5)"
@@ -220,6 +220,20 @@ export default function MasterData() {
               placeholder="제조사 (예: 기아)"
               value={formData.manufacturer || ''}
               onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="년식 (예: 2024)"
+              value={formData.model_year || ''}
+              onChange={(e) => setFormData({ ...formData, model_year: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="사양 (예: 프리미엄)"
+              value={formData.specification || ''}
+              onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
               className="input"
             />
           </div>
@@ -680,21 +694,25 @@ export default function MasterData() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">순서</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종명</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종코드</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제조사</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">순서</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종명</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종코드</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">제조사</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">년식</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">사양</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredData.map((item, index) => (
                 <tr key={item.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.model_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.model_code || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.manufacturer || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.model_name}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.model_code || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.manufacturer || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.model_year || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.specification || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
                       <Edit2 size={16} />
                     </button>

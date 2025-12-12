@@ -35,6 +35,16 @@ module.exports = (sequelize) => {
         allowNull: true,
         comment: '제조사 (현대, 기아 등)'
       },
+      model_year: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        comment: '년식 (예: 2024, 2023~2024)'
+      },
+      specification: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        comment: '사양 (예: 기본, 프리미엄, 스포츠)'
+      },
       sort_order: {
         type: DataTypes.INTEGER,
         allowNull: false,

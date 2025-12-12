@@ -346,6 +346,18 @@ const runRepairRequestsMigration = async () => {
   }
 };
 
+// Run car_models columns migration (년식, 사양 추가)
+const runCarModelsMigration = async () => {
+  console.log('🔄 Running car_models columns migration...');
+  try {
+    await sequelize.query(`ALTER TABLE car_models ADD COLUMN IF NOT EXISTS model_year VARCHAR(20)`);
+    await sequelize.query(`ALTER TABLE car_models ADD COLUMN IF NOT EXISTS specification VARCHAR(100)`);
+    console.log('✅ car_models columns (model_year, specification) added/verified.');
+  } catch (error) {
+    console.error('⚠️ car_models migration warning:', error.message);
+  }
+};
+
 // Run transfer_requests table migration
 const runTransferRequestsMigration = async () => {
   console.log('🔄 Running transfer_requests table migration...');
@@ -412,6 +424,9 @@ const startServer = async () => {
     
     // Run transfer_requests table migration
     await runTransferRequestsMigration();
+    
+    // Run car_models columns migration
+    await runCarModelsMigration();
     
     // Run production transfer tables migration
     await runProductionTransferMigration();
