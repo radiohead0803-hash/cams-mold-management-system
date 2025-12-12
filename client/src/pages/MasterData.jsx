@@ -354,10 +354,24 @@ export default function MasterData() {
             />
             <input
               type="text"
-              placeholder="비고"
-              value={formData.notes || ''}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="input col-span-3"
+              placeholder="장점 (예: 강성↑, 내열성↑)"
+              value={formData.advantages || ''}
+              onChange={(e) => setFormData({ ...formData, advantages: e.target.value })}
+              className="input col-span-2"
+            />
+            <input
+              type="text"
+              placeholder="단점 (예: 충격강도↓, 고가)"
+              value={formData.disadvantages || ''}
+              onChange={(e) => setFormData({ ...formData, disadvantages: e.target.value })}
+              className="input col-span-2"
+            />
+            <input
+              type="text"
+              placeholder="특징 (예: 저온(-30℃) 충격/강성↑, 열변형↓)"
+              value={formData.characteristics || ''}
+              onChange={(e) => setFormData({ ...formData, characteristics: e.target.value })}
+              className="input col-span-4"
             />
           </div>
         );
@@ -511,34 +525,36 @@ export default function MasterData() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-10">순서</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">#</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">MS SPEC</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">타입</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">그레이드</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">공급업체</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">수축률</th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">비중</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">용도</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">장점</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">단점</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">특징</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {data.map((item, index) => (
                 <tr key={item.id}>
-                  <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
-                  <td className="px-2 py-2 whitespace-nowrap font-medium text-blue-600 text-sm">{item.ms_spec}</td>
-                  <td className="px-2 py-2 whitespace-nowrap text-sm">{item.material_type}</td>
-                  <td className="px-2 py-2 whitespace-nowrap text-sm">{item.grade || '-'}</td>
-                  <td className="px-2 py-2 whitespace-nowrap text-sm">{item.supplier || '-'}</td>
-                  <td className="px-2 py-2 whitespace-nowrap text-sm">{item.shrinkage_rate || '-'}</td>
-                  <td className="px-2 py-2 whitespace-nowrap text-sm">{item.specific_gravity || '-'}</td>
-                  <td className="px-2 py-2 text-sm max-w-[200px] truncate" title={item.usage || ''}>{item.usage || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-xs">{index + 1}</td>
+                  <td className="px-2 py-2 whitespace-nowrap font-medium text-blue-600 text-xs">{item.ms_spec}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.material_type}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.supplier || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.shrinkage_rate || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[120px] truncate" title={item.usage || ''}>{item.usage || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[150px] truncate text-green-600" title={item.advantages || ''}>{item.advantages || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[150px] truncate text-red-600" title={item.disadvantages || ''}>{item.disadvantages || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[150px] truncate text-purple-600" title={item.characteristics || ''}>{item.characteristics || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
-                      <Edit2 size={16} />
+                      <Edit2 size={14} />
                     </button>
                     <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900">
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>
