@@ -663,7 +663,7 @@ const getRawMaterials = async (req, res) => {
 const createRawMaterial = async (req, res) => {
   try {
     const {
-      ms_spec, material_type, grade, supplier,
+      ms_spec, material_type, grade, grade_code, supplier,
       shrinkage_rate, specific_gravity, mold_shrinkage,
       usage, advantages, disadvantages, characteristics,
       unit_price, notes, sort_order
@@ -671,12 +671,12 @@ const createRawMaterial = async (req, res) => {
 
     const [result] = await sequelize.query(`
       INSERT INTO raw_materials (
-        ms_spec, material_type, grade, supplier,
+        ms_spec, material_type, grade, grade_code, supplier,
         shrinkage_rate, specific_gravity, mold_shrinkage,
         usage, advantages, disadvantages, characteristics,
         unit_price, notes, sort_order, is_active, created_at, updated_at
       ) VALUES (
-        :ms_spec, :material_type, :grade, :supplier,
+        :ms_spec, :material_type, :grade, :grade_code, :supplier,
         :shrinkage_rate, :specific_gravity, :mold_shrinkage,
         :usage, :advantages, :disadvantages, :characteristics,
         :unit_price, :notes, :sort_order, true, NOW(), NOW()
@@ -684,7 +684,7 @@ const createRawMaterial = async (req, res) => {
     `, {
       replacements: {
         ms_spec, material_type,
-        grade: grade || null, supplier: supplier || null,
+        grade: grade || null, grade_code: grade_code || null, supplier: supplier || null,
         shrinkage_rate: shrinkage_rate || null, specific_gravity: specific_gravity || null,
         mold_shrinkage: mold_shrinkage || null,
         usage: usage || null, advantages: advantages || null,
@@ -715,7 +715,7 @@ const updateRawMaterial = async (req, res) => {
     const replacements = { id };
 
     const allowedFields = [
-      'ms_spec', 'material_type', 'grade', 'supplier',
+      'ms_spec', 'material_type', 'grade', 'grade_code', 'supplier',
       'shrinkage_rate', 'specific_gravity', 'mold_shrinkage',
       'usage', 'advantages', 'disadvantages', 'characteristics',
       'unit_price', 'notes', 'sort_order', 'is_active'

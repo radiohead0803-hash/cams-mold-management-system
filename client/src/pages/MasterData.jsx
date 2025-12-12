@@ -515,6 +515,25 @@ export default function MasterData() {
               className="input"
               required
             />
+            <select
+              value={formData.supplier || ''}
+              onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+              className="input"
+            >
+              <option value="">공급업체 선택</option>
+              <option value="롯데케미칼">롯데케미칼</option>
+              <option value="GS케미칼">GS케미칼</option>
+              <option value="금호석유화학">금호석유화학</option>
+              <option value="LG화학">LG화학</option>
+              <option value="한화솔루션">한화솔루션</option>
+              <option value="코오롱플라스틱">코오롱플라스틱</option>
+              <option value="SABIC">SABIC</option>
+              <option value="BASF">BASF</option>
+              <option value="DuPont">DuPont</option>
+              <option value="셀라니즈">셀라니즈</option>
+              <option value="등록업체">등록업체</option>
+              <option value="신규업체확인필요">신규업체확인필요</option>
+            </select>
             <input
               type="text"
               placeholder="그레이드 (예: H2202)"
@@ -522,26 +541,13 @@ export default function MasterData() {
               onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
               className="input"
             />
-            <select
-              value={formData.supplier || ''}
-              onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+            <input
+              type="text"
+              placeholder="그레이드 코드 (예: SEP-550)"
+              value={formData.grade_code || ''}
+              onChange={(e) => setFormData({ ...formData, grade_code: e.target.value })}
               className="input"
-            >
-              <option value="">공급업체 선택</option>
-              <option value="몰딩케미칼">몰딩케미칼</option>
-              <option value="GSS플라스틱">GSS플라스틱</option>
-              <option value="금호석유화학">금호석유화학</option>
-              <option value="LG화학">LG화학</option>
-              <option value="롯데케미칼">롯데케미칼</option>
-              <option value="SABIC">SABIC</option>
-              <option value="BASF">BASF</option>
-              <option value="DuPont">DuPont</option>
-              <option value="코오롱플라스틱">코오롱플라스틱</option>
-              <option value="셀라니즈">셀라니즈</option>
-              <option value="한화솔루션">한화솔루션</option>
-              <option value="등록업체">등록업체</option>
-              <option value="신규업체확인필요">신규업체확인필요</option>
-            </select>
+            />
             <input
               type="text"
               placeholder="원재료 수축률 (예: 6/1000)"
@@ -848,12 +854,13 @@ export default function MasterData() {
       case 'raw-materials':
         return (
           <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">#</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">MS SPEC</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">타입</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">공급업체</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">그레이드코드</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">수축률</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">단가(kg)</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">용도</th>
@@ -869,13 +876,16 @@ export default function MasterData() {
                   <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-xs">{index + 1}</td>
                   <td className="px-2 py-2 whitespace-nowrap font-medium text-blue-600 text-xs">{item.ms_spec}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.material_type}</td>
-                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.supplier || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">
+                    <span className="px-2 py-1 rounded bg-blue-100 text-blue-700">{item.supplier || '-'}</span>
+                  </td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-purple-600">{item.grade_code || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.shrinkage_rate || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-orange-600">{item.unit_price ? `₩${item.unit_price.toLocaleString()}` : '-'}</td>
                   <td className="px-2 py-2 text-xs max-w-[100px] truncate" title={item.usage || ''}>{item.usage || '-'}</td>
-                  <td className="px-2 py-2 text-xs max-w-[120px] truncate text-green-600" title={item.advantages || ''}>{item.advantages || '-'}</td>
-                  <td className="px-2 py-2 text-xs max-w-[120px] truncate text-red-600" title={item.disadvantages || ''}>{item.disadvantages || '-'}</td>
-                  <td className="px-2 py-2 text-xs max-w-[120px] truncate text-purple-600" title={item.characteristics || ''}>{item.characteristics || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[100px] truncate text-green-600" title={item.advantages || ''}>{item.advantages || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[100px] truncate text-red-600" title={item.disadvantages || ''}>{item.disadvantages || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[100px] truncate text-purple-600" title={item.characteristics || ''}>{item.characteristics || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
                       <Edit2 size={14} />
