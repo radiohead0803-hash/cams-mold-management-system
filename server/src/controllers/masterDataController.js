@@ -361,19 +361,56 @@ const getTonnages = async (req, res) => {
 
 const createTonnage = async (req, res) => {
   try {
-    const { tonnage_value, description, sort_order } = req.body;
+    const {
+      tonnage_value, manufacturer, model_name, clamping_stroke,
+      daylight_opening, platen_size_h, platen_size_v,
+      tiebar_spacing_h, tiebar_spacing_v, min_mold_thickness, max_mold_thickness,
+      ejector_force, ejector_stroke, screw_diameter, shot_volume, shot_weight,
+      injection_pressure, injection_rate, plasticizing_capacity,
+      nozzle_contact_force, machine_dimensions, machine_weight, motor_power,
+      description, sort_order
+    } = req.body;
 
-    const tonnage = await Tonnage.create({
-      tonnage_value,
-      description,
-      sort_order: sort_order || 0
+    const [result] = await sequelize.query(`
+      INSERT INTO tonnages (
+        tonnage_value, manufacturer, model_name, clamping_force, clamping_stroke,
+        daylight_opening, platen_size_h, platen_size_v,
+        tiebar_spacing_h, tiebar_spacing_v, min_mold_thickness, max_mold_thickness,
+        ejector_force, ejector_stroke, screw_diameter, shot_volume, shot_weight,
+        injection_pressure, injection_rate, plasticizing_capacity,
+        nozzle_contact_force, machine_dimensions, machine_weight, motor_power,
+        description, sort_order, is_active, created_at, updated_at
+      ) VALUES (
+        :tonnage_value, :manufacturer, :model_name, :tonnage_value, :clamping_stroke,
+        :daylight_opening, :platen_size_h, :platen_size_v,
+        :tiebar_spacing_h, :tiebar_spacing_v, :min_mold_thickness, :max_mold_thickness,
+        :ejector_force, :ejector_stroke, :screw_diameter, :shot_volume, :shot_weight,
+        :injection_pressure, :injection_rate, :plasticizing_capacity,
+        :nozzle_contact_force, :machine_dimensions, :machine_weight, :motor_power,
+        :description, :sort_order, true, NOW(), NOW()
+      ) RETURNING *
+    `, {
+      replacements: {
+        tonnage_value, manufacturer: manufacturer || null, model_name: model_name || null,
+        clamping_stroke: clamping_stroke || null, daylight_opening: daylight_opening || null,
+        platen_size_h: platen_size_h || null, platen_size_v: platen_size_v || null,
+        tiebar_spacing_h: tiebar_spacing_h || null, tiebar_spacing_v: tiebar_spacing_v || null,
+        min_mold_thickness: min_mold_thickness || null, max_mold_thickness: max_mold_thickness || null,
+        ejector_force: ejector_force || null, ejector_stroke: ejector_stroke || null,
+        screw_diameter: screw_diameter || null, shot_volume: shot_volume || null,
+        shot_weight: shot_weight || null, injection_pressure: injection_pressure || null,
+        injection_rate: injection_rate || null, plasticizing_capacity: plasticizing_capacity || null,
+        nozzle_contact_force: nozzle_contact_force || null, machine_dimensions: machine_dimensions || null,
+        machine_weight: machine_weight || null, motor_power: motor_power || null,
+        description: description || null, sort_order: sort_order || 0
+      }
     });
 
-    logger.info(`Tonnage created: ${tonnage.id} by user ${req.user.id}`);
+    logger.info(`Tonnage created: ${result[0].id} by user ${req.user.id}`);
 
     res.status(201).json({
       success: true,
-      data: tonnage
+      data: result[0]
     });
   } catch (error) {
     logger.error('Create tonnage error:', error);
@@ -387,23 +424,51 @@ const createTonnage = async (req, res) => {
 const updateTonnage = async (req, res) => {
   try {
     const { id } = req.params;
-    const updateData = req.body;
+    const updateFields = [];
+    const replacements = { id };
 
-    const tonnage = await Tonnage.findByPk(id);
-    if (!tonnage) {
+    const allowedFields = [
+      'tonnage_value', 'manufacturer', 'model_name', 'clamping_force', 'clamping_stroke',
+      'daylight_opening', 'platen_size_h', 'platen_size_v',
+      'tiebar_spacing_h', 'tiebar_spacing_v', 'min_mold_thickness', 'max_mold_thickness',
+      'ejector_force', 'ejector_stroke', 'screw_diameter', 'shot_volume', 'shot_weight',
+      'injection_pressure', 'injection_rate', 'plasticizing_capacity',
+      'nozzle_contact_force', 'machine_dimensions', 'machine_weight', 'motor_power',
+      'description', 'sort_order', 'is_active'
+    ];
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateFields.push(`${field} = :${field}`);
+        replacements[field] = req.body[field];
+      }
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: '수정할 필드가 없습니다' }
+      });
+    }
+
+    updateFields.push('updated_at = NOW()');
+
+    const [result] = await sequelize.query(`
+      UPDATE tonnages SET ${updateFields.join(', ')} WHERE id = :id RETURNING *
+    `, { replacements });
+
+    if (result.length === 0) {
       return res.status(404).json({
         success: false,
         error: { message: '톤수를 찾을 수 없습니다' }
       });
     }
 
-    await tonnage.update(updateData);
-
     logger.info(`Tonnage updated: ${id} by user ${req.user.id}`);
 
     res.json({
       success: true,
-      data: tonnage
+      data: result[0]
     });
   } catch (error) {
     logger.error('Update tonnage error:', error);

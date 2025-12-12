@@ -264,20 +264,120 @@ export default function MasterData() {
       
       case 'tonnages':
         return (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-4 gap-3">
             <input
               type="number"
               placeholder="톤수 (예: 350)"
               value={formData.tonnage_value || ''}
               onChange={(e) => setFormData({ ...formData, tonnage_value: parseInt(e.target.value) })}
               className="input"
+              required
+            />
+            <select
+              value={formData.manufacturer || ''}
+              onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+              className="input"
+            >
+              <option value="">제조처 선택</option>
+              <option value="LS엠트론">LS엠트론</option>
+              <option value="우진플라임">우진플라임</option>
+              <option value="엥겔">엥겔</option>
+              <option value="크라우스마파이">크라우스마파이</option>
+              <option value="아버그">아버그</option>
+              <option value="동성화인">동성화인</option>
+              <option value="기타">기타</option>
+            </select>
+            <input
+              type="text"
+              placeholder="모델명 (예: LGE350)"
+              value={formData.model_name || ''}
+              onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="형개폐 스트로크(mm)"
+              value={formData.clamping_stroke || ''}
+              onChange={(e) => setFormData({ ...formData, clamping_stroke: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="데이라이트(mm)"
+              value={formData.daylight_opening || ''}
+              onChange={(e) => setFormData({ ...formData, daylight_opening: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="플래튼 가로(mm)"
+              value={formData.platen_size_h || ''}
+              onChange={(e) => setFormData({ ...formData, platen_size_h: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="플래튼 세로(mm)"
+              value={formData.platen_size_v || ''}
+              onChange={(e) => setFormData({ ...formData, platen_size_v: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="타이바 간격 가로(mm)"
+              value={formData.tiebar_spacing_h || ''}
+              onChange={(e) => setFormData({ ...formData, tiebar_spacing_h: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="타이바 간격 세로(mm)"
+              value={formData.tiebar_spacing_v || ''}
+              onChange={(e) => setFormData({ ...formData, tiebar_spacing_v: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="최소 금형두께(mm)"
+              value={formData.min_mold_thickness || ''}
+              onChange={(e) => setFormData({ ...formData, min_mold_thickness: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="최대 금형두께(mm)"
+              value={formData.max_mold_thickness || ''}
+              onChange={(e) => setFormData({ ...formData, max_mold_thickness: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="사출용량(cm³)"
+              value={formData.shot_volume || ''}
+              onChange={(e) => setFormData({ ...formData, shot_volume: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="사출중량 PS기준(g)"
+              value={formData.shot_weight || ''}
+              onChange={(e) => setFormData({ ...formData, shot_weight: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              step="0.1"
+              placeholder="모터출력(kW)"
+              value={formData.motor_power || ''}
+              onChange={(e) => setFormData({ ...formData, motor_power: parseFloat(e.target.value) || null })}
+              className="input"
             />
             <input
               type="text"
-              placeholder="설명"
+              placeholder="설명 (예: 대형 범퍼용)"
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="input"
+              className="input col-span-2"
             />
           </div>
         );
@@ -561,24 +661,36 @@ export default function MasterData() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-16">순서</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">톤수</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">설명</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">#</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">톤수</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">제조처</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">모델명</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">형개폐(mm)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">타이바간격(mm)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">금형두께(mm)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">사출용량</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">용도</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredData.map((item, index) => (
                 <tr key={item.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{item.tonnage_value}T</td>
-                  <td className="px-6 py-4">{item.description || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
-                      <Edit2 size={16} />
+                  <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-xs">{index + 1}</td>
+                  <td className="px-2 py-2 whitespace-nowrap font-bold text-blue-600">{item.tonnage_value}T</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.manufacturer || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.model_name || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.clamping_stroke || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.tiebar_spacing_h ? `${item.tiebar_spacing_h}x${item.tiebar_spacing_v}` : '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.min_mold_thickness && item.max_mold_thickness ? `${item.min_mold_thickness}~${item.max_mold_thickness}` : '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.shot_volume ? `${item.shot_volume}cm³` : '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[150px] truncate" title={item.description || ''}>{item.description || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap">
+                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
+                      <Edit2 size={14} />
                     </button>
                     <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900">
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </td>
                 </tr>
