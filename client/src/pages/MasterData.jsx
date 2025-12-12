@@ -352,6 +352,20 @@ export default function MasterData() {
             />
             <input
               type="number"
+              placeholder="최대 금형 가로(mm)"
+              value={formData.max_mold_width || ''}
+              onChange={(e) => setFormData({ ...formData, max_mold_width: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="최대 금형 세로(mm)"
+              value={formData.max_mold_height || ''}
+              onChange={(e) => setFormData({ ...formData, max_mold_height: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="number"
               placeholder="사출용량(cm³)"
               value={formData.shot_volume || ''}
               onChange={(e) => setFormData({ ...formData, shot_volume: parseInt(e.target.value) || null })}
@@ -668,6 +682,7 @@ export default function MasterData() {
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">형개폐(mm)</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">타이바간격(mm)</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">금형두께(mm)</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">최대금형(mm)</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">사출용량</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">용도</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
@@ -683,8 +698,9 @@ export default function MasterData() {
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.clamping_stroke || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.tiebar_spacing_h ? `${item.tiebar_spacing_h}x${item.tiebar_spacing_v}` : '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.min_mold_thickness && item.max_mold_thickness ? `${item.min_mold_thickness}~${item.max_mold_thickness}` : '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs text-green-600 font-medium">{item.max_mold_width && item.max_mold_height ? `${item.max_mold_width}x${item.max_mold_height}` : '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.shot_volume ? `${item.shot_volume}cm³` : '-'}</td>
-                  <td className="px-2 py-2 text-xs max-w-[150px] truncate" title={item.description || ''}>{item.description || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[120px] truncate" title={item.description || ''}>{item.description || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
                       <Edit2 size={14} />
