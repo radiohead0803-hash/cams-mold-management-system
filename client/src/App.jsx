@@ -69,7 +69,7 @@ import MobileScrappingPage from './pages/mobile/MobileScrappingPage'
 import MobileHomePage from './pages/mobile/MobileHomePage'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
-import PreProductionChecklist from './pages/PreProductionChecklist'
+import StandardDocumentMaster from './pages/StandardDocumentMaster'
 import ScrappingManagement from './pages/ScrappingManagement'
 import MaintenanceManagement from './pages/MaintenanceManagement'
 import NotificationSettings from './pages/NotificationSettings'
@@ -230,9 +230,9 @@ function App() {
         <Route path="inspection-approval" element={<InspectionApproval />} />
         <Route path="repair-request-form" element={<RepairRequestForm />} />
         
-        {/* 제작전 체크리스트 */}
-        <Route path="pre-production-checklist" element={<PreProductionChecklist />} />
-        <Route path="pre-production-checklist/:id" element={<PreProductionChecklist />} />
+        {/* 표준문서 마스터 관리 */}
+        <Route path="pre-production-checklist" element={<StandardDocumentMaster />} />
+        <Route path="pre-production-checklist/:id" element={<StandardDocumentMaster />} />
         
         {/* 금형 폐기 관리 */}
         <Route path="scrapping" element={<ScrappingManagement />} />
