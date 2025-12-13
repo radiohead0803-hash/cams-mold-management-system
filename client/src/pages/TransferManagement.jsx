@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { transferAPI } from '../lib/api'
-import { ArrowRight, CheckCircle, Clock, XCircle, FileText, ArrowLeft, Plus } from 'lucide-react'
+import { ArrowRight, CheckCircle, Clock, XCircle, FileText, ArrowLeft, Plus, Eye, Edit, Settings, Upload } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function TransferManagement() {
@@ -58,6 +58,31 @@ export default function TransferManagement() {
     }
   }
 
+  const handleApprove = async (id) => {
+    if (!confirm('이관 요청을 승인하시겠습니까?')) return
+    try {
+      await transferAPI.approve(id)
+      loadTransfers()
+      alert('승인되었습니다.')
+    } catch (error) {
+      console.error('Approve failed:', error)
+      alert('승인에 실패했습니다.')
+    }
+  }
+
+  const handleReject = async (id) => {
+    const reason = prompt('반려 사유를 입력하세요:')
+    if (!reason) return
+    try {
+      await transferAPI.reject(id, { reason })
+      loadTransfers()
+      alert('반려되었습니다.')
+    } catch (error) {
+      console.error('Reject failed:', error)
+      alert('반려에 실패했습니다.')
+    }
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -75,13 +100,22 @@ export default function TransferManagement() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => navigate('/transfers/new')}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <Plus size={18} />
-          이관 요청
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/production-transfer/checklist-master')}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            <Settings size={18} />
+            체크리스트 마스터
+          </button>
+          <button
+            onClick={() => navigate('/transfers/new')}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Plus size={18} />
+            이관 요청
+          </button>
+        </div>
       </div>
 
       {/* 필터 */}
@@ -188,16 +222,33 @@ export default function TransferManagement() {
                 )}
               </div>
 
-              {transfer.status === 'pending' && (
-                <div className="mt-4 flex gap-2">
-                  <button className="btn-primary flex-1 text-sm">
-                    승인
-                  </button>
-                  <button className="btn-secondary flex-1 text-sm">
-                    반려
-                  </button>
-                </div>
-              )}
+              <div className="mt-4 flex gap-2">
+                <button 
+                  onClick={() => navigate(`/transfers/${transfer.id}`)}
+                  className="flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm flex-1"
+                >
+                  <Eye size={14} />
+                  상세
+                </button>
+                {transfer.status === 'pending' && (
+                  <>
+                    <button 
+                      onClick={() => handleApprove(transfer.id)}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm flex-1"
+                    >
+                      <CheckCircle size={14} />
+                      승인
+                    </button>
+                    <button 
+                      onClick={() => handleReject(transfer.id)}
+                      className="flex items-center justify-center gap-1 px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm flex-1"
+                    >
+                      <XCircle size={14} />
+                      반려
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
