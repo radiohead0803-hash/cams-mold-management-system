@@ -49,7 +49,7 @@ const TypeBadge = ({ type }) => {
   );
 };
 
-// 기본 표준문서 마스터 데이터
+// 기본 표준문서 마스터 데이터 (중복 제거)
 const DEFAULT_DOCUMENTS = [
   {
     id: 1,
@@ -59,7 +59,7 @@ const DEFAULT_DOCUMENTS = [
     status: 'deployed',
     itemCount: 81,
     categoryCount: 9,
-    deployedTo: ['제작처', '생산처'],
+    deployedTo: ['제작처'],
     lastModified: '2025-12-08',
     createdBy: 'admin',
     description: '금형 제작 전 81개 항목, 9개 카테고리 체크리스트'
@@ -92,19 +92,6 @@ const DEFAULT_DOCUMENTS = [
   },
   {
     id: 4,
-    name: '금형체크리스트 v1.0',
-    type: 'mold_checklist',
-    version: '1.0',
-    status: 'deployed',
-    itemCount: 81,
-    categoryCount: 9,
-    deployedTo: ['제작처', '생산처'],
-    lastModified: '2025-12-08',
-    createdBy: 'admin',
-    description: '금형 검수용 81개 항목, 9개 카테고리 체크리스트'
-  },
-  {
-    id: 5,
     name: '개발계획 템플릿 v1.0',
     type: 'development_plan',
     version: '1.0',
@@ -117,20 +104,20 @@ const DEFAULT_DOCUMENTS = [
     description: '12단계 금형개발 공정 관리 템플릿'
   },
   {
-    id: 6,
-    name: '이관 체크리스트 v1.0',
+    id: 5,
+    name: '양산이관 체크리스트 v1.0',
     type: 'transfer',
     version: '1.0',
-    status: 'approved',
-    itemCount: 15,
-    categoryCount: 3,
-    deployedTo: [],
+    status: 'deployed',
+    itemCount: 45,
+    categoryCount: 8,
+    deployedTo: ['생산처'],
     lastModified: '2025-12-10',
     createdBy: 'admin',
-    description: '금형 이관 시 확인 항목'
+    description: '8개 카테고리 양산이관 체크리스트'
   },
   {
-    id: 7,
+    id: 6,
     name: '경도측정 기록표 v1.0',
     type: 'hardness',
     version: '1.0',
@@ -143,7 +130,7 @@ const DEFAULT_DOCUMENTS = [
     description: '경도측정 6개 강종 기준표'
   },
   {
-    id: 8,
+    id: 7,
     name: '금형육성 체크리스트 v1.0',
     type: 'nurturing',
     version: '1.0',
