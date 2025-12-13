@@ -23,9 +23,15 @@ export default function MoldRegistration() {
     mold_type: '',
     cavity_count: 1,
     material: '',
-    tonnage: '',
     dimensions: '', // 치수 (LxWxH)
     weight: '', // 중량 (kg)
+    
+    // 원재료 정보 (기초정보 연동)
+    raw_material_id: '', // 원재료 ID
+    ms_spec: '', // MS 스펙
+    material_type: '', // 타입
+    grade: '', // 그레이드
+    shrinkage_rate: '', // 수축율
     
     // 제작 정보
     target_maker_id: '', // 제작처 업체
@@ -69,7 +75,7 @@ export default function MoldRegistration() {
   const [carModels, setCarModels] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [moldTypes, setMoldTypes] = useState([]);
-  const [tonnages, setTonnages] = useState([]);
+  const [rawMaterials, setRawMaterials] = useState([]);
   const [masterDataLoading, setMasterDataLoading] = useState(true);
 
   // 기초정보 로드
@@ -81,11 +87,11 @@ export default function MoldRegistration() {
     try {
       setMasterDataLoading(true);
       console.log('Loading master data...');
-      const [carModelsRes, materialsRes, moldTypesRes, tonnagesRes, companiesRes] = await Promise.all([
+      const [carModelsRes, materialsRes, moldTypesRes, rawMaterialsRes, companiesRes] = await Promise.all([
         masterDataAPI.getCarModels(),
         masterDataAPI.getMaterials(),
         masterDataAPI.getMoldTypes(),
-        masterDataAPI.getTonnages(),
+        masterDataAPI.getRawMaterials(),
         masterDataAPI.getCompanies()
       ]);
 
@@ -93,14 +99,14 @@ export default function MoldRegistration() {
         carModels: carModelsRes.data.data,
         materials: materialsRes.data.data,
         moldTypes: moldTypesRes.data.data,
-        tonnages: tonnagesRes.data.data,
+        rawMaterials: rawMaterialsRes.data.data,
         companies: companiesRes.data.data
       });
 
       setCarModels(carModelsRes.data.data || []);
       setMaterials(materialsRes.data.data || []);
       setMoldTypes(moldTypesRes.data.data || []);
-      setTonnages(tonnagesRes.data.data || []);
+      setRawMaterials(rawMaterialsRes.data.data || []);
       
       // 회사 목록에서 제작처/생산처 분리
       const companies = companiesRes.data.data || [];
@@ -129,6 +135,32 @@ export default function MoldRegistration() {
         delete newErrors[name];
         return newErrors;
       });
+    }
+  };
+
+  // MS 스펙 선택 시 타입/그레이드/수축율 자동 연동
+  const handleMsSpecChange = (e) => {
+    const selectedId = e.target.value;
+    const selectedMaterial = rawMaterials.find(m => m.id.toString() === selectedId);
+    
+    if (selectedMaterial) {
+      setFormData(prev => ({
+        ...prev,
+        raw_material_id: selectedId,
+        ms_spec: selectedMaterial.ms_spec || '',
+        material_type: selectedMaterial.material_type || '',
+        grade: selectedMaterial.grade || '',
+        shrinkage_rate: selectedMaterial.shrinkage_rate || ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        raw_material_id: '',
+        ms_spec: '',
+        material_type: '',
+        grade: '',
+        shrinkage_rate: ''
+      }));
     }
   };
 
@@ -204,7 +236,6 @@ export default function MoldRegistration() {
     const firstCarModel = carModels[0]?.model_name || 'K5';
     const firstMoldType = moldTypes[0]?.type_name || '사출금형';
     const firstMaterial = materials[0]?.material_name || 'NAK80';
-    const firstTonnage = tonnages[0]?.tonnage_value || 350;
     const firstMaker = makers[0]?.id || '';
     const firstPlant = plants[0]?.id || '';
 
@@ -222,7 +253,6 @@ export default function MoldRegistration() {
       mold_type: firstMoldType,
       cavity_count: 2,
       material: firstMaterial,
-      tonnage: firstTonnage,
       dimensions: '800x600x500',
       weight: '1500',
       target_maker_id: firstMaker.toString(),
@@ -267,9 +297,6 @@ export default function MoldRegistration() {
     }
     if (formData.cavity_count < 1) {
       newErrors.cavity_count = 'Cavity 수는 1 이상이어야 합니다';
-    }
-    if (formData.tonnage < 1) {
-      newErrors.tonnage = '톤수는 1 이상이어야 합니다';
     }
 
     setErrors(newErrors);
@@ -475,7 +502,7 @@ export default function MoldRegistration() {
         {/* 금형 사양 */}
         <section className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">🔧 금형 사양</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 금형 타입 <span className="text-red-500">*</span>
@@ -490,30 +517,14 @@ export default function MoldRegistration() {
                 <option value="">금형 타입 선택</option>
                 {moldTypes.map(type => (
                   <option key={type.id} value={type.type_name}>
-                    {type.type_name} {type.type_code ? `(${type.type_code})` : ''}
+                    {type.type_name}
                   </option>
                 ))}
               </select>
               {errors.mold_type && (
                 <p className="text-sm text-red-500 mt-1">{errors.mold_type}</p>
               )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cavity 수 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="cavity_count"
-                value={formData.cavity_count}
-                onChange={handleChange}
-                className={`input ${errors.cavity_count ? 'border-red-500' : ''}`}
-                min="1"
-              />
-              {errors.cavity_count && (
-                <p className="text-sm text-red-500 mt-1">{errors.cavity_count}</p>
-              )}
+              <p className="text-xs text-gray-500 mt-1">기초정보 연동</p>
             </div>
 
             <div>
@@ -530,35 +541,30 @@ export default function MoldRegistration() {
                 <option value="">재질 선택</option>
                 {materials.map(mat => (
                   <option key={mat.id} value={mat.material_name}>
-                    {mat.material_name} {mat.material_code ? `(${mat.material_code})` : ''}
+                    {mat.material_name}
                   </option>
                 ))}
               </select>
               {errors.material && (
                 <p className="text-sm text-red-500 mt-1">{errors.material}</p>
               )}
+              <p className="text-xs text-gray-500 mt-1">기초정보 연동</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                톤수 (ton) <span className="text-red-500">*</span>
+                Cavity 수 <span className="text-red-500">*</span>
               </label>
-              <select
-                name="tonnage"
-                value={formData.tonnage}
+              <input
+                type="number"
+                name="cavity_count"
+                value={formData.cavity_count}
                 onChange={handleChange}
-                className={`input ${errors.tonnage ? 'border-red-500' : ''}`}
-                disabled={masterDataLoading}
-              >
-                <option value="">톤수 선택</option>
-                {tonnages.map(ton => (
-                  <option key={ton.id} value={ton.tonnage_value}>
-                    {ton.tonnage_value}T {ton.description ? `- ${ton.description}` : ''}
-                  </option>
-                ))}
-              </select>
-              {errors.tonnage && (
-                <p className="text-sm text-red-500 mt-1">{errors.tonnage}</p>
+                className={`input ${errors.cavity_count ? 'border-red-500' : ''}`}
+                min="1"
+              />
+              {errors.cavity_count && (
+                <p className="text-sm text-red-500 mt-1">{errors.cavity_count}</p>
               )}
             </div>
 
@@ -587,6 +593,75 @@ export default function MoldRegistration() {
                 onChange={handleChange}
                 className="input"
                 placeholder="1500"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* 원재료 정보 */}
+        <section className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">🧪 원재료 정보</h2>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                MS 스펙
+              </label>
+              <select
+                name="raw_material_id"
+                value={formData.raw_material_id}
+                onChange={handleMsSpecChange}
+                className="input"
+                disabled={masterDataLoading}
+              >
+                <option value="">MS 스펙 선택</option>
+                {rawMaterials.map(mat => (
+                  <option key={mat.id} value={mat.id}>
+                    {mat.ms_spec}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">기초정보 연동</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                타입
+              </label>
+              <input
+                type="text"
+                name="material_type"
+                value={formData.material_type}
+                className="input bg-gray-50"
+                placeholder="MS 스펙 선택 시 자동 입력"
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                그레이드
+              </label>
+              <input
+                type="text"
+                name="grade"
+                value={formData.grade}
+                className="input bg-gray-50"
+                placeholder="MS 스펙 선택 시 자동 입력"
+                readOnly
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                수축율
+              </label>
+              <input
+                type="text"
+                name="shrinkage_rate"
+                value={formData.shrinkage_rate}
+                className="input bg-gray-50"
+                placeholder="MS 스펙 선택 시 자동 입력"
+                readOnly
               />
             </div>
           </div>

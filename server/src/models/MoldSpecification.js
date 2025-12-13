@@ -43,6 +43,26 @@ class MoldSpecification extends Model {
           type: DataTypes.STRING(20),
           comment: '년식 (기초정보 연동)'
         },
+        raw_material_id: {
+          type: DataTypes.INTEGER,
+          comment: '원재료 ID (raw_materials 테이블 연동)'
+        },
+        ms_spec: {
+          type: DataTypes.STRING(100),
+          comment: 'MS 스펙 (기초정보 연동)'
+        },
+        material_type: {
+          type: DataTypes.STRING(200),
+          comment: '타입 (기초정보 연동)'
+        },
+        grade: {
+          type: DataTypes.STRING(100),
+          comment: '그레이드 (기초정보 연동)'
+        },
+        shrinkage_rate: {
+          type: DataTypes.STRING(50),
+          comment: '수축율 (기초정보 연동)'
+        },
         mold_type: {
           type: DataTypes.STRING(50)
         },

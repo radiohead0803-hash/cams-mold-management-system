@@ -361,6 +361,14 @@ const runCarModelsMigration = async () => {
     // car_year 컬럼 타입 확장 (10 -> 20)
     await sequelize.query(`ALTER TABLE mold_specifications ALTER COLUMN car_year TYPE VARCHAR(20)`);
     console.log('✅ mold_specifications car model columns added/verified.');
+    
+    // mold_specifications 테이블에 원재료 연동 컬럼 추가
+    await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS raw_material_id INTEGER`);
+    await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS ms_spec VARCHAR(100)`);
+    await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS material_type VARCHAR(200)`);
+    await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS grade VARCHAR(100)`);
+    await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS shrinkage_rate VARCHAR(50)`);
+    console.log('✅ mold_specifications raw material columns added/verified.');
   } catch (error) {
     console.error('⚠️ car_models migration warning:', error.message);
   }
