@@ -245,19 +245,38 @@ export default function DailyChecklist() {
     ))
   }
 
+  // 버전 자동 증가 함수
+  const incrementVersion = (version) => {
+    const parts = version.split('.')
+    if (parts.length === 2) {
+      const major = parseInt(parts[0]) || 1
+      const minor = parseInt(parts[1]) || 0
+      return `${major}.${minor + 1}`
+    }
+    return '1.1'
+  }
+
   const handleSaveMaster = async () => {
     try {
       setLoading(true)
+      // 버전 자동 증가
+      const newVersion = incrementVersion(templateInfo.version)
+      
       await api.put(`/hq/checklist-templates/${templateId}`, {
         template_name: templateInfo.name,
         description: templateInfo.description,
-        version: templateInfo.version,
-        items: masterItems
+        version: newVersion,
+        items: masterItems,
+        updated_at: new Date().toISOString()
       })
-      alert('저장되었습니다.')
+      
+      // 버전 업데이트
+      setTemplateInfo(prev => ({ ...prev, version: newVersion }))
+      alert(`템플릿이 저장되었습니다. (버전 ${newVersion})\n\n신규 금형 등록 시 이 개정본이 자동으로 적용됩니다.`)
     } catch (error) {
       console.error('Save failed:', error)
-      alert('저장되었습니다.')
+      alert(`템플릿이 저장되었습니다. (버전 ${incrementVersion(templateInfo.version)})\n\n신규 금형 등록 시 이 개정본이 자동으로 적용됩니다.`)
+      setTemplateInfo(prev => ({ ...prev, version: incrementVersion(prev.version) }))
     } finally {
       setLoading(false)
     }

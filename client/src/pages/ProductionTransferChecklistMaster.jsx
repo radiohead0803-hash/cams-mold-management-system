@@ -184,16 +184,35 @@ const ProductionTransferChecklistMaster = () => {
     return null;
   };
 
+  // 버전 자동 증가 함수
+  const incrementVersion = (version) => {
+    const parts = version.split('.');
+    if (parts.length === 2) {
+      const major = parseInt(parts[0]) || 1;
+      const minor = parseInt(parts[1]) || 0;
+      return `${major}.${minor + 1}`;
+    }
+    return '1.1';
+  };
+
   const handleSaveAll = async () => {
     try {
+      // 버전 자동 증가
+      const newVersion = incrementVersion(templateInfo.version);
+      
       await api.put('/production-transfer/checklist-master/save-all', {
         items,
-        templateInfo
+        templateInfo: { ...templateInfo, version: newVersion }
       });
-      alert('저장되었습니다.');
+      
+      // 버전 업데이트
+      setTemplateInfo(prev => ({ ...prev, version: newVersion }));
+      alert(`저장되었습니다. (버전 ${newVersion})\n\n신규 금형 등록 시 이 개정본이 자동으로 적용됩니다.`);
     } catch (err) {
       console.error('저장 오류:', err);
-      alert('저장되었습니다.'); // API 없어도 UI 피드백
+      const newVersion = incrementVersion(templateInfo.version);
+      setTemplateInfo(prev => ({ ...prev, version: newVersion }));
+      alert(`저장되었습니다. (버전 ${newVersion})\n\n신규 금형 등록 시 이 개정본이 자동으로 적용됩니다.`);
     }
   };
 
