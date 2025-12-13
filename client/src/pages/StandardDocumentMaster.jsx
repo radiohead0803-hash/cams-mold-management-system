@@ -378,16 +378,16 @@ export default function StandardDocumentMaster() {
   const handleViewDetail = (doc) => {
     // 문서 유형에 따라 상세 페이지로 이동
     const routes = {
-      pre_production: '/checklist/master',
-      daily_check: '/checklist/master',
-      periodic_check: '/checklist/master',
-      mold_checklist: '/checklist/master',
-      development_plan: '/checklist/master',
-      transfer: '/checklist/master',
-      hardness: '/checklist/master',
-      nurturing: '/checklist/master'
+      pre_production: '/checklist-master',
+      daily_check: '/checklist/daily',
+      periodic_check: '/inspection/periodic',
+      mold_checklist: '/mold-checklist',
+      development_plan: '/mold-development/plan',
+      transfer: '/production-transfer/checklist-master',
+      hardness: '/mold-development/hardness',
+      nurturing: '/mold-development/nurturing'
     };
-    navigate(`${routes[doc.type] || '/checklist/master'}?templateId=${doc.id}`);
+    navigate(`${routes[doc.type] || '/checklist-master'}?templateId=${doc.id}`);
   };
 
   return (
