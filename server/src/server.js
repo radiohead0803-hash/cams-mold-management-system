@@ -375,6 +375,123 @@ const runCarModelsMigration = async () => {
   }
 };
 
+// Run standard_document_templates table migration (표준문서 마스터 관리)
+const runStandardDocumentTemplatesMigration = async () => {
+  console.log('🔄 Running standard_document_templates table migration...');
+  try {
+    // 표준문서 템플릿 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS standard_document_templates (
+        id SERIAL PRIMARY KEY,
+        template_code VARCHAR(50) UNIQUE NOT NULL,
+        template_name VARCHAR(200) NOT NULL,
+        template_type VARCHAR(50) NOT NULL,
+        version VARCHAR(20) DEFAULT '1.0',
+        status VARCHAR(30) DEFAULT 'draft',
+        description TEXT,
+        development_stage VARCHAR(20) DEFAULT 'all',
+        deployed_to JSONB DEFAULT '[]'::jsonb,
+        item_count INTEGER DEFAULT 0,
+        category_count INTEGER DEFAULT 1,
+        template_data JSONB DEFAULT '{}'::jsonb,
+        items JSONB DEFAULT '[]'::jsonb,
+        stages JSONB DEFAULT '[]'::jsonb,
+        created_by INTEGER,
+        created_by_name VARCHAR(100),
+        approved_by INTEGER,
+        approved_by_name VARCHAR(100),
+        approved_at TIMESTAMP WITH TIME ZONE,
+        deployed_by INTEGER,
+        deployed_by_name VARCHAR(100),
+        deployed_at TIMESTAMP WITH TIME ZONE,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ standard_document_templates table created/verified.');
+
+    // 인덱스 생성
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_std_doc_templates_type ON standard_document_templates(template_type)',
+      'CREATE INDEX IF NOT EXISTS idx_std_doc_templates_status ON standard_document_templates(status)',
+      'CREATE INDEX IF NOT EXISTS idx_std_doc_templates_stage ON standard_document_templates(development_stage)',
+      'CREATE INDEX IF NOT EXISTS idx_std_doc_templates_active ON standard_document_templates(is_active)',
+      'CREATE INDEX IF NOT EXISTS idx_std_doc_templates_created_at ON standard_document_templates(created_at DESC)'
+    ];
+    for (const idx of indexes) {
+      try { await sequelize.query(idx); } catch (e) { }
+    }
+    console.log('✅ standard_document_templates indexes created/verified.');
+
+    // 표준문서 버전 이력 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS standard_document_versions (
+        id SERIAL PRIMARY KEY,
+        template_id INTEGER NOT NULL,
+        version VARCHAR(20) NOT NULL,
+        template_data JSONB,
+        items JSONB,
+        stages JSONB,
+        change_reason TEXT,
+        changed_by INTEGER,
+        changed_by_name VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ standard_document_versions table created/verified.');
+
+    // 버전 이력 인덱스
+    try { await sequelize.query('CREATE INDEX IF NOT EXISTS idx_std_doc_versions_template ON standard_document_versions(template_id)'); } catch (e) { }
+    try { await sequelize.query('CREATE INDEX IF NOT EXISTS idx_std_doc_versions_created_at ON standard_document_versions(created_at DESC)'); } catch (e) { }
+
+    // 표준문서 승인 이력 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS standard_document_approvals (
+        id SERIAL PRIMARY KEY,
+        template_id INTEGER NOT NULL,
+        action VARCHAR(30) NOT NULL,
+        status VARCHAR(30) NOT NULL,
+        version VARCHAR(20),
+        comment TEXT,
+        action_by INTEGER,
+        action_by_name VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ standard_document_approvals table created/verified.');
+
+    // 승인 이력 인덱스
+    try { await sequelize.query('CREATE INDEX IF NOT EXISTS idx_std_doc_approvals_template ON standard_document_approvals(template_id)'); } catch (e) { }
+    try { await sequelize.query('CREATE INDEX IF NOT EXISTS idx_std_doc_approvals_action ON standard_document_approvals(action)'); } catch (e) { }
+
+    // 기본 템플릿 데이터 삽입 (없으면)
+    const defaultTemplates = [
+      { code: 'PRE_PROD_CHK', name: '제작전 체크리스트', type: 'pre_production', items: 81, categories: 9 },
+      { code: 'DAILY_CHK', name: '일상점검 체크리스트', type: 'daily_check', items: 7, categories: 3 },
+      { code: 'PERIODIC_CHK', name: '정기점검 체크리스트', type: 'periodic_check', items: 13, categories: 1 },
+      { code: 'DEV_PLAN', name: '개발계획 템플릿', type: 'development_plan', items: 12, categories: 1 },
+      { code: 'TRANSFER_CHK', name: '양산이관 체크리스트', type: 'transfer', items: 45, categories: 8 },
+      { code: 'HARDNESS_REC', name: '경도측정 기록표', type: 'hardness', items: 6, categories: 1 },
+      { code: 'NURTURING_CHK', name: '금형육성 체크리스트', type: 'nurturing', items: 10, categories: 2 }
+    ];
+
+    for (const t of defaultTemplates) {
+      try {
+        await sequelize.query(`
+          INSERT INTO standard_document_templates (template_code, template_name, template_type, status, item_count, category_count, deployed_to)
+          VALUES ($1, $2, $3, 'deployed', $4, $5, '["제작처", "생산처"]'::jsonb)
+          ON CONFLICT (template_code) DO NOTHING
+        `, { bind: [t.code, t.name, t.type, t.items, t.categories] });
+      } catch (e) { }
+    }
+    console.log('✅ Default standard document templates inserted/verified.');
+
+  } catch (error) {
+    console.error('⚠️ standard_document_templates migration warning:', error.message);
+  }
+};
+
 // Run transfer_requests table migration
 const runTransferRequestsMigration = async () => {
   console.log('🔄 Running transfer_requests table migration...');
@@ -444,6 +561,9 @@ const startServer = async () => {
     
     // Run car_models columns migration
     await runCarModelsMigration();
+    
+    // Run standard document templates migration
+    await runStandardDocumentTemplatesMigration();
     
     // Run production transfer tables migration
     await runProductionTransferMigration();
