@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Send, CheckCircle, Clock, AlertCircle, Upload, Calendar } from 'lucide-react';
+import { ArrowLeft, Save, Send, CheckCircle, Clock, AlertCircle, Upload, Calendar, Edit, Trash2, Plus, Copy, Settings } from 'lucide-react';
 import { moldSpecificationAPI } from '../lib/api';
+import api from '../lib/api';
 
 // 12단계 공정 정의
 const DEVELOPMENT_STAGES = [
@@ -31,11 +32,28 @@ export default function MoldDevelopmentPlan() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const moldId = searchParams.get('moldId');
+  const templateId = searchParams.get('templateId');
+  
+  // 마스터 모드 (templateId가 있으면 마스터 편집 모드)
+  const isMasterMode = !!templateId && !moldId;
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [moldInfo, setMoldInfo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  
+  // 마스터 템플릿 정보
+  const [templateInfo, setTemplateInfo] = useState({
+    name: '개발계획 템플릿',
+    version: '1.0',
+    status: 'deployed',
+    description: '12단계 금형개발 공정 관리 템플릿',
+    deployedTo: ['제작처'],
+    lastModified: new Date().toISOString().split('T')[0]
+  });
+  
+  // 마스터 단계 편집
+  const [editingStages, setEditingStages] = useState([...DEVELOPMENT_STAGES.map(s => ({ ...s, defaultDays: 5 }))]);
   
   // 제작사양
   const [specData, setSpecData] = useState({
@@ -71,8 +89,39 @@ export default function MoldDevelopmentPlan() {
   useEffect(() => {
     if (moldId) {
       loadMoldData();
+    } else if (isMasterMode) {
+      loadTemplateData();
+    } else {
+      setLoading(false);
     }
-  }, [moldId]);
+  }, [moldId, templateId]);
+
+  const loadTemplateData = async () => {
+    try {
+      setLoading(true);
+      // API에서 템플릿 정보 로드 시도
+      const response = await api.get(`/hq/checklist-templates/${templateId}`);
+      if (response.data?.success && response.data?.data?.template) {
+        const t = response.data.data.template;
+        setTemplateInfo({
+          name: t.template_name || '개발계획 템플릿',
+          version: t.version || '1.0',
+          status: t.is_active ? 'deployed' : 'draft',
+          description: t.description || '12단계 금형개발 공정 관리 템플릿',
+          deployedTo: t.deployed_to || ['제작처'],
+          lastModified: t.updated_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+        });
+        if (t.stages) {
+          setEditingStages(t.stages);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load template:', error);
+      // 기본값 사용
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadMoldData = async () => {
     try {
@@ -148,9 +197,20 @@ export default function MoldDevelopmentPlan() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      // API 호출하여 저장
-      // await moldSpecificationAPI.updateDevelopmentPlan(moldId, { specData, planData });
-      alert('저장되었습니다.');
+      if (isMasterMode) {
+        // 마스터 템플릿 저장
+        await api.put(`/hq/checklist-templates/${templateId}`, {
+          template_name: templateInfo.name,
+          description: templateInfo.description,
+          version: templateInfo.version,
+          stages: editingStages
+        });
+        alert('템플릿이 저장되었습니다.');
+      } else {
+        // 금형별 개발계획 저장
+        // await moldSpecificationAPI.updateDevelopmentPlan(moldId, { specData, planData });
+        alert('저장되었습니다.');
+      }
       setIsEditing(false);
     } catch (error) {
       console.error('Save failed:', error);
@@ -158,6 +218,38 @@ export default function MoldDevelopmentPlan() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeploy = async () => {
+    if (!confirm('템플릿을 배포하시겠습니까? 배포 후 협력사에서 사용할 수 있습니다.')) return;
+    try {
+      await api.post(`/hq/checklist-templates/${templateId}/deploy`);
+      setTemplateInfo(prev => ({ ...prev, status: 'deployed', deployedTo: ['제작처', '생산처'] }));
+      alert('배포되었습니다.');
+    } catch (error) {
+      console.error('Deploy failed:', error);
+      alert('배포에 실패했습니다.');
+    }
+  };
+
+  const handleStageChange = (index, field, value) => {
+    setEditingStages(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleAddStage = () => {
+    setEditingStages(prev => [
+      ...prev,
+      { id: `stage_${Date.now()}`, name: '새 단계', order: prev.length + 1, defaultDays: 5 }
+    ]);
+  };
+
+  const handleRemoveStage = (index) => {
+    if (editingStages.length <= 1) return;
+    setEditingStages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmitForApproval = async () => {
@@ -199,6 +291,229 @@ export default function MoldDevelopmentPlan() {
     );
   }
 
+  // 마스터 모드 UI
+  if (isMasterMode) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button onClick={() => navigate('/pre-production-checklist')} className="p-2 hover:bg-gray-100 rounded-full">
+                  <ArrowLeft size={20} />
+                </button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 text-xs font-medium rounded bg-orange-100 text-orange-700">개발계획</span>
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${templateInfo.status === 'deployed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                      {templateInfo.status === 'deployed' ? '배포됨' : '초안'}
+                    </span>
+                  </div>
+                  <h1 className="text-xl font-bold text-gray-900 mt-1">{templateInfo.name}</h1>
+                  <p className="text-sm text-gray-500">버전 {templateInfo.version} | {templateInfo.description}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Save size={16} />
+                  {saving ? '저장 중...' : '저장'}
+                </button>
+                {templateInfo.status !== 'deployed' && (
+                  <button
+                    onClick={handleDeploy}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                  >
+                    <Upload size={16} />
+                    배포
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+          {/* 템플릿 기본 정보 */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <Settings size={20} />
+              템플릿 기본 정보
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">템플릿 이름</label>
+                <input
+                  type="text"
+                  value={templateInfo.name}
+                  onChange={(e) => setTemplateInfo(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">버전</label>
+                <input
+                  type="text"
+                  value={templateInfo.version}
+                  onChange={(e) => setTemplateInfo(prev => ({ ...prev, version: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">배포 대상</label>
+                <div className="flex gap-4 mt-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={templateInfo.deployedTo.includes('제작처')}
+                      onChange={(e) => {
+                        setTemplateInfo(prev => ({
+                          ...prev,
+                          deployedTo: e.target.checked 
+                            ? [...prev.deployedTo, '제작처']
+                            : prev.deployedTo.filter(d => d !== '제작처')
+                        }));
+                      }}
+                      className="rounded"
+                    />
+                    <span className="text-sm">제작처</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={templateInfo.deployedTo.includes('생산처')}
+                      onChange={(e) => {
+                        setTemplateInfo(prev => ({
+                          ...prev,
+                          deployedTo: e.target.checked 
+                            ? [...prev.deployedTo, '생산처']
+                            : prev.deployedTo.filter(d => d !== '생산처')
+                        }));
+                      }}
+                      className="rounded"
+                    />
+                    <span className="text-sm">생산처</span>
+                  </label>
+                </div>
+              </div>
+              <div className="col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                <textarea
+                  value={templateInfo.description}
+                  onChange={(e) => setTemplateInfo(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2"
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 12단계 공정 관리 */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <Calendar size={20} />
+                개발 단계 관리 ({editingStages.length}단계)
+              </h2>
+              <button
+                onClick={handleAddStage}
+                className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm flex items-center gap-1 hover:bg-blue-200"
+              >
+                <Plus size={14} /> 단계 추가
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border px-4 py-3 text-sm font-medium text-gray-700 w-16">순서</th>
+                    <th className="border px-4 py-3 text-sm font-medium text-gray-700">단계명</th>
+                    <th className="border px-4 py-3 text-sm font-medium text-gray-700 w-32">기본 소요일</th>
+                    <th className="border px-4 py-3 text-sm font-medium text-gray-700 w-20">삭제</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {editingStages.map((stage, index) => (
+                    <tr key={stage.id} className="hover:bg-gray-50">
+                      <td className="border px-4 py-3 text-center text-sm font-medium text-gray-600">
+                        {index + 1}
+                      </td>
+                      <td className="border px-2 py-2">
+                        <input
+                          type="text"
+                          value={stage.name}
+                          onChange={(e) => handleStageChange(index, 'name', e.target.value)}
+                          className="w-full border rounded px-3 py-2 text-sm"
+                        />
+                      </td>
+                      <td className="border px-2 py-2">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={stage.defaultDays || 5}
+                            onChange={(e) => handleStageChange(index, 'defaultDays', parseInt(e.target.value) || 0)}
+                            className="w-20 border rounded px-2 py-2 text-sm text-center"
+                          />
+                          <span className="text-sm text-gray-500">일</span>
+                        </div>
+                      </td>
+                      <td className="border px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleRemoveStage(index)}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded"
+                          disabled={editingStages.length <= 1}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>총 {editingStages.length}개 단계</strong> | 
+                기본 총 소요일: {editingStages.reduce((sum, s) => sum + (s.defaultDays || 5), 0)}일
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                * 단계를 추가/삭제하고 기본 소요일을 설정할 수 있습니다. 저장 후 배포하면 협력사에서 사용할 수 있습니다.
+              </p>
+            </div>
+          </div>
+
+          {/* 12단계 미리보기 */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">단계 미리보기</h2>
+            <div className="flex items-center justify-between overflow-x-auto pb-4">
+              {editingStages.map((stage, index) => (
+                <div key={stage.id} className="flex flex-col items-center min-w-[80px]">
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
+                      {index + 1}
+                    </div>
+                    {index < editingStages.length - 1 && (
+                      <div className="absolute top-5 left-10 w-12 h-0.5 bg-gray-300" />
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-600 mt-2 text-center">{stage.name}</span>
+                  <span className="text-xs text-gray-400">D+{stage.defaultDays || 5}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 금형별 개발계획 UI (기존)
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
