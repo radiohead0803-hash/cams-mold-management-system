@@ -368,6 +368,7 @@ const runCarModelsMigration = async () => {
     await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS material_type VARCHAR(200)`);
     await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS grade VARCHAR(100)`);
     await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS shrinkage_rate VARCHAR(50)`);
+    await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS supplier VARCHAR(200)`);
     console.log('✅ mold_specifications raw material columns added/verified.');
   } catch (error) {
     console.error('⚠️ car_models migration warning:', error.message);

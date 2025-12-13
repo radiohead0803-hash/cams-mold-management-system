@@ -63,6 +63,10 @@ class MoldSpecification extends Model {
           type: DataTypes.STRING(50),
           comment: '수축율 (기초정보 연동)'
         },
+        supplier: {
+          type: DataTypes.STRING(200),
+          comment: '공급업체 (기초정보 연동)'
+        },
         mold_type: {
           type: DataTypes.STRING(50)
         },

@@ -30,6 +30,7 @@ export default function MoldRegistration() {
     raw_material_id: '', // 원재료 ID
     ms_spec: '', // MS 스펙
     material_type: '', // 타입
+    supplier: '', // 공급업체
     grade: '', // 그레이드
     shrinkage_rate: '', // 수축율
     
@@ -138,7 +139,7 @@ export default function MoldRegistration() {
     }
   };
 
-  // MS 스펙 선택 시 타입/그레이드/수축율 자동 연동
+  // MS 스펙 선택 시 그레이드/수축율 자동 연동
   const handleMsSpecChange = (e) => {
     const selectedId = e.target.value;
     const selectedMaterial = rawMaterials.find(m => m.id.toString() === selectedId);
@@ -148,7 +149,6 @@ export default function MoldRegistration() {
         ...prev,
         raw_material_id: selectedId,
         ms_spec: selectedMaterial.ms_spec || '',
-        material_type: selectedMaterial.material_type || '',
         grade: selectedMaterial.grade || '',
         shrinkage_rate: selectedMaterial.shrinkage_rate || ''
       }));
@@ -157,12 +157,33 @@ export default function MoldRegistration() {
         ...prev,
         raw_material_id: '',
         ms_spec: '',
-        material_type: '',
         grade: '',
         shrinkage_rate: ''
       }));
     }
   };
+
+  // 타입 선택 핸들러 (원재료 타입 필터링)
+  const handleMaterialTypeChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      material_type: e.target.value
+    }));
+  };
+
+  // 공급업체 선택 핸들러
+  const handleSupplierChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      supplier: e.target.value
+    }));
+  };
+
+  // 원재료 타입 목록 (중복 제거)
+  const materialTypes = [...new Set(rawMaterials.map(m => m.material_type).filter(Boolean))];
+  
+  // 공급업체 목록 (중복 제거)
+  const suppliers = [...new Set(rawMaterials.map(m => m.supplier).filter(Boolean))];
 
   // 차종 선택 시 년식/사양 자동 연동
   const handleCarModelChange = (e) => {
@@ -601,7 +622,7 @@ export default function MoldRegistration() {
         {/* 원재료 정보 */}
         <section className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">🧪 원재료 정보</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 MS 스펙
@@ -627,14 +648,42 @@ export default function MoldRegistration() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 타입
               </label>
-              <input
-                type="text"
+              <select
                 name="material_type"
                 value={formData.material_type}
-                className="input bg-gray-50"
-                placeholder="MS 스펙 선택 시 자동 입력"
-                readOnly
-              />
+                onChange={handleMaterialTypeChange}
+                className="input"
+                disabled={masterDataLoading}
+              >
+                <option value="">타입 선택</option>
+                {materialTypes.map((type, idx) => (
+                  <option key={idx} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">기초정보 연동</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                공급업체
+              </label>
+              <select
+                name="supplier"
+                value={formData.supplier}
+                onChange={handleSupplierChange}
+                className="input"
+                disabled={masterDataLoading}
+              >
+                <option value="">공급업체 선택</option>
+                {suppliers.map((sup, idx) => (
+                  <option key={idx} value={sup}>
+                    {sup}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">기초정보 연동</p>
             </div>
 
             <div>
