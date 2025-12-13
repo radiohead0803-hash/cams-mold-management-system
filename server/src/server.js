@@ -375,6 +375,111 @@ const runCarModelsMigration = async () => {
   }
 };
 
+// Run checklist_master_templates table migration (체크리스트 마스터 템플릿)
+const runChecklistMasterTemplatesMigration = async () => {
+  console.log('🔄 Running checklist_master_templates table migration...');
+  try {
+    // 체크리스트 마스터 템플릿 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_master_templates (
+        id SERIAL PRIMARY KEY,
+        template_name VARCHAR(100) NOT NULL,
+        template_type VARCHAR(50) NOT NULL,
+        version INTEGER DEFAULT 1,
+        description TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_by INTEGER,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ checklist_master_templates table created/verified.');
+
+    // 인덱스 생성
+    const indexes = [
+      'CREATE INDEX IF NOT EXISTS idx_checklist_master_templates_type ON checklist_master_templates(template_type)',
+      'CREATE INDEX IF NOT EXISTS idx_checklist_master_templates_active ON checklist_master_templates(is_active)',
+      'CREATE INDEX IF NOT EXISTS idx_checklist_master_templates_version ON checklist_master_templates(version)'
+    ];
+    for (const idx of indexes) {
+      try { await sequelize.query(idx); } catch (e) { }
+    }
+    console.log('✅ checklist_master_templates indexes created/verified.');
+
+    // checklist_template_items 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_template_items (
+        id SERIAL PRIMARY KEY,
+        template_id INTEGER NOT NULL,
+        item_name VARCHAR(200) NOT NULL,
+        order_index INTEGER DEFAULT 0,
+        is_required BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ checklist_template_items table created/verified.');
+
+    // checklist_template_deployments 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_template_deployments (
+        id SERIAL PRIMARY KEY,
+        template_id INTEGER NOT NULL,
+        deployed_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        deployed_by VARCHAR(100),
+        target_type VARCHAR(50),
+        target_id INTEGER,
+        scope TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ checklist_template_deployments table created/verified.');
+
+    // checklist_template_history 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_template_history (
+        id SERIAL PRIMARY KEY,
+        template_id INTEGER NOT NULL,
+        action VARCHAR(50) NOT NULL,
+        changes TEXT,
+        changed_by VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ checklist_template_history table created/verified.');
+
+    // 기본 템플릿 데이터 삽입 (없으면)
+    const defaultTemplates = [
+      { name: '제작전 체크리스트', type: 'pre_production' },
+      { name: '일상점검 체크리스트', type: 'daily_check' },
+      { name: '정기점검 체크리스트', type: 'periodic_check' },
+      { name: '개발계획 템플릿', type: 'development_plan' },
+      { name: '양산이관 체크리스트', type: 'transfer' },
+      { name: '경도측정 기록표', type: 'hardness' },
+      { name: '금형육성 체크리스트', type: 'nurturing' }
+    ];
+
+    for (const t of defaultTemplates) {
+      try {
+        const [existing] = await sequelize.query(
+          `SELECT id FROM checklist_master_templates WHERE template_type = $1 LIMIT 1`,
+          { bind: [t.type] }
+        );
+        if (!existing || existing.length === 0) {
+          await sequelize.query(
+            `INSERT INTO checklist_master_templates (template_name, template_type, is_active) VALUES ($1, $2, TRUE)`,
+            { bind: [t.name, t.type] }
+          );
+        }
+      } catch (e) { }
+    }
+    console.log('✅ Default checklist templates inserted/verified.');
+
+  } catch (error) {
+    console.error('⚠️ checklist_master_templates migration warning:', error.message);
+  }
+};
+
 // Run standard_document_templates table migration (표준문서 마스터 관리)
 const runStandardDocumentTemplatesMigration = async () => {
   console.log('🔄 Running standard_document_templates table migration...');
@@ -561,6 +666,9 @@ const startServer = async () => {
     
     // Run car_models columns migration
     await runCarModelsMigration();
+    
+    // Run checklist master templates migration
+    await runChecklistMasterTemplatesMigration();
     
     // Run standard document templates migration
     await runStandardDocumentTemplatesMigration();
