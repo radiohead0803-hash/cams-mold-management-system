@@ -697,9 +697,9 @@ export default function MasterData() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">순서</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종명</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종코드</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">제조사</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">년식</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">사양</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">년식</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">제조사</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
               </tr>
             </thead>
@@ -709,9 +709,9 @@ export default function MasterData() {
                   <td className="px-4 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{item.model_name}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{item.model_code || '-'}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">{item.manufacturer || '-'}</td>
-                  <td className="px-4 py-4 whitespace-nowrap">{item.model_year || '-'}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{item.specification || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.model_year || '-'}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.manufacturer || '-'}</td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-3">
                       <Edit2 size={16} />
