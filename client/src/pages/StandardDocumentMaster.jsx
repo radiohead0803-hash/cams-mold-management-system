@@ -161,7 +161,8 @@ export default function StandardDocumentMaster() {
     type: 'pre_production',
     version: '1.0',
     description: '',
-    deployedTo: []
+    deployedTo: [],
+    developmentStage: 'all' // 'all', 'development', 'production'
   });
 
   useEffect(() => {
@@ -729,6 +730,45 @@ export default function StandardDocumentMaster() {
                   rows={3}
                   placeholder="문서 설명 입력"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">적용단계</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="developmentStage"
+                      value="all"
+                      checked={formData.developmentStage === 'all'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, developmentStage: e.target.value }))}
+                      className="rounded"
+                    />
+                    <span className="text-sm">전체</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="developmentStage"
+                      value="development"
+                      checked={formData.developmentStage === 'development'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, developmentStage: e.target.value }))}
+                      className="rounded"
+                    />
+                    <span className="text-sm">개발</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="developmentStage"
+                      value="production"
+                      checked={formData.developmentStage === 'production'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, developmentStage: e.target.value }))}
+                      className="rounded"
+                    />
+                    <span className="text-sm">양산</span>
+                  </label>
+                </div>
               </div>
 
               <div>

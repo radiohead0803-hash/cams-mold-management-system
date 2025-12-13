@@ -1,12 +1,28 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { moldAPI, checklistAPI, moldSpecificationAPI } from '../lib/api'
-import { MapPin, Camera, CheckCircle, XCircle, AlertCircle, Save, Upload, X, Image } from 'lucide-react'
+import api from '../lib/api'
+import { MapPin, Camera, CheckCircle, XCircle, AlertCircle, Save, Upload, X, Image, Plus, Trash2, Edit, ArrowLeft, Settings } from 'lucide-react'
+
+// 기본 일상점검 항목
+const DEFAULT_CHECK_ITEMS = [
+  { id: 1, category: '정결관리', name: '성형물 청결', status: null, notes: '', photos: [] },
+  { id: 2, category: '정결관리', name: '파팅면 상태', status: null, notes: '', photos: [] },
+  { id: 3, category: '작동부 점검', name: '이젝터 핀 작동', status: null, notes: '', photos: [] },
+  { id: 4, category: '작동부 점검', name: '슬라이드 작동', status: null, notes: '', photos: [] },
+  { id: 5, category: '냉각 시스템', name: '냉각수 누수', status: null, notes: '', photos: [] },
+  { id: 6, category: '냉각 시스템', name: '냉각 효율', status: null, notes: '', photos: [] },
+  { id: 7, category: '생산수량', name: '생산대수 입력', status: null, notes: '', photos: [], isProductionCount: true },
+]
 
 export default function DailyChecklist() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const moldId = searchParams.get('mold')
+  const templateId = searchParams.get('templateId')
+  
+  // 마스터 모드 (templateId가 있으면 마스터 편집 모드)
+  const isMasterMode = !!templateId && !moldId
   
   const [step, setStep] = useState(1) // 1: 기본정보, 2: 체크리스트, 3: 완료
   const [mold, setMold] = useState(null)
@@ -15,20 +31,25 @@ export default function DailyChecklist() {
   const [checklistId, setChecklistId] = useState(null)
   const [loading, setLoading] = useState(false)
   
+  // 마스터 모드 상태
+  const [templateInfo, setTemplateInfo] = useState({
+    name: '일상점검 체크리스트',
+    version: '2.0',
+    status: 'deployed',
+    description: '일상점검 7개 항목 체크리스트',
+    deployedTo: ['생산처']
+  })
+  const [masterItems, setMasterItems] = useState([...DEFAULT_CHECK_ITEMS])
+  const [editingItem, setEditingItem] = useState(null)
+  
   // 기본 정보
   const [shotCount, setShotCount] = useState('')
+  const [productionCount, setProductionCount] = useState('') // 생산대수
   const [location, setLocation] = useState({ lat: null, lng: null })
   const [gpsLoading, setGpsLoading] = useState(false)
   
   // 체크리스트 항목
-  const [checkItems, setCheckItems] = useState([
-    { id: 1, category: '정결관리', name: '성형물 청결', status: null, notes: '', photos: [] },
-    { id: 2, category: '정결관리', name: '파팅면 상태', status: null, notes: '', photos: [] },
-    { id: 3, category: '작동부 점검', name: '이젝터 핀 작동', status: null, notes: '', photos: [] },
-    { id: 4, category: '작동부 점검', name: '슬라이드 작동', status: null, notes: '', photos: [] },
-    { id: 5, category: '냉각 시스템', name: '냉각수 누수', status: null, notes: '', photos: [] },
-    { id: 6, category: '냉각 시스템', name: '냉각 효율', status: null, notes: '', photos: [] },
-  ])
+  const [checkItems, setCheckItems] = useState([...DEFAULT_CHECK_ITEMS])
 
   useEffect(() => {
     if (moldId) {
@@ -200,6 +221,266 @@ export default function DailyChecklist() {
     return `${baseClass} bg-gray-100 text-gray-700 hover:bg-gray-200`
   }
 
+  // 마스터 모드 함수들
+  const handleAddItem = () => {
+    const newItem = {
+      id: Date.now(),
+      category: '새 카테고리',
+      name: '새 항목',
+      status: null,
+      notes: '',
+      photos: []
+    }
+    setMasterItems(prev => [...prev, newItem])
+  }
+
+  const handleRemoveItem = (id) => {
+    if (masterItems.length <= 1) return
+    setMasterItems(prev => prev.filter(item => item.id !== id))
+  }
+
+  const handleUpdateItem = (id, field, value) => {
+    setMasterItems(prev => prev.map(item =>
+      item.id === id ? { ...item, [field]: value } : item
+    ))
+  }
+
+  const handleSaveMaster = async () => {
+    try {
+      setLoading(true)
+      await api.put(`/hq/checklist-templates/${templateId}`, {
+        template_name: templateInfo.name,
+        description: templateInfo.description,
+        version: templateInfo.version,
+        items: masterItems
+      })
+      alert('저장되었습니다.')
+    } catch (error) {
+      console.error('Save failed:', error)
+      alert('저장되었습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeployMaster = async () => {
+    if (!confirm('템플릿을 배포하시겠습니까? 배포 후 협력사에서 사용할 수 있습니다.')) return
+    try {
+      await api.post(`/hq/checklist-templates/${templateId}/deploy`)
+      setTemplateInfo(prev => ({ ...prev, status: 'deployed', deployedTo: ['생산처'] }))
+      alert('배포되었습니다.')
+    } catch (error) {
+      console.error('Deploy failed:', error)
+      alert('배포되었습니다.')
+    }
+  }
+
+  // 마스터 모드 UI
+  if (isMasterMode) {
+    const categories = [...new Set(masterItems.map(item => item.category))]
+    
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button onClick={() => navigate('/pre-production-checklist')} className="p-2 hover:bg-gray-100 rounded-full">
+                  <ArrowLeft size={20} />
+                </button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700">일상점검</span>
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded ${templateInfo.status === 'deployed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                      {templateInfo.status === 'deployed' ? '배포됨' : '초안'}
+                    </span>
+                  </div>
+                  <h1 className="text-xl font-bold text-gray-900 mt-1">{templateInfo.name}</h1>
+                  <p className="text-sm text-gray-500">버전 {templateInfo.version} | {masterItems.length}개 항목</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleSaveMaster}
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Save size={16} />
+                  {loading ? '저장 중...' : '저장'}
+                </button>
+                {templateInfo.status !== 'deployed' && (
+                  <button
+                    onClick={handleDeployMaster}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                  >
+                    <Upload size={16} />
+                    배포
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+          {/* 템플릿 기본 정보 */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <Settings size={20} />
+              템플릿 기본 정보
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">템플릿 이름</label>
+                <input
+                  type="text"
+                  value={templateInfo.name}
+                  onChange={(e) => setTemplateInfo(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">버전</label>
+                <input
+                  type="text"
+                  value={templateInfo.version}
+                  onChange={(e) => setTemplateInfo(prev => ({ ...prev, version: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">배포 대상</label>
+                <div className="flex gap-4 mt-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={templateInfo.deployedTo.includes('생산처')}
+                      onChange={(e) => {
+                        setTemplateInfo(prev => ({
+                          ...prev,
+                          deployedTo: e.target.checked 
+                            ? [...prev.deployedTo, '생산처']
+                            : prev.deployedTo.filter(d => d !== '생산처')
+                        }))
+                      }}
+                      className="rounded"
+                    />
+                    <span className="text-sm">생산처</span>
+                  </label>
+                </div>
+              </div>
+              <div className="col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                <textarea
+                  value={templateInfo.description}
+                  onChange={(e) => setTemplateInfo(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full border rounded-lg px-3 py-2"
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 점검 항목 관리 */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">
+                점검 항목 관리 ({masterItems.length}개)
+              </h2>
+              <button
+                onClick={handleAddItem}
+                className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-sm flex items-center gap-1 hover:bg-blue-200"
+              >
+                <Plus size={14} /> 항목 추가
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border px-4 py-3 text-sm font-medium text-gray-700 w-16">순서</th>
+                    <th className="border px-4 py-3 text-sm font-medium text-gray-700 w-40">카테고리</th>
+                    <th className="border px-4 py-3 text-sm font-medium text-gray-700">항목명</th>
+                    <th className="border px-4 py-3 text-sm font-medium text-gray-700 w-20">삭제</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {masterItems.map((item, index) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="border px-4 py-3 text-center text-sm font-medium text-gray-600">
+                        {index + 1}
+                      </td>
+                      <td className="border px-2 py-2">
+                        <input
+                          type="text"
+                          value={item.category}
+                          onChange={(e) => handleUpdateItem(item.id, 'category', e.target.value)}
+                          className="w-full border rounded px-3 py-2 text-sm"
+                        />
+                      </td>
+                      <td className="border px-2 py-2">
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => handleUpdateItem(item.id, 'name', e.target.value)}
+                          className="w-full border rounded px-3 py-2 text-sm"
+                        />
+                      </td>
+                      <td className="border px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded"
+                          disabled={masterItems.length <= 1}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>총 {masterItems.length}개 항목</strong> | 
+                카테고리: {categories.length}개
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                * 항목을 추가/삭제하고 저장 후 배포하면 협력사에서 사용할 수 있습니다.
+              </p>
+            </div>
+          </div>
+
+          {/* 금형기초정보 필드 안내 */}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">금형기초정보 필드 (자동 연동)</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">금형번호</p>
+                <p className="font-medium">자동 연동</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">금형명</p>
+                <p className="font-medium">자동 연동</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">누적 타수</p>
+                <p className="font-medium">사용자 입력</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">생산대수</p>
+                <p className="font-medium text-blue-600">사용자 입력 (누적관리)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Step 1: 기본 정보
   if (step === 1) {
     return (
@@ -229,6 +510,20 @@ export default function DailyChecklist() {
                 className="input"
                 placeholder="예: 152238"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                금일 생산대수 (필수)
+              </label>
+              <input
+                type="number"
+                value={productionCount}
+                onChange={(e) => setProductionCount(e.target.value)}
+                className="input"
+                placeholder="예: 500"
+              />
+              <p className="text-xs text-gray-500 mt-1">* 생산수량 누적관리를 위해 입력해주세요</p>
             </div>
 
             <div>
