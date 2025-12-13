@@ -142,7 +142,7 @@ export default function Layout() {
         { 
           to: '/pre-production-checklist', 
           icon: FileCheck, 
-          label: '제작전 체크리스트',
+          label: '표준관리',
           subMenus: [
             { to: '/pre-production-checklist', label: '체크리스트 목록' },
             { to: '/pre-production-checklist/new', label: '새 체크리스트' }
@@ -267,7 +267,7 @@ export default function Layout() {
         { 
           to: '/pre-production-checklist', 
           icon: FileCheck, 
-          label: '제작전 체크리스트',
+          label: '표준관리',
           subMenus: [
             { to: '/pre-production-checklist', label: '체크리스트 목록' }
           ]
