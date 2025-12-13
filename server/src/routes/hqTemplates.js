@@ -151,7 +151,7 @@ router.post('/checklist-templates', async (req, res) => {
 router.put('/checklist-templates/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { template_name, template_type, description, is_active } = req.body;
+    const { template_name, template_type, description, is_active, version, stages, items, updated_at } = req.body;
 
     const template = await ChecklistMasterTemplate.findByPk(id);
     if (!template) {
@@ -167,25 +167,44 @@ router.put('/checklist-templates/:id', async (req, res) => {
       template_name: template.template_name,
       template_type: template.template_type,
       description: template.description,
-      is_active: template.is_active
+      is_active: template.is_active,
+      version: template.version
     };
 
     if (template_name) template.template_name = template_name;
     if (template_type) template.template_type = template_type;
     if (description !== undefined) template.description = description;
     if (is_active !== undefined) template.is_active = is_active;
+    if (version !== undefined) {
+      // version이 문자열이면 숫자로 변환 시도
+      const versionNum = typeof version === 'string' ? parseInt(version.replace(/\./g, '')) || template.version + 1 : version;
+      template.version = versionNum;
+    }
 
     await template.save();
 
-    // 히스토리 기록
-    await writeTemplateHistory({
-      templateId: template.id,
-      action: 'updated',
-      changes: JSON.stringify({ old: oldValues, new: { template_name, template_type, description, is_active } }),
-      changedBy: req.user.name || req.user.username
-    });
+    // stages나 items가 있으면 별도 저장 (향후 확장용)
+    // 현재는 히스토리에만 기록
+    const changesData = { 
+      old: oldValues, 
+      new: { template_name, template_type, description, is_active, version }
+    };
+    if (stages) changesData.stages = stages;
+    if (items) changesData.items = items;
 
-    logger.info(`Template updated: ${template.template_name} by user ${req.user.id}`);
+    // 히스토리 기록
+    try {
+      await writeTemplateHistory({
+        templateId: template.id,
+        action: 'updated',
+        changes: JSON.stringify(changesData),
+        changedBy: req.user?.name || req.user?.username || 'system'
+      });
+    } catch (historyError) {
+      logger.warn('Template history write failed:', historyError.message);
+    }
+
+    logger.info(`Template updated: ${template.template_name} by user ${req.user?.id || 'system'}`);
 
     return res.json({
       success: true,
