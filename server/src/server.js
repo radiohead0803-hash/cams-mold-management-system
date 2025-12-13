@@ -375,6 +375,42 @@ const runCarModelsMigration = async () => {
   }
 };
 
+// Run valve_gate columns migration (밸브게이트 옵션)
+const runValveGateMigration = async () => {
+  console.log('🔄 Running valve_gate columns migration...');
+  try {
+    // mold_specifications 테이블에 밸브게이트 관련 컬럼 추가
+    const columns = [
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS gate_type VARCHAR(50)' }, // open, valve_gate
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS valve_gate_used BOOLEAN DEFAULT FALSE' },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS valve_gate_count INTEGER DEFAULT 0' },
+      { sql: "ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS valve_gate_data JSONB DEFAULT '[]'::jsonb" },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS hot_runner_installed BOOLEAN DEFAULT FALSE' },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS hot_runner_type VARCHAR(50)' },
+      { sql: 'ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS hot_runner_count INTEGER DEFAULT 0' }
+    ];
+    
+    for (const col of columns) {
+      try { await sequelize.query(col.sql); } catch (e) { }
+    }
+    console.log('✅ Valve gate columns added to mold_specifications.');
+
+    // injection_conditions 테이블에 밸브게이트 시퀀스 컬럼 추가
+    const injectionColumns = [
+      { sql: "ALTER TABLE injection_conditions ADD COLUMN IF NOT EXISTS valve_gate_sequence JSONB DEFAULT '[]'::jsonb" },
+      { sql: 'ALTER TABLE injection_conditions ADD COLUMN IF NOT EXISTS valve_gate_used BOOLEAN DEFAULT FALSE' }
+    ];
+    
+    for (const col of injectionColumns) {
+      try { await sequelize.query(col.sql); } catch (e) { }
+    }
+    console.log('✅ Valve gate sequence columns added to injection_conditions.');
+
+  } catch (error) {
+    console.error('⚠️ Valve gate migration warning:', error.message);
+  }
+};
+
 // Run checklist_master_templates table migration (체크리스트 마스터 템플릿)
 const runChecklistMasterTemplatesMigration = async () => {
   console.log('🔄 Running checklist_master_templates table migration...');
@@ -666,6 +702,9 @@ const startServer = async () => {
     
     // Run car_models columns migration
     await runCarModelsMigration();
+    
+    // Run valve gate migration
+    await runValveGateMigration();
     
     // Run checklist master templates migration
     await runChecklistMasterTemplatesMigration();

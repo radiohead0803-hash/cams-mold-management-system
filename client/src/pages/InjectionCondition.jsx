@@ -68,6 +68,7 @@ export default function InjectionConditionNew() {
     hr_temp_1: '', hr_temp_2: '', hr_temp_3: '', hr_temp_4: '',
     hr_temp_5: '', hr_temp_6: '', hr_temp_7: '', hr_temp_8: '',
     valve_gate_count: 0,
+    valve_gate_used: false,
     valve_gate_data: [],
     // 칠러온도
     chiller_temp_main: '', chiller_temp_moving: '', chiller_temp_fixed: '',
@@ -204,7 +205,7 @@ export default function InjectionConditionNew() {
     const newSeq = (conditionData.valve_gate_data?.length || 0) + 1;
     setConditionData(prev => ({
       ...prev, valve_gate_count: newSeq,
-      valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, moving: '', fixed: '' }]
+      valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, sequence: `V${newSeq}`, moving: '', fixed: '', used: true }]
     }));
   };
 
@@ -230,7 +231,8 @@ export default function InjectionConditionNew() {
     setConditionData(prev => ({
       ...prev, hot_runner_type: type,
       valve_gate_count: type === 'valve_gate' ? (prev.valve_gate_count || 1) : 0,
-      valve_gate_data: type === 'valve_gate' ? (prev.valve_gate_data?.length > 0 ? prev.valve_gate_data : [{ seq: 1, moving: '', fixed: '' }]) : []
+      valve_gate_used: type === 'valve_gate',
+      valve_gate_data: type === 'valve_gate' ? (prev.valve_gate_data?.length > 0 ? prev.valve_gate_data : [{ seq: 1, sequence: 'V1', moving: '', fixed: '', used: true }]) : []
     }));
   };
 
@@ -816,44 +818,100 @@ export default function InjectionConditionNew() {
 
                     {/* 밸브게이트 */}
                     {conditionData.hot_runner_type === 'valve_gate' && (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="text-sm font-medium text-slate-700">밸브게이트 ({conditionData.valve_gate_data?.length || 0}개)</label>
-                          {isEditing && (
-                            <button onClick={addValveGate} className="flex items-center gap-1 px-3 py-1.5 bg-violet-100 text-violet-600 rounded text-sm font-medium">
-                              <Plus size={16} /> 추가
+                      <div className="space-y-4">
+                        {/* 밸브게이트 수량 및 사용유무 */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-slate-700 mb-2 block">밸브 수량</label>
+                            <input
+                              type="number"
+                              value={conditionData.valve_gate_count || 0}
+                              onChange={(e) => handleChange('valve_gate_count', parseInt(e.target.value) || 0)}
+                              disabled={!isEditing}
+                              min="0"
+                              className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm disabled:bg-slate-50"
+                              placeholder="밸브 수량"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-slate-700 mb-2 block">사용 유무</label>
+                            <button
+                              onClick={() => handleChange('valve_gate_used', !conditionData.valve_gate_used)}
+                              disabled={!isEditing}
+                              className={`w-full py-2 px-4 rounded-lg text-sm font-medium border transition-colors ${
+                                conditionData.valve_gate_used 
+                                  ? 'bg-green-500 text-white border-green-500' 
+                                  : 'bg-slate-100 text-slate-600 border-slate-300'
+                              } ${!isEditing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              {conditionData.valve_gate_used ? '사용' : '미사용'}
                             </button>
-                          )}
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          {(conditionData.valve_gate_data || []).map((gate, index) => (
-                            <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg">
-                              <span className="text-sm font-medium text-slate-500 w-8">#{gate.seq}</span>
-                              <div className="flex-1 grid grid-cols-2 gap-3">
+
+                        {/* 밸브게이트 시퀀스 */}
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-medium text-slate-700">밸브게이트 시퀀스 ({conditionData.valve_gate_data?.length || 0}개)</label>
+                            {isEditing && (
+                              <button onClick={addValveGate} className="flex items-center gap-1 px-3 py-1.5 bg-violet-100 text-violet-600 rounded text-sm font-medium">
+                                <Plus size={16} /> 추가
+                              </button>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-12 gap-2 text-xs text-slate-500 font-medium px-3">
+                              <div className="col-span-1">순번</div>
+                              <div className="col-span-2">시퀀스</div>
+                              <div className="col-span-3">가동측 온도</div>
+                              <div className="col-span-3">고정측 온도</div>
+                              <div className="col-span-2">사용</div>
+                              <div className="col-span-1"></div>
+                            </div>
+                            {(conditionData.valve_gate_data || []).map((gate, index) => (
+                              <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-white rounded-lg">
+                                <span className="col-span-1 text-sm font-medium text-slate-500">#{gate.seq}</span>
+                                <input
+                                  type="text"
+                                  value={gate.sequence || ''}
+                                  onChange={(e) => handleValveGateChange(index, 'sequence', e.target.value)}
+                                  disabled={!isEditing}
+                                  className="col-span-2 border rounded px-2 py-2 text-sm text-center"
+                                  placeholder="SEQ"
+                                />
                                 <input
                                   type="number"
                                   value={gate.moving || ''}
                                   onChange={(e) => handleValveGateChange(index, 'moving', e.target.value)}
                                   disabled={!isEditing}
-                                  className="w-full border rounded px-3 py-2 text-sm"
-                                  placeholder="가동"
+                                  className="col-span-3 border rounded px-2 py-2 text-sm text-center"
+                                  placeholder="가동 (°C)"
                                 />
                                 <input
                                   type="number"
                                   value={gate.fixed || ''}
                                   onChange={(e) => handleValveGateChange(index, 'fixed', e.target.value)}
                                   disabled={!isEditing}
-                                  className="w-full border rounded px-3 py-2 text-sm"
-                                  placeholder="고정"
+                                  className="col-span-3 border rounded px-2 py-2 text-sm text-center"
+                                  placeholder="고정 (°C)"
                                 />
-                              </div>
-                              {isEditing && (
-                                <button onClick={() => removeValveGate(index)} className="p-1 text-red-500">
-                                  <Minus size={18} />
+                                <button
+                                  onClick={() => handleValveGateChange(index, 'used', !gate.used)}
+                                  disabled={!isEditing}
+                                  className={`col-span-2 py-2 rounded text-xs font-medium ${
+                                    gate.used ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                                  }`}
+                                >
+                                  {gate.used ? '사용' : '미사용'}
                                 </button>
-                              )}
-                            </div>
-                          ))}
+                                {isEditing && (
+                                  <button onClick={() => removeValveGate(index)} className="col-span-1 p-1 text-red-500">
+                                    <Minus size={18} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
