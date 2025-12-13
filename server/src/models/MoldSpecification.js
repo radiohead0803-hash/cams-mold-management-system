@@ -27,11 +27,21 @@ class MoldSpecification extends Model {
           type: DataTypes.STRING(200),
           allowNull: false
         },
+        car_model_id: {
+          type: DataTypes.INTEGER,
+          comment: '차종 ID (car_models 테이블 연동)'
+        },
         car_model: {
-          type: DataTypes.STRING(100)
+          type: DataTypes.STRING(100),
+          comment: '차종명'
+        },
+        car_specification: {
+          type: DataTypes.STRING(100),
+          comment: '사양 (기초정보 연동)'
         },
         car_year: {
-          type: DataTypes.STRING(10)
+          type: DataTypes.STRING(20),
+          comment: '년식 (기초정보 연동)'
         },
         mold_type: {
           type: DataTypes.STRING(50)

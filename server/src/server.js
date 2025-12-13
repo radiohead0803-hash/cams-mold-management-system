@@ -350,9 +350,17 @@ const runRepairRequestsMigration = async () => {
 const runCarModelsMigration = async () => {
   console.log('🔄 Running car_models columns migration...');
   try {
+    // car_models 테이블에 년식, 사양 컬럼 추가
     await sequelize.query(`ALTER TABLE car_models ADD COLUMN IF NOT EXISTS model_year VARCHAR(20)`);
     await sequelize.query(`ALTER TABLE car_models ADD COLUMN IF NOT EXISTS specification VARCHAR(100)`);
     console.log('✅ car_models columns (model_year, specification) added/verified.');
+    
+    // mold_specifications 테이블에 차종 연동 컬럼 추가
+    await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS car_model_id INTEGER`);
+    await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS car_specification VARCHAR(100)`);
+    // car_year 컬럼 타입 확장 (10 -> 20)
+    await sequelize.query(`ALTER TABLE mold_specifications ALTER COLUMN car_year TYPE VARCHAR(20)`);
+    console.log('✅ mold_specifications car model columns added/verified.');
   } catch (error) {
     console.error('⚠️ car_models migration warning:', error.message);
   }

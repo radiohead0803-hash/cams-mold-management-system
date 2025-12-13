@@ -14,8 +14,10 @@ export default function MoldRegistration() {
     primary_part_name: '', // 대표품명
     part_number: '',
     part_name: '',
-    car_model: '',
-    car_year: new Date().getFullYear().toString(),
+    car_model_id: '', // 차종 ID (기초정보 연동)
+    car_model: '', // 차종명
+    car_specification: '', // 사양 (기초정보 연동)
+    car_year: '', // 년식 (기초정보 연동)
     
     // 금형 사양
     mold_type: '',
@@ -125,6 +127,39 @@ export default function MoldRegistration() {
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  // 차종 선택 시 년식/사양 자동 연동
+  const handleCarModelChange = (e) => {
+    const selectedId = e.target.value;
+    const selectedModel = carModels.find(m => m.id.toString() === selectedId);
+    
+    if (selectedModel) {
+      setFormData(prev => ({
+        ...prev,
+        car_model_id: selectedId,
+        car_model: selectedModel.model_name,
+        car_specification: selectedModel.specification || '',
+        car_year: selectedModel.model_year || ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        car_model_id: '',
+        car_model: '',
+        car_specification: '',
+        car_year: ''
+      }));
+    }
+    
+    // 에러 제거
+    if (errors.car_model) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.car_model;
         return newErrors;
       });
     }
@@ -379,21 +414,21 @@ export default function MoldRegistration() {
               )}
             </div>
 
-            {/* 3행: 차종, 연식 */}
+            {/* 3행: 차종, 사양, 년식 (기초정보 연동) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 차종 <span className="text-red-500">*</span>
               </label>
               <select
-                name="car_model"
-                value={formData.car_model}
-                onChange={handleChange}
+                name="car_model_id"
+                value={formData.car_model_id}
+                onChange={handleCarModelChange}
                 className={`input ${errors.car_model ? 'border-red-500' : ''}`}
                 disabled={masterDataLoading}
               >
                 <option value="">차종 선택</option>
                 {carModels.map(model => (
-                  <option key={model.id} value={model.model_name}>
+                  <option key={model.id} value={model.id}>
                     {model.model_name} {model.model_code ? `(${model.model_code})` : ''}
                   </option>
                 ))}
@@ -405,18 +440,34 @@ export default function MoldRegistration() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                연식
+                사양
               </label>
-              <select
+              <input
+                type="text"
+                name="car_specification"
+                value={formData.car_specification}
+                onChange={handleChange}
+                className="input bg-gray-50"
+                placeholder="차종 선택 시 자동 입력"
+                readOnly
+              />
+              <p className="text-xs text-gray-500 mt-1">기초정보에서 자동 연동</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                년식
+              </label>
+              <input
+                type="text"
                 name="car_year"
                 value={formData.car_year}
                 onChange={handleChange}
-                className="input"
-              >
-                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + 2 - i).map(year => (
-                  <option key={year} value={year.toString()}>{year}</option>
-                ))}
-              </select>
+                className="input bg-gray-50"
+                placeholder="차종 선택 시 자동 입력"
+                readOnly
+              />
+              <p className="text-xs text-gray-500 mt-1">기초정보에서 자동 연동</p>
             </div>
           </div>
         </section>
