@@ -205,7 +205,7 @@ export default function InjectionConditionNew() {
     const newSeq = (conditionData.valve_gate_data?.length || 0) + 1;
     setConditionData(prev => ({
       ...prev, valve_gate_count: newSeq,
-      valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, sequence: `V${newSeq}`, moving: '', fixed: '', used: true }]
+      valve_gate_data: [...(prev.valve_gate_data || []), { seq: newSeq, sequence: `V${newSeq}`, moving: '', fixed: '', cycle_time: '', used: true }]
     }));
   };
 
@@ -232,7 +232,7 @@ export default function InjectionConditionNew() {
       ...prev, hot_runner_type: type,
       valve_gate_count: type === 'valve_gate' ? (prev.valve_gate_count || 1) : 0,
       valve_gate_used: type === 'valve_gate',
-      valve_gate_data: type === 'valve_gate' ? (prev.valve_gate_data?.length > 0 ? prev.valve_gate_data : [{ seq: 1, sequence: 'V1', moving: '', fixed: '', used: true }]) : []
+      valve_gate_data: type === 'valve_gate' ? (prev.valve_gate_data?.length > 0 ? prev.valve_gate_data : [{ seq: 1, sequence: 'V1', moving: '', fixed: '', cycle_time: '', used: true }]) : []
     }));
   };
 
@@ -860,16 +860,17 @@ export default function InjectionConditionNew() {
                             )}
                           </div>
                           <div className="space-y-2">
-                            <div className="grid grid-cols-12 gap-2 text-xs text-slate-500 font-medium px-3">
+                            <div className="grid grid-cols-14 gap-2 text-xs text-slate-500 font-medium px-3">
                               <div className="col-span-1">순번</div>
                               <div className="col-span-2">시퀀스</div>
-                              <div className="col-span-3">가동측 온도</div>
-                              <div className="col-span-3">고정측 온도</div>
+                              <div className="col-span-2">가동측(°C)</div>
+                              <div className="col-span-2">고정측(°C)</div>
+                              <div className="col-span-3">사이클타임(sec)</div>
                               <div className="col-span-2">사용</div>
-                              <div className="col-span-1"></div>
+                              <div className="col-span-2"></div>
                             </div>
                             {(conditionData.valve_gate_data || []).map((gate, index) => (
-                              <div key={index} className="grid grid-cols-12 gap-2 items-center p-3 bg-white rounded-lg">
+                              <div key={index} className="grid grid-cols-14 gap-2 items-center p-3 bg-white rounded-lg">
                                 <span className="col-span-1 text-sm font-medium text-slate-500">#{gate.seq}</span>
                                 <input
                                   type="text"
@@ -884,16 +885,25 @@ export default function InjectionConditionNew() {
                                   value={gate.moving || ''}
                                   onChange={(e) => handleValveGateChange(index, 'moving', e.target.value)}
                                   disabled={!isEditing}
-                                  className="col-span-3 border rounded px-2 py-2 text-sm text-center"
-                                  placeholder="가동 (°C)"
+                                  className="col-span-2 border rounded px-2 py-2 text-sm text-center"
+                                  placeholder="가동"
                                 />
                                 <input
                                   type="number"
                                   value={gate.fixed || ''}
                                   onChange={(e) => handleValveGateChange(index, 'fixed', e.target.value)}
                                   disabled={!isEditing}
+                                  className="col-span-2 border rounded px-2 py-2 text-sm text-center"
+                                  placeholder="고정"
+                                />
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={gate.cycle_time || ''}
+                                  onChange={(e) => handleValveGateChange(index, 'cycle_time', e.target.value)}
+                                  disabled={!isEditing}
                                   className="col-span-3 border rounded px-2 py-2 text-sm text-center"
-                                  placeholder="고정 (°C)"
+                                  placeholder="사이클타임"
                                 />
                                 <button
                                   onClick={() => handleValveGateChange(index, 'used', !gate.used)}
@@ -905,7 +915,7 @@ export default function InjectionConditionNew() {
                                   {gate.used ? '사용' : '미사용'}
                                 </button>
                                 {isEditing && (
-                                  <button onClick={() => removeValveGate(index)} className="col-span-1 p-1 text-red-500">
+                                  <button onClick={() => removeValveGate(index)} className="col-span-2 p-1 text-red-500 flex justify-center">
                                     <Minus size={18} />
                                   </button>
                                 )}
