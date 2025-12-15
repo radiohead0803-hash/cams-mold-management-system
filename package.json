@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "echo 'No build required for server'",
+    "build": "npm run build:client && npm run copy:client",
+    "build:client": "cd client && npm install && npm run build",
+    "copy:client": "rm -rf server/public && mkdir -p server/public && cp -r client/dist/* server/public/",
     "start": "npm start --prefix server",
     "install:server": "npm install --prefix server",
-    "postinstall": "npm install --prefix server"
+    "postinstall": "npm install --prefix server && npm run build || echo 'Build skipped'"
   }
 }

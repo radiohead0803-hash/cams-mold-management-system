@@ -6,6 +6,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "build": "npm run build:client && npm run copy:client",
+    "build:client": "cd ../client && npm install && npm run build",
+    "copy:client": "rm -rf public && mkdir public && cp -r ../client/dist/* public/",
+    "postinstall": "npm run build || echo 'Client build skipped'",
     "migrate": "sequelize-cli db:migrate",
     "seed": "sequelize-cli db:seed:all",
     "seed:data": "node seed-data.js",
