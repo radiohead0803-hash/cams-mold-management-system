@@ -32,7 +32,8 @@ export default function MoldRegistration() {
     material_type: '', // 타입
     supplier: '', // 공급업체
     grade: '', // 그레이드
-    shrinkage_rate: '', // 수축율
+    shrinkage_rate: '', // 원재료 수축율
+    mold_shrinkage: '', // 금형 수축율
     
     // 제작 정보
     target_maker_id: '', // 제작처 업체
@@ -194,7 +195,7 @@ export default function MoldRegistration() {
     }
   };
 
-  // MS 스펙 선택 시 그레이드/수축율 자동 연동
+  // MS 스펙 선택 시 그레이드/수축율/금형수축율 자동 연동
   const handleMsSpecChange = (e) => {
     const selectedId = e.target.value;
     const selectedMaterial = rawMaterials.find(m => m.id.toString() === selectedId);
@@ -204,8 +205,11 @@ export default function MoldRegistration() {
         ...prev,
         raw_material_id: selectedId,
         ms_spec: selectedMaterial.ms_spec || '',
+        material_type: selectedMaterial.material_type || prev.material_type,
+        supplier: selectedMaterial.supplier || prev.supplier,
         grade: selectedMaterial.grade || '',
-        shrinkage_rate: selectedMaterial.shrinkage_rate || ''
+        shrinkage_rate: selectedMaterial.shrinkage_rate || '',
+        mold_shrinkage: selectedMaterial.mold_shrinkage || ''
       }));
     } else {
       setFormData(prev => ({
@@ -213,7 +217,8 @@ export default function MoldRegistration() {
         raw_material_id: '',
         ms_spec: '',
         grade: '',
-        shrinkage_rate: ''
+        shrinkage_rate: '',
+        mold_shrinkage: ''
       }));
     }
   };
@@ -517,7 +522,10 @@ export default function MoldRegistration() {
               )}
             </div>
 
-            {/* 3행: 차종, 사양, 년식 (기초정보 연동) */}
+          </div>
+
+          {/* 3행: 차종, 사양, 년식 (기초정보 연동) - 3열 구성 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 차종 <span className="text-red-500">*</span>
@@ -539,22 +547,34 @@ export default function MoldRegistration() {
               {errors.car_model && (
                 <p className="text-sm text-red-500 mt-1">{errors.car_model}</p>
               )}
+              <p className="text-xs text-gray-500 mt-1">기초정보 연동</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 사양
               </label>
-              <input
-                type="text"
+              <select
                 name="car_specification"
                 value={formData.car_specification}
                 onChange={handleChange}
-                className="input bg-gray-50"
-                placeholder="차종 선택 시 자동 입력"
-                readOnly
-              />
-              <p className="text-xs text-gray-500 mt-1">기초정보에서 자동 연동</p>
+                className="input"
+                disabled={masterDataLoading || !formData.car_model_id}
+              >
+                <option value="">사양 선택</option>
+                {carModels
+                  .filter(m => m.id.toString() === formData.car_model_id)
+                  .map(m => m.specification)
+                  .filter(Boolean)
+                  .map((spec, idx) => (
+                    <option key={idx} value={spec}>{spec}</option>
+                  ))}
+                {/* 기본 사양 옵션 */}
+                <option value="기본">기본</option>
+                <option value="프리미엄">프리미엄</option>
+                <option value="시그니처">시그니처</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">차종 선택 후 사양 선택</p>
             </div>
 
             <div>
@@ -677,7 +697,8 @@ export default function MoldRegistration() {
         {/* 원재료 정보 */}
         <section className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">🧪 원재료 정보</h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* 1행: MS 스펙, 타입, 공급업체 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 MS 스펙
@@ -740,7 +761,10 @@ export default function MoldRegistration() {
               </select>
               <p className="text-xs text-gray-500 mt-1">기초정보 연동</p>
             </div>
+          </div>
 
+          {/* 2행: 그레이드, 원재료 수축율, 금형 수축율 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 그레이드
@@ -753,11 +777,12 @@ export default function MoldRegistration() {
                 placeholder="MS 스펙 선택 시 자동 입력"
                 readOnly
               />
+              <p className="text-xs text-gray-500 mt-1">자동 연동</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                수축율
+                원재료 수축율
               </label>
               <input
                 type="text"
@@ -767,6 +792,22 @@ export default function MoldRegistration() {
                 placeholder="MS 스펙 선택 시 자동 입력"
                 readOnly
               />
+              <p className="text-xs text-gray-500 mt-1">자동 연동</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                금형 수축율
+              </label>
+              <input
+                type="text"
+                name="mold_shrinkage"
+                value={formData.mold_shrinkage || ''}
+                className="input bg-gray-50"
+                placeholder="MS 스펙 선택 시 자동 입력"
+                readOnly
+              />
+              <p className="text-xs text-gray-500 mt-1">자동 연동</p>
             </div>
           </div>
         </section>
