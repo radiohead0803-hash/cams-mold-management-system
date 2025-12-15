@@ -375,6 +375,206 @@ const runCarModelsMigration = async () => {
   }
 };
 
+// Run master data tables migration (기초정보 테이블)
+const runMasterDataMigration = async () => {
+  console.log('🔄 Running master data tables migration...');
+  try {
+    // car_models 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS car_models (
+        id SERIAL PRIMARY KEY,
+        model_name VARCHAR(100) NOT NULL,
+        model_code VARCHAR(50),
+        manufacturer VARCHAR(100),
+        model_year VARCHAR(10),
+        specification VARCHAR(200),
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ car_models table created/verified.');
+
+    // materials 테이블 생성 (금형재질)
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS materials (
+        id SERIAL PRIMARY KEY,
+        material_name VARCHAR(100) NOT NULL,
+        material_code VARCHAR(50),
+        category VARCHAR(50),
+        hardness VARCHAR(50),
+        tensile_strength VARCHAR(50),
+        description TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ materials table created/verified.');
+
+    // mold_types 테이블 생성
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS mold_types (
+        id SERIAL PRIMARY KEY,
+        type_name VARCHAR(100) NOT NULL,
+        type_code VARCHAR(50),
+        description TEXT,
+        category VARCHAR(50),
+        sub_category VARCHAR(50),
+        molding_method VARCHAR(100),
+        typical_materials TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ mold_types table created/verified.');
+
+    // tonnages 테이블 생성 (사출기 사양)
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS tonnages (
+        id SERIAL PRIMARY KEY,
+        tonnage_value INTEGER NOT NULL,
+        manufacturer VARCHAR(100),
+        model_name VARCHAR(100),
+        clamping_force INTEGER,
+        clamping_stroke INTEGER,
+        daylight_opening INTEGER,
+        platen_size_h INTEGER,
+        platen_size_v INTEGER,
+        tiebar_spacing_h INTEGER,
+        tiebar_spacing_v INTEGER,
+        min_mold_thickness INTEGER,
+        max_mold_thickness INTEGER,
+        max_mold_width INTEGER,
+        max_mold_height INTEGER,
+        ejector_force INTEGER,
+        ejector_stroke INTEGER,
+        screw_diameter INTEGER,
+        shot_volume INTEGER,
+        shot_weight INTEGER,
+        injection_pressure INTEGER,
+        injection_rate INTEGER,
+        plasticizing_capacity INTEGER,
+        nozzle_contact_force INTEGER,
+        machine_dimensions VARCHAR(100),
+        machine_weight INTEGER,
+        motor_power INTEGER,
+        description TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ tonnages table created/verified.');
+
+    // raw_materials 테이블 생성 (원재료)
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS raw_materials (
+        id SERIAL PRIMARY KEY,
+        ms_spec VARCHAR(100),
+        material_type VARCHAR(100),
+        grade VARCHAR(100),
+        grade_code VARCHAR(50),
+        supplier VARCHAR(200),
+        shrinkage_rate VARCHAR(50),
+        specific_gravity VARCHAR(50),
+        mold_shrinkage VARCHAR(50),
+        usage TEXT,
+        advantages TEXT,
+        disadvantages TEXT,
+        characteristics TEXT,
+        unit_price DECIMAL(12,2),
+        notes TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ raw_materials table created/verified.');
+
+    // companies 테이블 생성 (제작처/생산처)
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS companies (
+        id SERIAL PRIMARY KEY,
+        company_name VARCHAR(200) NOT NULL,
+        company_code VARCHAR(50),
+        company_type VARCHAR(50) NOT NULL,
+        business_number VARCHAR(50),
+        representative VARCHAR(100),
+        address TEXT,
+        phone VARCHAR(50),
+        email VARCHAR(100),
+        contact_person VARCHAR(100),
+        contact_phone VARCHAR(50),
+        notes TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ companies table created/verified.');
+
+    // 기본 데이터 삽입 (없으면)
+    // 차종 기본 데이터
+    const defaultCarModels = ['K5', 'K8', 'K9', 'EV6', 'EV9', 'Sorento', 'Carnival', 'Sportage'];
+    for (const model of defaultCarModels) {
+      try {
+        const [existing] = await sequelize.query(`SELECT id FROM car_models WHERE model_name = $1 LIMIT 1`, { bind: [model] });
+        if (!existing || existing.length === 0) {
+          await sequelize.query(`INSERT INTO car_models (model_name, is_active) VALUES ($1, TRUE)`, { bind: [model] });
+        }
+      } catch (e) { }
+    }
+
+    // 금형재질 기본 데이터
+    const defaultMaterials = ['NAK80', 'S45C', 'SKD11', 'SKD61', 'P20', 'HPM38', 'STAVAX'];
+    for (const mat of defaultMaterials) {
+      try {
+        const [existing] = await sequelize.query(`SELECT id FROM materials WHERE material_name = $1 LIMIT 1`, { bind: [mat] });
+        if (!existing || existing.length === 0) {
+          await sequelize.query(`INSERT INTO materials (material_name, is_active) VALUES ($1, TRUE)`, { bind: [mat] });
+        }
+      } catch (e) { }
+    }
+
+    // 금형타입 기본 데이터
+    const defaultMoldTypes = ['사출금형', '프레스금형', '다이캐스팅금형', '블로우금형', '압출금형'];
+    for (const type of defaultMoldTypes) {
+      try {
+        const [existing] = await sequelize.query(`SELECT id FROM mold_types WHERE type_name = $1 LIMIT 1`, { bind: [type] });
+        if (!existing || existing.length === 0) {
+          await sequelize.query(`INSERT INTO mold_types (type_name, is_active) VALUES ($1, TRUE)`, { bind: [type] });
+        }
+      } catch (e) { }
+    }
+
+    // 제작처/생산처 기본 데이터
+    const defaultCompanies = [
+      { name: '테스트 제작처', type: 'maker' },
+      { name: '테스트 생산처', type: 'plant' }
+    ];
+    for (const comp of defaultCompanies) {
+      try {
+        const [existing] = await sequelize.query(`SELECT id FROM companies WHERE company_name = $1 LIMIT 1`, { bind: [comp.name] });
+        if (!existing || existing.length === 0) {
+          await sequelize.query(`INSERT INTO companies (company_name, company_type, is_active) VALUES ($1, $2, TRUE)`, { bind: [comp.name, comp.type] });
+        }
+      } catch (e) { }
+    }
+
+    console.log('✅ Default master data inserted/verified.');
+
+  } catch (error) {
+    console.error('⚠️ Master data migration warning:', error.message);
+  }
+};
+
 // Run valve_gate columns migration (밸브게이트 옵션)
 const runValveGateMigration = async () => {
   console.log('🔄 Running valve_gate columns migration...');
@@ -702,6 +902,9 @@ const startServer = async () => {
     
     // Run car_models columns migration
     await runCarModelsMigration();
+    
+    // Run master data tables migration
+    await runMasterDataMigration();
     
     // Run valve gate migration
     await runValveGateMigration();
