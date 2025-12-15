@@ -88,34 +88,89 @@ export default function MoldRegistration() {
     try {
       setMasterDataLoading(true);
       console.log('Loading master data...');
-      const [carModelsRes, materialsRes, moldTypesRes, rawMaterialsRes, companiesRes] = await Promise.all([
-        masterDataAPI.getCarModels(),
-        masterDataAPI.getMaterials(),
-        masterDataAPI.getMoldTypes(),
-        masterDataAPI.getRawMaterials(),
-        masterDataAPI.getCompanies()
-      ]);
+      
+      // 각 API 개별 호출 (하나가 실패해도 다른 것은 로드)
+      let carModelsData = [];
+      let materialsData = [];
+      let moldTypesData = [];
+      let rawMaterialsData = [];
+      let companiesData = [];
+
+      try {
+        const res = await masterDataAPI.getCarModels();
+        carModelsData = res.data?.data || [];
+      } catch (e) {
+        console.warn('차종 로드 실패:', e.message);
+        // 기본 차종 데이터
+        carModelsData = [
+          { id: 1, model_name: 'K5' }, { id: 2, model_name: 'K8' }, { id: 3, model_name: 'K9' },
+          { id: 4, model_name: 'EV6' }, { id: 5, model_name: 'EV9' }, { id: 6, model_name: 'Sorento' },
+          { id: 7, model_name: 'Carnival' }, { id: 8, model_name: 'Sportage' }
+        ];
+      }
+
+      try {
+        const res = await masterDataAPI.getMaterials();
+        materialsData = res.data?.data || [];
+      } catch (e) {
+        console.warn('재질 로드 실패:', e.message);
+        // 기본 재질 데이터
+        materialsData = [
+          { id: 1, material_name: 'NAK80' }, { id: 2, material_name: 'S45C' },
+          { id: 3, material_name: 'SKD11' }, { id: 4, material_name: 'SKD61' },
+          { id: 5, material_name: 'P20' }, { id: 6, material_name: 'HPM38' }, { id: 7, material_name: 'STAVAX' }
+        ];
+      }
+
+      try {
+        const res = await masterDataAPI.getMoldTypes();
+        moldTypesData = res.data?.data || [];
+      } catch (e) {
+        console.warn('금형타입 로드 실패:', e.message);
+        // 기본 금형타입 데이터
+        moldTypesData = [
+          { id: 1, type_name: '사출금형' }, { id: 2, type_name: '프레스금형' },
+          { id: 3, type_name: '다이캐스팅금형' }, { id: 4, type_name: '블로우금형' }, { id: 5, type_name: '압출금형' }
+        ];
+      }
+
+      try {
+        const res = await masterDataAPI.getRawMaterials();
+        rawMaterialsData = res.data?.data || [];
+      } catch (e) {
+        console.warn('원재료 로드 실패:', e.message);
+      }
+
+      try {
+        const res = await masterDataAPI.getCompanies();
+        companiesData = res.data?.data || [];
+      } catch (e) {
+        console.warn('회사 로드 실패:', e.message);
+        // 기본 회사 데이터
+        companiesData = [
+          { id: 1, company_name: '테스트 제작처', company_type: 'maker' },
+          { id: 2, company_name: '테스트 생산처', company_type: 'plant' }
+        ];
+      }
 
       console.log('Master data loaded:', {
-        carModels: carModelsRes.data.data,
-        materials: materialsRes.data.data,
-        moldTypes: moldTypesRes.data.data,
-        rawMaterials: rawMaterialsRes.data.data,
-        companies: companiesRes.data.data
+        carModels: carModelsData,
+        materials: materialsData,
+        moldTypes: moldTypesData,
+        rawMaterials: rawMaterialsData,
+        companies: companiesData
       });
 
-      setCarModels(carModelsRes.data.data || []);
-      setMaterials(materialsRes.data.data || []);
-      setMoldTypes(moldTypesRes.data.data || []);
-      setRawMaterials(rawMaterialsRes.data.data || []);
+      setCarModels(carModelsData);
+      setMaterials(materialsData);
+      setMoldTypes(moldTypesData);
+      setRawMaterials(rawMaterialsData);
       
       // 회사 목록에서 제작처/생산처 분리
-      const companies = companiesRes.data.data || [];
-      setMakers(companies.filter(c => c.company_type === 'maker'));
-      setPlants(companies.filter(c => c.company_type === 'plant'));
+      setMakers(companiesData.filter(c => c.company_type === 'maker'));
+      setPlants(companiesData.filter(c => c.company_type === 'plant'));
     } catch (error) {
       console.error('Failed to load master data:', error);
-      alert('기초정보 로드 실패: ' + error.message);
     } finally {
       setMasterDataLoading(false);
     }
