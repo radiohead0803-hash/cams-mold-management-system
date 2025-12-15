@@ -108,6 +108,22 @@ const runMoldImagesMigration = async () => {
       console.log('⚠️ primary_part columns may already exist:', e.message);
     }
 
+    // mold_specifications에 차종/원재료 관련 컬럼 추가
+    try {
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS car_model_id INTEGER`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS car_specification VARCHAR(200)`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS raw_material_id INTEGER`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS ms_spec VARCHAR(100)`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS material_type VARCHAR(100)`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS supplier VARCHAR(200)`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS grade VARCHAR(100)`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS shrinkage_rate VARCHAR(50)`);
+      await sequelize.query(`ALTER TABLE mold_specifications ADD COLUMN IF NOT EXISTS mold_shrinkage VARCHAR(50)`);
+      console.log('✅ mold_specifications 차종/원재료 컬럼 추가/확인 완료.');
+    } catch (e) {
+      console.log('⚠️ mold_specifications 차종/원재료 columns may already exist:', e.message);
+    }
+
     // maker_specifications에 대표품번/대표품명 컬럼 추가 (본사 연동용)
     try {
       await sequelize.query(`ALTER TABLE maker_specifications ADD COLUMN IF NOT EXISTS primary_part_number VARCHAR(50)`);
