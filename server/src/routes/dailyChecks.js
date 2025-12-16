@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { DailyCheck, DailyCheckItem, Mold, User } = require('../models/newIndex');
+const { DailyCheck, DailyCheckItem, Mold, User, ProductionQuantity, MoldSpecification, sequelize } = require('../models/newIndex');
+const { Op } = require('sequelize');
 
 /**
  * @route   GET /api/daily-checks
@@ -135,17 +136,49 @@ router.post('/', async (req, res) => {
 
     // 트랜잭션 시작
     const result = await sequelize.transaction(async (t) => {
+      // 금형 정보 조회 (캐비티 수, 현재 타수)
+      const mold = await Mold.findByPk(mold_id, { transaction: t });
+      if (!mold) {
+        throw new Error('금형을 찾을 수 없습니다.');
+      }
+
+      // 타수 계산: 생산수량 / 캐비티 수
+      const cavityCount = mold.cavity_count || 1;
+      const shotsIncrement = Math.ceil(production_quantity / cavityCount);
+      const previousShots = mold.current_shots || 0;
+      const newCurrentShots = previousShots + shotsIncrement;
+
       // 일상점검 생성
       const check = await DailyCheck.create({
         mold_id,
         user_id,
         check_date,
         shift,
-        current_shots,
+        current_shots: newCurrentShots,
         production_quantity,
         gps_latitude,
         gps_longitude,
         status: 'in_progress'
+      }, { transaction: t });
+
+      // 생산수량 기록 생성
+      await ProductionQuantity.create({
+        mold_id,
+        daily_check_id: check.id,
+        production_date: check_date,
+        shift,
+        quantity: production_quantity,
+        shots_increment: shotsIncrement,
+        cavity_count: cavityCount,
+        previous_shots: previousShots,
+        current_shots: newCurrentShots,
+        recorded_by: user_id
+      }, { transaction: t });
+
+      // 금형 타수 업데이트
+      await mold.update({
+        current_shots: newCurrentShots,
+        last_check_date: check_date
       }, { transaction: t });
 
       // 점검 항목 생성
@@ -157,7 +190,10 @@ router.post('/', async (req, res) => {
         await DailyCheckItem.bulkCreate(checkItems, { transaction: t });
       }
 
-      return check;
+      // 점검 스케줄 업데이트 (다음 정기점검 계산)
+      await updateInspectionSchedule(mold_id, newCurrentShots, t);
+
+      return { check, shotsIncrement, previousShots, newCurrentShots };
     });
 
     res.status(201).json({
@@ -271,5 +307,69 @@ router.delete('/:id', async (req, res) => {
     });
   }
 });
+
+/**
+ * 점검 스케줄 업데이트 함수
+ * - 타수 기반 다음 정기점검 계산
+ * - 알람 생성 (90% 도달 시)
+ */
+async function updateInspectionSchedule(moldId, currentShots, transaction) {
+  try {
+    const { Alert, Mold } = require('../models/newIndex');
+    
+    // 금형 정보 조회
+    const mold = await Mold.findByPk(moldId, { transaction });
+    if (!mold) return;
+
+    // 정기점검 주기 (타수 기준)
+    const inspectionIntervals = [20000, 50000, 100000, 200000, 400000, 800000];
+    
+    // 다음 점검 타수 계산
+    let nextInspectionShots = null;
+    for (const interval of inspectionIntervals) {
+      const nextTarget = Math.ceil(currentShots / interval) * interval;
+      if (nextTarget > currentShots) {
+        nextInspectionShots = nextTarget;
+        break;
+      }
+    }
+
+    // 금형에 다음 점검 타수 업데이트
+    if (nextInspectionShots) {
+      await mold.update({
+        next_inspection_shots: nextInspectionShots
+      }, { transaction });
+
+      // 90% 도달 시 알람 생성
+      const threshold = nextInspectionShots * 0.9;
+      if (currentShots >= threshold) {
+        // 기존 알람 확인 (중복 방지)
+        const existingAlert = await Alert.findOne({
+          where: {
+            mold_id: moldId,
+            alert_type: 'inspection_due_shots',
+            status: 'pending'
+          },
+          transaction
+        });
+
+        if (!existingAlert) {
+          await Alert.create({
+            mold_id: moldId,
+            alert_type: 'inspection_due_shots',
+            priority: 'high',
+            title: '정기점검 예정 (타수 기준)',
+            message: `현재 타수 ${currentShots.toLocaleString()}회, 다음 점검 ${nextInspectionShots.toLocaleString()}회 (${Math.round(currentShots/nextInspectionShots*100)}% 도달)`,
+            status: 'pending',
+            created_at: new Date()
+          }, { transaction });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('점검 스케줄 업데이트 오류:', error);
+    // 오류가 발생해도 트랜잭션은 계속 진행
+  }
+}
 
 module.exports = router;
