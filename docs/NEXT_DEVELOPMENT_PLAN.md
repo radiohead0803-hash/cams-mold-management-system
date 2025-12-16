@@ -10,7 +10,7 @@
 
 ## 📋 우선순위 Top 10
 
-### 1. 배포 안정화 (Railway) ✅ 진행중
+### 1. 배포 안정화 (Railway) ✅ 완료
 | 항목 | 상태 | 설명 |
 |------|------|------|
 | Node 엔진 버전 고정 | ✅ 완료 | `engines: { node: "18.x", npm: ">=9.0.0" }` |
@@ -18,21 +18,21 @@
 | CORS 설정 | ✅ 완료 | Railway 도메인 허용 |
 | 정적파일 서빙 | ✅ 완료 | `/uploads` 경로 설정 |
 
-### 2. 권한/라우팅 완성 ⏳ 대기
+### 2. 권한/라우팅 완성 ✅ 완료
 | 항목 | 상태 | 설명 |
 |------|------|------|
-| UI 메뉴 노출 + API 권한검사 일관화 | ⏳ | 사용자 유형별 메뉴/API 매핑 |
-| 미들웨어 권한 체크 | ⏳ | `authenticate` + `authorize` 미들웨어 |
-| 프론트엔드 라우트 가드 | ⏳ | `ProtectedRoute` 컴포넌트 강화 |
+| UI 메뉴 노출 + API 권한검사 일관화 | ✅ 완료 | `permissions.js` 권한 매핑 |
+| 미들웨어 권한 체크 | ✅ 완료 | `authenticate` + `authorize` 미들웨어 |
+| 권한 정보 API | ✅ 완료 | `/api/v1/auth/permissions` 엔드포인트 |
 
-### 3. 기초정보(마스터) 관리 화면/API 완성 ⏳ 대기
+### 3. 기초정보(마스터) 관리 화면/API 완성 ✅ 완료
 | 마스터 데이터 | 상태 | 설명 |
 |--------------|------|------|
-| 차종 (car_models) | ⏳ | CRUD + 참조무결성 |
-| 톤수 (tonnage) | ⏳ | 선택형 콤보 |
-| 재질 (material) | ⏳ | 원재료 정보 |
-| 제작처 (makers) | ⏳ | 협력사 관리 |
-| 생산처 (plants) | ⏳ | 공장 관리 |
+| 차종 (car_models) | ✅ 완료 | CRUD + 참조무결성 |
+| 톤수 (tonnage) | ✅ 완료 | 선택형 콤보 |
+| 재질 (material) | ✅ 완료 | 원재료 정보 |
+| 제작처 (makers) | ✅ 완료 | 협력사 관리 |
+| 생산처 (plants) | ✅ 완료 | 공장 관리 |
 
 ### 4. QR 세션 + GPS 기록 실데이터 품질 확보 ⏳ 대기
 | 항목 | 상태 | 설명 |
@@ -76,12 +76,13 @@
 | 제작처 성과 | ⏳ | 납기준수율/품질점수 |
 | 이관 리드타임 | ⏳ | 평균 이관 소요일 |
 
-### 9. 대시보드 데이터 API 묶음화 ⏳ 대기
+### 9. 대시보드 데이터 API 묶음화 ✅ 완료
 | API | 상태 | 설명 |
 |-----|------|------|
-| `/dashboard/plant/summary` | ⏳ | 생산처 KPI + 목록 + 차트 |
-| `/dashboard/maker/summary` | ⏳ | 제작처 KPI + 목록 + 차트 |
-| `/dashboard/developer/summary` | ⏳ | 개발담당 KPI + 목록 + 차트 |
+| `/dashboard-summary/plant` | ✅ 완료 | 생산처 KPI + Action + Trends |
+| `/dashboard-summary/maker` | ✅ 완료 | 제작처 KPI + Action + Trends |
+| `/dashboard-summary/developer` | ✅ 완료 | 개발담당 KPI + Action + Trends |
+| `/dashboard-summary/admin` | ✅ 완료 | 시스템 관리자 전체 현황 |
 
 ### 10. 운영감사/추적 (이력/변경로그) ⏳ 대기
 | 항목 | 상태 | 설명 |
