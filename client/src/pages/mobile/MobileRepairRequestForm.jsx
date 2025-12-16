@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle, Clock, Calendar, FileText, Package, Wrench, Building, ClipboardList, Scale, Link2, User } from 'lucide-react';
+import { ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle, Clock, Calendar, FileText, Package, Wrench, Building, ClipboardList, Scale, Link2, User, WifiOff } from 'lucide-react';
 import { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
+import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
 
 export default function MobileRepairRequestForm() {
   const { id, moldId } = useParams();
@@ -14,6 +15,9 @@ export default function MobileRepairRequestForm() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(!id);
+  
+  // 오프라인 동기화
+  const { online, syncing, pendingCount, processQueue } = useOfflineSync();
   const [activeSection, setActiveSection] = useState('request');
   const [images, setImages] = useState([]);
   const [inspectionInfo, setInspectionInfo] = useState({ lastDailyCheck: null, lastPeriodicCheck: null, loading: false });
@@ -233,11 +237,12 @@ export default function MobileRepairRequestForm() {
   };
 
   return (<div className="min-h-screen bg-gray-50 pb-24">
+    <SyncStatus online={online} syncing={syncing} pendingCount={pendingCount} onSync={processQueue} />
     <div className="bg-white border-b sticky top-0 z-10">
-      <div className="px-4 py-3"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><button onClick={() => navigate(-1)} className="p-1"><ArrowLeft size={24} className="text-gray-600" /></button><div><h1 className="text-lg font-bold text-gray-800">{id ? '수리요청 수정' : '수리요청 등록'}</h1><p className="text-xs text-gray-500">{formData.part_number || '새 요청'}</p></div></div><div className="flex items-center gap-2">{id && !isEditing ? <button onClick={() => setIsEditing(true)} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium">수정</button> : id && isEditing ? <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium">취소</button> : null}</div></div></div>
+      <div className="px-4 py-3"><div className="flex items-center justify-between"><div className="flex items-center gap-3"><button onClick={() => navigate(-1)} className="p-1"><ArrowLeft size={24} className="text-gray-600" /></button><div><h1 className="text-lg font-bold text-gray-800">{id ? '수리요청 수정' : '수리요청 등록'}</h1><p className="text-xs text-gray-500">{formData.part_number || '새 요청'}{!online && <span className="ml-2 text-orange-500"><WifiOff size={12} className="inline" /> 오프라인</span>}</p></div></div><div className="flex items-center gap-2">{id && !isEditing ? <button onClick={() => setIsEditing(true)} className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium">수정</button> : id && isEditing ? <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium">취소</button> : null}</div></div></div>
       <div className="flex border-t overflow-x-auto">{sections.map(s => (<button key={s.id} onClick={() => setActiveSection(s.id)} className={`flex-shrink-0 px-3 py-2.5 text-center text-xs font-medium ${activeSection === s.id ? 'text-amber-600 border-b-2 border-amber-600 bg-amber-50' : 'text-gray-500'}`}><s.icon size={14} className="inline mr-1" />{s.name}</button>))}</div>
     </div>
     <div className="p-4"><div className="bg-white rounded-xl p-4 shadow-sm">{renderSection()}</div></div>
-    {isEditing && <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex gap-2"><button onClick={() => handleSave('draft')} disabled={saving} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"><Save size={18} />임시저장</button><button onClick={() => handleSave('submit')} disabled={saving} className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"><Send size={18} />{saving ? '저장 중...' : '제출'}</button></div>}
+    {isEditing && <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex gap-2"><button onClick={() => handleSave('draft')} disabled={saving} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"><Save size={18} />임시저장</button><button onClick={() => handleSave('submit')} disabled={saving || !online} className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2">{!online ? <WifiOff size={18} /> : <Send size={18} />}{saving ? '저장 중...' : !online ? '오프라인' : '제출'}</button></div>}
   </div>);
 }
