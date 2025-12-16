@@ -67,9 +67,11 @@
 | 항목 | 상태 | 비고 |
 |------|------|------|
 | 백엔드 URL | `https://cams-mold-management-system-production-b7d0.up.railway.app` | |
+| 프론트엔드 URL | `https://spirited-liberation-production-1a4d.up.railway.app` | |
 | Health Check | ✅ 정상 | `{"status":"ok"}` 응답 |
 | 인증 API | ✅ 정상 | 토큰 검증 작동 확인 |
-| 테스트 일시 | 2025-12-16 10:55 KST | |
+| 프론트엔드 | ✅ 정상 | HTML 페이지 정상 응답 |
+| 테스트 일시 | 2025-12-16 11:04 KST | |
 
 ---
 

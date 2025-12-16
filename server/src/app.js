@@ -14,7 +14,8 @@ const allowedOrigins = [
   'https://bountiful-nurturing-production-cd5c.up.railway.app',
   'https://cams-mold-management-system-production-cd5c.up.railway.app',
   'https://cams-mold-management-system-production-b7d0.up.railway.app',
-  'https://spirited-liberation-production.up.railway.app'
+  'https://spirited-liberation-production.up.railway.app',
+  'https://spirited-liberation-production-1a4d.up.railway.app'
 ];
 
 app.use(cors({
