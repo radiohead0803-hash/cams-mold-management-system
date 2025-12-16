@@ -169,6 +169,67 @@
 | 캐시 클리어 | POST /api/v1/cache/clear | ✅ |
 | 캐시 무효화 | POST /api/v1/cache/invalidate | ✅ |
 
+### 15. 대시보드 요약 API (신규)
+| API | 경로 | 상태 |
+|-----|------|------|
+| 생산처 대시보드 | GET /api/v1/dashboard-summary/plant | ✅ |
+| 제작처 대시보드 | GET /api/v1/dashboard-summary/maker | ✅ |
+| 개발담당 대시보드 | GET /api/v1/dashboard-summary/developer | ✅ |
+| 관리자 대시보드 | GET /api/v1/dashboard-summary/admin | ✅ |
+
+### 16. 점검 플로우 API (신규)
+| API | 경로 | 상태 |
+|-----|------|------|
+| 점검 시작 | POST /api/v1/inspection-flow/start | ✅ |
+| 점검 완료 | POST /api/v1/inspection-flow/complete | ✅ |
+| 빠른 수리요청 | POST /api/v1/inspection-flow/quick-repair | ✅ |
+| 오늘 점검 현황 | GET /api/v1/inspection-flow/today-status | ✅ |
+
+### 17. 수리 워크플로우 API (신규)
+| API | 경로 | 상태 |
+|-----|------|------|
+| 수리 접수 | POST /api/v1/repair-workflow/:id/accept | ✅ |
+| 수리 시작 | POST /api/v1/repair-workflow/:id/start | ✅ |
+| 수리 완료 | POST /api/v1/repair-workflow/:id/complete | ✅ |
+| 수리 확인 | POST /api/v1/repair-workflow/:id/confirm | ✅ |
+| 귀책 협의 시작 | POST /api/v1/repair-workflow/:id/start-liability-discussion | ✅ |
+| 귀책 협의 완료 | POST /api/v1/repair-workflow/:id/resolve-liability | ✅ |
+| 워크플로우 이력 | GET /api/v1/repair-workflow/:id/history | ✅ |
+| TAT 통계 | GET /api/v1/repair-workflow/stats/tat | ✅ |
+
+### 18. 통계/리포트 API (신규)
+| API | 경로 | 상태 |
+|-----|------|------|
+| 점검 완료율 | GET /api/v1/statistics-report/inspection-rate | ✅ |
+| 수리 TAT | GET /api/v1/statistics-report/repair-tat | ✅ |
+| NG Top | GET /api/v1/statistics-report/ng-top | ✅ |
+| 제작처 성과 | GET /api/v1/statistics-report/maker-performance | ✅ |
+| 이관 리드타임 | GET /api/v1/statistics-report/transfer-leadtime | ✅ |
+| 종합 리포트 | GET /api/v1/statistics-report/summary | ✅ |
+
+### 19. 알람 자동 연계 API (신규)
+| API | 경로 | 상태 |
+|-----|------|------|
+| 모든 알람 체크 | POST /api/v1/alerts/auto/run-all | ✅ |
+| 점검 지연 알람 | POST /api/v1/alerts/auto/inspection-overdue | ✅ |
+| 타수 경고 알람 | POST /api/v1/alerts/auto/shots-warning | ✅ |
+| 알람 유형 목록 | GET /api/v1/alerts/auto/types | ✅ |
+
+### 20. 운영감사/추적 API (신규)
+| API | 경로 | 상태 |
+|-----|------|------|
+| 감사 로그 조회 | GET /api/v1/audit-log | ✅ |
+| 엔티티별 이력 | GET /api/v1/audit-log/entity/:type/:id | ✅ |
+| 승인/반려 이력 | GET /api/v1/audit-log/approvals | ✅ |
+| 귀책비율 변경 이력 | GET /api/v1/audit-log/liability-changes | ✅ |
+| 마스터 수정 이력 | GET /api/v1/audit-log/master-changes | ✅ |
+| 감사 로그 통계 | GET /api/v1/audit-log/stats | ✅ |
+
+### 21. 권한 관리 API (신규)
+| API | 경로 | 상태 |
+|-----|------|------|
+| 권한 정보 조회 | GET /api/v1/auth/permissions | ✅ |
+
 ---
 
 ## ✅ 프론트엔드 구현 현황
@@ -370,11 +431,22 @@
 ### 📊 개발 완료율
 | 구분 | 완료 | 전체 | 완료율 |
 |------|------|------|--------|
-| 백엔드 API | 82 | 82 | **100%** |
+| 백엔드 API | 120+ | 120+ | **100%** |
 | 프론트엔드 페이지 | 80+ | 80+ | **100%** |
-| 데이터베이스 테이블 | 52 | 52 | **100%** |
+| 데이터베이스 테이블 | 53 | 53 | **100%** |
 | 알림 유형 | 16 | 16 | **100%** |
 | 체크리스트 항목 | 140 | 140 | **100%** |
 | 테스트 코드 | 20 | 20 | **100%** |
 
 **전체 개발 진행률: 100%** 🎉
+
+### 📅 최근 업데이트 (2025-12-16)
+- 대시보드 요약 API (4개)
+- 점검 플로우 API (4개)
+- 수리 워크플로우 API (8개)
+- 통계/리포트 API (6개)
+- 알람 자동 연계 API (4개)
+- 운영감사/추적 API (6개)
+- 권한 관리 API (1개)
+- GPS 서비스 강화 (이탈 감지, 알람)
+- 프론트엔드 대시보드 훅 추가
