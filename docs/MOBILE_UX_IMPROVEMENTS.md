@@ -359,3 +359,28 @@ if (canInstall()) {
   const installed = await promptInstall();
 }
 ```
+
+---
+
+## 🔗 컴포넌트 적용 현황 (2025-12-16 추가)
+
+### 적용된 페이지
+
+| 페이지 | 적용된 컴포넌트/훅 |
+|--------|-------------------|
+| `QrScanPage.jsx` | QRScanner, recentActions |
+| `MobileMoldDetail.jsx` | useGPSMonitor, GPSOutOfRangeAlert |
+| `MobileHomePage.jsx` | useOfflineSync, SyncStatus |
+| `MobileTransferRequest.jsx` | useOfflineSync, SyncStatus |
+| `MobileRepairRequestForm.jsx` | useOfflineSync, SyncStatus |
+| `ChecklistFormPage.jsx` | tempStorage (임시저장) |
+
+### 주요 기능
+
+| 기능 | 설명 |
+|------|------|
+| QR 스캔 | 카메라 기반 실시간 스캔, 수동 입력, 토치 |
+| GPS 이탈 알림 | 허용 범위(500m) 이탈 시 모달 알림 |
+| 오프라인 동기화 | 온라인 복귀 시 자동 큐 처리 |
+| 임시저장 | 30초 자동저장, 페이지 이탈 시 저장 |
+| 스캔 로그 | QR 스캔 성공/실패 로그 기록 |
