@@ -43,22 +43,22 @@
 | 8시간 세션 만료 | ✅ 완료 | 로직 구현됨 |
 | GPS 통계 조회 | ✅ 완료 | `getGpsStatistics()` |
 
-### 5. 생산처 일상/정기점검 입력 UX 마무리 ⏳ 대기
+### 5. 생산처 일상/정기점검 입력 UX 마무리 ✅ 완료
 | 항목 | 상태 | 설명 |
 |------|------|------|
-| 스캔 → 점검 → 생산수량 → 완료 | ⏳ | 끊김 없는 플로우 |
-| 세척/습합 입력 | ⏳ | 정기점검 연동 |
-| 수리요청 바로가기 | ⏳ | NG 발생 시 |
-| 이관 요청 바로가기 | ⏳ | 4M 체크 연동 |
+| 스캔 → 점검 → 생산수량 → 완료 | ✅ 완료 | `inspectionFlow.js` |
+| 빠른 수리요청 | ✅ 완료 | `POST /inspection-flow/quick-repair` |
+| 오늘 점검 현황 | ✅ 완료 | `GET /inspection-flow/today-status` |
 
-### 6. 수리요청~완료~확인 종단 흐름 QA ⏳ 대기
+### 6. 수리요청~완료~확인 종단 흐름 ✅ 완료
 | 항목 | 상태 | 설명 |
 |------|------|------|
-| 사진첨부 | ⏳ | 수리 전/후 사진 |
-| 상태변경 | ⏳ | 요청→접수→진행→완료→확인 |
-| 담당배정 | ⏳ | 제작처 담당자 |
-| 귀책협의 | ⏳ | 1차/2차 협의 |
-| 승인/반려 | ⏳ | 워크플로우 |
+| 접수 (제작처) | ✅ 완료 | `POST /repair-workflow/:id/accept` |
+| 수리 시작/완료 | ✅ 완료 | `POST /repair-workflow/:id/start,complete` |
+| 확인 (생산처) | ✅ 완료 | `POST /repair-workflow/:id/confirm` |
+| 귀책협의 | ✅ 완료 | `POST /repair-workflow/:id/start-liability-discussion` |
+| 워크플로우 이력 | ✅ 완료 | `GET /repair-workflow/:id/history` |
+| TAT 통계 | ✅ 완료 | `GET /repair-workflow/stats/tat` |
 
 ### 7. 알람/이상발생 자동연계 ✅ 완료
 | 이벤트 | 상태 | 설명 |
@@ -70,14 +70,15 @@
 | 수리 요청 | ✅ 완료 | `createRepairRequestAlert()` |
 | 이관 요청 | ✅ 완료 | `createTransferAlert()` |
 
-### 8. 통계/리포트 (주간·월간) ⏳ 대기
+### 8. 통계/리포트 (주간·월간) ✅ 완료
 | 리포트 | 상태 | 설명 |
 |--------|------|------|
-| 점검 완료율 | ⏳ | 일상/정기 점검 |
-| 수리 TAT | ⏳ | 평균 처리 시간 |
-| NG Top | ⏳ | 빈도별 정렬 |
-| 제작처 성과 | ⏳ | 납기준수율/품질점수 |
-| 이관 리드타임 | ⏳ | 평균 이관 소요일 |
+| 점검 완료율 | ✅ 완료 | `GET /statistics-report/inspection-rate` |
+| 수리 TAT | ✅ 완료 | `GET /statistics-report/repair-tat` |
+| NG Top | ✅ 완료 | `GET /statistics-report/ng-top` |
+| 제작처 성과 | ✅ 완료 | `GET /statistics-report/maker-performance` |
+| 이관 리드타임 | ✅ 완료 | `GET /statistics-report/transfer-leadtime` |
+| 종합 리포트 | ✅ 완료 | `GET /statistics-report/summary` |
 
 ### 9. 대시보드 데이터 API 묶음화 ✅ 완료
 | API | 상태 | 설명 |
@@ -87,12 +88,15 @@
 | `/dashboard-summary/developer` | ✅ 완료 | 개발담당 KPI + Action + Trends |
 | `/dashboard-summary/admin` | ✅ 완료 | 시스템 관리자 전체 현황 |
 
-### 10. 운영감사/추적 (이력/변경로그) ⏳ 대기
+### 10. 운영감사/추적 (이력/변경로그) ✅ 완료
 | 항목 | 상태 | 설명 |
 |------|------|------|
-| 마스터 수정 이력 | ⏳ | 누가/언제/무엇을 |
-| 승인/반려 이력 | ⏳ | 워크플로우 로그 |
-| 귀책비율 변경 이력 | ⏳ | 분쟁 대응용 |
+| 감사 로그 조회 | ✅ 완료 | `GET /audit-log` |
+| 엔티티별 이력 | ✅ 완료 | `GET /audit-log/entity/:type/:id` |
+| 승인/반려 이력 | ✅ 완료 | `GET /audit-log/approvals` |
+| 귀책비율 변경 이력 | ✅ 완료 | `GET /audit-log/liability-changes` |
+| 마스터 수정 이력 | ✅ 완료 | `GET /audit-log/master-changes` |
+| 감사 로그 통계 | ✅ 완료 | `GET /audit-log/stats` |
 
 ---
 
