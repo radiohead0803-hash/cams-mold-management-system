@@ -40,11 +40,27 @@ self.addEventListener('activate', (event) => {
 
 // Fetch 이벤트 (네트워크 우선, 실패 시 캐시)
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
   // API 요청은 캐시하지 않음
-  if (event.request.url.includes('/api/')) {
+  if (url.pathname.includes('/api/')) {
     return;
   }
 
+  // SPA 네비게이션 요청 처리 (HTML 요청)
+  // navigate 요청이면 index.html 반환 (SPA 라우팅 지원)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          // 오프라인 시 캐시된 index.html 반환
+          return caches.match('/') || caches.match('/index.html');
+        })
+    );
+    return;
+  }
+
+  // 정적 자산 요청 (JS, CSS, 이미지 등)
   event.respondWith(
     fetch(event.request)
       .then((response) => {

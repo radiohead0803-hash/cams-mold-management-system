@@ -54,6 +54,9 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+// 401 리다이렉트 디바운스 (중복 리다이렉트 방지)
+let isRedirecting = false
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
@@ -65,24 +68,35 @@ api.interceptors.response.use(
         '/daily-checks',
         '/repair-requests',
         '/mold-images',
-        '/notifications'
+        '/notifications',
+        '/alerts',
+        '/dashboard',
+        '/statistics'
       ]
       
       const shouldSkipRedirect = skipRedirectPaths.some(path => requestUrl.includes(path))
       
-      if (!shouldSkipRedirect) {
+      // 이미 리다이렉트 중이면 중복 실행 방지
+      if (!shouldSkipRedirect && !isRedirecting) {
+        isRedirecting = true
+        
         // Token expired or invalid
         localStorage.removeItem('cams-auth')
         
         // 현재 경로에 따라 적절한 로그인 페이지로 이동
         const currentPath = window.location.pathname
-        if (currentPath.startsWith('/mobile') || currentPath.startsWith('/m/')) {
-          // 모바일 페이지에서는 모바일 QR 로그인으로
-          window.location.href = '/mobile/qr-login'
-        } else {
-          // PC 페이지에서는 일반 로그인으로
-          window.location.href = '/login'
-        }
+        
+        // 짧은 딜레이 후 리다이렉트 (중복 요청 방지)
+        setTimeout(() => {
+          if (currentPath.startsWith('/mobile') || currentPath.startsWith('/m/')) {
+            // 모바일 페이지에서는 모바일 QR 로그인으로
+            window.location.replace('/mobile/qr-login')
+          } else {
+            // PC 페이지에서는 일반 로그인으로
+            window.location.replace('/login')
+          }
+          isRedirecting = false
+        }, 100)
       }
     }
     return Promise.reject(error)

@@ -267,6 +267,7 @@ export default function MobileQRLogin() {
     
     // 역할별 금형 상세 페이지로 이동
     navigate(`/mobile/mold/${mold.id}`, {
+      replace: true,
       state: {
         mold,
         role,
@@ -276,24 +277,8 @@ export default function MobileQRLogin() {
   }
 
   const navigateByRole = (userData) => {
-    const role = userData.user_type || userData.role
-    
-    switch (role) {
-      case 'system_admin':
-      case 'mold_developer':
-      case 'developer':
-        navigate('/mobile/qr-scan')
-        break
-      case 'maker':
-        navigate('/mobile/qr-scan')
-        break
-      case 'plant':
-      case 'production':
-        navigate('/mobile/qr-scan')
-        break
-      default:
-        navigate('/mobile/qr-scan')
-    }
+    // 로그인 후 모바일 홈으로 이동 (QR 스캔이 아닌 홈)
+    navigate('/mobile/home', { replace: true })
   }
 
   // ========== 렌더링 ==========
