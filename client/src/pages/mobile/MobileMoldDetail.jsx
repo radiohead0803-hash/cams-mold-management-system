@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { BottomCTA, GPSStatus, SessionTimer } from '../../components/mobile/MobileLayout'
 import { recentActions } from '../../utils/mobileStorage'
+import useGPSMonitor, { GPSOutOfRangeAlert } from '../../hooks/useGPSMonitor'
 
 /**
  * 모바일 금형 상세 페이지
@@ -30,24 +31,33 @@ export default function MobileMoldDetail() {
   const [showQRCode, setShowQRCode] = useState(false)
   const [activities, setActivities] = useState([])
   const [loadingActivities, setLoadingActivities] = useState(false)
-  const [gpsAccuracy, setGpsAccuracy] = useState(null)
   const [sessionExpires, setSessionExpires] = useState(null)
   
   // 사용자 역할
   const role = user?.user_type || user?.role || location.state?.role || 'plant'
 
+  // GPS 모니터링 (금형 위치 기준 500m 허용)
+  const allowedLocation = mold?.gps_latitude && mold?.gps_longitude 
+    ? { latitude: mold.gps_latitude, longitude: mold.gps_longitude }
+    : null
+  
+  const { 
+    currentPosition, 
+    isOutOfRange, 
+    distance, 
+    accuracy: gpsAccuracy 
+  } = useGPSMonitor({
+    allowedLocation,
+    allowedRadius: 500,
+    enabled: !!allowedLocation,
+    onOutOfRange: (data) => {
+      console.log('[GPS] Out of range:', data)
+    }
+  })
+
   useEffect(() => {
     if (!mold && moldId) {
       fetchMoldDetail()
-    }
-    
-    // GPS 위치 가져오기
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setGpsAccuracy(pos.coords.accuracy),
-        () => setGpsAccuracy(null),
-        { enableHighAccuracy: true }
-      )
     }
     
     // 세션 만료 시간 (8시간 후)
@@ -759,6 +769,22 @@ export default function MobileMoldDetail() {
           </div>
         </div>
       )}
+
+      {/* GPS 이탈 알림 */}
+      <GPSOutOfRangeAlert
+        isOutOfRange={isOutOfRange}
+        distance={distance}
+        allowedRadius={500}
+        onRequestReturn={() => {
+          // 금형 위치로 이동 안내
+          if (allowedLocation) {
+            window.open(
+              `https://maps.google.com/maps?daddr=${allowedLocation.latitude},${allowedLocation.longitude}`,
+              '_blank'
+            )
+          }
+        }}
+      />
     </div>
   )
 }
