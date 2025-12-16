@@ -10,7 +10,7 @@ import { useAuthStore } from '../../stores/authStore';
 import api from '../../lib/api';
 import { BottomNav } from '../../components/mobile/MobileLayout';
 import { recentActions } from '../../utils/mobileStorage';
-import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync';
+import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
 
 // 빠른 액션 버튼
 const QuickAction = ({ icon: Icon, label, color, onClick, badge }) => {
