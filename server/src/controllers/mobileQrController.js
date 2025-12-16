@@ -1,37 +1,19 @@
 const { Mold, ChecklistTemplate, QRSession, User, sequelize } = require('../models/newIndex');
 const { v4: uuidv4 } = require('uuid');
 const jwt = require('jsonwebtoken');
+const gpsService = require('../services/gpsService');
 
 /**
- * GPS 위치 기록 저장
+ * GPS 위치 기록 저장 (레거시 - gpsService 사용 권장)
  */
 async function recordGpsLocation(moldId, userId, gps, actionType, transaction = null) {
-  if (!gps || !gps.lat || !gps.lng) return;
-  
-  try {
-    await sequelize.query(`
-      INSERT INTO gps_locations (
-        mold_id, user_id, latitude, longitude, accuracy, action_type,
-        recorded_at, created_at
-      ) VALUES (
-        :mold_id, :user_id, :latitude, :longitude, :accuracy, :action_type,
-        NOW(), NOW()
-      )
-    `, {
-      replacements: {
-        mold_id: moldId,
-        user_id: userId,
-        latitude: gps.lat,
-        longitude: gps.lng,
-        accuracy: gps.accuracy || null,
-        action_type: actionType
-      },
-      transaction
-    });
-    console.log(`[GPS] Location recorded for mold ${moldId}: ${gps.lat}, ${gps.lng}`);
-  } catch (error) {
-    console.error('[GPS] Error recording location:', error.message);
-  }
+  return gpsService.recordGpsLocation({
+    moldId,
+    userId,
+    gps,
+    actionType,
+    transaction
+  });
 }
 
 /**
@@ -179,8 +161,17 @@ exports.qrLogin = async (req, res) => {
     });
 
     // GPS 위치 기록 (gps_locations 테이블에 저장)
+    let gpsDeviation = null;
     if (gps) {
       await recordGpsLocation(mold.id, user?.id, gps, 'qr_login');
+      
+      // GPS 이탈 감지
+      gpsDeviation = await gpsService.checkGpsDeviation(mold.id, gps);
+      if (gpsDeviation.isOutOfRange) {
+        // GPS 이탈 알람 생성
+        await gpsService.createGpsDeviationAlert(mold.id, user?.id, gpsDeviation);
+        console.log(`[qrLogin] GPS deviation detected for mold ${mold.id}: ${gpsDeviation.distance}m`);
+      }
     }
 
     // JWT 토큰 생성 (QR 세션용)
@@ -233,7 +224,13 @@ exports.qrLogin = async (req, res) => {
           role: user.user_type,
           companyName: user.company_name
         } : null,
-        templates
+        templates,
+        gpsStatus: gpsDeviation ? {
+          isOutOfRange: gpsDeviation.isOutOfRange,
+          distance: gpsDeviation.distance,
+          allowedRadius: gpsDeviation.allowedRadius,
+          registeredLocation: gpsDeviation.registeredLocation
+        } : null
       }
     });
 
