@@ -17,7 +17,9 @@
     "seed:all": "node seed-data.js && node seed-gps-locations.js",
     "db:migrate": "sequelize-cli db:migrate",
     "db:seed": "sequelize-cli db:seed:all",
-    "db:reset": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate && sequelize-cli db:seed:all"
+    "db:reset": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate && sequelize-cli db:seed:all",
+    "test": "jest --coverage --detectOpenHandles",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.450.0",
@@ -42,8 +44,10 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "jest": "^30.2.0",
     "nodemon": "^3.0.2",
-    "sequelize-cli": "^6.6.2"
+    "sequelize-cli": "^6.6.2",
+    "supertest": "^7.1.4"
   },
   "engines": {
     "node": "18.x"

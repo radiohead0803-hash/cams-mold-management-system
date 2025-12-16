@@ -50,8 +50,11 @@ const cleanupCache = () => {
   }
 };
 
-// 주기적 캐시 정리 (5분마다)
-setInterval(cleanupCache, 5 * 60 * 1000);
+// 주기적 캐시 정리 (5분마다) - 테스트 환경에서는 비활성화
+let cleanupInterval = null;
+if (process.env.NODE_ENV !== 'test') {
+  cleanupInterval = setInterval(cleanupCache, 5 * 60 * 1000);
+}
 
 /**
  * 캐시 미들웨어
