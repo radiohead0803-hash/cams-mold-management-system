@@ -76,6 +76,10 @@ import MobileLocationMap from './pages/mobile/MobileLocationMap'
 import MobileProfile from './pages/mobile/MobileProfile'
 import MobileNotificationSettings from './pages/mobile/MobileNotificationSettings'
 import MobileHelp from './pages/mobile/MobileHelp'
+import ChecklistSelectPage from './pages/mobile/ChecklistSelectPage'
+import ChecklistFormPage from './pages/mobile/ChecklistFormPage'
+import ChecklistCompletePage from './pages/mobile/ChecklistCompletePage'
+import QrScanPageMobile from './pages/mobile/QrScanPage'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
 import StandardDocumentMaster from './pages/StandardDocumentMaster'
@@ -201,6 +205,12 @@ function App() {
       {/* Mobile - 도움말 */}
       <Route path="/mobile/help" element={<MobileHelp />} />
       <Route path="/mobile/about" element={<MobileHelp />} />
+      
+      {/* Mobile - 점검 플로우 */}
+      <Route path="/mobile/qr-scan" element={<QrScanPageMobile />} />
+      <Route path="/mobile/checklist-select" element={<ChecklistSelectPage />} />
+      <Route path="/mobile/checklist-form" element={<ChecklistFormPage />} />
+      <Route path="/mobile/checklist-complete" element={<ChecklistCompletePage />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
