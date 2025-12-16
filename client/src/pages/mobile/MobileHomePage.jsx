@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Package, ClipboardCheck, Wrench, Trash2, FileCheck, 
   Bell, QrCode, Settings, ChevronRight, Calendar,
-  TrendingUp, AlertTriangle, CheckCircle, Cog, BarChart3, MapPin, History, List
+  TrendingUp, AlertTriangle, CheckCircle, Cog, BarChart3, MapPin, History, List,
+  Clock, Wifi, WifiOff
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import api from '../../lib/api';
+import { BottomNav } from '../../components/mobile/MobileLayout';
+import { recentActions, isOnline, onOnlineStatusChange } from '../../utils/mobileStorage';
 
 // 빠른 액션 버튼
 const QuickAction = ({ icon: Icon, label, color, onClick, badge }) => {
@@ -73,10 +76,26 @@ export default function MobileHomePage() {
     maintenanceDue: 0
   });
   const [loading, setLoading] = useState(true);
+  const [recentMolds, setRecentMolds] = useState([]);
+  const [online, setOnline] = useState(isOnline());
 
   useEffect(() => {
     loadStats();
+    loadRecentActions();
+    
+    // 온라인 상태 감지
+    const cleanup = onOnlineStatusChange(setOnline);
+    return cleanup;
   }, []);
+
+  const loadRecentActions = async () => {
+    try {
+      const actions = await recentActions.getAll(5);
+      setRecentMolds(actions);
+    } catch (error) {
+      console.error('Failed to load recent actions:', error);
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -214,41 +233,61 @@ export default function MobileHomePage() {
         </div>
       </div>
 
-      {/* 최근 금형 */}
-      <div className="px-4 mt-6 pb-8">
+      {/* 최근 작업 금형 */}
+      <div className="px-4 mt-6 pb-24">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-900">최근 작업 금형</h2>
           <button
-            onClick={() => navigate('/molds')}
+            onClick={() => navigate('/mobile/molds')}
             className="text-xs text-blue-600 font-medium"
           >
             전체보기
           </button>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-100">
-          {[1, 2, 3].map((i) => (
-            <button
-              key={i}
-              onClick={() => navigate(`/mobile/mold/${i}`)}
-              className="w-full p-4 flex items-center gap-3 text-left"
-            >
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Package size={20} className="text-gray-500" />
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-gray-900">M2024-00{i}</div>
-                <div className="text-xs text-gray-500">프론트 범퍼 금형</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                  양산
-                </span>
-                <ChevronRight size={16} className="text-gray-400" />
-              </div>
-            </button>
-          ))}
+          {recentMolds.length > 0 ? (
+            recentMolds.map((action) => (
+              <button
+                key={action.id}
+                onClick={() => navigate(`/mobile/mold/${action.moldId}`)}
+                className="w-full p-4 flex items-center gap-3 text-left"
+              >
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Package size={20} className="text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">{action.moldNumber}</div>
+                  <div className="text-xs text-gray-500">{action.description}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                    <Clock size={12} />
+                    {new Date(action.timestamp).toLocaleDateString('ko-KR')}
+                  </span>
+                  <ChevronRight size={16} className="text-gray-400" />
+                </div>
+              </button>
+            ))
+          ) : (
+            <div className="p-8 text-center text-gray-500">
+              <History size={32} className="mx-auto mb-2 opacity-30" />
+              <p className="text-sm">최근 작업 기록이 없습니다</p>
+              <p className="text-xs mt-1">QR 스캔으로 금형 작업을 시작하세요</p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* 오프라인 표시 */}
+      {!online && (
+        <div className="fixed top-0 left-0 right-0 bg-orange-500 text-white text-center py-2 text-sm z-50 flex items-center justify-center gap-2">
+          <WifiOff size={16} />
+          오프라인 모드
+        </div>
+      )}
+
+      {/* 하단 네비게이션 */}
+      <BottomNav />
     </div>
   );
 }
