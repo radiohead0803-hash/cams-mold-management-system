@@ -4,12 +4,13 @@ import {
   Package, ClipboardCheck, Wrench, Trash2, FileCheck, 
   Bell, QrCode, Settings, ChevronRight, Calendar,
   TrendingUp, AlertTriangle, CheckCircle, Cog, BarChart3, MapPin, History, List,
-  Clock, Wifi, WifiOff
+  Clock, Wifi, WifiOff, RefreshCw
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import api from '../../lib/api';
 import { BottomNav } from '../../components/mobile/MobileLayout';
-import { recentActions, isOnline, onOnlineStatusChange } from '../../utils/mobileStorage';
+import { recentActions } from '../../utils/mobileStorage';
+import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync';
 
 // 빠른 액션 버튼
 const QuickAction = ({ icon: Icon, label, color, onClick, badge }) => {
@@ -77,15 +78,13 @@ export default function MobileHomePage() {
   });
   const [loading, setLoading] = useState(true);
   const [recentMolds, setRecentMolds] = useState([]);
-  const [online, setOnline] = useState(isOnline());
+  
+  // 오프라인 동기화 훅
+  const { online, syncing, pendingCount, processQueue } = useOfflineSync();
 
   useEffect(() => {
     loadStats();
     loadRecentActions();
-    
-    // 온라인 상태 감지
-    const cleanup = onOnlineStatusChange(setOnline);
-    return cleanup;
   }, []);
 
   const loadRecentActions = async () => {
@@ -278,13 +277,13 @@ export default function MobileHomePage() {
         </div>
       </div>
 
-      {/* 오프라인 표시 */}
-      {!online && (
-        <div className="fixed top-0 left-0 right-0 bg-orange-500 text-white text-center py-2 text-sm z-50 flex items-center justify-center gap-2">
-          <WifiOff size={16} />
-          오프라인 모드
-        </div>
-      )}
+      {/* 오프라인/동기화 상태 표시 */}
+      <SyncStatus 
+        online={online} 
+        syncing={syncing} 
+        pendingCount={pendingCount} 
+        onSync={processQueue} 
+      />
 
       {/* 하단 네비게이션 */}
       <BottomNav />
