@@ -114,6 +114,7 @@ const reportsRouter = require('./routes/reports');
 const emailRouter = require('./routes/email');
 const pushRouter = require('./routes/push');
 const cacheRouter = require('./routes/cache');
+const dashboardSummaryRouter = require('./routes/dashboardSummary');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -194,6 +195,8 @@ app.use('/api/v1/email', emailRouter);
 app.use('/api/v1/push', pushRouter);
 // 캐시 관리
 app.use('/api/v1/cache', cacheRouter);
+// 대시보드 요약 (역할별 KPI + Action + Trends)
+app.use('/api/v1/dashboard-summary', dashboardSummaryRouter);
 
 // Health check
 app.get('/health', (req, res) => {
