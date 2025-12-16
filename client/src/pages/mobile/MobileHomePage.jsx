@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Package, ClipboardCheck, Wrench, Trash2, FileCheck, 
   Bell, QrCode, Settings, ChevronRight, Calendar,
-  TrendingUp, AlertTriangle, CheckCircle, Cog
+  TrendingUp, AlertTriangle, CheckCircle, Cog, BarChart3, MapPin, History, List
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import api from '../../lib/api';
@@ -100,13 +100,20 @@ export default function MobileHomePage() {
 
   const quickActions = [
     { icon: QrCode, label: 'QR 스캔', color: 'blue', path: '/qr/scan' },
+    { icon: List, label: '금형목록', color: 'blue', path: '/mobile/molds' },
     { icon: ClipboardCheck, label: '일상점검', color: 'green', path: '/mobile/daily-check' },
     { icon: Calendar, label: '정기점검', color: 'purple', path: '/mobile/periodic-check' },
     { icon: Cog, label: '유지보전', color: 'orange', path: '/mobile/maintenance' },
     { icon: Wrench, label: '수리요청', color: 'red', path: '/mobile/repair-request' },
+    { icon: BarChart3, label: '통계', color: 'purple', path: '/mobile/reports' },
+    { icon: Bell, label: '알림', color: 'orange', path: '/mobile/alerts', badge: stats.unreadAlerts }
+  ];
+  
+  const moreActions = [
     { icon: Trash2, label: '폐기관리', color: 'gray', path: '/mobile/scrapping' },
     { icon: FileCheck, label: '체크리스트', color: 'blue', path: '/mobile/pre-production-checklist' },
-    { icon: Bell, label: '알림', color: 'orange', path: '/alerts', badge: stats.unreadAlerts }
+    { icon: MapPin, label: '위치지도', color: 'green', path: '/mobile/location-map' },
+    { icon: QrCode, label: 'QR세션', color: 'blue', path: '/mobile/qr-sessions' }
   ];
 
   return (
@@ -159,6 +166,22 @@ export default function MobileHomePage() {
                 onClick={() => navigate(action.path)}
               />
             ))}
+          </div>
+          
+          {/* 추가 메뉴 */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <h3 className="text-xs text-gray-500 mb-3">더보기</h3>
+            <div className="grid grid-cols-4 gap-3">
+              {moreActions.map((action) => (
+                <QuickAction
+                  key={action.label}
+                  icon={action.icon}
+                  label={action.label}
+                  color={action.color}
+                  onClick={() => navigate(action.path)}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>

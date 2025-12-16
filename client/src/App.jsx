@@ -67,6 +67,12 @@ import MobileMaintenancePage from './pages/mobile/MobileMaintenancePage'
 import MobilePreProductionChecklist from './pages/mobile/MobilePreProductionChecklist'
 import MobileScrappingPage from './pages/mobile/MobileScrappingPage'
 import MobileHomePage from './pages/mobile/MobileHomePage'
+import MobileAlerts from './pages/mobile/MobileAlerts'
+import MobileReports from './pages/mobile/MobileReports'
+import MobileMoldList from './pages/mobile/MobileMoldList'
+import MobileMoldHistory from './pages/mobile/MobileMoldHistory'
+import MobileQRSessions from './pages/mobile/MobileQRSessions'
+import MobileLocationMap from './pages/mobile/MobileLocationMap'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
 import StandardDocumentMaster from './pages/StandardDocumentMaster'
@@ -157,6 +163,29 @@ function App() {
       {/* Mobile - 홈 */}
       <Route path="/mobile/home" element={<MobileHomePage />} />
       <Route path="/mobile" element={<MobileHomePage />} />
+      
+      {/* Mobile - 알림 */}
+      <Route path="/mobile/alerts" element={<MobileAlerts />} />
+      <Route path="/mobile/notifications" element={<MobileAlerts />} />
+      
+      {/* Mobile - 통계/리포트 */}
+      <Route path="/mobile/reports" element={<MobileReports />} />
+      <Route path="/mobile/statistics" element={<MobileReports />} />
+      
+      {/* Mobile - 금형 목록 */}
+      <Route path="/mobile/molds" element={<MobileMoldList />} />
+      <Route path="/mobile/mold-list" element={<MobileMoldList />} />
+      
+      {/* Mobile - 금형 이력 */}
+      <Route path="/mobile/mold/:moldId/history" element={<MobileMoldHistory />} />
+      <Route path="/mobile/mold-history/:moldId" element={<MobileMoldHistory />} />
+      
+      {/* Mobile - QR 세션 */}
+      <Route path="/mobile/qr-sessions" element={<MobileQRSessions />} />
+      
+      {/* Mobile - 금형 위치 지도 */}
+      <Route path="/mobile/location-map" element={<MobileLocationMap />} />
+      <Route path="/mobile/mold-location" element={<MobileLocationMap />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
