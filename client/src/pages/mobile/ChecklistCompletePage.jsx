@@ -1,5 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { CheckCircle, QrCode, LayoutDashboard, Share2 } from 'lucide-react';
+import { recentActions } from '../../utils/mobileStorage';
 
 export default function ChecklistCompletePage() {
   const { state } = useLocation();
@@ -7,13 +9,23 @@ export default function ChecklistCompletePage() {
   const { mold, template } = state || {};
 
   useEffect(() => {
-    // 3초 후 자동으로 QR 스캔 페이지로 이동
+    // 최근 작업 기록 저장
+    if (mold && template) {
+      recentActions.add(
+        mold.id,
+        mold.code || mold.mold_code,
+        template.type === 'daily' ? 'daily_check' : 'periodic_check',
+        `${template.name} 완료`
+      );
+    }
+
+    // 5초 후 자동으로 홈 페이지로 이동
     const timer = setTimeout(() => {
-      navigate('/mobile/qr-scan', { replace: true });
-    }, 3000);
+      navigate('/mobile/home', { replace: true });
+    }, 5000);
 
     return () => clearTimeout(timer);
-  }, [navigate]);
+  }, [navigate, mold, template]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center p-4">
@@ -68,7 +80,7 @@ export default function ChecklistCompletePage() {
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
             <div className="text-sm text-blue-700">
-              <p>3초 후 자동으로 QR 스캔 화면으로 이동합니다.</p>
+              <p>5초 후 자동으로 홈 화면으로 이동합니다.</p>
             </div>
           </div>
         </div>
@@ -76,16 +88,18 @@ export default function ChecklistCompletePage() {
         {/* 버튼 */}
         <div className="space-y-2">
           <button
-            onClick={() => navigate('/mobile/qr-scan', { replace: true })}
-            className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors"
+            onClick={() => navigate('/qr/scan', { replace: true })}
+            className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
           >
+            <QrCode className="w-5 h-5" />
             다른 금형 점검하기
           </button>
           <button
-            onClick={() => navigate('/dashboard', { replace: true })}
-            className="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-lg border border-slate-200 transition-colors"
+            onClick={() => navigate('/mobile/home', { replace: true })}
+            className="w-full py-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-lg border border-slate-200 transition-colors flex items-center justify-center gap-2"
           >
-            대시보드로 이동
+            <LayoutDashboard className="w-5 h-5" />
+            홈으로 이동
           </button>
         </div>
       </div>
