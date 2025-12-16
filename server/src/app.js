@@ -110,6 +110,7 @@ const userManagementRouter = require('./routes/userManagement');
 const reportsRouter = require('./routes/reports');
 const emailRouter = require('./routes/email');
 const pushRouter = require('./routes/push');
+const cacheRouter = require('./routes/cache');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -188,6 +189,8 @@ app.use('/api/v1/reports', reportsRouter);
 app.use('/api/v1/email', emailRouter);
 // 푸시 알림
 app.use('/api/v1/push', pushRouter);
+// 캐시 관리
+app.use('/api/v1/cache', cacheRouter);
 
 // Health check
 app.get('/health', (req, res) => {
