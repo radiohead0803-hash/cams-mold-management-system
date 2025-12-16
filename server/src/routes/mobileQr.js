@@ -397,4 +397,143 @@ router.post('/molds/update-qr-codes', async (req, res) => {
   }
 });
 
+/**
+ * QR 스캔 로그 기록
+ * POST /api/v1/mobile/qr/scan-log
+ * Body: { qr_code, mold_id, user_id, scan_result, error_message, gps, device_info }
+ */
+router.post('/qr/scan-log', async (req, res) => {
+  try {
+    const { 
+      qr_code, 
+      mold_id, 
+      user_id, 
+      scan_result, // 'success' | 'fail' | 'not_found'
+      error_message,
+      gps,
+      device_info 
+    } = req.body;
+
+    // audit_logs 테이블에 기록
+    await sequelize.query(`
+      INSERT INTO audit_logs (
+        entity_type, entity_id, action, user_id,
+        new_value, description, ip_address, created_at
+      ) VALUES (
+        'qr_scan', :mold_id, :action, :user_id,
+        :new_value, :description, :ip_address, NOW()
+      )
+    `, {
+      replacements: {
+        mold_id: mold_id || null,
+        action: scan_result === 'success' ? 'qr_scan_success' : 'qr_scan_fail',
+        user_id: user_id || null,
+        new_value: JSON.stringify({
+          qr_code,
+          scan_result,
+          gps,
+          device_info,
+          scanned_at: new Date().toISOString()
+        }),
+        description: scan_result === 'success' 
+          ? `QR 스캔 성공: ${qr_code}` 
+          : `QR 스캔 실패: ${qr_code} - ${error_message || '알 수 없는 오류'}`,
+        ip_address: req.ip || req.connection?.remoteAddress || null
+      }
+    });
+
+    console.log(`[QR Scan Log] ${scan_result}: ${qr_code}`);
+
+    return res.json({
+      success: true,
+      message: '스캔 로그가 기록되었습니다.'
+    });
+  } catch (error) {
+    console.error('[QR Scan Log] Error:', error);
+    // 로그 기록 실패해도 에러 반환하지 않음
+    return res.json({
+      success: true,
+      message: '스캔 로그 기록 중 오류가 발생했습니다.',
+      warning: error.message
+    });
+  }
+});
+
+/**
+ * QR 스캔 로그 조회
+ * GET /api/v1/mobile/qr/scan-logs
+ */
+router.get('/qr/scan-logs', async (req, res) => {
+  try {
+    const { mold_id, user_id, scan_result, limit = 50 } = req.query;
+
+    let whereClause = "entity_type = 'qr_scan'";
+    const replacements = { limit: parseInt(limit) };
+
+    if (mold_id) {
+      whereClause += ' AND entity_id = :mold_id';
+      replacements.mold_id = mold_id;
+    }
+
+    if (user_id) {
+      whereClause += ' AND user_id = :user_id';
+      replacements.user_id = user_id;
+    }
+
+    if (scan_result) {
+      whereClause += scan_result === 'success' 
+        ? " AND action = 'qr_scan_success'" 
+        : " AND action = 'qr_scan_fail'";
+    }
+
+    const [logs] = await sequelize.query(`
+      SELECT 
+        al.id, al.entity_id as mold_id, al.action, al.user_id,
+        al.new_value, al.description, al.ip_address, al.created_at,
+        u.name as user_name
+      FROM audit_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      WHERE ${whereClause}
+      ORDER BY al.created_at DESC
+      LIMIT :limit
+    `, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    // 결과 포맷팅
+    const formattedLogs = (logs || []).map(log => {
+      let parsedValue = {};
+      try {
+        parsedValue = JSON.parse(log.new_value || '{}');
+      } catch (e) {}
+
+      return {
+        id: log.id,
+        mold_id: log.mold_id,
+        user_id: log.user_id,
+        user_name: log.user_name,
+        scan_result: log.action === 'qr_scan_success' ? 'success' : 'fail',
+        qr_code: parsedValue.qr_code,
+        gps: parsedValue.gps,
+        device_info: parsedValue.device_info,
+        description: log.description,
+        scanned_at: parsedValue.scanned_at || log.created_at,
+        created_at: log.created_at
+      };
+    });
+
+    return res.json({
+      success: true,
+      data: formattedLogs
+    });
+  } catch (error) {
+    console.error('[QR Scan Logs] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: { message: 'QR 스캔 로그 조회 실패' }
+    });
+  }
+});
+
 module.exports = router;

@@ -7,8 +7,11 @@ import {
   ArrowLeft, QrCode, Settings, Wrench, ClipboardCheck, 
   Truck, BarChart3, AlertTriangle, CheckCircle, Clock,
   Camera, FileText, MapPin, Activity, Box, Thermometer,
-  User, Shield, Calendar, ChevronRight, Upload, Eye
+  User, Shield, Calendar, ChevronRight, Upload, Eye,
+  Navigation, Gauge
 } from 'lucide-react'
+import { BottomCTA, GPSStatus, SessionTimer } from '../../components/mobile/MobileLayout'
+import { recentActions } from '../../utils/mobileStorage'
 
 /**
  * 모바일 금형 상세 페이지
@@ -27,6 +30,8 @@ export default function MobileMoldDetail() {
   const [showQRCode, setShowQRCode] = useState(false)
   const [activities, setActivities] = useState([])
   const [loadingActivities, setLoadingActivities] = useState(false)
+  const [gpsAccuracy, setGpsAccuracy] = useState(null)
+  const [sessionExpires, setSessionExpires] = useState(null)
   
   // 사용자 역할
   const role = user?.user_type || user?.role || location.state?.role || 'plant'
@@ -35,6 +40,20 @@ export default function MobileMoldDetail() {
     if (!mold && moldId) {
       fetchMoldDetail()
     }
+    
+    // GPS 위치 가져오기
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setGpsAccuracy(pos.coords.accuracy),
+        () => setGpsAccuracy(null),
+        { enableHighAccuracy: true }
+      )
+    }
+    
+    // 세션 만료 시간 (8시간 후)
+    const expires = new Date()
+    expires.setHours(expires.getHours() + 8)
+    setSessionExpires(expires.toISOString())
   }, [moldId])
 
   // 활동 이력 가져오기
@@ -531,6 +550,12 @@ export default function MobileMoldDetail() {
             </div>
           </div>
         </div>
+        
+        {/* GPS 및 세션 상태 */}
+        <div className="flex items-center gap-2 mt-3">
+          <GPSStatus accuracy={gpsAccuracy} />
+          {sessionExpires && <SessionTimer expiresAt={sessionExpires} />}
+        </div>
       </div>
 
       {/* 타수 현황 */}
@@ -673,22 +698,33 @@ export default function MobileMoldDetail() {
       </div>
 
       {/* 하단 고정 버튼 */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t flex gap-2">
-        <button
-          onClick={() => setShowQRCode(true)}
-          className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg flex items-center justify-center gap-2"
-        >
-          <QrCode className="w-5 h-5" />
-          QR 코드
-        </button>
-        <button
-          onClick={() => navigate('/mobile/qr-login')}
-          className={`flex-1 py-3 ${roleConfig.bgColor} text-white rounded-lg flex items-center justify-center gap-2`}
-        >
-          <Camera className="w-5 h-5" />
-          다른 금형 스캔
-        </button>
-      </div>
+      <BottomCTA>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowQRCode(true)}
+            className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg flex items-center justify-center gap-2"
+          >
+            <QrCode className="w-5 h-5" />
+            QR 코드
+          </button>
+          <button
+            onClick={async () => {
+              // 최근 작업 기록 저장
+              await recentActions.add(
+                mold.id || moldId,
+                mold.mold_code || mold.code,
+                'view',
+                mold.part_name || mold.mold_name || '금형 조회'
+              )
+              navigate('/qr/scan')
+            }}
+            className={`flex-1 py-3 ${roleConfig.bgColor} text-white rounded-lg flex items-center justify-center gap-2`}
+          >
+            <Camera className="w-5 h-5" />
+            다른 금형 스캔
+          </button>
+        </div>
+      </BottomCTA>
 
       {/* QR 코드 모달 */}
       {showQRCode && (
