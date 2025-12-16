@@ -74,6 +74,7 @@ import MobileMoldHistory from './pages/mobile/MobileMoldHistory'
 import MobileQRSessions from './pages/mobile/MobileQRSessions'
 import MobileLocationMap from './pages/mobile/MobileLocationMap'
 import MobileProfile from './pages/mobile/MobileProfile'
+import MobileNotificationSettings from './pages/mobile/MobileNotificationSettings'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
 import StandardDocumentMaster from './pages/StandardDocumentMaster'
@@ -191,6 +192,10 @@ function App() {
       {/* Mobile - 프로필 */}
       <Route path="/mobile/profile" element={<MobileProfile />} />
       <Route path="/mobile/my" element={<MobileProfile />} />
+      
+      {/* Mobile - 알림 설정 */}
+      <Route path="/mobile/settings/notifications" element={<MobileNotificationSettings />} />
+      <Route path="/mobile/notification-settings" element={<MobileNotificationSettings />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
