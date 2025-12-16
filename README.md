@@ -6,6 +6,9 @@
 
 ### 📚 프로젝트 문서
 
+#### 📘 운영 가이드
+- **[OPERATION_GUIDE.md](docs/OPERATION_GUIDE.md)** - 시스템 운영 가이드 (사용자 배포용)
+
 #### 사용자 유형 4가지 (공통)
 - **CAMS 시스템 관리 담당 (본사)** – 시스템 규칙/감사/전사 모니터링, 권한 설정 · `docs/LOGIN_AND_PERMISSIONS.md`
 - **금형개발 담당 (본사)** – 금형 사양 정의·승인·품질, 문서 기반 설계/사용 통계 검토 · `docs/PROJECT_OVERVIEW.md`
@@ -67,18 +70,18 @@
 - **Week 3**: `docs/WEEK3_DEVELOPMENT.md`, `docs/NG_HANDLING_WORKFLOW.md`, `docs/REPAIR_LIABILITY_WORKFLOW.md` 중심
   - 수리 요청 → 1/2차 협의 워크플로우 구현, `docs/MOLD_LIFECYCLE_DETAILED.md` 체크리스트 연결
   - 제작처↔생산처 이관 상태 전환·점검 이력 추가, NG 유형별 대응 로직 및 알림(`docs/SYSTEM_SPECIFICATIONS.md`) 적용
-  - 현장 이슈 대시보드(`docs/MOLD_ISSUE_*`)에 상태/피드백 표시 기능 포함
+  - 현장 이슈 대시보드에 상태/피드백 표시 기능 포함
 - **Week 4**: `docs/WEEK4_DEVELOPMENT.md`, `docs/DESIGN_SYSTEM.md`, `docs/RAILWAY_DEPLOYMENT_GUIDE.md` 중심
   - Apple Design System 기반 반응형 컴포넌트·대시보드 마무리, `docs/DASHBOARD_GUIDE.md` 리포트 카드 검토
-  - Railway CI/CD 설정(`docs/RAILWAY_SETUP.md`, `docs/GIT_RAILWAY_WORKFLOW.md`)→배포 스크립트, 자동화 승인(`docs/ADMIN_MODIFICATION_GUIDE.md`)
-  - `docs/Report_Templates.md`에 따라 출시/운영 보고 정리, `docs/WORKFLOW_SUMMARY.md`로 전체 흐름 검증
+  - Railway CI/CD 설정(`docs/RAILWAY_DEPLOYMENT_GUIDE.md`)→배포 스크립트, 자동화 승인(`docs/ADMIN_MODIFICATION_GUIDE.md`)
+  - `docs/WORKFLOW_SUMMARY.md`로 전체 흐름 검증
 
 ---
 
 ### 기술 문서
 
 7. **[DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md)** - 데이터베이스 스키마
-   - 총 41개 테이블, 10개 카테고리
+   - 총 52개 테이블, 10개 카테고리
    - 상세 SQL 스키마 정의 (마스터 체크리스트·템플릿/사진/이관 포함)
    - 인덱스 및 관계 설정
 8. **[SYSTEM_SPECIFICATIONS.md](docs/SYSTEM_SPECIFICATIONS.md)** - 시스템 사양
@@ -94,12 +97,6 @@
    - 문서 마스터 관리 및 리비젼 시스템
    - WebSocket 기반 실시간 동기화
    
-9-1. **[DATA_FLOW_SUMMARY.md](docs/DATA_FLOW_SUMMARY.md)** - 데이터 흐름 핵심 요약
-   - 전체 데이터 흐름 구조
-   - 제작전 체크리스트 81개 항목
-   - 12단계 공정 및 경도측정
-   - QR 스캔 모바일 대시보드 API
-   - 실시간 데이터 동기화
 10. **[DAILY_CHECK_ITEMS.md](docs/DAILY_CHECK_ITEMS.md)** - 일상점검·이관 체크리스트
    - 인계처 확인란, 사진/문서 첨부 흐름
    - UI 모형, 자동 알림 및 API/DB 참조 테이블
@@ -117,17 +114,16 @@
 ### 운영 가이드
 
 12. **[INSPECTION_SCHEDULE_GUIDE.md](docs/INSPECTION_SCHEDULE_GUIDE.md)** - 점검 스케줄 가이드
-10. **[INSPECTION_SCHEDULE_GUIDE.md](docs/INSPECTION_SCHEDULE_GUIDE.md)** - 점검 스케줄 가이드
    - 생산수량 기반 점검 관리
    - QR 스캔 알람 시스템
    - 자동 연동 프로세스
 
-11. **[ADMIN_MODIFICATION_GUIDE.md](docs/ADMIN_MODIFICATION_GUIDE.md)** - 관리자 수정 가이드
+13. **[ADMIN_MODIFICATION_GUIDE.md](docs/ADMIN_MODIFICATION_GUIDE.md)** - 관리자 수정 가이드
     - 협력사 데이터 수정 이력 관리
     - 다단계 승인 프로세스
     - 자동 배포 시스템
 
-12. **[PRODUCTION_QUANTITY_WORKFLOW.md](docs/PRODUCTION_QUANTITY_WORKFLOW.md)** - 생산수량 연동
+14. **[PRODUCTION_QUANTITY_WORKFLOW.md](docs/PRODUCTION_QUANTITY_WORKFLOW.md)** - 생산수량 연동
     - 일상점검 시 생산수량 입력
     - 자동 연동 (점검 스케줄, 타수, 알람)
     - 데이터 흐름도
@@ -136,7 +132,7 @@
 
 ### 🎨 디자인 시스템
 
-13. **[DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)** - Apple Design System 가이드
+15. **[DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)** - Apple Design System 가이드
     - 컬러 시스템 (Primary, Neutral, Accent)
     - 타이포그래피 (SF Pro Text fallback)
     - 애니메이션 (fade-in, slide-up, scale-in, pulse)
@@ -146,7 +142,7 @@
     - 다크 모드 지원
     - 컴포넌트 스타일 가이드
 
-14. **[UI_UX_SPECIFICATIONS.md](docs/UI_UX_SPECIFICATIONS.md)** - UI/UX 상세 명세서
+16. **[UI_UX_SPECIFICATIONS.md](docs/UI_UX_SPECIFICATIONS.md)** - UI/UX 상세 명세서
     - 로그인 화면 구조 및 디자인
     - QR 코드 스캔 페이지
     - 상태별 UI (기본/포커스/호버/에러/로딩)
@@ -155,7 +151,7 @@
     - 보안 기능 및 API 연동
     - 접근성 (Accessibility) 가이드
 
-15. **[DASHBOARD_GUIDE.md](docs/DASHBOARD_GUIDE.md)** - 대시보드 가이드
+17. **[DASHBOARD_GUIDE.md](docs/DASHBOARD_GUIDE.md)** - 대시보드 가이드
     - CAMS 시스템 관리 담당 대시보드
     - 금형개발 담당 대시보드
     - GPS 금형 위치 추적
@@ -165,43 +161,43 @@
 
 ### 🔄 금형 Lifecycle 및 업무 플로우
 
-16. **[WORKFLOW_SUMMARY.md](docs/WORKFLOW_SUMMARY.md)** - 업무 플로우 종합 요약
+18. **[WORKFLOW_SUMMARY.md](docs/WORKFLOW_SUMMARY.md)** - 업무 플로우 종합 요약
     - 4단 역할 구조 요약
     - 10단계 Lifecycle 요약
     - QR 시스템 운영 요약
     - NG 자동 연계 요약
 
-17. **[MOLD_LIFECYCLE_WORKFLOW.md](docs/MOLD_LIFECYCLE_WORKFLOW.md)** - 금형 Lifecycle 전체 업무 플로어
+19. **[MOLD_LIFECYCLE_WORKFLOW.md](docs/MOLD_LIFECYCLE_WORKFLOW.md)** - 금형 Lifecycle 전체 업무 플로어
     - 업무 구분 및 역할 체계 (4단 구조)
     - 시스템 금형정보 입력 흐름
     - 금형 개발부터 폐기까지 10단계 프로세스
     - QR 스캔 기반 권한 자동 구분
 
-18. **[MOLD_LIFECYCLE_DETAILED.md](docs/MOLD_LIFECYCLE_DETAILED.md)** - 금형 Lifecycle 상세 흐름
+20. **[MOLD_LIFECYCLE_DETAILED.md](docs/MOLD_LIFECYCLE_DETAILED.md)** - 금형 Lifecycle 상세 흐름
     - 각 단계별 상세 프로세스
     - 데이터베이스 테이블 연계
     - 단계별 체크리스트
 
-19. **[NG_HANDLING_WORKFLOW.md](docs/NG_HANDLING_WORKFLOW.md)** - NG 처리 및 정기점검 연계
+21. **[NG_HANDLING_WORKFLOW.md](docs/NG_HANDLING_WORKFLOW.md)** - NG 처리 및 정기점검 연계
     - NG 자동 연계 5단계 프로세스
     - NG 유형 분류 (Minor/Major/Critical)
     - 정기점검 연계 구조 (1차/2차/3차)
     - 통합 흐름도 (일상점검-정기점검-NG)
 
-20. **[QR_BASED_OPERATIONS.md](docs/QR_BASED_OPERATIONS.md)** - QR 기반 전사 운영
+22. **[QR_BASED_OPERATIONS.md](docs/QR_BASED_OPERATIONS.md)** - QR 기반 전사 운영
     - QR 시스템 적용 전사 운영 구조
     - QR 스캔 프로세스 및 세션 관리
     - GPS 위치 추적 시스템
     - 이상 발생 시 자동 연계
     - 4단 역할 연동 구조
 
-21. **[REPAIR_LIABILITY_WORKFLOW.md](docs/REPAIR_LIABILITY_WORKFLOW.md)** - 금형 수리 귀책 협의 워크플로우
+23. **[REPAIR_LIABILITY_WORKFLOW.md](docs/REPAIR_LIABILITY_WORKFLOW.md)** - 금형 수리 귀책 협의 워크플로우
     - 귀책 협의 프로세스 (1차/2차)
     - 귀책 유형 분류 (생산처/제작처/자연마모/기타)
     - 비용 처리 방안
     - 데이터베이스 테이블 구조
 
-22. **[LOGIN_AND_PERMISSIONS.md](docs/LOGIN_AND_PERMISSIONS.md)** - 시스템 로그인 및 권한 관리
+24. **[LOGIN_AND_PERMISSIONS.md](docs/LOGIN_AND_PERMISSIONS.md)** - 시스템 로그인 및 권한 관리
     - 4단 사용자 유형 (시스템관리/금형개발/제작처/생산처)
     - 로그인 프로세스 및 JWT 인증
     - 권한별 메뉴 구조
