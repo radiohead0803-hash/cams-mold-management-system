@@ -1,7 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import { Box, Hash, Calendar, Gauge, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Box, Hash, Calendar, Gauge, ChevronDown, ChevronUp, AlertTriangle, Save, Cloud, CloudOff } from 'lucide-react';
 import api from '../../lib/api';
+import { tempStorage } from '../../utils/mobileStorage';
 
 export default function ChecklistFormPage() {
   const { state } = useLocation();
@@ -12,11 +13,75 @@ export default function ChecklistFormPage() {
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lastSaved, setLastSaved] = useState(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   // 생산수량 관련 상태
   const [productionQty, setProductionQty] = useState('');
   const [currentShots, setCurrentShots] = useState(mold?.current_shots || mold?.shot_count || 0);
   const [showMoldInfo, setShowMoldInfo] = useState(true);
+
+  // 임시저장 키
+  const storageKey = instanceId ? `checklist_${instanceId}` : null;
+
+  // 임시저장 데이터 불러오기
+  useEffect(() => {
+    if (!storageKey) return;
+    
+    const loadSavedData = async () => {
+      try {
+        const saved = await tempStorage.get(storageKey);
+        if (saved) {
+          setAnswers(saved.answers || {});
+          setComment(saved.comment || '');
+          setProductionQty(saved.productionQty || '');
+          setLastSaved(saved.savedAt);
+        }
+      } catch (err) {
+        console.error('Failed to load saved data:', err);
+      }
+    };
+    loadSavedData();
+  }, [storageKey]);
+
+  // 자동 임시저장 (30초마다)
+  const saveToTemp = useCallback(async () => {
+    if (!storageKey || !hasUnsavedChanges) return;
+    
+    try {
+      await tempStorage.save(storageKey, {
+        answers,
+        comment,
+        productionQty,
+        savedAt: new Date().toISOString()
+      });
+      setLastSaved(new Date().toISOString());
+      setHasUnsavedChanges(false);
+    } catch (err) {
+      console.error('Failed to save:', err);
+    }
+  }, [storageKey, answers, comment, productionQty, hasUnsavedChanges]);
+
+  useEffect(() => {
+    const interval = setInterval(saveToTemp, 30000);
+    return () => clearInterval(interval);
+  }, [saveToTemp]);
+
+  // 페이지 이탈 시 저장
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (hasUnsavedChanges && storageKey) {
+        tempStorage.save(storageKey, {
+          answers,
+          comment,
+          productionQty,
+          savedAt: new Date().toISOString()
+        });
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, storageKey, answers, comment, productionQty]);
 
   if (!instanceId || !template) {
     return (
@@ -36,6 +101,12 @@ export default function ChecklistFormPage() {
 
   const handleChange = (itemId, value) => {
     setAnswers((prev) => ({ ...prev, [itemId]: value }));
+    setHasUnsavedChanges(true);
+  };
+
+  // 수동 임시저장
+  const handleManualSave = async () => {
+    await saveToTemp();
   };
 
   const handleSubmit = async () => {
@@ -75,6 +146,11 @@ export default function ChecklistFormPage() {
         } catch (shotErr) {
           console.error('Shot update error:', shotErr);
         }
+      }
+
+      // 임시저장 데이터 삭제
+      if (storageKey) {
+        await tempStorage.remove(storageKey);
       }
 
       // 완료 페이지로 이동
