@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Save, Camera, CheckCircle, Clock, AlertCircle, 
-  Package, Building2, Wrench, ChevronDown, ChevronUp, X, Image as ImageIcon
+  Package, Building2, Wrench, ChevronDown, ChevronUp, X, Image as ImageIcon,
+  Wifi, WifiOff
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { transferAPI, moldSpecificationAPI } from '../../lib/api';
+import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
+import { tempStorage } from '../../utils/mobileStorage';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
@@ -27,6 +30,9 @@ export default function MobileTransferRequest() {
     checklist: true,
     approval: false
   });
+
+  // 오프라인 동기화
+  const { online, syncing, pendingCount, processQueue } = useOfflineSync();
   
   // 폼 데이터
   const [formData, setFormData] = useState({
@@ -584,13 +590,18 @@ export default function MobileTransferRequest() {
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={saving}
+          disabled={saving || !online}
           className="flex-1 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {saving ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               저장 중...
+            </>
+          ) : !online ? (
+            <>
+              <WifiOff size={18} />
+              오프라인
             </>
           ) : (
             <>
@@ -600,6 +611,14 @@ export default function MobileTransferRequest() {
           )}
         </button>
       </div>
+
+      {/* 오프라인/동기화 상태 표시 */}
+      <SyncStatus 
+        online={online} 
+        syncing={syncing} 
+        pendingCount={pendingCount} 
+        onSync={processQueue} 
+      />
     </div>
   );
 }
