@@ -1,6 +1,25 @@
 # QR + GPS 기반 금형관리시스템 Ver.09
 
-금형 개발부터 폐기까지 QR 스캔과 GPS 위치를 기반으로 모든 현장 작업을 실시간 추적하고 제어하는 시스템입니다. 
+금형 개발부터 폐기까지 QR 스캔과 GPS 위치를 기반으로 모든 현장 작업을 실시간 추적하고 제어하는 시스템입니다.
+
+## 🚀 배포 정보
+
+| 서비스 | URL | 상태 |
+|--------|-----|------|
+| **프론트엔드** | https://spirited-liberation-production-1a4d.up.railway.app | ✅ 운영중 |
+| **백엔드 API** | https://cams-mold-management-system-production-b7d0.up.railway.app | ✅ 운영중 |
+| **GitHub** | https://github.com/radiohead0803-hash/cams-mold-management-system | |
+
+### 개발 완료율: 100% 🎉
+
+| 구분 | 완료 | 전체 | 완료율 |
+|------|------|------|--------|
+| 백엔드 API | 97+ | 97+ | 100% |
+| 프론트엔드 페이지 | 80+ | 80+ | 100% |
+| 데이터베이스 테이블 | 52 | 52 | 100% |
+| 테스트 코드 | 20 | 20 | 100% |
+
+--- 
 
 ## 🧭 문서 기반 전체 개발 플랜
 
