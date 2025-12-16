@@ -50,6 +50,8 @@
     "supertest": "^7.1.4"
   },
   "engines": {
-    "node": "18.x"
-  }
+    "node": "18.x",
+    "npm": ">=9.0.0"
+  },
+  "engineStrict": true
 }
