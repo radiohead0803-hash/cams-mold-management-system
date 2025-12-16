@@ -73,6 +73,7 @@ import MobileMoldList from './pages/mobile/MobileMoldList'
 import MobileMoldHistory from './pages/mobile/MobileMoldHistory'
 import MobileQRSessions from './pages/mobile/MobileQRSessions'
 import MobileLocationMap from './pages/mobile/MobileLocationMap'
+import MobileProfile from './pages/mobile/MobileProfile'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
 import StandardDocumentMaster from './pages/StandardDocumentMaster'
@@ -186,6 +187,10 @@ function App() {
       {/* Mobile - 금형 위치 지도 */}
       <Route path="/mobile/location-map" element={<MobileLocationMap />} />
       <Route path="/mobile/mold-location" element={<MobileLocationMap />} />
+      
+      {/* Mobile - 프로필 */}
+      <Route path="/mobile/profile" element={<MobileProfile />} />
+      <Route path="/mobile/my" element={<MobileProfile />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
