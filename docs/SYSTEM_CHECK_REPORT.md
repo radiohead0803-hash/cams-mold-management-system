@@ -90,9 +90,10 @@
   FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...}
   ```
 
-#### 4.2 user_device_tokens 테이블 확인 필요
-- 푸시 알림 토큰 저장용 테이블 존재 여부 확인 필요
-- 없으면 생성 필요:
+#### 4.2 user_device_tokens 테이블 ✅ 생성 완료
+- 푸시 알림 토큰 저장용 테이블
+- **생성 완료**: 2025-12-16 10:59 KST
+- 테이블 구조:
   ```sql
   CREATE TABLE user_device_tokens (
     id SERIAL PRIMARY KEY,
@@ -129,7 +130,7 @@
 ### 단기 조치 (This Week)
 1. [ ] SMTP 환경변수 설정 (이메일 기능 활성화)
 2. [ ] Firebase 설정 (푸시 알림 활성화)
-3. [ ] user_device_tokens 테이블 생성
+3. [x] user_device_tokens 테이블 생성 ✅ 완료
 
 ### 중기 조치 (Next Week)
 1. [ ] E2E 테스트 추가
