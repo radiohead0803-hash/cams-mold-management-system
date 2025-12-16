@@ -109,6 +109,7 @@ const fileUploadRouter = require('./routes/fileUpload');
 const userManagementRouter = require('./routes/userManagement');
 const reportsRouter = require('./routes/reports');
 const emailRouter = require('./routes/email');
+const pushRouter = require('./routes/push');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -185,6 +186,8 @@ app.use('/api/v1/user-management', userManagementRouter);
 app.use('/api/v1/reports', reportsRouter);
 // 이메일 발송
 app.use('/api/v1/email', emailRouter);
+// 푸시 알림
+app.use('/api/v1/push', pushRouter);
 
 // Health check
 app.get('/health', (req, res) => {
