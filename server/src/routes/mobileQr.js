@@ -38,6 +38,80 @@ router.get('/qr/session/:token', qrController.validateSession);
 router.post('/qr/session/:token/end', qrController.endSession);
 
 /**
+ * QR 세션 목록 조회
+ * GET /api/v1/mobile/qr/sessions
+ */
+router.get('/qr/sessions', async (req, res) => {
+  try {
+    const { is_active, user_id, limit = 50 } = req.query;
+    
+    let whereClause = '1=1';
+    const replacements = { limit: parseInt(limit) };
+    
+    if (is_active !== undefined) {
+      whereClause += ' AND qs.is_active = :is_active';
+      replacements.is_active = is_active === 'true';
+    }
+    
+    if (user_id) {
+      whereClause += ' AND qs.user_id = :user_id';
+      replacements.user_id = user_id;
+    }
+    
+    const [sessions] = await sequelize.query(`
+      SELECT 
+        qs.id, qs.session_token, qs.is_active, qs.expires_at,
+        qs.gps_latitude, qs.gps_longitude, qs.gps_accuracy,
+        qs.created_at,
+        u.id as user_id, u.name as user_name, u.user_type,
+        ms.id as mold_id, ms.mold_number, ms.part_name
+      FROM qr_sessions qs
+      LEFT JOIN users u ON qs.user_id = u.id
+      LEFT JOIN mold_specifications ms ON qs.mold_id = ms.id
+      WHERE ${whereClause}
+      ORDER BY qs.created_at DESC
+      LIMIT :limit
+    `, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    // 결과 포맷팅
+    const formattedSessions = (sessions || []).map(s => ({
+      id: s.id,
+      session_token: s.session_token,
+      is_active: s.is_active,
+      expires_at: s.expires_at,
+      gps_latitude: s.gps_latitude,
+      gps_longitude: s.gps_longitude,
+      gps_accuracy: s.gps_accuracy,
+      created_at: s.created_at,
+      user: s.user_id ? {
+        id: s.user_id,
+        name: s.user_name,
+        user_type: s.user_type
+      } : null,
+      mold: s.mold_id ? {
+        id: s.mold_id,
+        mold_number: s.mold_number,
+        part_name: s.part_name
+      } : null
+    }));
+    
+    return res.json({
+      success: true,
+      data: formattedSessions
+    });
+  } catch (error) {
+    console.error('[QR Sessions List] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: { message: 'QR 세션 목록 조회 실패' }
+    });
+  }
+});
+
+/**
  * 점검 세션 시작
  * POST /api/v1/mobile/molds/:moldId/checklists/start
  */

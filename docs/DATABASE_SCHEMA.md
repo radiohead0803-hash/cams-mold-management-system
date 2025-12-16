@@ -5,7 +5,7 @@
 
 ## 📊 테이블 구조 개요
 
-총 **52개 테이블**로 구성되며, 10개 카테고리로 분류됩니다.
+총 **54개 테이블**로 구성되며, 11개 카테고리로 분류됩니다.
 
 **주요 변경사항**: 습합점검(`fitting_checks`)과 세척점검(`cleaning_checks`)은 정기점검(`inspections`) 내 체크리스트 항목으로 통합되었습니다.
 
@@ -2091,6 +2091,47 @@ CREATE TABLE gps_locations (
 
 CREATE INDEX idx_gps_locations_mold ON gps_locations(mold_id);
 CREATE INDEX idx_gps_locations_date ON gps_locations(recorded_at);
+```
+
+### 10.9 audit_logs (감사 로그)
+```sql
+CREATE TABLE audit_logs (
+  id SERIAL PRIMARY KEY,
+  entity_type VARCHAR(50) NOT NULL,           -- 엔티티 유형 (mold_specification, repair_request 등)
+  entity_id VARCHAR(50),                       -- 엔티티 ID
+  action VARCHAR(50) NOT NULL,                 -- 액션 (create, update, delete, approval, rejection 등)
+  user_id INTEGER REFERENCES users(id),
+  company_id INTEGER REFERENCES companies(id),
+  previous_value JSONB,                        -- 변경 전 값
+  new_value JSONB,                             -- 변경 후 값
+  description TEXT,                            -- 설명
+  ip_address VARCHAR(45),                      -- IP 주소
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX idx_audit_logs_created ON audit_logs(created_at);
+```
+
+### 10.10 repair_workflow_history (수리 워크플로우 이력)
+```sql
+CREATE TABLE repair_workflow_history (
+  id SERIAL PRIMARY KEY,
+  repair_request_id INTEGER NOT NULL REFERENCES repair_requests(id),
+  status VARCHAR(50) NOT NULL,                 -- 상태 (requested, accepted, in_progress, completed 등)
+  previous_status VARCHAR(50),                 -- 이전 상태
+  user_id INTEGER REFERENCES users(id),
+  user_name VARCHAR(100),
+  user_type VARCHAR(20),                       -- 사용자 유형
+  comment TEXT,                                -- 코멘트
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_repair_workflow_history_request ON repair_workflow_history(repair_request_id);
+CREATE INDEX idx_repair_workflow_history_status ON repair_workflow_history(status);
+CREATE INDEX idx_repair_workflow_history_created ON repair_workflow_history(created_at);
 ```
 
 ---
