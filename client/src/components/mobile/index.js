@@ -26,3 +26,16 @@ export {
   ChecklistStep,
   SignatureStep
 } from './TransferStepUI';
+
+export {
+  Skeleton,
+  SkeletonText,
+  SkeletonAvatar,
+  SkeletonCard,
+  SkeletonListItem,
+  SkeletonMoldCard,
+  SkeletonInspectionForm,
+  SkeletonDashboard,
+  SkeletonProfile,
+  SkeletonPage
+} from './Skeleton';

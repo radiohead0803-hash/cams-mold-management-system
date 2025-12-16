@@ -80,6 +80,8 @@ import ChecklistSelectPage from './pages/mobile/ChecklistSelectPage'
 import ChecklistFormPage from './pages/mobile/ChecklistFormPage'
 import ChecklistCompletePage from './pages/mobile/ChecklistCompletePage'
 import QrScanPageMobile from './pages/mobile/QrScanPage'
+import MobileDashboard from './pages/mobile/MobileDashboard'
+import MobileSearch from './pages/mobile/MobileSearch'
 import InspectionApproval from './pages/InspectionApproval'
 import RepairRequestForm from './pages/RepairRequestForm'
 import StandardDocumentMaster from './pages/StandardDocumentMaster'
@@ -211,6 +213,10 @@ function App() {
       <Route path="/mobile/checklist-select" element={<ChecklistSelectPage />} />
       <Route path="/mobile/checklist-form" element={<ChecklistFormPage />} />
       <Route path="/mobile/checklist-complete" element={<ChecklistCompletePage />} />
+      
+      {/* Mobile - 대시보드 & 검색 */}
+      <Route path="/mobile/dashboard" element={<MobileDashboard />} />
+      <Route path="/mobile/search" element={<MobileSearch />} />
       
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
