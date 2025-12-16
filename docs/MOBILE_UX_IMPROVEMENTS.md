@@ -303,4 +303,55 @@ import TransferStepUI from '../../components/mobile/TransferStepUI';
 - iOS Safe Area 지원
 
 **다음 단계**:
-1. PWA 푸시 알림 연동 (Firebase Cloud Messaging)
+1. PWA 아이콘 이미지 생성 (현재 SVG placeholder)
+2. Firebase Cloud Messaging 연동 (선택사항)
+
+---
+
+## 🔧 PWA 설정 (2025-12-16 추가)
+
+### 파일 구조
+
+```
+client/public/
+├── manifest.json      # PWA 매니페스트
+├── sw.js              # 서비스 워커
+└── icons/
+    └── icon.svg       # 아이콘 (placeholder)
+
+client/src/utils/
+└── pwaUtils.js        # PWA 유틸리티
+```
+
+### 기능
+
+| 기능 | 설명 | 상태 |
+|------|------|------|
+| manifest.json | 앱 이름, 아이콘, 테마 | ✅ |
+| 서비스 워커 | 오프라인 캐싱, 푸시 수신 | ✅ |
+| 푸시 알림 권한 | requestNotificationPermission | ✅ |
+| 푸시 구독 | subscribeToPush | ✅ |
+| 설치 프롬프트 | promptInstall | ✅ |
+| iOS 메타 태그 | apple-mobile-web-app | ✅ |
+
+### 사용 예시
+
+```jsx
+import { 
+  registerServiceWorker, 
+  requestNotificationPermission,
+  promptInstall,
+  isPWAInstalled 
+} from '../utils/pwaUtils';
+
+// 서비스 워커 등록
+const registration = await registerServiceWorker();
+
+// 알림 권한 요청
+const permission = await requestNotificationPermission();
+
+// PWA 설치 프롬프트
+if (canInstall()) {
+  const installed = await promptInstall();
+}
+```
