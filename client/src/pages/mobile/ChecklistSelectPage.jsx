@@ -1,6 +1,8 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { ArrowLeft, Tag, MapPin, BarChart3, ChevronRight, AlertCircle, ClipboardCheck, Calendar } from 'lucide-react';
 import api from '../../lib/api';
+import { MobileHeader } from '../../components/mobile/MobileLayout';
 
 export default function ChecklistSelectPage() {
   const { state } = useLocation();
@@ -58,18 +60,10 @@ export default function ChecklistSelectPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
-      <div className="max-w-md mx-auto pt-8">
-        {/* 뒤로가기 버튼 */}
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-4 flex items-center text-slate-600 hover:text-slate-800"
-        >
-          <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span className="text-sm">뒤로</span>
-        </button>
+    <div className="min-h-screen bg-gray-50">
+      <MobileHeader title="점검 종류 선택" />
+      
+      <div className="p-4">
 
         {/* 금형 정보 카드 */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
