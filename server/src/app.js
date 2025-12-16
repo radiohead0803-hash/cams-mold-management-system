@@ -119,6 +119,7 @@ const alertAutoRouter = require('./routes/alertAuto');
 const inspectionFlowRouter = require('./routes/inspectionFlow');
 const repairWorkflowRouter = require('./routes/repairWorkflow');
 const statisticsReportRouter = require('./routes/statisticsReport');
+const auditLogRouter = require('./routes/auditLog');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -209,6 +210,8 @@ app.use('/api/v1/inspection-flow', inspectionFlowRouter);
 app.use('/api/v1/repair-workflow', repairWorkflowRouter);
 // 통계/리포트 API
 app.use('/api/v1/statistics-report', statisticsReportRouter);
+// 운영감사/추적 API
+app.use('/api/v1/audit-log', auditLogRouter);
 
 // Health check
 app.get('/health', (req, res) => {
