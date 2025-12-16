@@ -184,6 +184,66 @@ import NumberInput from '../../components/mobile/NumberInput';
 
 ---
 
+## ✅ 추가 구현 완료 항목 (2025-12-16)
+
+### 1. 오프라인 동기화 훅 (`hooks/useOfflineSync.js`)
+
+| 기능 | 설명 | 상태 |
+|------|------|------|
+| `useOfflineSync` | 오프라인 동기화 훅 | ✅ |
+| 자동 큐 처리 | 온라인 복귀 시 자동 전송 | ✅ |
+| 주기적 동기화 | 5분마다 자동 동기화 | ✅ |
+| `SyncStatus` | 동기화 상태 표시 컴포넌트 | ✅ |
+| `addToQueue` | 오프라인 요청 큐 추가 | ✅ |
+
+### 2. 이관 Step UI (`components/mobile/TransferStepUI.jsx`)
+
+| 컴포넌트 | 설명 | 상태 |
+|----------|------|------|
+| `StepIndicator` | 단계별 진행 표시 | ✅ |
+| `GPSConfirmStep` | GPS 위치 확인 단계 | ✅ |
+| `PhotoCaptureStep` | 사진 촬영 단계 (압축, 미리보기) | ✅ |
+| `ChecklistStep` | 체크리스트 확인 단계 | ✅ |
+| `SignatureStep` | 담당자 서명 단계 | ✅ |
+
+### 3. QR 스캔 로그 API
+
+| API | 설명 | 상태 |
+|-----|------|------|
+| `POST /mobile/qr/scan-log` | 스캔 로그 기록 | ✅ |
+| `GET /mobile/qr/scan-logs` | 스캔 로그 조회 | ✅ |
+
+### 사용 예시
+
+```jsx
+// 오프라인 동기화 훅
+import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync';
+
+const { online, syncing, pendingCount, processQueue, addToQueue } = useOfflineSync();
+
+// 오프라인 요청 추가
+await addToQueue('inspection', '/api/v1/inspections', 'POST', inspectionData);
+
+// 상태 표시
+<SyncStatus online={online} syncing={syncing} pendingCount={pendingCount} onSync={processQueue} />
+```
+
+```jsx
+// 이관 Step UI
+import TransferStepUI from '../../components/mobile/TransferStepUI';
+
+<TransferStepUI
+  moldId={moldId}
+  moldInfo={moldInfo}
+  transferType="outbound"
+  checklistItems={checklistItems}
+  onComplete={(data) => handleTransferComplete(data)}
+  onCancel={() => navigate(-1)}
+/>
+```
+
+---
+
 ## 🚧 추가 개선 필요 항목
 
 ### 우선순위 높음
@@ -191,15 +251,11 @@ import NumberInput from '../../components/mobile/NumberInput';
 | 항목 | 설명 | 상태 |
 |------|------|------|
 | PWA 푸시 알림 | Firebase Cloud Messaging 연동 | ⏳ |
-| 오프라인 큐 자동 처리 | 온라인 복귀 시 자동 전송 | ⏳ |
-| QR 스캔 로그 API | 스캔 성공/실패 로그 기록 | ⏳ |
 
 ### 우선순위 중간
 
 | 항목 | 설명 | 상태 |
 |------|------|------|
-| 금형 모바일 대시보드 | `/m/molds/:moldId` 퀵 액션 | ⏳ |
-| 이관 Step UI | 단계별 진행 UI | ⏳ |
 | GPS 이탈 알림 | 허용 범위 벗어남 알림 | ⏳ |
 
 ### 우선순위 낮음
