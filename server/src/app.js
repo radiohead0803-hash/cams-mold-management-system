@@ -107,6 +107,7 @@ const productionTransferRouter = require('./routes/productionTransfer');
 const tryoutIssuesRouter = require('./routes/tryoutIssues');
 const fileUploadRouter = require('./routes/fileUpload');
 const userManagementRouter = require('./routes/userManagement');
+const reportsRouter = require('./routes/reports');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
@@ -179,6 +180,8 @@ app.use('/api/v1/tryout-issues', tryoutIssuesRouter);
 app.use('/api/v1/files', fileUploadRouter);
 // 사용자 관리
 app.use('/api/v1/user-management', userManagementRouter);
+// 리포트 (PDF 다운로드)
+app.use('/api/v1/reports', reportsRouter);
 
 // Health check
 app.get('/health', (req, res) => {
