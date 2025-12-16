@@ -236,6 +236,50 @@ export const recentActions = {
   }
 };
 
+// 범용 임시저장 (키-값 저장)
+export const tempStorage = {
+  async save(key, data) {
+    try {
+      localStorage.setItem(`cams_temp_${key}`, JSON.stringify(data));
+      return true;
+    } catch (e) {
+      console.error('[tempStorage] save error:', e);
+      return false;
+    }
+  },
+
+  async get(key) {
+    try {
+      const data = localStorage.getItem(`cams_temp_${key}`);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.error('[tempStorage] get error:', e);
+      return null;
+    }
+  },
+
+  async remove(key) {
+    try {
+      localStorage.removeItem(`cams_temp_${key}`);
+      return true;
+    } catch (e) {
+      console.error('[tempStorage] remove error:', e);
+      return false;
+    }
+  },
+
+  async clear() {
+    try {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('cams_temp_'));
+      keys.forEach(k => localStorage.removeItem(k));
+      return true;
+    } catch (e) {
+      console.error('[tempStorage] clear error:', e);
+      return false;
+    }
+  }
+};
+
 // 온라인 상태 확인
 export function isOnline() {
   return navigator.onLine;
@@ -256,6 +300,7 @@ export default {
   inspectionDraft,
   offlineQueue,
   recentActions,
+  tempStorage,
   isOnline,
   onOnlineStatusChange
 };
