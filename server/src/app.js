@@ -12,7 +12,9 @@ const allowedOrigins = [
   'http://localhost:5174',
   'http://localhost:5175',
   'https://bountiful-nurturing-production-cd5c.up.railway.app',
-  'https://cams-mold-management-system-production-cd5c.up.railway.app'
+  'https://cams-mold-management-system-production-cd5c.up.railway.app',
+  'https://cams-mold-management-system-production-b7d0.up.railway.app',
+  'https://spirited-liberation-production.up.railway.app'
 ];
 
 app.use(cors({
