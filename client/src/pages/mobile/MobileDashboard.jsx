@@ -38,24 +38,57 @@ export default function MobileDashboard() {
     try {
       setLoading(true);
       
-      // 병렬로 데이터 로드
-      const [statsRes, activitiesRes, alertsRes] = await Promise.all([
-        api.get('/api/dashboard/stats').catch(() => ({ data: { data: {} } })),
-        api.get('/api/dashboard/recent-activities?limit=5').catch(() => ({ data: { data: [] } })),
-        api.get('/api/notifications?unread=true&limit=5').catch(() => ({ data: { data: [] } }))
+      // 사용자 역할 결정
+      const role = user?.role || 'plant';
+      
+      // 역할별 모바일 대시보드 API 호출
+      const [dashboardRes, alertsRes] = await Promise.all([
+        api.get(`/api/v1/mobile/dashboard/${role}`).catch(() => ({ data: { data: {} } })),
+        api.get('/api/v1/notifications?unread=true&limit=5').catch(() => ({ data: { data: [] } }))
       ]);
 
-      setStats({
-        totalMolds: statsRes.data?.data?.totalMolds || 0,
-        activeMolds: statsRes.data?.data?.activeMolds || 0,
-        pendingInspections: statsRes.data?.data?.pendingInspections || 0,
-        overdueInspections: statsRes.data?.data?.overdueInspections || 0,
-        pendingRepairs: statsRes.data?.data?.pendingRepairs || 0,
-        completedToday: statsRes.data?.data?.completedToday || 0
-      });
+      const summary = dashboardRes.data?.data?.summary || {};
+      
+      // 역할별 통계 매핑
+      if (role === 'plant' || role === 'production') {
+        setStats({
+          totalMolds: summary.totalMolds || 0,
+          activeMolds: summary.activeMolds || 0,
+          pendingInspections: summary.needsCheck || 0,
+          overdueInspections: summary.ngMolds || 0,
+          pendingRepairs: summary.pendingRepairs || 0,
+          completedToday: summary.todayChecks || 0,
+          todayProduction: summary.todayProduction || 0,
+          monthlyProduction: summary.monthlyProduction || 0,
+          todayScans: summary.todayScans || 0
+        });
+        setRecentActivities(dashboardRes.data?.data?.recentChecks || []);
+      } else if (role === 'maker') {
+        setStats({
+          totalMolds: summary.assignedMolds || 0,
+          activeMolds: summary.inProduction || 0,
+          pendingInspections: summary.pendingInspection || 0,
+          overdueInspections: 0,
+          pendingRepairs: summary.repairRequests || 0,
+          completedToday: summary.todayCompleted || 0
+        });
+        setRecentActivities(dashboardRes.data?.data?.recentWorks || []);
+      } else {
+        // developer, system_admin
+        setStats({
+          totalMolds: summary.totalMolds || 0,
+          activeMolds: summary.activeMolds || 0,
+          pendingInspections: summary.inspectionDue || 0,
+          overdueInspections: summary.ngMolds || 0,
+          pendingRepairs: summary.pendingRepairs || 0,
+          completedToday: summary.todayScans || 0,
+          developingMolds: summary.developingMolds || 0,
+          pendingApprovals: summary.pendingApprovals || 0
+        });
+        setRecentActivities(dashboardRes.data?.data?.recentMolds || []);
+      }
 
-      setRecentActivities(activitiesRes.data?.data || []);
-      setAlerts(alertsRes.data?.data?.items || alertsRes.data?.data || []);
+      setAlerts(alertsRes.data?.data?.items || alertsRes.data?.data || dashboardRes.data?.data?.recentAlerts || []);
 
     } catch (error) {
       console.error('[Dashboard] 데이터 로드 실패:', error);
