@@ -109,6 +109,7 @@ import {
   MoldOverviewPage,
   ChecklistStartPage,
   RepairRequestListPage,
+  MobileDailyChecklist,
   QrScanPage,
   DailyInspectionPageQr,
   PeriodicInspectionPageQr,
@@ -151,7 +152,7 @@ function App() {
       {/* Mobile Routes - 새로운 QR 로그인 플로우 */}
       <Route path="/mobile/qr-login" element={<MobileQRLogin />} />
       <Route path="/mobile/mold/:moldId" element={<MobileMoldDetail />} />
-      <Route path="/mobile/mold/:moldId/daily-check" element={<ChecklistStartPage />} />
+      <Route path="/mobile/mold/:moldId/daily-check" element={<MobileDailyChecklist />} />
       <Route path="/mobile/mold/:moldId/periodic-check" element={<ChecklistStartPage />} />
       <Route path="/mobile/mold/:moldId/repair-request" element={<MobileRepairRequestForm />} />
       <Route path="/mobile/mold/:moldId/repair-list" element={<RepairRequestListPage />} />

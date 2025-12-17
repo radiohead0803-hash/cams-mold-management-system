@@ -123,6 +123,7 @@ export const MobileSearch = lazy(() => import('../pages/mobile/MobileSearch'));
 export const MoldOverviewPage = lazy(() => import('../pages/mobile/MoldOverviewPage'));
 export const ChecklistStartPage = lazy(() => import('../pages/mobile/ChecklistStartPage'));
 export const RepairRequestListPage = lazy(() => import('../pages/mobile/RepairRequestListPage'));
+export const MobileDailyChecklist = lazy(() => import('../pages/mobile/MobileDailyChecklist'));
 
 // 체크리스트 마스터 관리
 export const ChecklistMasterConsole = lazy(() => import('../pages/ChecklistMasterConsole'));
