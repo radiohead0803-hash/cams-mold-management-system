@@ -449,7 +449,7 @@ export default function SystemAdminDashboard() {
               icon="👥" 
               title="사용자 관리" 
               description="사용자 등록/수정"
-              link="/users"
+              link="/users/internal"
             />
             <QuickActionCard 
               icon="📋" 
@@ -459,9 +459,9 @@ export default function SystemAdminDashboard() {
             />
             <QuickActionCard 
               icon="🔔" 
-              title="알람 기준 설정" 
-              description="타수/NG 기준"
-              link="/alert-settings"
+              title="기준값 설정" 
+              description="타수/점검 기준"
+              link="/dashboard/system-admin/rules"
             />
             <QuickActionCard 
               icon="📊" 

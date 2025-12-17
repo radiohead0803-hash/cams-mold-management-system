@@ -64,8 +64,8 @@ export const SYSTEM_ADMIN_MENU = [
     allowedRoles: [USER_ROLES.SYSTEM_ADMIN],
     subMenus: [
       { key: 'risk-overview', label: '리스크 현황', path: '/dashboard/system-admin/risk-monitor' },
-      { key: 'gps-tracking', label: 'GPS 추적', path: '/dashboard/system-admin/gps' },
-      { key: 'activity-log', label: '활동 현황', path: '/dashboard/system-admin/activity' }
+      { key: 'gps-tracking', label: 'GPS 추적', path: '/mold-location-map' },
+      { key: 'activity-log', label: '감사 로그', path: '/dashboard/system-admin/audit-logs' }
     ]
   },
   {
@@ -194,11 +194,12 @@ export const SYSTEM_ADMIN_MENU = [
   {
     key: 'notifications',
     label: '알림',
-    path: '/alerts',
+    path: '/dashboard/system-admin/notifications',
     icon: Bell,
-    allowedRoles: [USER_ROLES.SYSTEM_ADMIN, USER_ROLES.MOLD_DEVELOPER],
+    allowedRoles: [USER_ROLES.SYSTEM_ADMIN],
     badge: 'unreadNotifications',
     subMenus: [
+      { key: 'notifications-center', label: '알림 센터', path: '/dashboard/system-admin/notifications' },
       { key: 'notifications-list', label: '알림 목록', path: '/alerts' },
       { key: 'notifications-settings', label: '알림 설정', path: '/notification-settings' }
     ]
@@ -433,11 +434,8 @@ export const REGISTERED_ROUTES = [
   '/dashboard/system-admin',
   '/dashboard/system-admin/approvals',
   '/dashboard/system-admin/risk-monitor',
-  '/dashboard/system-admin/gps',
-  '/dashboard/system-admin/activity',
-  '/dashboard/system-admin/masters',
+  '/dashboard/system-admin/notifications',
   '/dashboard/system-admin/rules',
-  '/dashboard/system-admin/rules/notifications',
   '/dashboard/system-admin/users',
   '/dashboard/system-admin/audit-logs',
   '/dashboard/mold-developer',
