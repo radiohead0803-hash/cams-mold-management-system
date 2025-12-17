@@ -127,11 +127,13 @@ const auditLogRouter = require('./routes/auditLog');
 const approvalsRouter = require('./routes/approvals');
 const systemRulesRouter = require('./routes/systemRules');
 const riskMonitorRouter = require('./routes/riskMonitor');
+const globalSearchRouter = require('./routes/globalSearch');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
 app.use('/api/v1/system-rules', systemRulesRouter);
 app.use('/api/v1/risk-monitor', riskMonitorRouter);
+app.use('/api/v1/search', globalSearchRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/molds', moldsRouter);
 app.use('/api/v1/inspections', inspectionsRouter);
