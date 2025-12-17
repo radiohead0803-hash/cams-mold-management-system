@@ -6,7 +6,9 @@
     "dev": "vite",
     "build": "vite build",
     "start": "npm run build && serve -s dist -l $PORT",
-    "postinstall": "vite build"
+    "postinstall": "vite build",
+    "test:e2e": "npx playwright test --config=e2e/playwright.config.js",
+    "test:e2e:ui": "npx playwright test --config=e2e/playwright.config.js --ui"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.11",
