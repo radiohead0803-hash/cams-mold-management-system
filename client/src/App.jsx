@@ -252,10 +252,14 @@ function App() {
         }
       >
         <Route index element={<Dashboard />} />
-        <Route path="dashboard/admin" element={<SystemAdminDashboard />} />
-        <Route path="dashboard/developer" element={<MoldDeveloperDashboard />} />
+        {/* 문서 기준 대시보드 경로 통일 */}
+        <Route path="dashboard/system-admin" element={<SystemAdminDashboard />} />
+        <Route path="dashboard/mold-developer" element={<MoldDeveloperDashboard />} />
         <Route path="dashboard/maker" element={<MakerDashboard />} />
         <Route path="dashboard/plant" element={<PlantDashboard />} />
+        {/* 기존 경로 호환성 유지 */}
+        <Route path="dashboard/admin" element={<SystemAdminDashboard />} />
+        <Route path="dashboard/developer" element={<MoldDeveloperDashboard />} />
         <Route path="mobile/maker" element={<MakerMobileDashboard />} />
         <Route path="mobile/plant" element={<PlantMobileDashboard />} />
         <Route path="mobile/developer" element={<DeveloperMobileDashboard />} />
