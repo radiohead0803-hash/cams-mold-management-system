@@ -131,6 +131,7 @@ const globalSearchRouter = require('./routes/globalSearch');
 const moldEventsRouter = require('./routes/moldEvents');
 const checklistMastersRouter = require('./routes/checklistMasters');
 const inspectionsNewRouter = require('./routes/inspectionsNew');
+const inspectionPhotosRouter = require('./routes/inspectionPhotos');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -233,6 +234,8 @@ app.use('/api/v1/repair-workflow', repairWorkflowRouter);
 app.use('/api/v1/statistics-report', statisticsReportRouter);
 // 운영감사/추적 API
 app.use('/api/v1/audit-log', auditLogRouter);
+// 점검 사진 업로드/관리
+app.use('/api/v1/inspection-photos', inspectionPhotosRouter);
 
 // Health check
 app.get('/health', (req, res) => {

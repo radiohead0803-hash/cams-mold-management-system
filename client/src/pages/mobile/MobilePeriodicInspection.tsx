@@ -1,7 +1,8 @@
 // client/src/pages/mobile/MobilePeriodicInspection.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, AlertTriangle, Wrench, ChevronRight, ChevronLeft, Camera, Loader2, BookOpen, X, MapPin } from 'lucide-react';
+import { ArrowLeft, Check, AlertTriangle, Wrench, ChevronRight, ChevronLeft, Camera, Loader2, BookOpen, X, MapPin, Image, Trash2 } from 'lucide-react';
+import { useRef } from 'react';
 import api from '../../lib/api';
 
 // 웹버전과 동일한 정기점검 유형/카테고리/항목 구조
@@ -304,6 +305,9 @@ export default function MobilePeriodicInspection() {
   const [success, setSuccess] = useState('');
   const [showGuide, setShowGuide] = useState<Item | null>(null);
   const [gpsLocation, setGpsLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [uploadingItemId, setUploadingItemId] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [currentPhotoItemId, setCurrentPhotoItemId] = useState<number | null>(null);
 
   // 금형 정보 로드
   useEffect(() => {
