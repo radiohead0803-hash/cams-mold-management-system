@@ -21,9 +21,12 @@ interface Mold {
 }
 
 export default function ChecklistStartPage() {
-  const { moldId, category } = useParams();
+  const { moldId, category: categoryParam } = useParams();
   const navigate = useNavigate();
-  const { state } = useLocation();
+  const { state, pathname } = useLocation();
+  
+  // URL 경로에서 category 추론 (daily-check → daily, periodic-check → regular)
+  const category = categoryParam || (pathname.includes('periodic') ? 'regular' : 'daily');
   
   const auth = JSON.parse(localStorage.getItem('cams_auth') || '{}');
   const scannedMold = JSON.parse(localStorage.getItem('cams_scanned_mold') || '{}');
