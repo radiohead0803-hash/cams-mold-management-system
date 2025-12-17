@@ -1,14 +1,18 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import api from '../lib/api';
 
 /**
  * 알림 관리 훅
+ * - 주기적 폴링 (30초)
+ * - 페이지 포커스 시 즉시 갱신
+ * - 브라우저 알림 지원
  * @returns {Object} 알림 데이터 및 함수들
  */
 export function useNotifications() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const prevUnreadCountRef = useRef(0);
 
   /**
    * 알림 목록 조회
@@ -79,15 +83,63 @@ export function useNotifications() {
     }
   }, []);
 
+  /**
+   * 브라우저 알림 표시
+   */
+  const showBrowserNotification = useCallback((notification) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const browserNotif = new Notification(notification.title, {
+        body: notification.message,
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-72x72.png',
+        tag: `notification-${notification.id}`,
+        requireInteraction: notification.priority === 'critical'
+      });
+
+      browserNotif.onclick = () => {
+        window.focus();
+        if (notification.action_url) {
+          window.location.href = notification.action_url;
+        }
+        browserNotif.close();
+      };
+
+      // 5초 후 자동 닫기 (critical 제외)
+      if (notification.priority !== 'critical') {
+        setTimeout(() => browserNotif.close(), 5000);
+      }
+    }
+  }, []);
+
   // 초기 로드 및 주기적 갱신
   useEffect(() => {
     fetchNotifications();
     
-    // 1분마다 자동 갱신
-    const timer = setInterval(fetchNotifications, 60000);
+    // 30초마다 자동 갱신
+    const timer = setInterval(fetchNotifications, 30000);
     
-    return () => clearInterval(timer);
+    // 페이지 포커스 시 즉시 갱신
+    const handleFocus = () => fetchNotifications();
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchNotifications]);
+
+  // 새 알림 도착 시 브라우저 알림 표시
+  useEffect(() => {
+    const currentUnreadCount = items.filter(n => !n.is_read).length;
+    
+    // 새 알림이 도착한 경우
+    if (currentUnreadCount > prevUnreadCountRef.current && prevUnreadCountRef.current > 0) {
+      const newNotifications = items.filter(n => !n.is_read).slice(0, currentUnreadCount - prevUnreadCountRef.current);
+      newNotifications.forEach(showBrowserNotification);
+    }
+    
+    prevUnreadCountRef.current = currentUnreadCount;
+  }, [items, showBrowserNotification]);
 
   // 읽지 않은 알림 개수
   const unreadCount = items.filter(n => !n.is_read).length;
@@ -98,6 +150,17 @@ export function useNotifications() {
     return acc;
   }, {});
 
+  /**
+   * 브라우저 알림 권한 요청
+   */
+  const requestNotificationPermission = useCallback(async () => {
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+    return false;
+  }, []);
+
   return {
     items,
     loading,
@@ -107,6 +170,8 @@ export function useNotifications() {
     fetchNotifications,
     markAsRead,
     markAllAsRead,
-    deleteNotification
+    deleteNotification,
+    requestNotificationPermission,
+    showBrowserNotification
   };
 }
