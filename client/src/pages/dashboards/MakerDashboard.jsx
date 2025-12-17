@@ -142,7 +142,7 @@ export default function MakerDashboard() {
           <section className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">📋 진행 중인 프로젝트</h3>
-              <Link to="/projects" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <Link to="/molds" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
                 전체 보기 →
               </Link>
             </div>
@@ -243,10 +243,10 @@ export default function MakerDashboard() {
         <section>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">⚡ 빠른 작업</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <QuickActionCard icon="📋" title="제작전 체크리스트" description="81개 항목 점검" link="/pre-production" />
-            <QuickActionCard icon="🧪" title="시운전 결과 입력" description="T/O 결과 등록" link="/trial-run" />
-            <QuickActionCard icon="🔧" title="수리 작업 관리" description="수리 진행 현황" link="/repairs" />
-            <QuickActionCard icon="📱" title="QR 코드 출력" description="명판 부착용" link="/qr-codes" />
+            <QuickActionCard icon="📋" title="제작전 체크리스트" description="81개 항목 점검" link="/pre-production-checklist" />
+            <QuickActionCard icon="🔧" title="수리 작업 관리" description="수리 진행 현황" link="/maker/repair-requests" />
+            <QuickActionCard icon="📦" title="금형 현황" description="금형 목록 조회" link="/molds" />
+            <QuickActionCard icon="🔔" title="알림 확인" description="알림 목록" link="/alerts" />
           </div>
         </section>
       </div>
@@ -317,7 +317,7 @@ function ProjectCard({ project }) {
       </div>
       <div className="flex items-center justify-between text-sm">
         <span className="text-gray-500">납기: {project.dueDate}</span>
-        <Link to={`/projects/${project.id}`} className="text-blue-600 hover:text-blue-700 font-medium">
+        <Link to={`/mold-detail/${project.id}`} className="text-blue-600 hover:text-blue-700 font-medium">
           상세보기 →
         </Link>
       </div>
@@ -356,9 +356,9 @@ function RepairCard({ repair }) {
           <p className="text-sm text-gray-600">증상: {repair.symptom}</p>
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-gray-500">{repair.requestDate}</span>
-            <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+            <Link to="/maker/repair-requests" className="text-xs text-blue-600 hover:text-blue-700 font-medium">
               수리 시작 →
-            </button>
+            </Link>
           </div>
         </div>
       </div>
@@ -390,12 +390,18 @@ function QRCodeCard({ qrCode }) {
         <p className="text-xs font-mono text-gray-600">{qrCode.qrToken}</p>
       </div>
       <div className="flex space-x-2">
-        <button className="flex-1 py-2 px-3 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-          출력
-        </button>
-        <button className="flex-1 py-2 px-3 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50">
-          상세
-        </button>
+        <Link 
+          to={`/mold-detail/${qrCode.id}`}
+          className="flex-1 py-2 px-3 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 text-center"
+        >
+          상세보기
+        </Link>
+        <Link 
+          to="/qr-sessions"
+          className="flex-1 py-2 px-3 border border-gray-300 text-gray-700 text-sm rounded hover:bg-gray-50 text-center"
+        >
+          QR 세션
+        </Link>
       </div>
     </div>
   );
