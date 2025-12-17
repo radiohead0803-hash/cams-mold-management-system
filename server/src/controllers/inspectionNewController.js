@@ -14,6 +14,7 @@ const {
 } = require('../models/newIndex');
 const { Op } = require('sequelize');
 const logger = require('../utils/logger');
+const inspectionAlertService = require('../services/inspectionAlertService');
 
 /**
  * 점검 시작 (인스턴스 생성)
@@ -300,6 +301,10 @@ const submitInspection = async (req, res) => {
     }
 
     await transaction.commit();
+    
+    // 알림 종료 처리
+    await inspectionAlertService.resolveAlerts(instance.mold_id, instance.cycle_code_id);
+    
     res.json({ success: true, message: '점검이 제출되었습니다' });
   } catch (error) {
     await transaction.rollback();
