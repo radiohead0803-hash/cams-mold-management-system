@@ -126,6 +126,7 @@ export const RepairRequestListPage = lazy(() => import('../pages/mobile/RepairRe
 
 // 체크리스트 마스터 관리
 export const ChecklistMasterConsole = lazy(() => import('../pages/ChecklistMasterConsole'));
+export const ChecklistMasterDetail = lazy(() => import('../pages/ChecklistMasterDetail'));
 
 // 모바일 통합 점검
 export const MobileInspectionNew = lazy(() => import('../pages/mobile/MobileInspectionNew'));

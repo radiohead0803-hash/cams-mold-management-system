@@ -69,6 +69,7 @@ import {
   MoldLocationMapPage,
   ProductionTransferChecklistMaster,
   ChecklistMasterConsole,
+  ChecklistMasterDetail,
   MobileInspectionNew,
   MobileQRLogin,
   MobileMoldDetail,
@@ -321,7 +322,7 @@ function App() {
         
         {/* 체크리스트 마스터 관리 콘솔 */}
         <Route path="pre-production-checklist" element={<ChecklistMasterConsole />} />
-        <Route path="checklist-master/:id" element={<ChecklistMasterConsole />} />
+        <Route path="checklist-master/:id" element={<ChecklistMasterDetail />} />
         <Route path="checklist-master/:id/edit" element={<ChecklistMasterConsole />} />
         
         {/* 금형 폐기 관리 */}
