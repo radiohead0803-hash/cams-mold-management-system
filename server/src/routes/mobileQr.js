@@ -112,6 +112,42 @@ router.get('/qr/sessions', async (req, res) => {
 });
 
 /**
+ * 금형별 체크리스트 템플릿 조회
+ * GET /api/v1/mobile/molds/:moldId/checklist-templates
+ */
+router.get('/molds/:moldId/checklist-templates', async (req, res) => {
+  try {
+    const { moldId } = req.params;
+    const { category } = req.query; // 'daily' | 'regular'
+
+    // 활성 템플릿 조회
+    const [templates] = await sequelize.query(`
+      SELECT 
+        id, template_name as name, template_type as category,
+        description, is_active, version
+      FROM checklist_templates
+      WHERE is_active = true
+      ${category ? "AND template_type = :category" : ""}
+      ORDER BY template_name
+    `, {
+      replacements: { category },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    return res.json({
+      success: true,
+      data: templates || []
+    });
+  } catch (error) {
+    console.error('[Checklist Templates] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '템플릿 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+/**
  * 점검 세션 시작
  * POST /api/v1/mobile/molds/:moldId/checklists/start
  */

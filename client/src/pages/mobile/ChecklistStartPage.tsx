@@ -45,13 +45,13 @@ export default function ChecklistStartPage() {
 
       // 금형 정보 없으면 백엔드에서 조회
       if (!mold && moldId) {
-        const moldRes = await api.get(`/api/v1/molds/${moldId}`);
+        const moldRes = await api.get(`/mobile/mold/${moldId}`);
         setMold(moldRes.data.data);
       }
 
       // 카테고리별 활성 템플릿 조회
       const tmpRes = await api.get(
-        `/api/v1/molds/${moldId}/checklist-templates`,
+        `/mobile/molds/${moldId}/checklist-templates`,
         {
           params: { category },
         }
@@ -74,7 +74,7 @@ export default function ChecklistStartPage() {
       console.log('[ChecklistStart] Starting checklist:', { moldId, templateId, category, role });
 
       const res = await api.post(
-        `/api/v1/molds/${moldId}/checklists/start`,
+        `/mobile/molds/${moldId}/checklists/start`,
         {
           templateId,
           siteRole: role,
