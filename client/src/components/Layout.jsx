@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2, Trash2, Cog, FileCheck, Keyboard } from 'lucide-react'
+import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2, Trash2, Cog, FileCheck, Keyboard, Search } from 'lucide-react'
+import { getMenuByRole, isRouteRegistered } from '../config/menuRegistry'
+import NotificationBell from './NotificationBell'
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
@@ -48,8 +50,46 @@ export default function Layout() {
     navigate('/login')
   }
 
-  // 사용자 유형별 메뉴 구성 (서브메뉴 포함)
+  // menuRegistry 기반 메뉴 구성
   const getMenuItems = () => {
+    const menuConfig = getMenuByRole(user?.user_type)
+    
+    // menuRegistry 형식을 Layout 형식으로 변환
+    return menuConfig.map(item => ({
+      to: item.path,
+      icon: item.icon,
+      label: item.label,
+      subMenus: item.subMenus?.map(sub => ({
+        to: sub.path,
+        label: sub.label
+      })) || []
+    }))
+  }
+
+  // 기존 하드코딩 메뉴 (menuRegistry로 이전 완료 후 제거 예정)
+  const getLegacyMenuItems = () => {
+    const userType = user?.user_type
+
+    // 시스템 관리자 메뉴 - menuRegistry 사용
+    if (userType === 'system_admin') {
+      return getMenuItems()
+    }
+
+    // 금형개발 담당 메뉴 - menuRegistry 사용
+    if (userType === 'mold_developer') {
+      return getMenuItems()
+    }
+
+    // 제작처/생산처는 아직 기존 방식 유지 (추후 이전)
+    if (userType === 'maker' || userType === 'plant') {
+      return getMenuItems()
+    }
+
+    return getMenuItems()
+  }
+
+  // 사용자 유형별 메뉴 구성 (서브메뉴 포함) - 레거시 백업
+  const getOldMenuItems = () => {
     const userType = user?.user_type
 
     // 시스템 관리자 메뉴
