@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { sequelize } = require('./models/newIndex');
+const { requestLogger } = require('./utils/logger');
 
 const app = express();
 
@@ -52,6 +53,9 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// API 요청 로깅 미들웨어
+app.use(requestLogger);
 
 // 정적 파일 제공 (업로드된 이미지)
 const uploadDir = process.env.UPLOAD_PATH || 'uploads/';
