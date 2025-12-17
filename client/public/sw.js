@@ -42,6 +42,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   
+  // chrome-extension 및 기타 비표준 스킴은 무시 (캐시 불가)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+  
   // API 요청은 캐시하지 않음
   if (url.pathname.includes('/api/')) {
     return;
