@@ -47,6 +47,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
+  // GET 이외의 메서드는 캐시 불가 (POST, PUT, DELETE 등)
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
   // API 요청은 캐시하지 않음
   if (url.pathname.includes('/api/')) {
     return;
