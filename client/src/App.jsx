@@ -13,6 +13,7 @@ import RepairRequestPage from './pages/RepairRequestPage'
 // Lazy loaded components
 import {
   SystemAdminDashboard,
+  ApprovalInbox,
   MoldDeveloperDashboard,
   MakerDashboard,
   PlantDashboard,
@@ -257,6 +258,8 @@ function App() {
         <Route path="dashboard/mold-developer" element={<MoldDeveloperDashboard />} />
         <Route path="dashboard/maker" element={<MakerDashboard />} />
         <Route path="dashboard/plant" element={<PlantDashboard />} />
+        {/* 관리자 전용 페이지 */}
+        <Route path="dashboard/system-admin/approvals" element={<ProtectedRoute allowedRoles={['system_admin']}><ApprovalInbox /></ProtectedRoute>} />
         {/* 기존 경로 호환성 유지 */}
         <Route path="dashboard/admin" element={<SystemAdminDashboard />} />
         <Route path="dashboard/developer" element={<MoldDeveloperDashboard />} />

@@ -6,6 +6,9 @@ import { lazy } from 'react';
 
 // PC 대시보드
 export const SystemAdminDashboard = lazy(() => import('../pages/dashboards/SystemAdminDashboard'));
+
+// 관리자 전용 페이지
+export const ApprovalInbox = lazy(() => import('../pages/admin/ApprovalInbox'));
 export const MoldDeveloperDashboard = lazy(() => import('../pages/dashboards/MoldDeveloperDashboard'));
 export const MakerDashboard = lazy(() => import('../pages/dashboards/MakerDashboard'));
 export const PlantDashboard = lazy(() => import('../pages/dashboards/PlantDashboard'));
