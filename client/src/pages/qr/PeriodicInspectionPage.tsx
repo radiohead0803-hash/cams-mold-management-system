@@ -1,30 +1,45 @@
 // client/src/pages/qr/PeriodicInspectionPage.tsx
 import { FormEvent, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { submitPeriodicInspection } from '../../api/inspectionApi';
 
-const cycleOptions = [
-  { value: '20K', label: '20K 정기점검' },
-  { value: '100K', label: '100K 정기점검' },
-  { value: '400K', label: '400K 정기점검' },
-  { value: '800K', label: '800K 정기점검' },
-] as const;
+type CycleType = '20K' | '100K' | '400K' | '800K';
+
+interface LocationState {
+  mold?: {
+    id: number;
+    code: string;
+    name?: string;
+  };
+}
 
 export default function PeriodicInspectionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [searchParams] = useSearchParams();
   const moldId = Number(searchParams.get('moldId') || 0);
+  const location = useLocation();
+  const state = location.state as LocationState | null;
 
   const navigate = useNavigate();
-  const [cycleType, setCycleType] =
-    useState<(typeof cycleOptions)[number]['value']>('20K');
-  const [measuredValue, setMeasuredValue] = useState('');
-  const [specMin, setSpecMin] = useState('');
-  const [specMax, setSpecMax] = useState('');
-  const [notes, setNotes] = useState('');
+  const [cycleType, setCycleType] = useState<CycleType>('20K');
+  const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [items, setItems] = useState([
+    { code: 'PARTING_LINE', measuredValue: 0 },
+    { code: 'GUIDE_PIN', measuredValue: 0 },
+    { code: 'COOLING', measuredValue: 0 },
+  ]);
+
+  const handleChangeMeasured = (index: number, value: number) => {
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === index ? { ...item, measuredValue: value } : item
+      )
+    );
+  };
 
   if (!sessionId || !moldId) {
     return (
@@ -37,33 +52,25 @@ export default function PeriodicInspectionPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
+    setSuccess(null);
     setError(null);
 
     try {
-      const payload = {
-        session_id: sessionId,
-        mold_id: moldId,
-        inspection_type: cycleType,
-        checklist_items: [
-          {
-            question_id: 1, // TODO: 나중에 체크리스트 마스터 연동
-            answer: measuredValue,
-            measured_value: Number(measuredValue),
-            spec_min: specMin ? Number(specMin) : undefined,
-            spec_max: specMax ? Number(specMax) : undefined,
-          },
-        ],
-        notes: notes || undefined,
-      };
+      await submitPeriodicInspection({
+        sessionId,
+        moldId,
+        cycleType,
+        items: items.map((item) => ({
+          code: item.code,
+          measuredValue: item.measuredValue,
+        })),
+        note,
+      });
 
-      await submitPeriodicInspection(payload);
-      setMessage(
-        `${cycleType} 정기점검이 저장되었습니다. NG/Critical NG는 자동 판정됩니다.`,
-      );
+      setSuccess('정기점검이 저장되었습니다. NG/Critical NG 결과는 자동으로 반영됩니다.');
       setTimeout(() => {
         navigate(-1);
-      }, 1200);
+      }, 1500);
     } catch (err: any) {
       const msg =
         err?.response?.data?.error?.message ||
@@ -75,113 +82,104 @@ export default function PeriodicInspectionPage() {
     }
   };
 
+  const moldLabel =
+    state?.mold?.code ??
+    (moldId ? `금형 ID ${moldId}` : '금형');
+
   return (
-    <div className="min-h-screen bg-slate-900 flex justify-center py-8 px-4">
-      <div className="w-full max-w-xl bg-slate-950/80 border border-white/10 rounded-3xl p-6 shadow-xl shadow-sky-500/20">
-        <h1 className="text-xl font-semibold text-white mb-1">정기점검</h1>
-        <p className="text-xs text-slate-400 mb-4">
-          타수 기준 정기점검 결과를 기록합니다. 기준값 대비 NG 여부는 서버에서
-          자동 판정합니다.
-        </p>
+    <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col items-center">
+      <div className="w-full max-w-xl mt-10 px-4">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold text-white">
+            정기점검 등록
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            {moldLabel} 에 대한 정기점검 결과를 입력하세요.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-slate-900/70 border border-slate-800 rounded-3xl p-4 space-y-4"
+        >
           <div>
-            <label className="block text-xs text-slate-200 mb-1">
+            <div className="block text-xs font-medium text-slate-300 mb-1">
               점검 주기
-            </label>
-            <select
-              className="w-full rounded-2xl bg-slate-900/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-              value={cycleType}
-              onChange={(e) =>
-                setCycleType(e.target.value as (typeof cycleOptions)[number]['value'])
-              }
-            >
-              {cycleOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(['20K', '100K', '400K', '800K'] as CycleType[]).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setCycleType(c)}
+                  className={`px-3 py-1.5 rounded-2xl text-xs border ${
+                    cycleType === c
+                      ? 'bg-sky-500 text-white border-sky-400'
+                      : 'bg-slate-950 text-slate-200 border-slate-700'
+                  }`}
+                >
+                  {c}
+                </button>
               ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs text-slate-200 mb-1">
-                측정값
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                className="w-full rounded-2xl bg-slate-900/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                value={measuredValue}
-                onChange={(e) => setMeasuredValue(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-200 mb-1">
-                최소값
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                className="w-full rounded-2xl bg-slate-900/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                value={specMin}
-                onChange={(e) => setSpecMin(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-200 mb-1">
-                최대값
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                className="w-full rounded-2xl bg-slate-900/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                value={specMax}
-                onChange={(e) => setSpecMax(e.target.value)}
-              />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs text-slate-200 mb-1">
-              특이사항 / 메모
+            <div className="block text-xs font-medium text-slate-300 mb-1">
+              측정 항목
+            </div>
+            <div className="space-y-2">
+              {items.map((item, index) => (
+                <div
+                  key={item.code}
+                  className="flex items-center justify-between gap-2 bg-slate-950 rounded-2xl px-3 py-2 border border-slate-800"
+                >
+                  <div className="text-xs text-slate-300">{item.code}</div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-24 rounded-xl bg-slate-900 border border-slate-700 px-2 py-1 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-right"
+                    value={item.measuredValue}
+                    onChange={(e) =>
+                      handleChangeMeasured(index, Number(e.target.value))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1">
+              비고
             </label>
             <textarea
-              rows={3}
-              className="w-full rounded-2xl bg-slate-900/60 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              className="w-full min-h-[80px] rounded-2xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              placeholder="특이사항, NG 사유 등을 기록하세요."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
             />
           </div>
 
           {error && (
-            <div className="text-xs text-red-400 bg-red-950/40 border border-red-500/40 rounded-2xl px-3 py-2">
+            <div className="text-[11px] text-red-400 bg-red-950/40 border border-red-500/40 rounded-2xl px-3 py-2">
               {error}
             </div>
           )}
-          {message && (
-            <div className="text-xs text-emerald-300 bg-emerald-950/40 border border-emerald-500/40 rounded-2xl px-3 py-2">
-              {message}
+
+          {success && (
+            <div className="text-[11px] text-emerald-300 bg-emerald-950/40 border border-emerald-500/40 rounded-2xl px-3 py-2">
+              {success}
             </div>
           )}
 
-          <div className="flex gap-2 mt-2">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex-1 rounded-2xl border border-slate-600 text-slate-200 text-sm py-2.5"
-            >
-              취소
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 rounded-2xl bg-sky-500 hover:bg-sky-400 disabled:bg-slate-600 text-white text-sm font-medium py-2.5 shadow-lg shadow-sky-500/40"
-            >
-              {loading ? '저장 중…' : '저장'}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-2xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 mt-1 shadow-lg shadow-emerald-500/40 transition-all"
+          >
+            {loading ? '저장 중…' : '정기점검 저장'}
+          </button>
         </form>
       </div>
     </div>
