@@ -46,6 +46,7 @@ import {
   RepairRequestForm,
   HqRepairListPage,
   MakerRepairListPage,
+  MakerMoldDetail,
   MoldDevelopmentPlan,
   HardnessMeasurement,
   MoldSpecification,
@@ -298,6 +299,7 @@ function App() {
         <Route path="master-data" element={<ProtectedRoute allowedRoles={['system_admin']}><MasterData /></ProtectedRoute>} />
         <Route path="hq/repair-requests" element={<HqRepairListPage />} />
         <Route path="maker/repair-requests" element={<MakerRepairListPage />} />
+        <Route path="maker/mold/:id" element={<MakerMoldDetail />} />
         <Route path="mold-development/plan" element={<MoldDevelopmentPlan />} />
         <Route path="mold-development/nurturing" element={<MoldDevelopmentPlan />} />
         <Route path="mold-development/hardness" element={<HardnessMeasurement />} />

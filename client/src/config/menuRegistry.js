@@ -456,6 +456,7 @@ export const REGISTERED_ROUTES = [
   '/repairs',
   '/hq/repair-requests',
   '/maker/repair-requests',
+  '/maker/mold',
   '/repair-request-form',
   '/transfers',
   '/transfers/new',

@@ -52,6 +52,9 @@ export const RepairRequestForm = lazy(() => import('../pages/RepairRequestForm')
 export const HqRepairListPage = lazy(() => import('../pages/HqRepairListPage'));
 export const MakerRepairListPage = lazy(() => import('../pages/MakerRepairListPage'));
 
+// 제작처 전용 페이지
+export const MakerMoldDetail = lazy(() => import('../pages/maker/MakerMoldDetail'));
+
 // 금형 개발
 export const MoldDevelopmentPlan = lazy(() => import('../pages/MoldDevelopmentPlan'));
 export const HardnessMeasurement = lazy(() => import('../pages/HardnessMeasurement'));
