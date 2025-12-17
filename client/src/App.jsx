@@ -300,6 +300,7 @@ function App() {
         <Route path="alerts" element={<Alerts />} />
         <Route path="checklist-master" element={<ChecklistMaster />} />
         <Route path="repairs" element={<RepairManagement />} />
+        <Route path="repairs/new" element={<RepairRequestForm />} />
         <Route path="molds/:id/documents" element={<MoldDocuments />} />
         <Route path="molds/:id/photos" element={<MoldPhotoGallery />} />
         <Route path="companies" element={<CompanyManagement />} />
