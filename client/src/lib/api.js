@@ -339,4 +339,43 @@ export const userManagementAPI = {
   deleteUser: (id) => api.delete(`/user-management/${id}`),
 }
 
+// Checklist Master API (체크리스트 마스터 관리)
+export const checklistMasterAPI = {
+  // 마스터 버전
+  getVersions: (params) => api.get('/checklist-masters', { params }),
+  getVersionById: (id) => api.get(`/checklist-masters/${id}`),
+  createVersion: (data) => api.post('/checklist-masters', data),
+  updateVersion: (id, data) => api.patch(`/checklist-masters/${id}`, data),
+  submitForReview: (id) => api.post(`/checklist-masters/${id}/submit-review`),
+  approve: (id) => api.post(`/checklist-masters/${id}/approve`),
+  deploy: (id) => api.post(`/checklist-masters/${id}/deploy`),
+  clone: (id) => api.post(`/checklist-masters/${id}/clone`),
+  getDeployed: (params) => api.get('/checklist-masters/deployed', { params }),
+  
+  // 점검항목
+  getItems: (params) => api.get('/checklist-masters/items', { params }),
+  createItem: (data) => api.post('/checklist-masters/items', data),
+  updateItem: (id, data) => api.patch(`/checklist-masters/items/${id}`, data),
+  
+  // 주기 코드
+  getCycles: () => api.get('/checklist-masters/cycles'),
+}
+
+// Inspection New API (통합 점검 시스템)
+export const inspectionNewAPI = {
+  // 점검 수행
+  start: (data) => api.post('/inspections-new/start', data),
+  getById: (id) => api.get(`/inspections-new/${id}`),
+  saveDraft: (id, data) => api.patch(`/inspections-new/${id}/save-draft`, data),
+  submit: (id, data) => api.post(`/inspections-new/${id}/submit`, data),
+  
+  // 점검 이력
+  getHistory: (params) => api.get('/inspections-new', { params }),
+  
+  // 스케줄
+  getDueSchedules: (params) => api.get('/inspections-new/schedules/due', { params }),
+  getSchedules: (params) => api.get('/inspections-new/schedules', { params }),
+  recalcSchedules: (params) => api.post('/inspections-new/schedules/recalc', null, { params }),
+}
+
 export default api

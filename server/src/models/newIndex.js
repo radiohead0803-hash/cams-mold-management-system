@@ -51,6 +51,14 @@ const ProductionTransferRequest = require('./ProductionTransferRequest');
 const ProductionTransferChecklistItem = require('./ProductionTransferChecklistItem');
 const ProductionTransferApproval = require('./ProductionTransferApproval');
 const TryoutIssue = require('./TryoutIssue');
+const ChecklistMasterVersion = require('./ChecklistMasterVersion');
+const ChecklistItemMasterNew = require('./ChecklistItemMasterNew');
+const ChecklistCycleCode = require('./ChecklistCycleCode');
+const ChecklistVersionItemMap = require('./ChecklistVersionItemMap');
+const ChecklistItemCycleMap = require('./ChecklistItemCycleMap');
+const InspectionSchedule = require('./InspectionSchedule');
+const InspectionInstanceNew = require('./InspectionInstanceNew');
+const InspectionInstanceItem = require('./InspectionInstanceItem');
 
 // Helper function to initialize models
 const initModel = (ModelClass, sequelize) => {
@@ -107,7 +115,15 @@ const models = {
   ProductionTransferRequest: initModel(ProductionTransferRequest, sequelize),
   ProductionTransferChecklistItem: initModel(ProductionTransferChecklistItem, sequelize),
   ProductionTransferApproval: initModel(ProductionTransferApproval, sequelize),
-  TryoutIssue: initModel(TryoutIssue, sequelize)
+  TryoutIssue: initModel(TryoutIssue, sequelize),
+  ChecklistMasterVersion: initModel(ChecklistMasterVersion, sequelize),
+  ChecklistItemMasterNew: initModel(ChecklistItemMasterNew, sequelize),
+  ChecklistCycleCode: initModel(ChecklistCycleCode, sequelize),
+  ChecklistVersionItemMap: initModel(ChecklistVersionItemMap, sequelize),
+  ChecklistItemCycleMap: initModel(ChecklistItemCycleMap, sequelize),
+  InspectionSchedule: initModel(InspectionSchedule, sequelize),
+  InspectionInstanceNew: initModel(InspectionInstanceNew, sequelize),
+  InspectionInstanceItem: initModel(InspectionInstanceItem, sequelize)
 };
 
 // Setup associations

@@ -124,6 +124,12 @@ export const MoldOverviewPage = lazy(() => import('../pages/mobile/MoldOverviewP
 export const ChecklistStartPage = lazy(() => import('../pages/mobile/ChecklistStartPage'));
 export const RepairRequestListPage = lazy(() => import('../pages/mobile/RepairRequestListPage'));
 
+// 체크리스트 마스터 관리
+export const ChecklistMasterConsole = lazy(() => import('../pages/ChecklistMasterConsole'));
+
+// 모바일 통합 점검
+export const MobileInspectionNew = lazy(() => import('../pages/mobile/MobileInspectionNew'));
+
 // QR 스캔 페이지
 export const QrScanPage = lazy(() => import('../pages/qr/QrScanPage'));
 export const DailyInspectionPageQr = lazy(() => import('../pages/qr/DailyInspectionPage'));

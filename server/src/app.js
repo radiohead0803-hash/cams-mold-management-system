@@ -129,6 +129,8 @@ const systemRulesRouter = require('./routes/systemRules');
 const riskMonitorRouter = require('./routes/riskMonitor');
 const globalSearchRouter = require('./routes/globalSearch');
 const moldEventsRouter = require('./routes/moldEvents');
+const checklistMastersRouter = require('./routes/checklistMasters');
+const inspectionsNewRouter = require('./routes/inspectionsNew');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -191,6 +193,10 @@ app.use('/api/v1/test-data', testDataRouter);
 app.use('/api/v1/alerts', alertsRouter);
 // Pre-production checklist (제작전 체크리스트)
 app.use('/api/v1/pre-production-checklist', preProductionChecklistRouter);
+// Checklist Masters (체크리스트 마스터 관리)
+app.use('/api/v1/checklist-masters', checklistMastersRouter);
+// Inspections New (통합 점검 시스템)
+app.use('/api/v1/inspections-new', inspectionsNewRouter);
 // Maintenance (유지보전)
 app.use('/api/v1/maintenance', maintenanceRouter);
 // Scrapping (폐기)

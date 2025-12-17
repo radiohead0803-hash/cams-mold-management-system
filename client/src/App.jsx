@@ -68,6 +68,8 @@ import {
   QRSessionsPage,
   MoldLocationMapPage,
   ProductionTransferChecklistMaster,
+  ChecklistMasterConsole,
+  MobileInspectionNew,
   MobileQRLogin,
   MobileMoldDetail,
   MobileQRScan,
@@ -175,6 +177,10 @@ function App() {
       {/* Mobile - 제작전 체크리스트 */}
       <Route path="/mobile/pre-production-checklist" element={<MobilePreProductionChecklist />} />
       <Route path="/mobile/pre-production-checklist/:id" element={<MobilePreProductionChecklist />} />
+      
+      {/* Mobile - 통합 점검 시스템 */}
+      <Route path="/mobile/inspection-new" element={<MobileInspectionNew />} />
+      <Route path="/mobile/inspection-new/:id" element={<MobileInspectionNew />} />
       
       {/* Mobile - 금형 폐기 */}
       <Route path="/mobile/scrapping" element={<MobileScrappingPage />} />
@@ -313,9 +319,10 @@ function App() {
         <Route path="inspection-approval" element={<InspectionApproval />} />
         <Route path="repair-request-form" element={<RepairRequestForm />} />
         
-        {/* 표준문서 마스터 관리 */}
-        <Route path="pre-production-checklist" element={<StandardDocumentMaster />} />
-        <Route path="pre-production-checklist/:id" element={<StandardDocumentMaster />} />
+        {/* 체크리스트 마스터 관리 콘솔 */}
+        <Route path="pre-production-checklist" element={<ChecklistMasterConsole />} />
+        <Route path="checklist-master/:id" element={<ChecklistMasterConsole />} />
+        <Route path="checklist-master/:id/edit" element={<ChecklistMasterConsole />} />
         
         {/* 금형 폐기 관리 */}
         <Route path="scrapping" element={<ScrappingManagement />} />
