@@ -6,6 +6,7 @@ import NaverMoldLocationMap from '../../components/NaverMoldLocationMap';
 import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget, InspectionDueWidget, ApprovalPendingWidget, DevelopmentProgressWidget, RepairWidget, TransferWidget } from '../../components/DashboardWidgets';
 import { useDashboardKpi, useDashboardActivities } from '../../hooks/useDashboardKpi';
 import { useMoldLocations } from '../../hooks/useMoldLocations';
+import { SkeletonDashboard } from '../../components/mobile/Skeleton';
 
 export default function SystemAdminDashboard() {
   const navigate = useNavigate();
@@ -62,13 +63,17 @@ export default function SystemAdminDashboard() {
     { label: 'Critical 알람', value: stats.criticalAlerts || 0 }
   ] : [];
 
-  // 로딩 상태
+  // 로딩 상태 - 스켈레톤 UI 적용
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">대시보드 로딩 중...</p>
+      <div className="min-h-screen bg-gray-50">
+        <DashboardHeader 
+          title="시스템 관리자 대시보드"
+          subtitle="전사 통합 현황 모니터링 및 시스템 관리"
+          stats={[]}
+        />
+        <div className="p-6">
+          <SkeletonDashboard />
         </div>
       </div>
     );

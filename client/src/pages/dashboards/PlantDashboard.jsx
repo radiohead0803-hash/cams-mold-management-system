@@ -4,6 +4,7 @@ import { Factory, CheckCircle, Wrench, TrendingUp, Package, AlertTriangle, QrCod
 import api from '../../lib/api';
 import DashboardHeader from '../../components/DashboardHeader';
 import { MaintenanceWidget, AlertSummaryWidget, InspectionDueWidget } from '../../components/DashboardWidgets';
+import { SkeletonDashboard } from '../../components/mobile/Skeleton';
 
 export default function PlantDashboard() {
   const navigate = useNavigate();
@@ -48,13 +49,17 @@ export default function PlantDashboard() {
     { label: '오늘 점검', value: stats.todayChecks || 0 }
   ] : [];
 
-  // 로딩 상태
+  // 로딩 상태 - 스켈레톤 UI 적용
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">대시보드 로딩 중...</p>
+      <div className="min-h-screen bg-gray-50">
+        <DashboardHeader 
+          title="생산처 대시보드"
+          subtitle="금형 점검 및 생산 현황 관리"
+          stats={[]}
+        />
+        <div className="p-6">
+          <SkeletonDashboard />
         </div>
       </div>
     );
