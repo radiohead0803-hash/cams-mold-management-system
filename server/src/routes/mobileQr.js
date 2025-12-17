@@ -120,15 +120,15 @@ router.get('/molds/:moldId/checklist-templates', async (req, res) => {
     const { moldId } = req.params;
     const { category } = req.query; // 'daily' | 'regular'
 
-    // 활성 템플릿 조회
-    const [templates] = await sequelize.query(`
+    // 활성 템플릿 조회 (컬럼명: name, category)
+    const templates = await sequelize.query(`
       SELECT 
-        id, template_name as name, template_type as category,
-        description, is_active, version
+        id, name, category, shot_interval,
+        is_active, version
       FROM checklist_templates
       WHERE is_active = true
-      ${category ? "AND template_type = :category" : ""}
-      ORDER BY template_name
+      ${category ? "AND category = :category" : ""}
+      ORDER BY name
     `, {
       replacements: { category },
       type: sequelize.QueryTypes.SELECT
@@ -142,7 +142,8 @@ router.get('/molds/:moldId/checklist-templates', async (req, res) => {
     console.error('[Checklist Templates] Error:', error);
     return res.status(500).json({
       success: false,
-      message: '템플릿 조회 중 오류가 발생했습니다.'
+      message: '템플릿 조회 중 오류가 발생했습니다.',
+      error: error.message
     });
   }
 });
