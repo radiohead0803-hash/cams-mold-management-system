@@ -120,6 +120,23 @@ router.get('/molds/:moldId/checklist-templates', async (req, res) => {
     const { moldId } = req.params;
     const { category } = req.query; // 'daily' | 'regular'
 
+    // 테이블 존재 여부 확인
+    const [tableCheck] = await sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'checklist_templates'
+      ) as exists
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    if (!tableCheck || !tableCheck.exists) {
+      // 테이블이 없으면 빈 배열 반환
+      console.log('[Checklist Templates] Table does not exist, returning empty array');
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
     // 활성 템플릿 조회 (컬럼명: name, category)
     const templates = await sequelize.query(`
       SELECT 
@@ -140,6 +157,13 @@ router.get('/molds/:moldId/checklist-templates', async (req, res) => {
     });
   } catch (error) {
     console.error('[Checklist Templates] Error:', error);
+    // 테이블이 없거나 컬럼 오류 시 빈 배열 반환
+    if (error.message?.includes('does not exist') || error.message?.includes('relation')) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
     return res.status(500).json({
       success: false,
       message: '템플릿 조회 중 오류가 발생했습니다.',
