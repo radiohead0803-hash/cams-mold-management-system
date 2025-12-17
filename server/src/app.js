@@ -127,6 +127,7 @@ app.use('/api/v1/molds', moldsRouter);
 app.use('/api/v1/inspections', inspectionsRouter);
 app.use('/api/v1/mobile', mobileMoldsRouter);
 app.use('/api/v1/mobile', mobileQrRouter);
+app.use('/api/v1/mobile', mobileDashboardRouter);
 app.use('/api/v1', repairRequestsRouter);
 app.use('/api/v1/notifications', notificationsRouter);
 app.use('/api/v1/qr', qrRouter);
