@@ -125,9 +125,11 @@ const repairWorkflowRouter = require('./routes/repairWorkflow');
 const statisticsReportRouter = require('./routes/statisticsReport');
 const auditLogRouter = require('./routes/auditLog');
 const approvalsRouter = require('./routes/approvals');
+const systemRulesRouter = require('./routes/systemRules');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
+app.use('/api/v1/system-rules', systemRulesRouter);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/molds', moldsRouter);
 app.use('/api/v1/inspections', inspectionsRouter);

@@ -14,6 +14,7 @@ import RepairRequestPage from './pages/RepairRequestPage'
 import {
   SystemAdminDashboard,
   ApprovalInbox,
+  SystemRulesPage,
   MoldDeveloperDashboard,
   MakerDashboard,
   PlantDashboard,
@@ -260,6 +261,7 @@ function App() {
         <Route path="dashboard/plant" element={<PlantDashboard />} />
         {/* 관리자 전용 페이지 */}
         <Route path="dashboard/system-admin/approvals" element={<ProtectedRoute allowedRoles={['system_admin']}><ApprovalInbox /></ProtectedRoute>} />
+        <Route path="dashboard/system-admin/rules" element={<ProtectedRoute allowedRoles={['system_admin']}><SystemRulesPage /></ProtectedRoute>} />
         {/* 기존 경로 호환성 유지 */}
         <Route path="dashboard/admin" element={<SystemAdminDashboard />} />
         <Route path="dashboard/developer" element={<MoldDeveloperDashboard />} />
