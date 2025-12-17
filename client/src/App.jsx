@@ -16,6 +16,7 @@ import {
   ApprovalInbox,
   SystemRulesPage,
   NotificationCenter,
+  RiskMonitorDashboard,
   MoldDeveloperDashboard,
   MakerDashboard,
   PlantDashboard,
@@ -264,6 +265,7 @@ function App() {
         <Route path="dashboard/system-admin/approvals" element={<ProtectedRoute allowedRoles={['system_admin']}><ApprovalInbox /></ProtectedRoute>} />
         <Route path="dashboard/system-admin/rules" element={<ProtectedRoute allowedRoles={['system_admin']}><SystemRulesPage /></ProtectedRoute>} />
         <Route path="dashboard/system-admin/notifications" element={<ProtectedRoute allowedRoles={['system_admin']}><NotificationCenter /></ProtectedRoute>} />
+        <Route path="dashboard/system-admin/risk-monitor" element={<ProtectedRoute allowedRoles={['system_admin']}><RiskMonitorDashboard /></ProtectedRoute>} />
         {/* 기존 경로 호환성 유지 */}
         <Route path="dashboard/admin" element={<SystemAdminDashboard />} />
         <Route path="dashboard/developer" element={<MoldDeveloperDashboard />} />

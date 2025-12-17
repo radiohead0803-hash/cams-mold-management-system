@@ -11,6 +11,7 @@ export const SystemAdminDashboard = lazy(() => import('../pages/dashboards/Syste
 export const ApprovalInbox = lazy(() => import('../pages/admin/ApprovalInbox'));
 export const SystemRulesPage = lazy(() => import('../pages/admin/SystemRulesPage'));
 export const NotificationCenter = lazy(() => import('../pages/admin/NotificationCenter'));
+export const RiskMonitorDashboard = lazy(() => import('../pages/admin/RiskMonitorDashboard'));
 export const MoldDeveloperDashboard = lazy(() => import('../pages/dashboards/MoldDeveloperDashboard'));
 export const MakerDashboard = lazy(() => import('../pages/dashboards/MakerDashboard'));
 export const PlantDashboard = lazy(() => import('../pages/dashboards/PlantDashboard'));
