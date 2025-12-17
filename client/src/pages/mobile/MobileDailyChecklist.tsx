@@ -1,19 +1,19 @@
 // client/src/pages/mobile/MobileDailyChecklist.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, AlertTriangle, X, ChevronRight, ChevronLeft, Camera, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, AlertTriangle, X, ChevronRight, ChevronLeft, Camera, Loader2, BookOpen } from 'lucide-react';
 import api from '../../lib/api';
 
-// 웹버전과 동일한 일상점검 카테고리/항목 구조
+// 웹버전과 동일한 일상점검 카테고리/항목 구조 (checkPoints 포함)
 const CHECK_CATEGORIES = [
   {
     id: 1,
     name: '금형 외관 점검',
     icon: '🔍',
     items: [
-      { id: 101, name: '금형 외관 상태', description: '금형 외관의 손상, 변형, 부식 여부 확인', required: true },
-      { id: 102, name: '금형 명판 상태', description: '명판 식별 가능 여부 확인', required: true },
-      { id: 103, name: '파팅라인 상태', description: '파팅라인 밀착 상태 및 버 발생 여부', required: true }
+      { id: 101, name: '금형 외관 상태', description: '금형 외관의 손상, 변형, 부식 여부 확인', required: true, checkPoints: ['금형 표면 스크래치 확인', '찌그러짐/변형 여부', '녹/부식 발생 여부', '외관 청결 상태'] },
+      { id: 102, name: '금형 명판 상태', description: '명판 식별 가능 여부 확인', required: true, checkPoints: ['금형 번호 식별 가능', '제작일자 확인 가능', '명판 손상 여부'] },
+      { id: 103, name: '파팅라인 상태', description: '파팅라인 밀착 상태 및 버 발생 여부', required: true, checkPoints: ['상/하형 접합부 밀착도', '버(Burr) 발생 여부', '수지 간섭 흔적 확인', '찌꺼기 제거 상태'] }
     ]
   },
   {
@@ -21,9 +21,9 @@ const CHECK_CATEGORIES = [
     name: '냉각 시스템',
     icon: '💧',
     items: [
-      { id: 201, name: '냉각수 연결 상태', description: '냉각수 라인 연결 및 누수 여부', required: true },
-      { id: 202, name: '냉각수 유량', description: '냉각수 흐름 원활 여부 (온도차 5℃ 이하)', required: true },
-      { id: 203, name: '냉각 채널 막힘', description: '냉각 채널 스케일/이물질 막힘', required: false }
+      { id: 201, name: '냉각수 연결 상태', description: '냉각수 라인 연결 및 누수 여부', required: true, checkPoints: ['입/출구 호스 연결 상태', '누수 여부 확인', '커플링 체결 상태'] },
+      { id: 202, name: '냉각수 유량', description: '냉각수 흐름 원활 여부 (온도차 5℃ 이하)', required: true, checkPoints: ['입구 온도 측정', '출구 온도 측정', '온도차 5℃ 이하 확인', '유량 정상 여부'] },
+      { id: 203, name: '냉각 채널 막힘', description: '냉각 채널 스케일/이물질 막힘', required: false, checkPoints: ['채널 막힘 여부', '스케일 축적 상태', '냉각 효율 저하 여부'] }
     ]
   },
   {
@@ -31,11 +31,11 @@ const CHECK_CATEGORIES = [
     name: '작동부 점검',
     icon: '⚙️',
     items: [
-      { id: 301, name: '이젝터 작동 상태', description: '이젝터 핀 작동 원활성', required: true },
-      { id: 302, name: '슬라이드 작동 상태', description: '슬라이드 코어 작동 상태', required: false },
-      { id: 303, name: '가이드 핀/부시 상태', description: '가이드 핀 마모 및 유격', required: true },
-      { id: 304, name: '밀핀/제품핀', description: '작동 시 걸림, 파손, 변형 無', required: true },
-      { id: 305, name: '리턴 핀/스프링', description: '리턴 핀 작동 및 스프링 탄성', required: true }
+      { id: 301, name: '이젝터 작동 상태', description: '이젝터 핀 작동 원활성', required: true, checkPoints: ['이젝터 핀 걸림 없음', '부드러운 작동 확인', '복귀 동작 정상'] },
+      { id: 302, name: '슬라이드 작동 상태', description: '슬라이드 코어 작동 상태', required: false, checkPoints: ['슬라이드 이동 시 걸림 확인', '이상음 발생 여부', '작동 속도 정상 여부'] },
+      { id: 303, name: '가이드 핀/부시 상태', description: '가이드 핀 마모 및 유격', required: true, checkPoints: ['가이드핀 손상 확인', '마모 상태 점검', '유격 정상 여부'] },
+      { id: 304, name: '밀핀/제품핀', description: '작동 시 걸림, 파손, 변형 無', required: true, checkPoints: ['밀핀 작동 확인', '파손 여부 점검', '변형 상태 확인'] },
+      { id: 305, name: '리턴 핀/스프링', description: '리턴 핀 작동 및 스프링 탄성', required: true, checkPoints: ['리턴 핀 복귀 동작', '스프링 탄성 상태', '정상 작동 확인'] }
     ]
   },
   {
@@ -43,9 +43,9 @@ const CHECK_CATEGORIES = [
     name: '게이트/런너/벤트',
     icon: '🔄',
     items: [
-      { id: 401, name: '게이트 상태', description: '게이트 마모 및 손상 여부', required: true },
-      { id: 402, name: '런너 상태', description: '런너 청결 및 막힘 여부', required: true },
-      { id: 403, name: '벤트 상태', description: '가스 벤트 막힘 여부', required: true }
+      { id: 401, name: '게이트 상태', description: '게이트 마모 및 손상 여부', required: true, checkPoints: ['게이트 마모 확인', '변형/손상 여부', '막힘 상태 점검'] },
+      { id: 402, name: '런너 상태', description: '런너 청결 및 막힘 여부', required: true, checkPoints: ['잔류 수지 확인', '이물질 여부', '청결 상태'] },
+      { id: 403, name: '벤트 상태', description: '가스 벤트 막힘 여부', required: true, checkPoints: ['벤트 구멍 막힘 확인', '가스 배출 원활성', '이물질 제거 상태'] }
     ]
   },
   {
@@ -53,8 +53,8 @@ const CHECK_CATEGORIES = [
     name: '히터/센서/전기',
     icon: '🌡️',
     items: [
-      { id: 501, name: '히터/온도센서 상태', description: '히터 작동 및 센서 정상 여부', required: false },
-      { id: 502, name: '배선/커넥터 상태', description: '전기 배선 손상 여부', required: false }
+      { id: 501, name: '히터/온도센서 상태', description: '히터 작동 및 센서 정상 여부', required: false, checkPoints: ['히터 작동 확인', '온도센서 정상 작동', '과열 여부 점검', '단선/접촉불량 확인'] },
+      { id: 502, name: '배선/커넥터 상태', description: '전기 배선 손상 여부', required: false, checkPoints: ['배선 피복 상태', '커넥터 접촉 상태', '단선 여부 확인'] }
     ]
   },
   {
@@ -62,9 +62,9 @@ const CHECK_CATEGORIES = [
     name: '체결/취출 계통',
     icon: '🔧',
     items: [
-      { id: 601, name: '금형 체결볼트', description: '풀림, 균열, 아이마킹 상태', required: true },
-      { id: 602, name: '로케이트링/스프루부', description: '위치이탈, 손상 無', required: true },
-      { id: 603, name: '취출핀/스프링', description: '정상작동, 파손·마모 無', required: true }
+      { id: 601, name: '금형 체결볼트', description: '풀림, 균열, 아이마킹 상태', required: true, checkPoints: ['볼트 풀림 확인', '균열 발생 여부', '아이마킹 상태'] },
+      { id: 602, name: '로케이트링/스프루부', description: '위치이탈, 손상 無', required: true, checkPoints: ['로케이트링 위치', '스프루부 손상 여부', '고정 상태 확인'] },
+      { id: 603, name: '취출핀/스프링', description: '정상작동, 파손·마모 無', required: true, checkPoints: ['취출핀 작동 확인', '스프링 탄성 상태', '파손/마모 여부'] }
     ]
   },
   {
@@ -72,9 +72,9 @@ const CHECK_CATEGORIES = [
     name: '윤활/청결 관리',
     icon: '🧴',
     items: [
-      { id: 701, name: '슬라이드/핀류 윤활', description: '그리스 도포 상태 양호', required: true },
-      { id: 702, name: '엘글라/리프트핀 윤활', description: '그리스 도포 상태 양호', required: true },
-      { id: 703, name: '성형면 청결', description: '캐비티/코어 이물질 제거', required: true }
+      { id: 701, name: '슬라이드/핀류 윤활', description: '그리스 도포 상태 양호', required: true, checkPoints: ['슬라이드 그리스 상태', '핀류 윤활 상태', '그리스 도포량 적정'] },
+      { id: 702, name: '엘글라/리프트핀 윤활', description: '그리스 도포 상태 양호', required: true, checkPoints: ['엘글라 그리스 상태', '리프트핀 윤활 상태', '도포 상태 확인'] },
+      { id: 703, name: '성형면 청결', description: '캐비티/코어 이물질 제거', required: true, checkPoints: ['캐비티 표면 수지 잔류 확인', '코어 청결 상태', '이물질 제거 완료'] }
     ]
   },
   {
@@ -82,7 +82,7 @@ const CHECK_CATEGORIES = [
     name: '이상/누출 점검',
     icon: '⚠️',
     items: [
-      { id: 801, name: '누유/누수 여부', description: '냉각수, 오일, 에어라인 이상 無', required: true }
+      { id: 801, name: '누유/누수 여부', description: '냉각수, 오일, 에어라인 이상 無', required: true, checkPoints: ['냉각수 누수 확인', '오일 누유 확인', '에어라인 이상 확인'] }
     ]
   },
   {
@@ -90,7 +90,7 @@ const CHECK_CATEGORIES = [
     name: '방청 관리',
     icon: '🛡️',
     items: [
-      { id: 901, name: '방청유 도포', description: '보관 시 성형면 방청처리 (비가동 시)', required: false }
+      { id: 901, name: '방청유 도포', description: '보관 시 성형면 방청처리 (비가동 시)', required: false, checkPoints: ['방청유 도포 상태', '성형면 처리 확인', '보관 환경 적정'] }
     ]
   },
   {
@@ -98,10 +98,19 @@ const CHECK_CATEGORIES = [
     name: '생산 정보',
     icon: '📊',
     items: [
-      { id: 1001, name: '생산수량', description: '금일 생산수량 입력 (숏수 자동 누적)', required: false, fieldType: 'number' }
+      { id: 1001, name: '생산수량', description: '금일 생산수량 입력 (숏수 자동 누적)', required: false, fieldType: 'number', checkPoints: ['생산수량 정확히 입력', '숏수 자동 누적 확인', '보증숏수 90% 도달 시 경고', '100% 도달 시 긴급 알림'] }
     ]
   }
 ];
+
+interface Item {
+  id: number;
+  name: string;
+  description: string;
+  required: boolean;
+  checkPoints?: string[];
+  fieldType?: string;
+}
 
 type CheckStatus = '양호' | '주의' | '불량' | null;
 
@@ -134,6 +143,7 @@ export default function MobileDailyChecklist() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showGuide, setShowGuide] = useState<Item | null>(null);
   const [success, setSuccess] = useState('');
 
   const currentCategory = CHECK_CATEGORIES[currentCategoryIndex];
@@ -317,7 +327,7 @@ export default function MobileDailyChecklist() {
 
       {/* 카테고리 탭 (가로 스크롤) */}
       <div className="bg-white border-b border-slate-200 overflow-x-auto">
-        <div className="flex p-2 gap-2 min-w-max">
+        <div className="flex px-3 py-3 gap-2 min-w-max">
           {CHECK_CATEGORIES.map((category, index) => {
             const { completed, total } = getCategoryProgress(category);
             const isActive = index === currentCategoryIndex;
@@ -327,7 +337,7 @@ export default function MobileDailyChecklist() {
               <button
                 key={category.id}
                 onClick={() => setCurrentCategoryIndex(index)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs whitespace-nowrap transition-all ${
                   isActive
                     ? 'bg-blue-500 text-white'
                     : isComplete
@@ -374,9 +384,18 @@ export default function MobileDailyChecklist() {
                     {item.name}
                     {item.required && <span className="text-red-500 ml-1">*</span>}
                   </h3>
-                  <button className="text-slate-400">
-                    <Camera size={16} />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowGuide(item as Item)}
+                      className="text-blue-500 flex items-center gap-1 text-[10px]"
+                    >
+                      <BookOpen size={14} />
+                      가이드
+                    </button>
+                    <button className="text-slate-400">
+                      <Camera size={16} />
+                    </button>
+                  </div>
                 </div>
                 <p className="text-[10px] text-slate-500 mt-0.5">{item.description}</p>
               </div>
@@ -487,6 +506,64 @@ export default function MobileDailyChecklist() {
           </button>
         )}
       </div>
+      {/* 가이드 모달 */}
+      {showGuide && (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-2xl max-h-[80vh] overflow-y-auto animate-slide-up">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <BookOpen size={18} className="text-blue-500" />
+                점검 가이드
+              </h3>
+              <button
+                onClick={() => setShowGuide(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* 항목 정보 */}
+              <div>
+                <h4 className="text-sm font-semibold text-slate-900">{showGuide.name}</h4>
+                <p className="text-xs text-slate-500 mt-1">{showGuide.description}</p>
+              </div>
+
+              {/* 점검 포인트 */}
+              {showGuide.checkPoints && (
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <h5 className="text-xs font-semibold text-blue-900 mb-2">📋 점검 포인트</h5>
+                  <ul className="space-y-2">
+                    {showGuide.checkPoints.map((point, idx) => (
+                      <li key={idx} className="text-xs text-blue-800 flex items-start gap-2">
+                        <span className="text-blue-500 mt-0.5">✓</span>
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* 참고 사진 (플레이스홀더) */}
+              <div>
+                <h5 className="text-xs font-semibold text-slate-900 mb-2">📷 참고 사진</h5>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 text-[10px]">
+                    양호 예시
+                  </div>
+                  <div className="aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 text-[10px]">
+                    불량 예시
+                  </div>
+                  <div className="aspect-square bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 text-[10px]">
+                    점검 방법
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

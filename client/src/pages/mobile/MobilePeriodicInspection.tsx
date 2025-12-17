@@ -617,7 +617,7 @@ export default function MobilePeriodicInspection() {
 
       {/* 카테고리 탭 (가로 스크롤) */}
       <div className="bg-white border-b border-slate-200 overflow-x-auto">
-        <div className="flex p-2 gap-2 min-w-max">
+        <div className="flex px-3 py-3 gap-2 min-w-max">
           {selectedType.categories.map((category, index) => {
             const { completed, total } = getCategoryProgress(category);
             const isActive = index === currentCategoryIndex;
@@ -627,7 +627,7 @@ export default function MobilePeriodicInspection() {
               <button
                 key={category.id}
                 onClick={() => setCurrentCategoryIndex(index)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs whitespace-nowrap transition-all ${
                   isActive
                     ? 'bg-blue-500 text-white'
                     : isComplete
