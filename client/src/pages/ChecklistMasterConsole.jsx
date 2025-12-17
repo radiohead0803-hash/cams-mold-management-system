@@ -303,7 +303,7 @@ export default function ChecklistMasterConsole() {
         )}
 
         {activeTab === 'items' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">점검항목 마스터</h3>
               <button
@@ -314,66 +314,109 @@ export default function ChecklistMasterConsole() {
                 항목 추가
               </button>
             </div>
-            <div className="divide-y divide-gray-200">
-              {items.length === 0 ? (
-                <div className="p-12 text-center text-gray-500">
-                  <Settings className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  점검항목이 없습니다.
-                </div>
-              ) : (
-                items.map(item => (
-                  <div key={item.id} className="px-6 py-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                            {item.major_category}
-                          </span>
-                          <span className="font-medium text-gray-900">{item.item_name}</span>
-                          {item.required_photo && (
-                            <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">
-                              사진필수
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">{item.description}</p>
-                      </div>
-                      <button className="p-2 text-gray-400 hover:text-blue-600">
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">대분류</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">항목명</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">점검내용</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">점검방법</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">사진필수</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">작업</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {items.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                      <Settings className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      점검항목이 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((item, idx) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm text-gray-500">{idx + 1}</td>
+                      <td className="px-6 py-4">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                          {item.major_category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 font-medium text-gray-900">{item.item_name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                        {item.description || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                        {item.check_method || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {item.required_photo ? (
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">필수</span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         )}
 
         {activeTab === 'cycles' && (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">점검주기 코드</h3>
             </div>
-            <div className="divide-y divide-gray-200">
-              {cycles.map(cycle => (
-                <div key={cycle.id} className="px-6 py-4 flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      cycle.cycle_type === 'daily' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-purple-100 text-purple-800'
-                    }`}>
-                      {cycle.label}
-                    </span>
-                    <span className="text-gray-600">{cycle.description}</span>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {cycle.cycle_type === 'shots' && `${cycle.cycle_shots?.toLocaleString()} SHOT`}
-                    {cycle.cycle_type === 'daily' && '매일/생산전'}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">No</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">코드</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">유형</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">설명</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">주기 타수</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">상태</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {cycles.map((cycle, idx) => (
+                  <tr key={cycle.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-500">{idx + 1}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        cycle.cycle_type === 'daily' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        {cycle.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {cycle.cycle_type === 'daily' ? '일상점검' : '정기점검'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{cycle.description || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 text-right">
+                      {cycle.cycle_type === 'shots' ? `${cycle.cycle_shots?.toLocaleString()} SHOT` : '-'}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      {cycle.is_active ? (
+                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">활성</span>
+                      ) : (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">비활성</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
