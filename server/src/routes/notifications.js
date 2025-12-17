@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notificationController');
-// const { authMiddleware } = require('../middleware/auth'); // 인증 미들웨어 (필요시 활성화)
+const { authenticate } = require('../middleware/auth');
 
 /**
  * 내 알림 목록 조회
@@ -9,7 +9,7 @@ const notificationController = require('../controllers/notificationController');
  */
 router.get(
   '/',
-  // authMiddleware, // 인증 필요 시 활성화
+  authenticate,
   notificationController.getMyNotifications
 );
 
@@ -19,7 +19,7 @@ router.get(
  */
 router.get(
   '/unread-count',
-  // authMiddleware,
+  authenticate,
   notificationController.getUnreadCount
 );
 
@@ -29,7 +29,7 @@ router.get(
  */
 router.patch(
   '/read-all',
-  // authMiddleware,
+  authenticate,
   notificationController.markAllAsRead
 );
 
@@ -39,7 +39,7 @@ router.patch(
  */
 router.patch(
   '/:id/read',
-  // authMiddleware,
+  authenticate,
   notificationController.markAsRead
 );
 
@@ -49,7 +49,7 @@ router.patch(
  */
 router.delete(
   '/:id',
-  // authMiddleware,
+  authenticate,
   notificationController.deleteNotification
 );
 
