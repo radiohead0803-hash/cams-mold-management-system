@@ -6,6 +6,7 @@ const {
   getMasterVersionById,
   createMasterVersion,
   updateMasterVersion,
+  deleteMasterVersion,
   submitForReview,
   approveMasterVersion,
   deployMasterVersion,
@@ -14,6 +15,7 @@ const {
   getChecklistItems,
   createChecklistItem,
   updateChecklistItem,
+  deleteChecklistItem,
   getCycleCodes
 } = require('../controllers/checklistMasterController');
 
@@ -27,6 +29,7 @@ router.get('/cycles', getCycleCodes);
 router.get('/items', getChecklistItems);
 router.post('/items', createChecklistItem);
 router.patch('/items/:id', updateChecklistItem);
+router.delete('/items/:id', deleteChecklistItem);
 
 // 현재 배포 버전
 router.get('/deployed', getCurrentDeployedVersion);
@@ -36,6 +39,7 @@ router.get('/', getMasterVersions);
 router.post('/', createMasterVersion);
 router.get('/:id', getMasterVersionById);
 router.patch('/:id', updateMasterVersion);
+router.delete('/:id', deleteMasterVersion);
 
 // 상태 전환
 router.post('/:id/submit-review', submitForReview);

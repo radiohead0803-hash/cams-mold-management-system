@@ -504,16 +504,66 @@ const getCycleCodes = async (req, res) => {
   }
 };
 
+/**
+ * 마스터 버전 삭제 (Draft 상태에서만)
+ */
+const deleteMasterVersion = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const version = await ChecklistMasterVersion.findByPk(id);
+    if (!version) {
+      return res.status(404).json({ success: false, error: { message: '마스터 버전을 찾을 수 없습니다' } });
+    }
+
+    if (version.status !== 'draft') {
+      return res.status(400).json({ success: false, error: { message: 'Draft 상태에서만 삭제 가능합니다' } });
+    }
+
+    if (version.is_current_deployed) {
+      return res.status(400).json({ success: false, error: { message: '현재 배포된 버전은 삭제할 수 없습니다' } });
+    }
+
+    await version.destroy();
+    res.json({ success: true, message: '삭제되었습니다' });
+  } catch (error) {
+    logger.error('Delete master version error:', error);
+    res.status(500).json({ success: false, error: { message: '삭제 실패' } });
+  }
+};
+
+/**
+ * 점검항목 삭제
+ */
+const deleteChecklistItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const item = await ChecklistItemMasterNew.findByPk(id);
+    if (!item) {
+      return res.status(404).json({ success: false, error: { message: '점검항목을 찾을 수 없습니다' } });
+    }
+
+    await item.destroy();
+    res.json({ success: true, message: '삭제되었습니다' });
+  } catch (error) {
+    logger.error('Delete checklist item error:', error);
+    res.status(500).json({ success: false, error: { message: '삭제 실패' } });
+  }
+};
+
 module.exports = {
   getMasterVersions,
   getMasterVersionById,
   createMasterVersion,
   updateMasterVersion,
+  deleteMasterVersion,
   submitForReview,
   approveMasterVersion,
   deployMasterVersion,
   cloneMasterVersion,
   getCurrentDeployedVersion,
+  deleteChecklistItem,
   getChecklistItems,
   createChecklistItem,
   updateChecklistItem,

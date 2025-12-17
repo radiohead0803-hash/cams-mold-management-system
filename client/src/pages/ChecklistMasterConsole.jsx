@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Filter, Edit3, Eye, Copy, Send, CheckCircle, 
-  Rocket, RefreshCw, ChevronRight, FileText, Settings, Clock
+  Rocket, RefreshCw, ChevronRight, FileText, Settings, Clock, Trash2
 } from 'lucide-react';
 import { checklistMasterAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
@@ -21,6 +21,7 @@ export default function ChecklistMasterConsole() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -68,6 +69,32 @@ export default function ChecklistMasterConsole() {
     } catch (error) {
       console.error('Action failed:', error);
       alert('작업에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteVersion = async (version) => {
+    if (!window.confirm(`"${version.name}" 버전을 삭제하시겠습니까?`)) {
+      return;
+    }
+    try {
+      await checklistMasterAPI.deleteVersion(version.id);
+      loadData();
+    } catch (error) {
+      console.error('Delete failed:', error);
+      alert('삭제에 실패했습니다.');
+    }
+  };
+
+  const handleDeleteItem = async (item) => {
+    if (!window.confirm(`"${item.item_name}" 항목을 삭제하시겠습니까?`)) {
+      return;
+    }
+    try {
+      await checklistMasterAPI.deleteItem(item.id);
+      loadData();
+    } catch (error) {
+      console.error('Delete item failed:', error);
+      alert('삭제에 실패했습니다.');
     }
   };
 
@@ -290,6 +317,16 @@ export default function ChecklistMasterConsole() {
                               >
                                 <Copy className="w-4 h-4" />
                               </button>
+                              
+                              {version.status === 'draft' && !version.is_current_deployed && (
+                                <button
+                                  onClick={() => handleDeleteVersion(version)}
+                                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                                  title="삭제"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -358,9 +395,22 @@ export default function ChecklistMasterConsole() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded">
-                          <Edit3 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end space-x-1">
+                          <button 
+                            onClick={() => setEditingItem(item)}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                            title="수정"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteItem(item)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

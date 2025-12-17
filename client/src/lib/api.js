@@ -346,6 +346,7 @@ export const checklistMasterAPI = {
   getVersionById: (id) => api.get(`/checklist-masters/${id}`),
   createVersion: (data) => api.post('/checklist-masters', data),
   updateVersion: (id, data) => api.patch(`/checklist-masters/${id}`, data),
+  deleteVersion: (id) => api.delete(`/checklist-masters/${id}`),
   submitForReview: (id) => api.post(`/checklist-masters/${id}/submit-review`),
   approve: (id) => api.post(`/checklist-masters/${id}/approve`),
   deploy: (id) => api.post(`/checklist-masters/${id}/deploy`),
@@ -356,6 +357,7 @@ export const checklistMasterAPI = {
   getItems: (params) => api.get('/checklist-masters/items', { params }),
   createItem: (data) => api.post('/checklist-masters/items', data),
   updateItem: (id, data) => api.patch(`/checklist-masters/items/${id}`, data),
+  deleteItem: (id) => api.delete(`/checklist-masters/items/${id}`),
   
   // 주기 코드
   getCycles: () => api.get('/checklist-masters/cycles'),
