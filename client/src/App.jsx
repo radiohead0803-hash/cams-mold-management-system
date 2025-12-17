@@ -1,106 +1,111 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, Suspense } from 'react'
 import { useAuthStore } from './stores/authStore'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import QRLogin from './pages/QRLogin'
 import Dashboard from './pages/Dashboard'
-import SystemAdminDashboard from './pages/dashboards/SystemAdminDashboard'
-import MoldDeveloperDashboard from './pages/dashboards/MoldDeveloperDashboard'
-import MakerDashboard from './pages/dashboards/MakerDashboard'
-import PlantDashboard from './pages/dashboards/PlantDashboard'
-import MakerMobileDashboard from './pages/dashboards/MakerMobileDashboard'
-import PlantMobileDashboard from './pages/dashboards/PlantMobileDashboard'
-import DeveloperMobileDashboard from './pages/dashboards/DeveloperMobileDashboard'
-import MoldList from './pages/MoldList'
-import MoldDetail from './pages/MoldDetail'
-import MoldRegistration from './pages/MoldRegistration'
-import MoldNew from './pages/MoldNew'
-import MoldBulkUpload from './pages/MoldBulkUpload'
-import MoldMaster from './pages/MoldMaster'
-import MoldLifecycle from './pages/MoldLifecycle'
-import MoldDetailNew from './pages/MoldDetailNew'
-import DailyChecklist from './pages/DailyChecklistNew'
-import PeriodicInspection from './pages/PeriodicInspectionNew'
-import TransferManagement from './pages/TransferManagement'
-import TransferRequest from './pages/TransferRequest'
-import Alerts from './pages/Alerts'
-import ChecklistMaster from './pages/ChecklistMaster'
-import RepairManagement from './pages/RepairManagement'
-import MoldDocuments from './pages/MoldDocuments'
-import MoldPhotoGallery from './pages/MoldPhotoGallery'
-import CompanyManagement from './pages/CompanyManagement'
-import CompanyDetail from './pages/CompanyDetail'
-import UserRequests from './pages/UserRequests'
-import MasterData from './pages/MasterData'
+import ProtectedRoute from './components/ProtectedRoute'
+import PageLoader from './components/PageLoader'
 import ScanInfoPage from './pages/ScanInfoPage'
 import RepairRequestPage from './pages/RepairRequestPage'
-import HqRepairListPage from './pages/HqRepairListPage'
-import MakerRepairListPage from './pages/MakerRepairListPage'
-import MoldDevelopmentPlan from './pages/MoldDevelopmentPlan'
-import MoldChecklist from './pages/MoldChecklist'
-import HardnessMeasurement from './pages/HardnessMeasurement'
-import MoldSpecification from './pages/MoldSpecification'
-import InjectionHistory from './pages/InjectionHistory'
-import InjectionStats from './pages/InjectionStats'
-import InjectionCondition from './pages/InjectionCondition'
-import MoldOverviewPage from './pages/mobile/MoldOverviewPage'
-import ChecklistStartPage from './pages/mobile/ChecklistStartPage'
-import RepairRequestListPage from './pages/mobile/RepairRequestListPage'
-import MobileQRLogin from './pages/mobile/MobileQRLogin'
-import MobileMoldDetail from './pages/mobile/MobileMoldDetailNew'
-import MobileQRScan from './pages/mobile/MobileQRScan'
-import MobileDevelopmentPlan from './pages/mobile/MobileDevelopmentPlan'
-import MobileMoldChecklist from './pages/mobile/MobileMoldChecklist'
-import MobileMoldNurturing from './pages/mobile/MobileMoldNurturing'
-import MobileHardnessMeasurement from './pages/mobile/MobileHardnessMeasurement'
-import MobileMoldSpecification from './pages/mobile/MobileMoldSpecification'
-import MobileInjectionCondition from './pages/mobile/MobileInjectionCondition'
-import MobileInjectionHistory from './pages/mobile/MobileInjectionHistory'
-import MobileInjectionStats from './pages/mobile/MobileInjectionStats'
-import MobileTransferRequest from './pages/mobile/MobileTransferRequest'
-import MobileTransferList from './pages/mobile/MobileTransferList'
-import MobileTryoutIssue from './pages/mobile/MobileTryoutIssue'
-import MobileInspectionApproval from './pages/mobile/MobileInspectionApproval'
-import MobileRepairRequestForm from './pages/mobile/MobileRepairRequestForm'
-import MobileMaintenancePage from './pages/mobile/MobileMaintenancePage'
-import MobilePreProductionChecklist from './pages/mobile/MobilePreProductionChecklist'
-import MobileScrappingPage from './pages/mobile/MobileScrappingPage'
-import MobileHomePage from './pages/mobile/MobileHomePage'
-import MobileAlerts from './pages/mobile/MobileAlerts'
-import MobileReports from './pages/mobile/MobileReports'
-import MobileMoldList from './pages/mobile/MobileMoldList'
-import MobileMoldHistory from './pages/mobile/MobileMoldHistory'
-import MobileQRSessions from './pages/mobile/MobileQRSessions'
-import MobileLocationMap from './pages/mobile/MobileLocationMap'
-import MobileProfile from './pages/mobile/MobileProfile'
-import MobileNotificationSettings from './pages/mobile/MobileNotificationSettings'
-import MobileHelp from './pages/mobile/MobileHelp'
-import ChecklistSelectPage from './pages/mobile/ChecklistSelectPage'
-import ChecklistFormPage from './pages/mobile/ChecklistFormPage'
-import ChecklistCompletePage from './pages/mobile/ChecklistCompletePage'
-import QrScanPageMobile from './pages/mobile/QrScanPage'
-import MobileDashboard from './pages/mobile/MobileDashboard'
-import MobileSearch from './pages/mobile/MobileSearch'
-import InspectionApproval from './pages/InspectionApproval'
-import RepairRequestForm from './pages/RepairRequestForm'
-import StandardDocumentMaster from './pages/StandardDocumentMaster'
-import ScrappingManagement from './pages/ScrappingManagement'
-import MaintenanceManagement from './pages/MaintenanceManagement'
-import NotificationSettings from './pages/NotificationSettings'
-import Reports from './pages/Reports'
-import MoldHistory from './pages/MoldHistory'
-import QRSessionsPage from './pages/QRSessionsPage'
-import MoldLocationMapPage from './pages/MoldLocationMapPage'
-import ProductionTransferChecklistMaster from './pages/ProductionTransferChecklistMaster'
-import InternalUsers from './pages/InternalUsers'
-import PartnerUsers from './pages/PartnerUsers'
-import QrScanPage from './pages/qr/QrScanPage'
-import DailyInspectionPageQr from './pages/qr/DailyInspectionPage'
-import PeriodicInspectionPageQr from './pages/qr/PeriodicInspectionPage'
-import DailyInspectionPage from './pages/inspections/DailyInspectionPage'
-import PeriodicInspectionPage from './pages/inspections/PeriodicInspectionPage'
-import ProtectedRoute from './components/ProtectedRoute'
+
+// Lazy loaded components
+import {
+  SystemAdminDashboard,
+  MoldDeveloperDashboard,
+  MakerDashboard,
+  PlantDashboard,
+  MakerMobileDashboard,
+  PlantMobileDashboard,
+  DeveloperMobileDashboard,
+  MoldList,
+  MoldDetail,
+  MoldRegistration,
+  MoldNew,
+  MoldBulkUpload,
+  MoldMaster,
+  MoldLifecycle,
+  MoldDetailNew,
+  MoldDocuments,
+  MoldPhotoGallery,
+  MoldHistory,
+  DailyChecklist,
+  PeriodicInspection,
+  InspectionApproval,
+  ChecklistMaster,
+  MoldChecklist,
+  TransferManagement,
+  TransferRequest,
+  RepairManagement,
+  RepairRequestForm,
+  HqRepairListPage,
+  MakerRepairListPage,
+  MoldDevelopmentPlan,
+  HardnessMeasurement,
+  MoldSpecification,
+  InjectionHistory,
+  InjectionStats,
+  InjectionCondition,
+  CompanyManagement,
+  CompanyDetail,
+  UserRequests,
+  InternalUsers,
+  PartnerUsers,
+  MasterData,
+  Alerts,
+  StandardDocumentMaster,
+  ScrappingManagement,
+  MaintenanceManagement,
+  NotificationSettings,
+  Reports,
+  QRSessionsPage,
+  MoldLocationMapPage,
+  ProductionTransferChecklistMaster,
+  MobileQRLogin,
+  MobileMoldDetail,
+  MobileQRScan,
+  MobileDevelopmentPlan,
+  MobileMoldChecklist,
+  MobileMoldNurturing,
+  MobileHardnessMeasurement,
+  MobileMoldSpecification,
+  MobileInjectionCondition,
+  MobileInjectionHistory,
+  MobileInjectionStats,
+  MobileTransferRequest,
+  MobileTransferList,
+  MobileTryoutIssue,
+  MobileInspectionApproval,
+  MobileRepairRequestForm,
+  MobileMaintenancePage,
+  MobilePreProductionChecklist,
+  MobileScrappingPage,
+  MobileHomePage,
+  MobileAlerts,
+  MobileReports,
+  MobileMoldList,
+  MobileMoldHistory,
+  MobileQRSessions,
+  MobileLocationMap,
+  MobileProfile,
+  MobileNotificationSettings,
+  MobileHelp,
+  ChecklistSelectPage,
+  ChecklistFormPage,
+  ChecklistCompletePage,
+  QrScanPageMobile,
+  MobileDashboard,
+  MobileSearch,
+  MoldOverviewPage,
+  ChecklistStartPage,
+  RepairRequestListPage,
+  QrScanPage,
+  DailyInspectionPageQr,
+  PeriodicInspectionPageQr,
+  DailyInspectionPage,
+  PeriodicInspectionPage
+} from './routes/lazyRoutes'
 
 function PeriodicAlias() {
   const location = useLocation()
@@ -120,6 +125,7 @@ function App() {
   }, [initialize])
 
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/qr-login" element={<QRLogin />} />
@@ -328,6 +334,7 @@ function App() {
         <Route path="users/partner" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><PartnerUsers /></ProtectedRoute>} />
       </Route>
     </Routes>
+    </Suspense>
   )
 }
 
