@@ -432,6 +432,13 @@ const getInjectionCondition = async (req, res) => {
   try {
     const { mold_spec_id, mold_id, include_history } = req.query;
 
+    // null 또는 'null' 문자열 파라미터 처리
+    if (!mold_spec_id || mold_spec_id === 'null' || mold_spec_id === 'undefined') {
+      if (!mold_id || mold_id === 'null' || mold_id === 'undefined') {
+        return res.json({ success: true, data: null });
+      }
+    }
+
     // 테이블 존재 확인
     try {
       await sequelize.query('SELECT 1 FROM injection_conditions LIMIT 1');
