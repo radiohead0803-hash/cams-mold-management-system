@@ -112,7 +112,7 @@ export default function MobileRepairRequestForm() {
     } catch (e) { alert('저장 실패'); } finally { setSaving(false); }
   };
 
-  const sections = [{ id: 'request', name: '요청', icon: FileText }, { id: 'product', name: '금형', icon: Package }, { id: 'repairShop', name: '수리처', icon: Building }, { id: 'repair', name: '수리', icon: Wrench }, { id: 'checklist', name: '점검', icon: ClipboardList }, { id: 'liability', name: '귀책', icon: Scale }, { id: 'complete', name: '관리', icon: ClipboardList }];
+  const sections = [{ id: 'request', name: '1.요청정보', icon: FileText }, { id: 'product', name: '2.금형정보', icon: Package }, { id: 'repairShop', name: '3.수리처', icon: Building }, { id: 'checklist', name: '4.점검', icon: ClipboardList }, { id: 'plantInspection', name: '5.검수', icon: CheckCircle }, { id: 'liability', name: '6.귀책', icon: Scale }, { id: 'maintenance', name: '7.유지보전', icon: Wrench }];
   const priorityOptions = ['높음', '보통', '낮음'];
   const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '수리진행', '체크리스트점검', '귀책처리', '수리완료', '검수중', '완료'];
   const occurrenceOptions = ['신규', '재발'];
@@ -215,26 +215,133 @@ export default function MobileRepairRequestForm() {
         <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">판정자</label><input value={formData.liability_decided_by || (isDeveloper ? user?.name : '')} onChange={(e) => handleChange('liability_decided_by', e.target.value)} disabled={!isRepairShopApproved || !isDeveloper} className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">판정일</label><input type="date" value={formData.liability_decided_date} onChange={(e) => handleChange('liability_decided_date', e.target.value)} disabled={!isRepairShopApproved || !isDeveloper} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div></div>
       </div>);
       
-      case 'repair': return (<div className={`space-y-4 ${!isRepairShopApproved ? 'opacity-50' : ''}`}>
+            
+      case 'checklist': return (<div className="space-y-4">
         {!isRepairShopApproved && <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700"><AlertCircle size={14} className="inline mr-1" />수리처 승인 후 진행 가능합니다.</div>}
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">진행상태</label><select value={formData.status} onChange={(e) => handleChange('status', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50">{statusOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div><div><label className="block text-sm font-medium text-gray-700 mb-1">담당자</label><input value={formData.manager_name} onChange={(e) => handleChange('manager_name', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="담당자명" /></div></div>
-        <div><label className="block text-sm font-medium text-gray-700 mb-1">금형 입고일</label><input type="date" value={formData.mold_arrival_date} onChange={(e) => handleChange('mold_arrival_date', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div>
-        <div><label className="block text-sm font-medium text-gray-700 mb-1">임시 조치 내용</label><textarea value={formData.temporary_action} onChange={(e) => handleChange('temporary_action', e.target.value)} disabled={!isRepairShopApproved || !isEditing} rows={2} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="임시 조치 내용" /></div>
-        <div><label className="block text-sm font-medium text-gray-700 mb-1">근본 원인 조치</label><textarea value={formData.root_cause_action} onChange={(e) => handleChange('root_cause_action', e.target.value)} disabled={!isRepairShopApproved || !isEditing} rows={2} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="근본 원인 조치" /></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">수리 시작일</label><input type="date" value={formData.repair_start_date} onChange={(e) => handleChange('repair_start_date', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">수리 완료일</label><input type="date" value={formData.repair_end_date} onChange={(e) => handleChange('repair_end_date', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">수리기간</label><input value={formData.repair_duration} onChange={(e) => handleChange('repair_duration', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="예: 3일" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">완료예정일</label><input type="date" value={formData.completion_date} onChange={(e) => handleChange('completion_date', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div></div>
-        <div><label className="block text-sm font-medium text-gray-700 mb-1">수리비용</label><input value={formData.repair_cost} onChange={(e) => handleChange('repair_cost', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="₩" /></div>
-      </div>);
-      
-      case 'checklist': return (<div className={`space-y-4 ${!isRepairShopApproved ? 'opacity-50' : ''}`}>
-        {!isRepairShopApproved && <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700"><AlertCircle size={14} className="inline mr-1" />수리처 승인 후 진행 가능합니다.</div>}
-        <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+        
+        {/* 전체 진행률 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-cyan-600">전체 진행률</span>
+            <span className="text-sm font-bold text-cyan-600">0%</span>
+          </div>
+          <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-cyan-400 to-cyan-600" style={{ width: '0%' }} />
+          </div>
+          <p className="text-xs text-slate-500 mt-2">0 / 32 항목 완료</p>
+        </div>
+
+        {/* 카테고리별 진행 현황 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <h3 className="font-semibold text-slate-900 mb-3 text-sm">카테고리별 진행 현황</h3>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { category: '수리이력', icon: '📋', count: 4 },
+              { category: '성형면', icon: '🔍', count: 5 },
+              { category: '기능부', icon: '⚙️', count: 5 },
+              { category: '치수', icon: '📐', count: 4 },
+              { category: '냉각', icon: '💧', count: 5 },
+              { category: '시운전', icon: '🧪', count: 4 },
+              { category: '출하', icon: '📦', count: 5 },
+              { category: '승인', icon: '✅', count: 2 }
+            ].map((cat, idx) => (
+              <div key={idx} className="p-2 rounded-lg border border-slate-200 bg-white text-center">
+                <span className="text-lg">{cat.icon}</span>
+                <p className="text-[10px] text-slate-600 mt-1 truncate">{cat.category}</p>
+                <p className="text-[10px] text-slate-400">0/{cat.count}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 점검 항목 미리보기 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <h3 className="text-sm font-bold text-slate-900 mb-3">1. 수리 이력 및 범위 확인</h3>
+          <div className="space-y-3">
+            {['수리 요청 내역 일치 여부', '수리 범위 명확화', '추가 수리 발생 여부', '수리 전·후 비교 사진'].map((item, idx) => (
+              <div key={idx} className="border border-slate-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <span>🔍</span>
+                  <span className="text-sm font-medium text-slate-800">{item}</span>
+                  <span className="text-red-500">*</span>
+                </div>
+                <div className="flex gap-3 mb-2">
+                  <label className="flex items-center gap-1 text-xs opacity-50"><input type="radio" disabled className="w-3 h-3" />양호</label>
+                  <label className="flex items-center gap-1 text-xs opacity-50"><input type="radio" disabled className="w-3 h-3" />주의</label>
+                  <label className="flex items-center gap-1 text-xs opacity-50"><input type="radio" disabled className="w-3 h-3" />불량</label>
+                </div>
+                <button disabled className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-slate-50 text-slate-400">📷 사진 추가</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className={`p-4 bg-cyan-50 border border-cyan-200 rounded-lg ${!isRepairShopApproved ? 'opacity-50' : ''}`}>
           <p className="text-sm text-cyan-700 mb-3 font-medium">📋 수리 후 출하점검 체크리스트</p>
           <button onClick={() => navigate(`/mobile/repair-shipment-checklist?repairRequestId=${id || ''}&moldId=${moldId || moldInfo?.id || ''}`)} disabled={!isRepairShopApproved} className="w-full py-3 bg-cyan-500 text-white rounded-lg font-medium disabled:opacity-50">체크리스트 점검 시작</button>
         </div>
       </div>);
       
-      case 'complete': return (<div className="space-y-4">
+      case 'plantInspection': return (<div className="space-y-4">
+        {!isRepairShopApproved && <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700"><AlertCircle size={14} className="inline mr-1" />체크리스트 점검 완료 후 진행 가능합니다.</div>}
+        
+        {/* 전체 진행률 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-indigo-600">전체 진행률</span>
+            <span className="text-sm font-bold text-indigo-600">0%</span>
+          </div>
+          <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-indigo-400 to-indigo-600" style={{ width: '0%' }} />
+          </div>
+          <p className="text-xs text-slate-500 mt-2">0 / 24 항목 완료</p>
+        </div>
+
+        {/* 카테고리별 진행 현황 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <h3 className="font-semibold text-slate-900 mb-3 text-sm">카테고리별 진행 현황</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { category: '입고상태', icon: '📦', count: 4 },
+              { category: '수리내역', icon: '📋', count: 4 },
+              { category: '기능점검', icon: '⚙️', count: 4 },
+              { category: '외관품질', icon: '🔍', count: 4 },
+              { category: '시운전', icon: '🧪', count: 4 },
+              { category: '최종승인', icon: '✅', count: 4 }
+            ].map((cat, idx) => (
+              <div key={idx} className="p-2 rounded-lg border border-slate-200 bg-white text-center">
+                <span className="text-lg">{cat.icon}</span>
+                <p className="text-[10px] text-slate-600 mt-1 truncate">{cat.category}</p>
+                <p className="text-[10px] text-slate-400">0/{cat.count}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 점검 항목 미리보기 */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <h3 className="text-sm font-bold text-slate-900 mb-3">1. 입고 상태 확인</h3>
+          <div className="space-y-3">
+            {['포장 상태 확인', '운송 중 손상 여부', '금형 외관 상태', '부속품 확인'].map((item, idx) => (
+              <div key={idx} className="border border-slate-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <span>📦</span>
+                  <span className="text-sm font-medium text-slate-800">{item}</span>
+                  <span className="text-red-500">*</span>
+                </div>
+                <div className="flex gap-3 mb-2">
+                  <label className="flex items-center gap-1 text-xs opacity-50"><input type="radio" disabled className="w-3 h-3" />양호</label>
+                  <label className="flex items-center gap-1 text-xs opacity-50"><input type="radio" disabled className="w-3 h-3" />주의</label>
+                  <label className="flex items-center gap-1 text-xs opacity-50"><input type="radio" disabled className="w-3 h-3" />불량</label>
+                </div>
+                <button disabled className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-slate-50 text-slate-400">📷 사진 추가</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>);
+      
+      case 'maintenance': return (<div className="space-y-4">
         <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">운영유형</label><select value={formData.operation_type} onChange={(e) => handleChange('operation_type', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50">{operationOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div><div><label className="block text-sm font-medium text-gray-700 mb-1">관리유형</label><select value={formData.management_type} onChange={(e) => handleChange('management_type', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50"><option value="">선택</option>{managementTypeOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div></div>
         <div><label className="block text-sm font-medium text-gray-700 mb-1">결재상태</label><input value={formData.sign_off_status} className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50" readOnly /></div>
         <div><label className="block text-sm font-medium text-gray-700 mb-1">발주업체</label><input value={formData.order_company} onChange={(e) => handleChange('order_company', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="발주업체명" /></div>
