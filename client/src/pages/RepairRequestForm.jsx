@@ -1295,16 +1295,16 @@ export default function RepairRequestForm() {
                       <div className="mb-3">
                         <label className="block text-sm font-medium text-slate-700 mb-2">상태 선택 <span className="text-red-500">*</span></label>
                         <div className="flex gap-4">
-                          <label className="flex items-center gap-2 cursor-pointer opacity-50">
-                            <input type="radio" disabled className="w-4 h-4" />
+                          <label className={`flex items-center gap-2 cursor-pointer ${!isChecklistEnabled ? 'opacity-50' : ''}`}>
+                            <input type="radio" name={`check-item-${idx}`} disabled={!isChecklistEnabled} className="w-4 h-4" />
                             <span className="text-sm">양호</span>
                           </label>
-                          <label className="flex items-center gap-2 cursor-pointer opacity-50">
-                            <input type="radio" disabled className="w-4 h-4" />
+                          <label className={`flex items-center gap-2 cursor-pointer ${!isChecklistEnabled ? 'opacity-50' : ''}`}>
+                            <input type="radio" name={`check-item-${idx}`} disabled={!isChecklistEnabled} className="w-4 h-4" />
                             <span className="text-sm">주의</span>
                           </label>
-                          <label className="flex items-center gap-2 cursor-pointer opacity-50">
-                            <input type="radio" disabled className="w-4 h-4" />
+                          <label className={`flex items-center gap-2 cursor-pointer ${!isChecklistEnabled ? 'opacity-50' : ''}`}>
+                            <input type="radio" name={`check-item-${idx}`} disabled={!isChecklistEnabled} className="w-4 h-4" />
                             <span className="text-sm">불량</span>
                           </label>
                         </div>
@@ -1312,10 +1312,10 @@ export default function RepairRequestForm() {
                       
                       <div className="mb-3">
                         <label className="block text-sm font-medium text-slate-700 mb-1">비고 (선택)</label>
-                        <textarea disabled className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50" rows={2} placeholder="점검 내용을 입력하세요" />
+                        <textarea disabled={!isChecklistEnabled} className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm ${!isChecklistEnabled ? 'bg-slate-50' : 'bg-white'}`} rows={2} placeholder="점검 내용을 입력하세요" />
                       </div>
                       
-                      <button disabled className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium bg-slate-50 text-slate-400">
+                      <button disabled={!isChecklistEnabled} className={`flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium ${!isChecklistEnabled ? 'bg-slate-50 text-slate-400' : 'bg-white text-slate-700 hover:bg-slate-50'}`}>
                         📷 점검 사진 추가
                       </button>
                     </div>
