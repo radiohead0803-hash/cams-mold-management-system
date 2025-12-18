@@ -1172,7 +1172,7 @@ export default function RepairRequestForm() {
           </button>
           
           {expandedSections.checklist && (
-            <div className={`p-6 space-y-4 ${!isRepairShopApproved ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className="p-6 space-y-4">
               {!isRepairShopApproved && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
                   <AlertCircle size={16} className="inline mr-2" />
@@ -1180,7 +1180,37 @@ export default function RepairRequestForm() {
                 </div>
               )}
               
-              <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+              {/* 체크리스트 점검 항목 미리보기 */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <ClipboardList size={16} className="text-cyan-600" />
+                  수리 후 출하점검 체크리스트 항목
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {[
+                    { category: '외관 검사', items: ['금형 외관 상태', '파팅라인 상태', '게이트 상태'] },
+                    { category: '치수 검사', items: ['주요 치수 확인', '공차 범위 확인'] },
+                    { category: '작동 검사', items: ['이젝터 작동', '슬라이드 작동', '냉각수 순환'] },
+                    { category: '수리 부위', items: ['수리 부위 확인', '수리 품질 확인'] }
+                  ].map((section, idx) => (
+                    <div key={idx} className="p-3 bg-white rounded-lg border border-slate-100">
+                      <p className="text-xs font-medium text-cyan-600 mb-2">{section.category}</p>
+                      <ul className="space-y-1">
+                        {section.items.map((item, itemIdx) => (
+                          <li key={itemIdx} className="text-xs text-slate-600 flex items-center gap-2">
+                            <span className="w-4 h-4 rounded border border-slate-300 flex items-center justify-center bg-white">
+                              {isRepairShopApproved ? '' : ''}
+                            </span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className={`p-4 bg-cyan-50 border border-cyan-200 rounded-lg ${!isRepairShopApproved ? 'opacity-50' : ''}`}>
                 <p className="text-sm text-cyan-700 mb-3">
                   <span className="font-medium">📋 수리 후 출하점검 체크리스트</span>
                 </p>
