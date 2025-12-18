@@ -111,6 +111,8 @@ import {
   RepairRequestListPage,
   MobileDailyChecklist,
   MobilePeriodicInspection,
+  MobileRepairShipmentChecklist,
+  RepairShipmentChecklist,
   QrScanPage,
   DailyInspectionPageQr,
   PeriodicInspectionPageQr,
@@ -157,6 +159,7 @@ function App() {
       <Route path="/mobile/mold/:moldId/periodic-check" element={<MobilePeriodicInspection />} />
       <Route path="/mobile/mold/:moldId/repair-request" element={<MobileRepairRequestForm />} />
       <Route path="/mobile/mold/:moldId/repair-list" element={<RepairRequestListPage />} />
+      <Route path="/mobile/mold/:moldId/repair-shipment-checklist" element={<MobileRepairShipmentChecklist />} />
       <Route path="/mobile/mold/:moldId/development-plan" element={<MobileDevelopmentPlan />} />
       <Route path="/mobile/mold/:moldId/mold-checklist" element={<MobileMoldChecklist />} />
       <Route path="/mobile/mold/:moldId/nurturing" element={<MobileMoldNurturing />} />
@@ -301,6 +304,7 @@ function App() {
         <Route path="checklist-master" element={<ChecklistMaster />} />
         <Route path="repairs" element={<RepairManagement />} />
         <Route path="repairs/new" element={<RepairRequestForm />} />
+        <Route path="repairs/shipment-checklist" element={<RepairShipmentChecklist />} />
         <Route path="molds/:id/documents" element={<MoldDocuments />} />
         <Route path="molds/:id/photos" element={<MoldPhotoGallery />} />
         <Route path="companies" element={<CompanyManagement />} />

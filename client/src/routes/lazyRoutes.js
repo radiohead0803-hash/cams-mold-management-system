@@ -51,6 +51,7 @@ export const RepairManagement = lazy(() => import('../pages/RepairManagement'));
 export const RepairRequestForm = lazy(() => import('../pages/RepairRequestForm'));
 export const HqRepairListPage = lazy(() => import('../pages/HqRepairListPage'));
 export const MakerRepairListPage = lazy(() => import('../pages/MakerRepairListPage'));
+export const RepairShipmentChecklist = lazy(() => import('../pages/RepairShipmentChecklist'));
 
 // 제작처 전용 페이지
 export const MakerMoldDetail = lazy(() => import('../pages/maker/MakerMoldDetail'));
@@ -125,6 +126,7 @@ export const ChecklistStartPage = lazy(() => import('../pages/mobile/ChecklistSt
 export const RepairRequestListPage = lazy(() => import('../pages/mobile/RepairRequestListPage'));
 export const MobileDailyChecklist = lazy(() => import('../pages/mobile/MobileDailyChecklist'));
 export const MobilePeriodicInspection = lazy(() => import('../pages/mobile/MobilePeriodicInspection'));
+export const MobileRepairShipmentChecklist = lazy(() => import('../pages/mobile/MobileRepairShipmentChecklist'));
 
 // 체크리스트 마스터 관리
 export const ChecklistMasterConsole = lazy(() => import('../pages/ChecklistMasterConsole'));
