@@ -47,6 +47,22 @@ class ProductionTransferChecklistMaster extends Model {
           defaultValue: 0,
           comment: '표시 순서'
         },
+        guide_description: {
+          type: DataTypes.TEXT,
+          comment: '가이드 상세 설명'
+        },
+        check_points: {
+          type: DataTypes.ARRAY(DataTypes.TEXT),
+          comment: '점검 포인트 목록'
+        },
+        guide_video_url: {
+          type: DataTypes.STRING(500),
+          comment: '가이드 동영상 URL'
+        },
+        guide_image_url: {
+          type: DataTypes.STRING(500),
+          comment: '가이드 이미지 URL'
+        },
         is_active: {
           type: DataTypes.BOOLEAN,
           defaultValue: true,

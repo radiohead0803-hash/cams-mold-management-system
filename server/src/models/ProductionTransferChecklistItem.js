@@ -47,6 +47,16 @@ class ProductionTransferChecklistItem extends Model {
         attachment_filename: {
           type: DataTypes.STRING(255)
         },
+        photos: {
+          type: DataTypes.JSONB,
+          defaultValue: [],
+          comment: '첨부 사진 목록 (JSON 배열)'
+        },
+        photo_count: {
+          type: DataTypes.INTEGER,
+          defaultValue: 0,
+          comment: '첨부 사진 개수'
+        },
         checked_by: {
           type: DataTypes.INTEGER,
           references: {

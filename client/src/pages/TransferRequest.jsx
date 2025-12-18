@@ -94,20 +94,20 @@ export default function TransferRequest() {
   };
 
   const getDefaultChecklistItems = () => [
-    { id: 1, category: 'fitting', category_name: '습합', item_name: '제품 BURR', item_description: 'BURR 발생부 습합개소 확인', requires_photo: false },
-    { id: 2, category: 'appearance', category_name: '외관', item_name: 'EYE BOLT 체결부', item_description: '피치 마모 및 밀착상태 확인', requires_photo: false },
-    { id: 3, category: 'appearance', category_name: '외관', item_name: '상,하 고정판 확인', item_description: '이물 및 녹 오염상태 확인', requires_photo: false },
-    { id: 4, category: 'appearance', category_name: '외관', item_name: '냉각상태', item_description: '냉각호스 정리 및 오염상태 확인', requires_photo: false },
-    { id: 5, category: 'cavity', category_name: '캐비티', item_name: '표면 흠집,녹', item_description: '표면 흠 및 녹 발생상태 확인', requires_photo: true },
-    { id: 6, category: 'cavity', category_name: '캐비티', item_name: '파팅면 오염,탄화', item_description: '파팅면 오염 및 탄화수지 확인', requires_photo: true },
-    { id: 7, category: 'cavity', category_name: '캐비티', item_name: '파팅면 BURR', item_description: '파팅면 끝단 손으로 접촉 확인', requires_photo: false },
-    { id: 8, category: 'core', category_name: '코어', item_name: '코어류 분해청소', item_description: '긁힘 상태확인 및 이물확인', requires_photo: true },
-    { id: 9, category: 'core', category_name: '코어', item_name: '마모', item_description: '작동부 마모상태 점검', requires_photo: false },
-    { id: 10, category: 'core', category_name: '코어', item_name: '작동유 윤활유', item_description: '작동유 윤활상태 확인', requires_photo: false },
-    { id: 11, category: 'hydraulic', category_name: '유압장치', item_name: '작동유 누유', item_description: '유압 배관 파손 확인', requires_photo: false },
-    { id: 12, category: 'hydraulic', category_name: '유압장치', item_name: '호스 및 배선정리', item_description: '호스,배선 정돈상태 확인', requires_photo: false },
-    { id: 13, category: 'heater', category_name: '히터', item_name: '히터단선 누전', item_description: '히터단선,누전확인[테스터기]', requires_photo: false },
-    { id: 14, category: 'heater', category_name: '히터', item_name: '수지 누출', item_description: '수지 넘침 확인', requires_photo: false }
+    { id: 1, category: 'fitting', category_name: '습합', item_name: '제품 BURR', item_description: 'BURR 발생부 습합개소 확인', requires_photo: false, guide_description: '제품 BURR 발생부의 습합 상태를 확인합니다', check_points: ['BURR 발생 위치 확인', '습합 개소 상태 점검', '필요시 수정 작업 진행'] },
+    { id: 2, category: 'appearance', category_name: '외관', item_name: 'EYE BOLT 체결부', item_description: '피치 마모 및 밀착상태 확인', requires_photo: false, guide_description: 'EYE BOLT 체결부의 피치 마모 및 밀착상태를 확인합니다', check_points: ['피치 마모 상태 확인', '밀착 상태 점검', '체결 토크 확인'] },
+    { id: 3, category: 'appearance', category_name: '외관', item_name: '상,하 고정판 확인', item_description: '이물 및 녹 오염상태 확인', requires_photo: false, guide_description: '상,하 고정판의 이물 및 녹 오염상태를 확인합니다', check_points: ['이물질 부착 여부 확인', '녹 발생 상태 점검', '오염 정도 확인'] },
+    { id: 4, category: 'appearance', category_name: '외관', item_name: '냉각상태', item_description: '냉각호스 정리 및 오염상태 확인', requires_photo: false, guide_description: '냉각호스 정리 및 오염상태를 확인합니다', check_points: ['냉각호스 연결 상태 확인', '호스 정리 상태 점검', '오염 및 누수 확인'] },
+    { id: 5, category: 'cavity', category_name: '캐비티', item_name: '표면 흠집,녹', item_description: '표면 흠 및 녹 발생상태 확인', requires_photo: true, guide_description: '표면 흠 및 녹 발생상태를 확인합니다', check_points: ['표면 흠집 유무 확인', '녹 발생 여부 점검', '손상 정도 기록'] },
+    { id: 6, category: 'cavity', category_name: '캐비티', item_name: '파팅면 오염,탄화', item_description: '파팅면 오염 및 탄화수지 확인', requires_photo: true, guide_description: '파팅면 오염 및 탄화수지 상태를 확인합니다', check_points: ['파팅면 오염 상태 확인', '탄화수지 부착 여부 점검', '청소 필요 여부 판단'] },
+    { id: 7, category: 'cavity', category_name: '캐비티', item_name: '파팅면 BURR', item_description: '파팅면 끝단 손으로 접촉 확인', requires_photo: false, guide_description: '파팅면 끝단을 손으로 접촉하여 BURR 상태를 확인합니다', check_points: ['파팅면 끝단 상태 확인', 'BURR 발생 여부 점검', '손으로 접촉 시 이상 유무'] },
+    { id: 8, category: 'core', category_name: '코어', item_name: '코어류 분해청소', item_description: '긁힘 상태확인 및 이물확인', requires_photo: true, guide_description: '코어류 분해 후 긁힘 상태 및 이물을 확인합니다', check_points: ['코어 분해 상태 확인', '긁힘 및 손상 점검', '이물질 유무 확인'] },
+    { id: 9, category: 'core', category_name: '코어', item_name: '마모', item_description: '작동부 마모상태 점검', requires_photo: false, guide_description: '작동부 마모상태를 점검합니다', check_points: ['작동부 마모 정도 확인', '교체 필요 여부 판단', '마모 패턴 기록'] },
+    { id: 10, category: 'core', category_name: '코어', item_name: '작동유 윤활유', item_description: '작동유 윤활상태 확인', requires_photo: false, guide_description: '작동유 윤활상태를 확인합니다', check_points: ['윤활유 상태 확인', '윤활 부족 여부 점검', '보충 필요 여부 판단'] },
+    { id: 11, category: 'hydraulic', category_name: '유압장치', item_name: '작동유 누유', item_description: '유압 배관 파손 확인', requires_photo: false, guide_description: '유압 배관 파손 및 누유 상태를 확인합니다', check_points: ['배관 파손 여부 확인', '누유 발생 위치 점검', '수리 필요 여부 판단'] },
+    { id: 12, category: 'hydraulic', category_name: '유압장치', item_name: '호스 및 배선정리', item_description: '호스,배선 정돈상태 확인', requires_photo: false, guide_description: '호스 및 배선 정돈상태를 확인합니다', check_points: ['호스 정리 상태 확인', '배선 정돈 여부 점검', '꼬임 및 손상 확인'] },
+    { id: 13, category: 'heater', category_name: '히터', item_name: '히터단선 누전', item_description: '히터단선,누전확인[테스터기]', requires_photo: false, guide_description: '히터단선 및 누전 상태를 테스터기로 확인합니다', check_points: ['히터 단선 여부 확인', '누전 테스트 진행', '저항값 측정 기록'] },
+    { id: 14, category: 'heater', category_name: '히터', item_name: '수지 누출', item_description: '수지 넘침 확인', requires_photo: false, guide_description: '수지 넘침 상태를 확인합니다', check_points: ['수지 누출 위치 확인', '넘침 정도 점검', '청소 필요 여부 판단'] }
   ];
 
   const handleChange = (e) => {
@@ -458,13 +458,13 @@ export default function TransferRequest() {
                     <th className="border px-2 py-2 text-center w-32">점검항목</th>
                     <th className="border px-2 py-2 text-center">점검내용</th>
                     <th className="border px-2 py-2 text-center w-16">결과</th>
-                    <th className="border px-2 py-2 text-center w-16">사진</th>
+                    <th className="border px-2 py-2 text-center w-20">사진</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(groupedChecklist).map(([category, group], groupIdx) => (
                     group.items.map((item, itemIdx) => (
-                      <tr key={item.id} className="hover:bg-gray-50">
+                      <tr key={item.id} className="hover:bg-gray-50 group">
                         {itemIdx === 0 && (
                           <td 
                             className="border px-2 py-2 text-center font-medium bg-gray-50"
@@ -473,8 +473,25 @@ export default function TransferRequest() {
                             {group.name}
                           </td>
                         )}
-                        <td className="border px-2 py-2">{item.item_name}</td>
-                        <td className="border px-2 py-2 text-gray-600">{item.item_description}</td>
+                        <td className="border px-2 py-2">
+                          <div className="font-medium text-gray-800">{item.item_name}</div>
+                          {item.guide_description && (
+                            <div className="text-xs text-blue-600 mt-1 hidden group-hover:block">
+                              📋 {item.guide_description}
+                            </div>
+                          )}
+                        </td>
+                        <td className="border px-2 py-2">
+                          <div className="text-gray-600">{item.item_description}</div>
+                          {item.check_points && item.check_points.length > 0 && (
+                            <div className="mt-1 p-1.5 bg-cyan-50 rounded text-xs hidden group-hover:block">
+                              <p className="font-medium text-cyan-700 mb-1">점검 포인트:</p>
+                              {item.check_points.map((point, pIdx) => (
+                                <p key={pIdx} className="text-cyan-600">• {point}</p>
+                              ))}
+                            </div>
+                          )}
+                        </td>
                         <td className="border px-2 py-2 text-center">
                           <input 
                             type="checkbox"
@@ -484,11 +501,35 @@ export default function TransferRequest() {
                           />
                         </td>
                         <td className="border px-2 py-2 text-center">
-                          {item.requires_photo && (
-                            <button type="button" className="text-gray-400 hover:text-blue-600">
+                          <div className="flex items-center justify-center gap-1">
+                            <label className="cursor-pointer p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors">
                               <Camera size={16} />
-                            </button>
-                          )}
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                capture="environment"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (ev) => {
+                                      handleChecklistChange(item.id, 'photos', [
+                                        ...(checklistResults[item.id]?.photos || []),
+                                        { url: ev.target.result, name: file.name, timestamp: new Date().toISOString() }
+                                      ]);
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                            {checklistResults[item.id]?.photos?.length > 0 && (
+                              <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                                {checklistResults[item.id].photos.length}
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
