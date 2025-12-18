@@ -71,7 +71,10 @@ api.interceptors.response.use(
         '/notifications',
         '/alerts',
         '/dashboard',
-        '/statistics'
+        '/statistics',
+        '/mold-specifications',
+        '/inspections',
+        '/injection-conditions'
       ]
       
       const shouldSkipRedirect = skipRedirectPaths.some(path => requestUrl.includes(path))
