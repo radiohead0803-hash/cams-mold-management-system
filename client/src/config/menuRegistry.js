@@ -120,16 +120,6 @@ export const SYSTEM_ADMIN_MENU = [
     ]
   },
   {
-    key: 'maintenance',
-    label: '유지보전',
-    path: '/maintenance',
-    icon: Cog,
-    allowedRoles: [USER_ROLES.SYSTEM_ADMIN, USER_ROLES.MOLD_DEVELOPER],
-    subMenus: [
-      { key: 'maintenance-list', label: '유지보전 기록', path: '/maintenance' }
-    ]
-  },
-  {
     key: 'users',
     label: '사용자 관리',
     path: '/dashboard/system-admin/users',
