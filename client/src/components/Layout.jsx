@@ -514,7 +514,7 @@ export default function Layout() {
       </header>
 
       {/* Navigation */}
-      <nav className="bg-white border-b overflow-x-auto">
+      <nav className="bg-white border-b overflow-x-auto relative z-[100]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-nowrap min-w-max">
             {menuItems.map((item, index) => {
