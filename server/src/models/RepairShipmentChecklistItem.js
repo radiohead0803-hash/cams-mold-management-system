@@ -54,11 +54,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         comment: 'pass | fail | na | pending'
       },
-      // 사진 필수 여부
+      // 사진 필수 여부 (전체 항목 사진 필수)
       photo_required: {
         type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        comment: '사진 첨부 필수 여부'
+        defaultValue: true,
+        comment: '사진 첨부 필수 여부 (전체 항목 필수)'
       },
       // 첨부 사진 URL들
       photo_urls: {

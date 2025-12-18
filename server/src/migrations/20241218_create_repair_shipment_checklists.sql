@@ -88,8 +88,8 @@ CREATE TABLE IF NOT EXISTS repair_shipment_checklist_items (
   -- 점검 결과: pass | fail | na | pending
   result VARCHAR(20),
   
-  -- 사진 필수 여부
-  photo_required BOOLEAN DEFAULT FALSE,
+  -- 사진 필수 여부 (전체 항목 사진 필수)
+  photo_required BOOLEAN DEFAULT TRUE,
   
   -- 첨부 사진 URL들
   photo_urls JSONB,

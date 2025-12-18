@@ -520,10 +520,14 @@ export default function MobileRepairShipmentChecklist() {
           </span>
         </div>
 
-        {currentCategory.items.map((item) => (
+        {currentCategory.items.map((item) => {
+          const hasPhoto = item.photo_urls && item.photo_urls.length > 0;
+          const needsPhoto = item.photo_required && !hasPhoto && item.result === 'pass';
+          
+          return (
           <div
             key={item.id}
-            className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm"
+            className={`bg-white rounded-xl border p-3 shadow-sm ${needsPhoto ? 'border-red-300 bg-red-50/30' : 'border-slate-200'}`}
           >
             {/* 항목 헤더 */}
             <div className="mb-2">
@@ -532,25 +536,32 @@ export default function MobileRepairShipmentChecklist() {
                   <h3 className="text-sm font-medium text-slate-900">
                     <span className="text-blue-500 mr-1">[{item.item_code}]</span>
                     {item.item_name}
-                    {item.photo_required && <span className="text-red-500 ml-1">📷</span>}
                   </h3>
                   <p className="text-[10px] text-slate-500 mt-0.5">{item.item_description}</p>
+                  {/* 사진 필수 표시 */}
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${hasPhoto ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      📷 사진필수 {hasPhoto ? `(${item.photo_urls.length}장)` : '(미첨부)'}
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={() => handleCameraClick(item.id)}
                   disabled={isReadOnly || uploadingItemId === item.id}
-                  className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                  className={`flex items-center justify-center w-12 h-12 rounded-full ${
                     uploadingItemId === item.id 
                       ? 'bg-blue-100' 
                       : isReadOnly 
                       ? 'bg-slate-100 text-slate-400' 
+                      : needsPhoto
+                      ? 'bg-red-100 hover:bg-red-200 text-red-600 animate-pulse'
                       : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
                   } transition-all`}
                 >
                   {uploadingItemId === item.id ? (
-                    <Loader2 size={20} className="animate-spin" />
+                    <Loader2 size={24} className="animate-spin" />
                   ) : (
-                    <Camera size={20} />
+                    <Camera size={24} />
                   )}
                 </button>
               </div>
@@ -636,7 +647,8 @@ export default function MobileRepairShipmentChecklist() {
               </div>
             )}
           </div>
-        ))}
+        );
+        })}
 
         {/* 에러/성공 메시지 */}
         {error && (

@@ -531,27 +531,36 @@ export default function RepairShipmentChecklist() {
                         <h3 className="font-medium text-gray-900">
                           <span className="text-blue-500 mr-2">[{item.item_code}]</span>
                           {item.item_name}
-                          {item.photo_required && (
-                            <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded">사진필수</span>
-                          )}
                         </h3>
                         <p className="text-sm text-gray-500 mt-1">{item.item_description}</p>
+                        {/* 사진 필수 상태 표시 */}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${
+                            item.photo_urls && item.photo_urls.length > 0 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            📷 사진필수 {item.photo_urls && item.photo_urls.length > 0 ? `(${item.photo_urls.length}장 첨부)` : '(미첨부)'}
+                          </span>
+                        </div>
                       </div>
                       <button
                         onClick={() => handleCameraClick(item.id)}
                         disabled={isReadOnly || uploadingItemId === item.id}
-                        className={`ml-4 p-2 rounded-lg ${
+                        className={`ml-4 p-3 rounded-lg ${
                           uploadingItemId === item.id
                             ? 'bg-blue-100 text-blue-500'
                             : isReadOnly
                             ? 'bg-gray-100 text-gray-400'
-                            : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                            : item.photo_urls && item.photo_urls.length > 0
+                            ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                            : 'bg-red-50 text-red-600 hover:bg-red-100 animate-pulse'
                         }`}
                       >
                         {uploadingItemId === item.id ? (
-                          <Loader2 size={20} className="animate-spin" />
+                          <Loader2 size={24} className="animate-spin" />
                         ) : (
-                          <Camera size={20} />
+                          <Camera size={24} />
                         )}
                       </button>
                     </div>
