@@ -317,6 +317,13 @@ export const masterDataAPI = {
   getCompanies: (params) => api.get('/companies', { params }),
 }
 
+// User API (사용자 조회)
+export const userAPI = {
+  getAll: (params) => api.get('/users', { params }),
+  getById: (id) => api.get(`/users/${id}`),
+  getDevelopers: () => api.get('/users', { params: { role: 'developer' } }),
+}
+
 // User Management API (사용자 관리)
 export const userManagementAPI = {
   // 사내 사용자
