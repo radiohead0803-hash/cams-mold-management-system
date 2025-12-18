@@ -4,7 +4,8 @@ import {
   ArrowLeft, Settings, ChevronDown, Upload, Eye, 
   CheckCircle, MapPin, TrendingUp, User, AlertTriangle,
   Thermometer, Gauge, Clock, Box, Wrench, FileText,
-  ClipboardCheck, Calendar, Activity, Camera, Shield, X, History, Printer, Star
+  ClipboardCheck, Calendar, Activity, Camera, Shield, X, History, Printer, Star,
+  Building, ClipboardList, DollarSign
 } from 'lucide-react';
 import { moldSpecificationAPI, moldAPI, moldImageAPI, getImageUrl } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
@@ -971,19 +972,23 @@ export default function MoldDetailNew() {
                 <Wrench className="text-orange-500" size={20} />
                 <h3 className="font-semibold text-gray-800">금형수리 진행현황</h3>
               </div>
-              <button className="px-3 py-1 bg-orange-500 text-white text-sm rounded-full hover:bg-orange-600 transition-colors">
+              <button 
+                onClick={() => navigate(`/repair-request-form?moldId=${id}`)}
+                className="px-3 py-1 bg-orange-500 text-white text-sm rounded-full hover:bg-orange-600 transition-colors"
+              >
                 상세보기
               </button>
             </div>
             <div className="p-6">
               <div className="flex items-center justify-between">
-                {/* 워크플로우 스텝 */}
+                {/* 워크플로우 스텝 - 수리요청 페이지와 동일 */}
                 {[
                   { label: '요청접수', status: 'completed', icon: FileText },
-                  { label: '작업배정', status: 'completed', icon: User },
+                  { label: '수리처선정', status: 'completed', icon: Building },
                   { label: '수리진행', status: 'current', icon: Wrench },
-                  { label: '검수완료', status: 'pending', icon: CheckCircle },
-                  { label: '최종승인', status: 'pending', icon: Shield }
+                  { label: '체크리스트', status: 'pending', icon: ClipboardList },
+                  { label: '귀책처리', status: 'pending', icon: DollarSign },
+                  { label: '완료', status: 'pending', icon: CheckCircle }
                 ].map((step, idx, arr) => (
                   <div key={idx} className="flex items-center">
                     <div className="flex flex-col items-center">
