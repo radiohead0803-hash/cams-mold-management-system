@@ -846,7 +846,7 @@ export default function MoldDetailNew() {
                     <span className="text-xs font-medium text-gray-700">변경이력</span>
                   </button>
                   <button 
-                    onClick={() => navigate(`/mobile/mold/${id}/transfer`)}
+                    onClick={() => navigate(`/transfers?moldId=${id}`)}
                     className="p-3 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl hover:shadow-md transition-shadow text-center"
                   >
                     <MapPin className="mx-auto mb-1 text-purple-600" size={20} />
