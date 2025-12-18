@@ -159,6 +159,30 @@ export const inspectionAPI = {
   reject: (id, data) => api.post(`/inspections/${id}/reject`, data),
 }
 
+// Periodic Inspection API (정기점검 관리)
+export const periodicInspectionAPI = {
+  // 정기점검 목록 조회
+  getAll: (params) => api.get('/periodic-inspections', { params }),
+  // 정기점검 상세 조회
+  getById: (id) => api.get(`/periodic-inspections/${id}`),
+  // 정기점검 생성
+  create: (data) => api.post('/periodic-inspections', data),
+  // 정기점검 수정
+  update: (id, data) => api.put(`/periodic-inspections/${id}`, data),
+  // 다음 정기점검 정보 조회
+  getNextInspection: (moldId) => api.get(`/periodic-inspections/mold/${moldId}/next`),
+  // 점검 유형별 체크리스트 항목 조회 (세척 항목 포함)
+  getChecklistItems: (inspectionType) => api.get(`/periodic-inspections/checklist-items/${inspectionType}`),
+  // 사진 업로드
+  uploadPhotos: (inspectionId, formData) => api.post(`/periodic-inspections/${inspectionId}/photos`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  // 사진 목록 조회
+  getPhotos: (inspectionId, params) => api.get(`/periodic-inspections/${inspectionId}/photos`, { params }),
+  // 사진 삭제
+  deletePhoto: (inspectionId, photoId) => api.delete(`/periodic-inspections/${inspectionId}/photos/${photoId}`),
+}
+
 // Alert/Notification API - 서버의 /notifications 라우트에 맞춤
 export const alertAPI = {
   getAll: (params) => api.get('/notifications', { params }),

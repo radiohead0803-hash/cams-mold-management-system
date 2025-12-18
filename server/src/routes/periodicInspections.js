@@ -1,7 +1,40 @@
 const express = require('express');
 const router = express.Router();
-const { Inspection, InspectionItem, Mold, User } = require('../models/newIndex');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
+const { Inspection, InspectionItem, Mold, User, InspectionPhoto } = require('../models/newIndex');
 const { Op } = require('sequelize');
+const sequelize = require('../config/database');
+
+// 사진 업로드 설정
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/inspection-photos');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('지원하지 않는 파일 형식입니다.'), false);
+    }
+  }
+});
 
 /**
  * @route   GET /api/periodic-inspections
@@ -293,6 +326,192 @@ router.get('/mold/:moldId/next', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '다음 정기점검 정보 조회 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @route   POST /api/periodic-inspections/:id/photos
+ * @desc    정기점검 사진 업로드
+ * @access  Private
+ */
+router.post('/:id/photos', upload.array('photos', 10), async (req, res) => {
+  try {
+    const inspectionId = req.params.id;
+    const { category, description, mold_id, inspection_type } = req.body;
+    const userId = req.body.user_id || req.user?.id;
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '업로드할 사진이 없습니다.'
+      });
+    }
+
+    const inspection = await Inspection.findByPk(inspectionId);
+    if (!inspection) {
+      return res.status(404).json({
+        success: false,
+        message: '정기점검을 찾을 수 없습니다.'
+      });
+    }
+
+    const photos = [];
+    for (const file of req.files) {
+      const photo = await InspectionPhoto.create({
+        inspection_id: inspectionId,
+        mold_id: mold_id || inspection.mold_id,
+        inspection_type: inspection_type || inspection.inspection_type,
+        category: category || '점검사진',
+        description: description || '',
+        file_url: `/uploads/inspection-photos/${file.filename}`,
+        file_type: file.mimetype,
+        file_size: file.size,
+        uploaded_by: userId,
+        uploaded_at: new Date()
+      });
+      photos.push(photo);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: `${photos.length}개의 사진이 업로드되었습니다.`,
+      data: photos
+    });
+  } catch (error) {
+    console.error('정기점검 사진 업로드 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '사진 업로드 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @route   GET /api/periodic-inspections/:id/photos
+ * @desc    정기점검 사진 목록 조회
+ * @access  Private
+ */
+router.get('/:id/photos', async (req, res) => {
+  try {
+    const inspectionId = req.params.id;
+    const { category } = req.query;
+
+    const where = { inspection_id: inspectionId };
+    if (category) where.category = category;
+
+    const photos = await InspectionPhoto.findAll({
+      where,
+      order: [['uploaded_at', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: photos
+    });
+  } catch (error) {
+    console.error('정기점검 사진 목록 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '사진 목록 조회 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @route   DELETE /api/periodic-inspections/:id/photos/:photoId
+ * @desc    정기점검 사진 삭제
+ * @access  Private
+ */
+router.delete('/:id/photos/:photoId', async (req, res) => {
+  try {
+    const { photoId } = req.params;
+
+    const photo = await InspectionPhoto.findByPk(photoId);
+    if (!photo) {
+      return res.status(404).json({
+        success: false,
+        message: '사진을 찾을 수 없습니다.'
+      });
+    }
+
+    // 파일 삭제
+    const filePath = path.join(__dirname, '../..', photo.file_url);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    await photo.destroy();
+
+    res.json({
+      success: true,
+      message: '사진이 삭제되었습니다.'
+    });
+  } catch (error) {
+    console.error('정기점검 사진 삭제 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '사진 삭제 중 오류가 발생했습니다.',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @route   GET /api/periodic-inspections/checklist-items/:inspectionType
+ * @desc    점검 유형별 체크리스트 항목 조회 (세척 항목 포함)
+ * @access  Private
+ */
+router.get('/checklist-items/:inspectionType', async (req, res) => {
+  try {
+    const { inspectionType } = req.params;
+    
+    // 점검 유형에 따른 sort_order 범위 결정
+    let maxSortOrder;
+    switch (inspectionType) {
+      case '20000':
+      case '20k':
+        maxSortOrder = 35; // 20K 항목 + 세척 항목
+        break;
+      case '50000':
+      case '50k':
+        maxSortOrder = 55; // 50K 항목 + 세척 항목
+        break;
+      case '80000':
+      case '80k':
+        maxSortOrder = 60; // 80K 항목
+        break;
+      case '100000':
+      case '100k':
+        maxSortOrder = 999; // 전체 항목
+        break;
+      default:
+        maxSortOrder = 17; // 일상점검 항목
+    }
+
+    const items = await sequelize.query(`
+      SELECT * FROM checklist_items_master 
+      WHERE sort_order <= :maxSortOrder
+      ORDER BY sort_order ASC
+    `, {
+      replacements: { maxSortOrder },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    res.json({
+      success: true,
+      data: items,
+      inspection_type: inspectionType,
+      total: items.length
+    });
+  } catch (error) {
+    console.error('체크리스트 항목 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '체크리스트 항목 조회 중 오류가 발생했습니다.',
       error: error.message
     });
   }
