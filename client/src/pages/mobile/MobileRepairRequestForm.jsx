@@ -27,16 +27,28 @@ export default function MobileRepairRequestForm() {
   const moldInfo = location.state?.moldInfo || { id: moldId };
   
   const [formData, setFormData] = useState({
+    // ===== 요청 단계 (Plant 작성) =====
     problem: '', cause_and_reason: '', priority: '보통', occurred_date: new Date().toISOString().split('T')[0],
-    problem_type: '', occurrence_type: '신규', repair_category: '', requester_name: user?.name || '', contact: '',
+    problem_type: '', occurrence_type: '신규', repair_category: '',
+    plant_manager_name: user?.name || '', plant_manager_contact: '',
+    cams_manager_id: '', cams_manager_name: '', cams_manager_contact: '',
+    // ===== 제품/금형 정보 (자동연동) =====
     car_model: '', part_number: '', part_name: '', maker: '', production_site: '', production_shot: '',
+    // ===== 수리처 선정 =====
     repair_shop_type: '', repair_company: '', repair_shop_selected_by: '', repair_shop_selected_date: '',
     repair_shop_approval_status: '대기', repair_shop_approved_by: '', repair_shop_approved_date: '', repair_shop_rejection_reason: '',
+    // ===== 생산처 검수 =====
+    plant_inspection_status: '대기', plant_inspection_result: '', plant_inspection_comment: '',
+    plant_inspection_by: '', plant_inspection_date: '', plant_inspection_rejection_reason: '',
+    // ===== 체크리스트 점검 =====
+    checklist_result: '', checklist_comment: '', checklist_inspector: '', checklist_date: '', checklist_status: '대기',
+    // ===== 귀책처리 =====
     liability_type: '', liability_ratio_maker: '', liability_ratio_plant: '', liability_reason: '', liability_decided_by: '', liability_decided_date: '',
+    // ===== 수리 단계 =====
     status: '요청접수', manager_name: '', temporary_action: '', root_cause_action: '', repair_cost: '', repair_duration: '',
     completion_date: '', mold_arrival_date: '', repair_start_date: '', repair_end_date: '',
-    operation_type: '양산', management_type: '', sign_off_status: '제출되지 않음', order_company: '',
-    representative_part_number: '', stock_schedule_date: '', stock_quantity: '', stock_unit: 'EA'
+    // ===== 완료/관리 단계 =====
+    operation_type: '양산', management_type: '', sign_off_status: '제출되지 않음', order_company: ''
   });
 
   useEffect(() => { if (id) loadRepairRequest(); else if (moldInfo?.id || moldId) loadMoldInfo(moldInfo?.id || moldId); }, [id, moldInfo?.id, moldId]);
@@ -136,9 +148,11 @@ export default function MobileRepairRequestForm() {
         <div><label className="block text-sm font-medium text-gray-700 mb-2"><Camera size={14} className="inline mr-1" />사진 추가</label><input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />{images.length > 0 && <div className="grid grid-cols-3 gap-2 mb-3">{images.map(i => (<div key={i.id} className="relative"><img src={i.preview} className="w-full h-20 object-cover rounded-lg border" />{isEditing && <button onClick={() => handleImageRemove(i.id)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"><X size={12} /></button>}</div>))}</div>}{isEditing && <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 rounded-lg text-sm text-gray-600 border-2 border-dashed"><Upload size={16} />이미지 선택</button>}</div>
         <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">우선순위</label><select value={formData.priority} onChange={(e) => handleChange('priority', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50">{priorityOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div><div><label className="block text-sm font-medium text-gray-700 mb-1">발생일</label><input type="date" value={formData.occurred_date} onChange={(e) => handleChange('occurred_date', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div></div>
         <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">문제유형</label><select value={formData.problem_type} onChange={(e) => handleChange('problem_type', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50"><option value="">선택</option>{problemTypeOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div><div><label className="block text-sm font-medium text-gray-700 mb-1">발생유형</label><div className="flex gap-2">{occurrenceOptions.map(o => (<button key={o} onClick={() => isEditing && handleChange('occurrence_type', o)} className={`flex-1 py-2 rounded-lg text-sm font-medium border ${formData.occurrence_type === o ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-600 border-gray-300'} ${!isEditing ? 'opacity-60' : ''}`}>{o}</button>))}</div></div></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">요청자</label><input type="text" value={formData.requester_name} onChange={(e) => handleChange('requester_name', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="요청자명" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">연락처</label><input type="tel" value={formData.contact} onChange={(e) => handleChange('contact', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="010-0000-0000" /></div></div>
-        <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-200"><div><label className="block text-sm font-medium text-gray-700 mb-1">대표 품번</label><input type="text" value={formData.representative_part_number} onChange={(e) => handleChange('representative_part_number', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="대표 품번" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">재고 예정일</label><input type="date" value={formData.stock_schedule_date} onChange={(e) => handleChange('stock_schedule_date', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div></div>
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">재고 수량</label><input type="number" value={formData.stock_quantity} onChange={(e) => handleChange('stock_quantity', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="0" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">단위</label><select value={formData.stock_unit} onChange={(e) => handleChange('stock_unit', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50"><option value="EA">EA</option><option value="SET">SET</option><option value="BOX">BOX</option></select></div></div>
+        {/* 생산처 담당자 */}
+        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">생산처 담당자</label><input type="text" value={formData.plant_manager_name} onChange={(e) => handleChange('plant_manager_name', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="담당자명" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">연락처</label><input type="tel" value={formData.plant_manager_contact} onChange={(e) => handleChange('plant_manager_contact', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="010-0000-0000" /></div></div>
+        {/* 캠스 담당자 */}
+        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">캠스 담당자</label><input type="text" value={formData.cams_manager_name} onChange={(e) => handleChange('cams_manager_name', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="담당자명" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">연락처</label><input type="tel" value={formData.cams_manager_contact} onChange={(e) => handleChange('cams_manager_contact', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="자동입력" readOnly /></div></div>
+        {formData.cams_manager_name && <div className="p-2 bg-blue-50 rounded-lg border border-blue-200"><p className="text-xs text-blue-700">선택된 담당자: {formData.cams_manager_name} {formData.cams_manager_contact && `(${formData.cams_manager_contact})`}</p></div>}
       </div>);
       
       case 'product': return (<div className="space-y-4">
@@ -377,6 +391,46 @@ export default function MobileRepairRequestForm() {
                 <button disabled className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-slate-50 text-slate-400">📷 사진 추가</button>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* 검수 결과 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">검수 결과</label>
+          <div className="grid grid-cols-2 gap-2">
+            {['적합', '부적합'].map(opt => (
+              <button key={opt} type="button" onClick={() => isRepairShopApproved && handleChange('plant_inspection_result', opt)} disabled={!isRepairShopApproved} className={`py-2.5 rounded-lg text-sm font-medium border-2 ${formData.plant_inspection_result === opt ? opt === '적합' ? 'bg-green-500 text-white border-green-500' : 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{opt}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* 검수 의견 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">검수 의견</label>
+          <textarea value={formData.plant_inspection_comment || ''} onChange={(e) => handleChange('plant_inspection_comment', e.target.value)} disabled={!isRepairShopApproved} rows={2} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="검수 의견을 입력하세요" />
+        </div>
+
+        {/* 검수자, 검수일 */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">검수자</label>
+            <input type="text" value={formData.plant_inspection_by || user?.name || ''} onChange={(e) => handleChange('plant_inspection_by', e.target.value)} disabled={!isRepairShopApproved} className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">검수일</label>
+            <input type="date" value={formData.plant_inspection_date || ''} onChange={(e) => handleChange('plant_inspection_date', e.target.value)} disabled={!isRepairShopApproved} className="w-full border rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+
+        {/* 승인요청 */}
+        <div className="pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">생산처 검수 승인</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${formData.plant_inspection_status === '승인' ? 'bg-green-100 text-green-700' : formData.plant_inspection_status === '반려' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{formData.plant_inspection_status || '대기'}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => handleChange('plant_inspection_status', '승인')} disabled={!isRepairShopApproved} className="py-2.5 bg-green-500 text-white rounded-lg text-sm font-medium disabled:opacity-50">승인</button>
+            <button type="button" onClick={() => handleChange('plant_inspection_status', '반려')} disabled={!isRepairShopApproved} className="py-2.5 bg-white text-red-500 border-2 border-red-200 rounded-lg text-sm font-medium disabled:opacity-50">반려</button>
           </div>
         </div>
       </div>);
