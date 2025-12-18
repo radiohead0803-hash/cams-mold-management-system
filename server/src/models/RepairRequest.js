@@ -345,6 +345,16 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 'EA',
         comment: '재고확보단위'
       },
+      shortage_expected_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+        comment: '과부족 예상일'
+      },
+      mold_arrival_request_datetime: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        comment: '금형입고요청일시'
+      },
       repair_company: {
         type: DataTypes.STRING(200),
         allowNull: true,

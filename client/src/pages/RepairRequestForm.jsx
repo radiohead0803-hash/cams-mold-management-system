@@ -67,7 +67,8 @@ export default function RepairRequestForm() {
     cams_manager_name: '',                          // 캠스 담당자명
     cams_manager_contact: '',                       // 캠스 담당자 연락처
     stock_quantity: '',                             // 재고 현황 (수량)
-    stock_depletion_days: '',                       // 재고소진 예상일 (예: 2.5일)
+    shortage_expected_date: '',                     // 과부족 예상일 (날짜)
+    mold_arrival_request_datetime: '',              // 금형입고요청일시
     
     // ===== 제품/금형 정보 (자동연동) =====
     car_model: '',                                  // 차종
@@ -837,25 +838,44 @@ export default function RepairRequestForm() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">재고소진 예상일</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={formData.stock_depletion_days}
-                        onChange={(e) => handleChange('stock_depletion_days', e.target.value)}
-                        className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500"
-                        placeholder="예: 2.5"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">일</span>
-                    </div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">과부족 예상일</label>
+                    <input
+                      type="date"
+                      value={formData.shortage_expected_date}
+                      onChange={(e) => handleChange('shortage_expected_date', e.target.value)}
+                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+                    />
                   </div>
                 </div>
-                {(formData.stock_quantity || formData.stock_depletion_days) && (
+                {(formData.stock_quantity || formData.shortage_expected_date) && (
                   <div className="mt-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
                     <p className="text-sm text-orange-700">
                       <span className="font-medium">재고 현황:</span> {formData.stock_quantity || 0}개 
-                      {formData.stock_depletion_days && ` / 소진 예상: ${formData.stock_depletion_days}일`}
+                      {formData.shortage_expected_date && ` / 과부족 예상일: ${formData.shortage_expected_date}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 금형입고요청일시 */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <Truck size={16} className="text-blue-600" />
+                  금형입고요청
+                </h4>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">금형입고요청일시</label>
+                  <input
+                    type="datetime-local"
+                    value={formData.mold_arrival_request_datetime}
+                    onChange={(e) => handleChange('mold_arrival_request_datetime', e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                {formData.mold_arrival_request_datetime && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-700">
+                      <span className="font-medium">입고요청일시:</span> {new Date(formData.mold_arrival_request_datetime).toLocaleString('ko-KR')}
                     </p>
                   </div>
                 )}
