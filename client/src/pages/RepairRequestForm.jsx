@@ -1172,7 +1172,7 @@ export default function RepairRequestForm() {
           </button>
           
           {expandedSections.checklist && (
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
               {!isRepairShopApproved && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
                   <AlertCircle size={16} className="inline mr-2" />
@@ -1180,44 +1180,101 @@ export default function RepairRequestForm() {
                 </div>
               )}
               
-              {/* 체크리스트 점검 항목 미리보기 - 8개 카테고리 */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <ClipboardList size={16} className="text-cyan-600" />
-                  수리 후 출하점검 체크리스트 (8개 카테고리, 32개 항목)
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {/* 전체 진행률 */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-cyan-600">전체 진행률</span>
+                  <span className="text-sm font-bold text-cyan-600">0%</span>
+                </div>
+                <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-cyan-400 to-cyan-600 transition-all duration-500" style={{ width: '0%' }} />
+                </div>
+                <p className="text-xs text-slate-500 mt-2">0 / 32 항목 완료</p>
+              </div>
+
+              {/* 카테고리별 진행 현황 */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <h3 className="font-semibold text-slate-900 mb-4">카테고리별 진행 현황</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { category: '1. 수리 이력 및 범위 확인', icon: '📋', items: ['수리 요청 내역 일치 여부', '수리 범위 명확화', '추가 수리 발생 여부', '수리 전·후 비교 사진'] },
-                    { category: '2. 성형면 및 외관 상태', icon: '🔍', items: ['성형면 손상', '폴리싱 상태', '파팅라인', '텍스처 영역', '육안 이물'] },
-                    { category: '3. 기능부 작동 점검', icon: '⚙️', items: ['슬라이드 작동', '리프터 작동', '이젝터', '가이드핀/부시', '볼트 체결 상태'] },
-                    { category: '4. 치수 및 맞물림 상태', icon: '📐', items: ['습합 상태', '간섭 흔적', '틈새 과다 여부', 'Shim 변경 여부'] },
-                    { category: '5. 냉각·윤활·방청 상태', icon: '💧', items: ['냉각 회로', '오링/실링', '윤활 상태', '방청 처리', '잔유 제거'] },
-                    { category: '6. 시운전 결과 확인', icon: '🧪', items: ['시운전 실시 여부', '성형품 외관', '기능 불량', '판단 결과'] },
-                    { category: '7. 출하 준비 및 식별 관리', icon: '📦', items: ['금형 세척 상태', '금형 고정', 'QR/명판', '출하 사진', '출하 목적지'] },
-                    { category: '8. 최종 확인 및 승인', icon: '✅', items: ['제작처 확인', '본사 승인'] }
-                  ].map((section, idx) => (
-                    <div key={idx} className="p-3 bg-white rounded-lg border border-slate-100">
-                      <p className="text-xs font-medium text-cyan-600 mb-2 flex items-center gap-1">
-                        <span>{section.icon}</span>
-                        {section.category}
-                      </p>
-                      <ul className="space-y-1">
-                        {section.items.map((item, itemIdx) => (
-                          <li key={itemIdx} className="text-xs text-slate-600 flex items-center gap-2">
-                            <span className="w-4 h-4 rounded border border-slate-300 flex items-center justify-center bg-white text-[10px]">
-                              📷
-                            </span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
+                    { category: '수리 이력', icon: '📋', count: 4 },
+                    { category: '성형면/외관', icon: '🔍', count: 5 },
+                    { category: '기능부 점검', icon: '⚙️', count: 5 },
+                    { category: '치수/맞물림', icon: '📐', count: 4 },
+                    { category: '냉각/윤활', icon: '💧', count: 5 },
+                    { category: '시운전', icon: '🧪', count: 4 },
+                    { category: '출하 준비', icon: '📦', count: 5 },
+                    { category: '최종 승인', icon: '✅', count: 2 }
+                  ].map((cat, idx) => (
+                    <div key={idx} className="p-3 rounded-xl border-2 border-slate-200 bg-white text-left">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span>{cat.icon}</span>
+                        <span className="text-xs font-medium text-slate-700 truncate">{cat.category}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden mb-1">
+                        <div className="h-full bg-cyan-500" style={{ width: '0%' }} />
+                      </div>
+                      <p className="text-xs text-slate-500">0/{cat.count} (0%)</p>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500 mt-3 text-center">
-                  ※ 모든 항목은 사진 첨부 필수입니다
-                </p>
+              </div>
+
+              {/* 점검 항목 상세 */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-900">1. 수리 이력 및 범위 확인</h3>
+                  <span className="text-sm text-slate-500">0 / 4</span>
+                </div>
+                
+                {/* 항목 예시 */}
+                <div className="space-y-4">
+                  {['수리 요청 내역 일치 여부', '수리 범위 명확화', '추가 수리 발생 여부', '수리 전·후 비교 사진'].map((item, idx) => (
+                    <div key={idx} className="border border-slate-200 rounded-xl p-4 bg-white">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">🔍</span>
+                            <h4 className="font-semibold text-slate-900">{item} <span className="text-red-500">*</span></h4>
+                          </div>
+                          <p className="text-sm text-slate-500">점검 항목 설명</p>
+                          <div className="mt-2 p-2 bg-cyan-50 rounded-lg">
+                            <p className="text-xs font-medium text-cyan-700">📋 점검 포인트:</p>
+                            <p className="text-xs text-cyan-600">• 해당 항목을 확인하세요</p>
+                          </div>
+                        </div>
+                        <span className="text-sm text-slate-400">🎬 가이드</span>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">상태 선택 <span className="text-red-500">*</span></label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer opacity-50">
+                            <input type="radio" disabled className="w-4 h-4" />
+                            <span className="text-sm">양호</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer opacity-50">
+                            <input type="radio" disabled className="w-4 h-4" />
+                            <span className="text-sm">주의</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer opacity-50">
+                            <input type="radio" disabled className="w-4 h-4" />
+                            <span className="text-sm">불량</span>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">비고 (선택)</label>
+                        <textarea disabled className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50" rows={2} placeholder="점검 내용을 입력하세요" />
+                      </div>
+                      
+                      <button disabled className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium bg-slate-50 text-slate-400">
+                        📷 점검 사진 추가
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
               
               <div className={`p-4 bg-cyan-50 border border-cyan-200 rounded-lg ${!isRepairShopApproved ? 'opacity-50' : ''}`}>
@@ -1259,7 +1316,7 @@ export default function RepairRequestForm() {
           </button>
           
           {expandedSections.plantInspection && (
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
               {!isRepairShopApproved && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
                   <AlertCircle size={16} className="inline mr-2" />
@@ -1267,71 +1324,99 @@ export default function RepairRequestForm() {
                 </div>
               )}
 
-              {/* 생산처 검수 체크리스트 항목 미리보기 - 6개 카테고리 */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <ClipboardList size={16} className="text-indigo-600" />
-                  생산처 입고 검수 체크리스트 (6개 카테고리, 24개 항목)
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {/* 전체 진행률 */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-indigo-600">전체 진행률</span>
+                  <span className="text-sm font-bold text-indigo-600">0%</span>
+                </div>
+                <div className="h-3 bg-slate-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-indigo-400 to-indigo-600 transition-all duration-500" style={{ width: '0%' }} />
+                </div>
+                <p className="text-xs text-slate-500 mt-2">0 / 24 항목 완료</p>
+              </div>
+
+              {/* 카테고리별 진행 현황 */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <h3 className="font-semibold text-slate-900 mb-4">카테고리별 진행 현황</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {[
-                    { category: '1. 입고 상태 확인', icon: '�', items: ['포장 상태 확인', '운송 중 손상 여부', '금형 외관 상태', '부속품 확인'] },
-                    { category: '2. 수리 내역 확인', icon: '�', items: ['수리 요청 내용 일치', '수리 완료 보고서 확인', '수리 전후 사진 비교', '추가 수리 사항 확인'] },
-                    { category: '3. 기능 점검', icon: '⚙️', items: ['슬라이드/리프터 작동', '이젝터 작동 확인', '냉각수 순환 테스트', '형개폐 테스트'] },
-                    { category: '4. 외관 품질 확인', icon: '�', items: ['성형면 상태', '파팅라인 상태', '게이트 상태', '텍스처 상태'] },
-                    { category: '5. 시운전 확인', icon: '🧪', items: ['초도품 생산', '치수 검사', '외관 검사', '기능 검사'] },
-                    { category: '6. 최종 검수 승인', icon: '✅', items: ['검수 결과 판정', '생산처 담당자 확인', '캠스 담당자 승인', '생산 투입 승인'] }
-                  ].map((section, idx) => (
-                    <div key={idx} className="p-3 bg-white rounded-lg border border-slate-100">
-                      <p className="text-xs font-medium text-indigo-600 mb-2 flex items-center gap-1">
-                        <span>{section.icon}</span>
-                        {section.category}
-                      </p>
-                      <ul className="space-y-1">
-                        {section.items.map((item, itemIdx) => (
-                          <li key={itemIdx} className="text-xs text-slate-600 flex items-center gap-2">
-                            <span className="w-4 h-4 rounded border border-slate-300 flex items-center justify-center bg-white text-[10px]">
-                              ☐
-                            </span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
+                    { category: '입고 상태', icon: '📦', count: 4 },
+                    { category: '수리 내역', icon: '📋', count: 4 },
+                    { category: '기능 점검', icon: '⚙️', count: 4 },
+                    { category: '외관 품질', icon: '🔍', count: 4 },
+                    { category: '시운전', icon: '🧪', count: 4 },
+                    { category: '최종 승인', icon: '✅', count: 4 }
+                  ].map((cat, idx) => (
+                    <div key={idx} className="p-3 rounded-xl border-2 border-slate-200 bg-white text-left">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span>{cat.icon}</span>
+                        <span className="text-xs font-medium text-slate-700 truncate">{cat.category}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden mb-1">
+                        <div className="h-full bg-indigo-500" style={{ width: '0%' }} />
+                      </div>
+                      <p className="text-xs text-slate-500">0/{cat.count} (0%)</p>
                     </div>
                   ))}
                 </div>
-                <p className="text-xs text-slate-500 mt-3 text-center">
-                  ※ 검수 완료 후 생산 투입 가능
-                </p>
               </div>
 
-              {/* 체크리스트 점검 결과 요약 */}
-              <div className={`p-4 bg-cyan-50 border border-cyan-200 rounded-lg ${!isRepairShopApproved ? 'opacity-50' : ''}`}>
-                <h4 className="text-sm font-semibold text-cyan-800 mb-3 flex items-center gap-2">
-                  <ClipboardList size={16} />
-                  체크리스트 점검 결과
-                </h4>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="p-3 bg-white rounded-lg border border-cyan-100">
-                    <p className="text-2xl font-bold text-green-600">-</p>
-                    <p className="text-xs text-slate-500">적합 항목</p>
-                  </div>
-                  <div className="p-3 bg-white rounded-lg border border-cyan-100">
-                    <p className="text-2xl font-bold text-red-600">-</p>
-                    <p className="text-xs text-slate-500">부적합 항목</p>
-                  </div>
-                  <div className="p-3 bg-white rounded-lg border border-cyan-100">
-                    <p className="text-2xl font-bold text-slate-600">-</p>
-                    <p className="text-xs text-slate-500">총 항목</p>
-                  </div>
+              {/* 점검 항목 상세 */}
+              <div className="bg-white rounded-xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-900">1. 입고 상태 확인</h3>
+                  <span className="text-sm text-slate-500">0 / 4</span>
                 </div>
-                <button
-                  onClick={() => navigate(`/repair-shipment-checklist?repairRequestId=${requestId || ''}&moldId=${moldId || moldInfo?.id || ''}&view=result`)}
-                  disabled={!isRepairShopApproved}
-                  className="w-full mt-3 py-2 bg-cyan-100 text-cyan-700 rounded-lg text-sm font-medium hover:bg-cyan-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  체크리스트 상세 보기
-                </button>
+                
+                {/* 항목 예시 */}
+                <div className="space-y-4">
+                  {['포장 상태 확인', '운송 중 손상 여부', '금형 외관 상태', '부속품 확인'].map((item, idx) => (
+                    <div key={idx} className="border border-slate-200 rounded-xl p-4 bg-white">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg">📦</span>
+                            <h4 className="font-semibold text-slate-900">{item} <span className="text-red-500">*</span></h4>
+                          </div>
+                          <p className="text-sm text-slate-500">입고된 금형의 상태를 확인합니다</p>
+                          <div className="mt-2 p-2 bg-indigo-50 rounded-lg">
+                            <p className="text-xs font-medium text-indigo-700">📋 점검 포인트:</p>
+                            <p className="text-xs text-indigo-600">• 해당 항목을 확인하세요</p>
+                          </div>
+                        </div>
+                        <span className="text-sm text-slate-400">🎬 가이드</span>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">상태 선택 <span className="text-red-500">*</span></label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer opacity-50">
+                            <input type="radio" disabled className="w-4 h-4" />
+                            <span className="text-sm">양호</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer opacity-50">
+                            <input type="radio" disabled className="w-4 h-4" />
+                            <span className="text-sm">주의</span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer opacity-50">
+                            <input type="radio" disabled className="w-4 h-4" />
+                            <span className="text-sm">불량</span>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">비고 (선택)</label>
+                        <textarea disabled className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-slate-50" rows={2} placeholder="점검 내용을 입력하세요" />
+                      </div>
+                      
+                      <button disabled className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium bg-slate-50 text-slate-400">
+                        📷 점검 사진 추가
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* 검수 결과 */}
