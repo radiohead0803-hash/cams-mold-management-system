@@ -12,14 +12,13 @@ import { useAuthStore } from '../stores/authStore';
 /**
  * PC 수리요청 양식 페이지
  * 프로세스 기준 섹션 구분:
- * 1. 요청 단계 (Plant): 기본정보 + 사진 + 카테고리(EO/현실화/돌발)
- * 2. 제품/금형 정보: 자동연동 (읽기전용)
- * 3. 수리처 선정 (Plant/개발담당자): 수리처 선정 → 개발담당자 승인
- * 4. 수리 단계 (Maker): 수리정보
- * 5. 체크리스트 점검: 수리 후 출하점검
- * 6. 생산처 검수 (Plant): 검수내용 확인 및 승인
- * 7. 귀책처리 (개발담당자): 귀책 판정
- * 8. 완료/관리 단계 (HQ): 관리정보
+ * 1. 요청 단계 (Plant): 기본정보 + 사진 + 카테고리 + 금형정보(자동연동)
+ * 2. 수리처 선정 (Plant/개발담당자): 수리처 선정 → 개발담당자 승인
+ * 3. 수리 단계 (Maker): 수리정보
+ * 4. 체크리스트 점검: 수리 후 출하점검
+ * 5. 생산처 검수 (Plant): 검수내용 확인 및 승인
+ * 6. 귀책처리 (개발담당자): 귀책 판정
+ * 7. 완료/관리 단계 (HQ): 관리정보
  */
 export default function RepairRequestForm() {
   const navigate = useNavigate();
@@ -43,8 +42,7 @@ export default function RepairRequestForm() {
   const [moldSpec, setMoldSpec] = useState(null);
   const [repairProgress, setRepairProgress] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
-    request: true,    // 요청 단계
-    product: true,    // 제품/금형 정보
+    request: true,    // 요청 단계 (금형정보 포함)
     repairShop: false, // 수리처 선정
     repair: false,    // 수리 단계
     checklist: false,  // 체크리스트 점검
@@ -702,380 +700,51 @@ export default function RepairRequestForm() {
                 </div>
               </div>
 
-              {/* 대표 품번, 재고 예정일, 재고 수량, 단위 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-slate-200">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">대표 품번</label>
-                  <input
-                    type="text"
-                    value={formData.representative_part_number}
-                    onChange={(e) => handleChange('representative_part_number', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
-                    placeholder="대표 품번"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 예정일</label>
-                  <input
-                    type="date"
-                    value={formData.stock_schedule_date}
-                    onChange={(e) => handleChange('stock_schedule_date', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">재고 수량</label>
-                  <input
-                    type="number"
-                    value={formData.stock_quantity}
-                    onChange={(e) => handleChange('stock_quantity', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">단위</label>
-                  <select
-                    value={formData.stock_unit}
-                    onChange={(e) => handleChange('stock_unit', e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
-                  >
-                    <option value="EA">EA</option>
-                    <option value="SET">SET</option>
-                    <option value="BOX">BOX</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ===== 2. 제품/금형 정보 (자동연동) ===== */}
-        <div id="section-product" className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <button
-            onClick={() => toggleSection('product')}
-            className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200"
-          >
-            <div className="flex items-center gap-3">
-              <Package className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-slate-800">2. 제품/금형 정보</span>
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">자동연동</span>
-            </div>
-            {expandedSections.product ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-          
-          {expandedSections.product && (
-            <div className="p-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">차종</label>
-                  <input
-                    type="text"
-                    value={formData.car_model}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
-                    placeholder="자동연동"
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">품번</label>
-                  <input
-                    type="text"
-                    value={formData.part_number}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
-                    placeholder="자동연동"
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">품명</label>
-                  <input
-                    type="text"
-                    value={formData.part_name}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
-                    placeholder="자동연동"
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">제작처</label>
-                  <input
-                    type="text"
-                    value={formData.maker}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
-                    placeholder="자동연동"
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">생산처</label>
-                  <input
-                    type="text"
-                    value={formData.production_site}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
-                    placeholder="자동연동"
-                    readOnly
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">현재 타수</label>
-                  <input
-                    type="text"
-                    value={formData.production_shot}
-                    className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
-                    placeholder="자동연동"
-                    readOnly
-                  />
-                </div>
-              </div>
-
-              {/* 사출조건 관리 */}
-              <div className="mt-6 pt-6 border-t border-slate-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <span className="text-red-500">🔥</span>
-                    사출조건 관리
-                  </h4>
-                  <button
-                    onClick={() => navigate(`/injection-condition?moldId=${moldId}`)}
-                    className="px-3 py-1 bg-red-500 text-white text-xs rounded-full hover:bg-red-600"
-                  >
-                    상세보기
-                  </button>
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="p-3 bg-red-50 rounded-lg border border-red-100">
-                    <p className="text-xs text-slate-500 mb-1">사출온도</p>
-                    <p className="text-lg font-bold text-red-600">
-                      {injectionCondition?.barrel_temp_1 || '-'}°C
-                    </p>
-                  </div>
-                  <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
-                    <p className="text-xs text-slate-500 mb-1">사출압력</p>
-                    <p className="text-lg font-bold text-orange-600">
-                      {injectionCondition?.pressure_1 || '-'} MPa
-                    </p>
-                  </div>
-                  <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-100">
-                    <p className="text-xs text-slate-500 mb-1">사출속도</p>
-                    <p className="text-lg font-bold text-yellow-600">
-                      {injectionCondition?.speed_1 || '-'} mm/s
-                    </p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-xs text-slate-500 mb-1">사이클타임</p>
-                    <p className="text-lg font-bold text-slate-600">
-                      {injectionCondition?.cycle_time || '-'} sec
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 금형사양 */}
-              <div className="mt-6 pt-6 border-t border-slate-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <span className="text-green-500">💎</span>
-                    금형사양
-                  </h4>
-                  <button
-                    onClick={() => navigate(`/mold-detail/${moldId}`)}
-                    className="px-3 py-1 bg-green-500 text-white text-xs rounded-full hover:bg-green-600"
-                  >
-                    상세보기
-                  </button>
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-xs text-slate-500 mb-1">재질</p>
-                    <p className="text-lg font-bold text-slate-700">
-                      {moldSpec?.material || 'NAK80'}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-xs text-slate-500 mb-1">중량</p>
-                    <p className="text-lg font-bold text-slate-700">
-                      {moldSpec?.mold?.weight || '-'}kg
-                    </p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-xs text-slate-500 mb-1">치수</p>
-                    <p className="text-lg font-bold text-slate-700">
-                      {moldSpec?.mold?.dimensions || '-'}mm
-                    </p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    <p className="text-xs text-slate-500 mb-1">캐비티</p>
-                    <p className="text-lg font-bold text-slate-700">
-                      {moldSpec?.cavity_count || '-'}개
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 금형수리 진행현황 */}
-              <div className="mt-6 pt-6 border-t border-slate-200">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Wrench size={16} className="text-amber-500" />
-                    금형수리 진행현황
-                  </h4>
-                  <button
-                    onClick={() => navigate(`/repair-requests?moldId=${moldId}`)}
-                    className="px-3 py-1 bg-amber-500 text-white text-xs rounded-full hover:bg-amber-600"
-                  >
-                    상세보기
-                  </button>
-                </div>
-                <div className="grid grid-cols-5 gap-2">
-                  <div 
-                    onClick={() => repairProgress?.requested > 0 && navigate(`/repair-requests?moldId=${moldId}&status=요청접수`)}
-                    className={`p-3 rounded-lg border text-center ${repairProgress?.requested > 0 ? 'bg-blue-50 border-blue-200 cursor-pointer hover:bg-blue-100' : 'bg-slate-50 border-slate-200'}`}
-                  >
-                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.requested > 0 ? 'bg-blue-500 text-white' : 'bg-slate-300 text-white'}`}>
-                      <FileText size={14} />
-                    </div>
-                    <p className="text-xs text-slate-600">요청접수</p>
-                    <p className={`text-sm font-bold ${repairProgress?.requested > 0 ? 'text-blue-600' : 'text-slate-400'}`}>{repairProgress?.requested || 0}</p>
-                  </div>
-                  <div 
-                    onClick={() => repairProgress?.assigned > 0 && navigate(`/repair-requests?moldId=${moldId}&status=작업배정`)}
-                    className={`p-3 rounded-lg border text-center ${repairProgress?.assigned > 0 ? 'bg-cyan-50 border-cyan-200 cursor-pointer hover:bg-cyan-100' : 'bg-slate-50 border-slate-200'}`}
-                  >
-                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.assigned > 0 ? 'bg-cyan-500 text-white' : 'bg-slate-300 text-white'}`}>
-                      <User size={14} />
-                    </div>
-                    <p className="text-xs text-slate-600">작업배정</p>
-                    <p className={`text-sm font-bold ${repairProgress?.assigned > 0 ? 'text-cyan-600' : 'text-slate-400'}`}>{repairProgress?.assigned || 0}</p>
-                  </div>
-                  <div 
-                    onClick={() => repairProgress?.inProgress > 0 && navigate(`/repair-requests?moldId=${moldId}&status=수리진행`)}
-                    className={`p-3 rounded-lg border text-center ${repairProgress?.inProgress > 0 ? 'bg-amber-50 border-amber-200 cursor-pointer hover:bg-amber-100' : 'bg-slate-50 border-slate-200'}`}
-                  >
-                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.inProgress > 0 ? 'bg-amber-500 text-white' : 'bg-slate-300 text-white'}`}>
-                      <Wrench size={14} />
-                    </div>
-                    <p className="text-xs text-slate-600">수리진행</p>
-                    <p className={`text-sm font-bold ${repairProgress?.inProgress > 0 ? 'text-amber-600' : 'text-slate-400'}`}>{repairProgress?.inProgress || 0}</p>
-                  </div>
-                  <div 
-                    onClick={() => repairProgress?.inspection > 0 && navigate(`/repair-requests?moldId=${moldId}&status=검수중`)}
-                    className={`p-3 rounded-lg border text-center ${repairProgress?.inspection > 0 ? 'bg-purple-50 border-purple-200 cursor-pointer hover:bg-purple-100' : 'bg-slate-50 border-slate-200'}`}
-                  >
-                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.inspection > 0 ? 'bg-purple-500 text-white' : 'bg-slate-300 text-white'}`}>
-                      <CheckCircle size={14} />
-                    </div>
-                    <p className="text-xs text-slate-600">검수완료</p>
-                    <p className={`text-sm font-bold ${repairProgress?.inspection > 0 ? 'text-purple-600' : 'text-slate-400'}`}>{repairProgress?.inspection || 0}</p>
-                  </div>
-                  <div 
-                    onClick={() => repairProgress?.completed > 0 && navigate(`/repair-requests?moldId=${moldId}&status=완료`)}
-                    className={`p-3 rounded-lg border text-center ${repairProgress?.completed > 0 ? 'bg-green-50 border-green-200 cursor-pointer hover:bg-green-100' : 'bg-slate-50 border-slate-200'}`}
-                  >
-                    <div className={`w-8 h-8 mx-auto mb-1 rounded-full flex items-center justify-center ${repairProgress?.completed > 0 ? 'bg-green-500 text-white' : 'bg-slate-300 text-white'}`}>
-                      <CheckCircle size={14} />
-                    </div>
-                    <p className="text-xs text-slate-600">최종승인</p>
-                    <p className={`text-sm font-bold ${repairProgress?.completed > 0 ? 'text-green-600' : 'text-slate-400'}`}>{repairProgress?.completed || 0}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 점검 정보 */}
-              <div className="mt-6 pt-6 border-t border-slate-200">
+              {/* 금형 기본 정보 (자동연동) */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
                 <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                  <ClipboardList size={16} className="text-blue-600" />
-                  점검 관리 현황
+                  <Package size={16} className="text-blue-600" />
+                  금형 정보 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">자동연동</span>
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* 일상점검 */}
-                  <div 
-                    onClick={() => navigateToInspection(inspectionInfo.lastDailyCheck)}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      inspectionInfo.lastDailyCheck 
-                        ? 'border-green-200 bg-green-50 hover:border-green-400 cursor-pointer' 
-                        : 'border-slate-200 bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-slate-700">일상점검</span>
-                      {inspectionInfo.loading ? (
-                        <span className="text-xs text-slate-400">로딩중...</span>
-                      ) : inspectionInfo.lastDailyCheck ? (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <CheckCircle size={10} /> 기록있음
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">기록없음</span>
-                      )}
-                    </div>
-                    {inspectionInfo.lastDailyCheck ? (
-                      <div className="space-y-1">
-                        <p className="text-sm text-slate-600">
-                          <Calendar size={12} className="inline mr-1" />
-                          최근: {new Date(inspectionInfo.lastDailyCheck.created_at).toLocaleDateString('ko-KR')}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          상태: {inspectionInfo.lastDailyCheck.status === 'approved' ? '승인됨' : 
-                                 inspectionInfo.lastDailyCheck.status === 'pending' ? '대기중' : 
-                                 inspectionInfo.lastDailyCheck.status}
-                        </p>
-                        <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
-                          <Link2 size={10} /> 클릭하여 점검시트 보기
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-400">일상점검 기록이 없습니다.</p>
-                    )}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">차종</p>
+                    <p className="text-sm font-medium text-slate-700">{formData.car_model || '-'}</p>
                   </div>
-
-                  {/* 정기점검 */}
-                  <div 
-                    onClick={() => navigateToInspection(inspectionInfo.lastPeriodicCheck)}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      inspectionInfo.lastPeriodicCheck 
-                        ? 'border-purple-200 bg-purple-50 hover:border-purple-400 cursor-pointer' 
-                        : 'border-slate-200 bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-slate-700">정기점검</span>
-                      {inspectionInfo.loading ? (
-                        <span className="text-xs text-slate-400">로딩중...</span>
-                      ) : inspectionInfo.lastPeriodicCheck ? (
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <CheckCircle size={10} /> 기록있음
-                        </span>
-                      ) : (
-                        <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">기록없음</span>
-                      )}
-                    </div>
-                    {inspectionInfo.lastPeriodicCheck ? (
-                      <div className="space-y-1">
-                        <p className="text-sm text-slate-600">
-                          <Calendar size={12} className="inline mr-1" />
-                          최근: {new Date(inspectionInfo.lastPeriodicCheck.created_at).toLocaleDateString('ko-KR')}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          상태: {inspectionInfo.lastPeriodicCheck.status === 'approved' ? '승인됨' : 
-                                 inspectionInfo.lastPeriodicCheck.status === 'pending' ? '대기중' : 
-                                 inspectionInfo.lastPeriodicCheck.status}
-                        </p>
-                        <p className="text-xs text-purple-600 mt-2 flex items-center gap-1">
-                          <Link2 size={10} /> 클릭하여 점검시트 보기
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-400">정기점검 기록이 없습니다.</p>
-                    )}
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">품번</p>
+                    <p className="text-sm font-medium text-slate-700">{formData.part_number || '-'}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">품명</p>
+                    <p className="text-sm font-medium text-slate-700">{formData.part_name || '-'}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">제작처</p>
+                    <p className="text-sm font-medium text-slate-700">{formData.maker || '-'}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-xs text-slate-500 mb-1">생산처</p>
+                    <p className="text-sm font-medium text-slate-700">{formData.production_site || '-'}</p>
+                  </div>
+                  <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-xs text-slate-500 mb-1">현재 타수</p>
+                    <p className="text-sm font-bold text-amber-600">{formData.production_shot || '-'}</p>
                   </div>
                 </div>
+                <button
+                  onClick={() => navigate(`/mold-detail/${moldId}`)}
+                  className="mt-3 w-full py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition flex items-center justify-center gap-2"
+                >
+                  <Package size={14} />
+                  금형 상세정보 보기
+                </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* ===== 3. 수리처 선정 (Plant/개발담당자 작성) ===== */}
+        {/* ===== 2. 수리처 선정 (Plant/개발담당자 작성) ===== */}
         <div id="section-repairShop" className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('repairShop')}
@@ -1083,7 +752,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <Building className="w-5 h-5 text-cyan-600" />
-              <span className="font-semibold text-slate-800">3. 수리처 선정</span>
+              <span className="font-semibold text-slate-800">2. 수리처 선정</span>
               <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">Plant/개발담당자</span>
               {formData.repair_shop_approval_status === '승인' && (
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -1217,7 +886,7 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 4. 수리 단계 (Maker 작성) ===== */}
+        {/* ===== 3. 수리 단계 (Maker 작성) ===== */}
         <div id="section-repair" className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('repair')}
@@ -1225,7 +894,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <Wrench className="w-5 h-5 text-green-600" />
-              <span className="font-semibold text-slate-800">4. 수리 단계</span>
+              <span className="font-semibold text-slate-800">3. 수리 단계</span>
               <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Maker 작성</span>
               {!isRepairShopApproved && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
@@ -1370,7 +1039,7 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 5. 체크리스트 점검 (수리 후 출하점검) ===== */}
+        {/* ===== 4. 체크리스트 점검 (수리 후 출하점검) ===== */}
         <div id="section-checklist" className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('checklist')}
@@ -1378,7 +1047,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <ClipboardList className="w-5 h-5 text-cyan-600" />
-              <span className="font-semibold text-slate-800">5. 체크리스트 점검</span>
+              <span className="font-semibold text-slate-800">4. 체크리스트 점검</span>
               <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">수리 후 출하점검</span>
               {!isRepairShopApproved && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
@@ -1412,7 +1081,7 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 6. 생산처 검수 (Plant 작성) ===== */}
+        {/* ===== 5. 생산처 검수 (Plant 작성) ===== */}
         <div id="section-plantInspection" className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('plantInspection')}
@@ -1420,7 +1089,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <Package className="w-5 h-5 text-indigo-600" />
-              <span className="font-semibold text-slate-800">6. 생산처 검수</span>
+              <span className="font-semibold text-slate-800">5. 생산처 검수</span>
               <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Plant 작성</span>
               {formData.plant_inspection_status === '승인' && (
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -1585,7 +1254,7 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 7. 귀책처리 (개발담당자 작성) ===== */}
+        {/* ===== 6. 귀책처리 (개발담당자 작성) ===== */}
         <div id="section-liability" className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('liability')}
@@ -1593,7 +1262,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <ClipboardList className="w-5 h-5 text-violet-600" />
-              <span className="font-semibold text-slate-800">7. 귀책처리</span>
+              <span className="font-semibold text-slate-800">6. 귀책처리</span>
               <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">개발담당자</span>
               {formData.plant_inspection_status !== '승인' && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">생산처 검수 승인 후 진행</span>
@@ -1710,7 +1379,7 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 8. 완료/관리 단계 (HQ 작성) ===== */}
+        {/* ===== 7. 완료/관리 단계 (HQ 작성) ===== */}
         <div id="section-complete" className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('complete')}
@@ -1718,7 +1387,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <ClipboardList className="w-5 h-5 text-purple-600" />
-              <span className="font-semibold text-slate-800">8. 완료/관리 단계</span>
+              <span className="font-semibold text-slate-800">7. 완료/관리 단계</span>
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">HQ 작성</span>
             </div>
             {expandedSections.complete ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
