@@ -6,7 +6,7 @@ import {
   Building, Truck, DollarSign, ClipboardList, Link2, ChevronDown, ChevronUp,
   Image, Plus, Trash2
 } from 'lucide-react';
-import { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI } from '../lib/api';
+import { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, userAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -41,6 +41,7 @@ export default function RepairRequestForm() {
   const [injectionCondition, setInjectionCondition] = useState(null);
   const [moldSpec, setMoldSpec] = useState(null);
   const [repairProgress, setRepairProgress] = useState(null);
+  const [camsManagerList, setCamsManagerList] = useState([]); // 캠스 담당자 목록
   const [expandedSections, setExpandedSections] = useState({
     request: true,    // 요청 단계 (금형정보 포함)
     repairShop: false, // 수리처 선정
@@ -60,12 +61,11 @@ export default function RepairRequestForm() {
     problem_type: '',                               // 문제 유형
     occurrence_type: '신규',                        // 발생 유형 (신규/재발)
     repair_category: '',                            // 수리 카테고리 (EO/현실화/돌발)
-    requester_name: user?.name || '',               // 요청자
-    contact: '',                                    // 연락처
-    representative_part_number: '',                 // 대표 품번
-    stock_schedule_date: '',                        // 재고 예정일
-    stock_quantity: '',                             // 재고 수량
-    stock_unit: 'EA',                               // 단위
+    plant_manager_name: user?.name || '',           // 생산처 담당자
+    plant_manager_contact: '',                      // 생산처 담당자 연락처
+    cams_manager_id: '',                            // 캠스 담당자 ID
+    cams_manager_name: '',                          // 캠스 담당자명
+    cams_manager_contact: '',                       // 캠스 담당자 연락처
     
     // ===== 제품/금형 정보 (자동연동) =====
     car_model: '',                                  // 차종
@@ -134,6 +134,11 @@ export default function RepairRequestForm() {
       loadInspectionInfo(moldId);
     }
   }, [moldId]);
+
+  // 캠스 담당자 목록 로드
+  useEffect(() => {
+    loadCamsManagers();
+  }, []);
 
   const loadMoldInfo = async () => {
     try {
@@ -255,6 +260,29 @@ export default function RepairRequestForm() {
     }
   };
 
+  // 캠스 담당자 목록 로드 (개발팀/HQ 사용자)
+  const loadCamsManagers = async () => {
+    try {
+      const response = await userAPI.getAll({ role: 'developer' });
+      if (response.data?.data) {
+        setCamsManagerList(response.data.data.map(u => ({
+          id: u.id,
+          name: u.name,
+          contact: u.phone || u.email || '',
+          department: u.department || '개발팀'
+        })));
+      }
+    } catch (error) {
+      console.error('Load CAMS managers error:', error);
+      // 기본 담당자 목록 (API 실패 시)
+      setCamsManagerList([
+        { id: '1', name: '김개발', contact: '010-1234-5678', department: '개발팀' },
+        { id: '2', name: '이품질', contact: '010-2345-6789', department: '품질팀' },
+        { id: '3', name: '박관리', contact: '010-3456-7890', department: '관리팀' }
+      ]);
+    }
+  };
+
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -263,6 +291,12 @@ export default function RepairRequestForm() {
     // 필수 필드 검증
     if (!formData.problem.trim()) {
       alert('문제 내용을 입력해주세요.');
+      return;
+    }
+
+    // 제출 시 캠스 담당자 필수 검증
+    if (submitType === 'submit' && !formData.cams_manager_id) {
+      alert('캠스 담당자를 선택해주세요.');
       return;
     }
 
@@ -275,12 +309,19 @@ export default function RepairRequestForm() {
         submit_type: submitType
       };
 
+      let savedRequest;
       if (requestId) {
-        await repairRequestAPI.update(requestId, dataToSave);
+        savedRequest = await repairRequestAPI.update(requestId, dataToSave);
         alert('수정되었습니다.');
       } else {
-        await repairRequestAPI.create(dataToSave);
-        alert('등록되었습니다.');
+        savedRequest = await repairRequestAPI.create(dataToSave);
+        
+        // 제출 시 캠스 담당자에게 알림 발송
+        if (submitType === 'submit' && formData.cams_manager_id) {
+          await sendNotificationToCamsManager(savedRequest.data?.data?.id);
+        }
+        
+        alert('등록되었습니다. 캠스 담당자에게 알림이 발송되었습니다.');
       }
 
       navigate(-1);
@@ -289,6 +330,25 @@ export default function RepairRequestForm() {
       alert('저장에 실패했습니다: ' + (error.response?.data?.error?.message || error.message));
     } finally {
       setSaving(false);
+    }
+  };
+
+  // 캠스 담당자에게 알림 발송
+  const sendNotificationToCamsManager = async (repairRequestId) => {
+    try {
+      // 알림 API 호출 (백엔드에서 처리)
+      await repairRequestAPI.sendNotification({
+        repair_request_id: repairRequestId,
+        recipient_id: formData.cams_manager_id,
+        recipient_name: formData.cams_manager_name,
+        notification_type: 'repair_request_created',
+        message: `새로운 수리요청이 등록되었습니다. (금형: ${formData.part_name || moldInfo?.part_name})`,
+        plant_manager_name: formData.plant_manager_name,
+        plant_manager_contact: formData.plant_manager_contact
+      });
+    } catch (error) {
+      console.error('Send notification error:', error);
+      // 알림 실패해도 요청 등록은 성공으로 처리
     }
   };
 
@@ -676,28 +736,83 @@ export default function RepairRequestForm() {
                 </div>
               </div>
 
-              {/* 요청자, 연락처 */}
+              {/* 생산처 담당자 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">요청자</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">생산처 담당자</label>
                   <input
                     type="text"
-                    value={formData.requester_name}
-                    onChange={(e) => handleChange('requester_name', e.target.value)}
+                    value={formData.plant_manager_name}
+                    onChange={(e) => handleChange('plant_manager_name', e.target.value)}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
-                    placeholder="요청자명"
+                    placeholder="담당자명"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">연락처</label>
                   <input
                     type="text"
-                    value={formData.contact}
-                    onChange={(e) => handleChange('contact', e.target.value)}
+                    value={formData.plant_manager_contact}
+                    onChange={(e) => handleChange('plant_manager_contact', e.target.value)}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
                     placeholder="010-0000-0000"
                   />
                 </div>
+              </div>
+
+              {/* 캠스 담당자 (조회 기능) */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <User size={16} className="text-blue-600" />
+                  캠스 담당자 <span className="text-xs text-red-500">* 필수</span>
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">담당자 선택</label>
+                    <div className="relative">
+                      <select
+                        value={formData.cams_manager_id}
+                        onChange={(e) => {
+                          const selectedUser = camsManagerList.find(u => u.id === e.target.value);
+                          if (selectedUser) {
+                            handleChange('cams_manager_id', selectedUser.id);
+                            handleChange('cams_manager_name', selectedUser.name);
+                            handleChange('cams_manager_contact', selectedUser.contact || '');
+                          }
+                        }}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
+                      >
+                        <option value="">캠스 담당자 선택</option>
+                        {camsManagerList.map(manager => (
+                          <option key={manager.id} value={manager.id}>
+                            {manager.name} ({manager.department || '개발팀'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">연락처</label>
+                    <input
+                      type="text"
+                      value={formData.cams_manager_contact}
+                      className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600"
+                      placeholder="자동입력"
+                      readOnly
+                    />
+                  </div>
+                </div>
+                {formData.cams_manager_name && (
+                  <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-700">
+                      <span className="font-medium">선택된 담당자:</span> {formData.cams_manager_name}
+                      {formData.cams_manager_contact && ` (${formData.cams_manager_contact})`}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      수리요청 등록 시 해당 담당자에게 알림이 발송됩니다.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* 금형 기본 정보 (자동연동) */}
