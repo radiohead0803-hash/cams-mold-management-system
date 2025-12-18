@@ -554,7 +554,7 @@ export default function Layout() {
                   
                   {/* Submenu Dropdown */}
                   {hasSubmenu && isOpen && (
-                    <div className="absolute top-full left-0 mt-0 w-56 bg-white border border-gray-200 rounded-b-lg shadow-xl z-50">
+                    <div className="absolute top-full left-0 mt-0 w-56 bg-white border border-gray-200 rounded-b-lg shadow-xl z-[100]">
                       {item.subMenus.map((subItem) => (
                         <Link
                           key={subItem.to}
