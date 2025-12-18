@@ -168,11 +168,11 @@ function App() {
       <Route path="/mobile/mold/:moldId/injection-condition" element={<MobileInjectionCondition />} />
       <Route path="/mobile/mold/:moldId/injection-history" element={<MobileInjectionHistory />} />
       <Route path="/mobile/mold/:moldId/injection-stats" element={<MobileInjectionStats />} />
-      <Route path="/mobile/mold/:moldId/transfer" element={<MobileTransferList />} />
-      <Route path="/mobile/mold/:moldId/transfer/new" element={<MobileTransferRequest />} />
-      <Route path="/mobile/mold/:moldId/transfer/list" element={<MobileTransferList />} />
+      <Route path="/mobile/mold/:moldId/transfer" element={<TransferManagement />} />
+      <Route path="/mobile/mold/:moldId/transfer/new" element={<TransferRequest />} />
+      <Route path="/mobile/mold/:moldId/transfer/list" element={<TransferManagement />} />
       <Route path="/mobile/mold/:moldId/tryout-issues" element={<MobileTryoutIssue />} />
-      <Route path="/mobile/transfer/:id" element={<MobileTransferList />} />
+      <Route path="/mobile/transfer/:id" element={<TransferManagement />} />
       <Route path="/mobile/mold/:moldId/inspection-approval" element={<MobileInspectionApproval />} />
       <Route path="/mobile/inspection-approval" element={<MobileInspectionApproval />} />
       
