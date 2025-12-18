@@ -146,7 +146,7 @@ export default function MoldLocationMapPage() {
       <div className="flex-1 flex min-h-0" style={{ height: 'calc(100vh - 80px)' }}>
         {/* 왼쪽 패널 - 금형 목록 */}
         {showList && (
-          <div className="w-[420px] bg-white border-r border-gray-200 flex flex-col h-full">
+          <div className="w-[280px] bg-white border-r border-gray-200 flex flex-col h-full">
             {/* 검색 및 필터 */}
             <div className="flex-shrink-0 p-4 border-b border-gray-200 space-y-3">
               {/* 검색 */}
