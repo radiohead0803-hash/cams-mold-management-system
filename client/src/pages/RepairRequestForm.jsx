@@ -66,6 +66,8 @@ export default function RepairRequestForm() {
     cams_manager_id: '',                            // 캠스 담당자 ID
     cams_manager_name: '',                          // 캠스 담당자명
     cams_manager_contact: '',                       // 캠스 담당자 연락처
+    stock_quantity: '',                             // 재고 현황 (수량)
+    stock_depletion_days: '',                       // 재고소진 예상일 (예: 2.5일)
     
     // ===== 제품/금형 정보 (자동연동) =====
     car_model: '',                                  // 차종
@@ -419,6 +421,8 @@ export default function RepairRequestForm() {
   
   const isDeveloper = ['mold_developer', 'system_admin'].includes(user?.user_type);
   const isRepairShopApproved = formData.repair_shop_approval_status === '승인';
+  // 개발단계에서는 4번 체크리스트, 5번 생산처검수 항목 항상 활성화
+  const isChecklistEnabled = true; // 개발단계: 항상 활성화
 
   if (loading) {
     return (
@@ -815,6 +819,48 @@ export default function RepairRequestForm() {
                 )}
               </div>
 
+              {/* 재고 현황 */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                  <Package size={16} className="text-orange-600" />
+                  재고 현황
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">재고 수량</label>
+                    <input
+                      type="number"
+                      value={formData.stock_quantity}
+                      onChange={(e) => handleChange('stock_quantity', e.target.value)}
+                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+                      placeholder="현재 재고 수량"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">재고소진 예상일</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={formData.stock_depletion_days}
+                        onChange={(e) => handleChange('stock_depletion_days', e.target.value)}
+                        className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+                        placeholder="예: 2.5"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-500">일</span>
+                    </div>
+                  </div>
+                </div>
+                {(formData.stock_quantity || formData.stock_depletion_days) && (
+                  <div className="mt-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                    <p className="text-sm text-orange-700">
+                      <span className="font-medium">재고 현황:</span> {formData.stock_quantity || 0}개 
+                      {formData.stock_depletion_days && ` / 소진 예상: ${formData.stock_depletion_days}일`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* 금형 기본 정보 (자동연동) */}
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
@@ -1034,7 +1080,7 @@ export default function RepairRequestForm() {
                   <select
                     value={formData.status}
                     onChange={(e) => handleChange('status', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   >
                     {statusOptions.map(opt => (
@@ -1048,7 +1094,7 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.manager_name}
                     onChange={(e) => handleChange('manager_name', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                     placeholder="담당자명"
                   />
@@ -1059,7 +1105,7 @@ export default function RepairRequestForm() {
                     type="date"
                     value={formData.mold_arrival_date}
                     onChange={(e) => handleChange('mold_arrival_date', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -1072,7 +1118,7 @@ export default function RepairRequestForm() {
                   value={formData.temporary_action}
                   onChange={(e) => handleChange('temporary_action', e.target.value)}
                   rows={2}
-                  disabled={!isRepairShopApproved}
+                  disabled={!isChecklistEnabled}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   placeholder="임시 조치 내용을 입력하세요"
                 />
@@ -1085,7 +1131,7 @@ export default function RepairRequestForm() {
                   value={formData.root_cause_action}
                   onChange={(e) => handleChange('root_cause_action', e.target.value)}
                   rows={2}
-                  disabled={!isRepairShopApproved}
+                  disabled={!isChecklistEnabled}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   placeholder="근본 원인 조치 내용을 입력하세요"
                 />
@@ -1099,7 +1145,7 @@ export default function RepairRequestForm() {
                     type="date"
                     value={formData.repair_start_date}
                     onChange={(e) => handleChange('repair_start_date', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -1109,7 +1155,7 @@ export default function RepairRequestForm() {
                     type="date"
                     value={formData.repair_end_date}
                     onChange={(e) => handleChange('repair_end_date', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -1119,7 +1165,7 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.repair_duration}
                     onChange={(e) => handleChange('repair_duration', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                     placeholder="예: 3일"
                   />
@@ -1130,7 +1176,7 @@ export default function RepairRequestForm() {
                     type="date"
                     value={formData.completion_date}
                     onChange={(e) => handleChange('completion_date', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -1144,7 +1190,7 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.repair_cost}
                     onChange={(e) => handleChange('repair_cost', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-green-500"
                     placeholder="₩"
                   />
@@ -1164,7 +1210,7 @@ export default function RepairRequestForm() {
               <ClipboardList className="w-5 h-5 text-cyan-600" />
               <span className="font-semibold text-slate-800">4. 체크리스트 점검</span>
               <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">수리 후 출하점검</span>
-              {!isRepairShopApproved && (
+              {!isChecklistEnabled && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
               )}
             </div>
@@ -1173,7 +1219,7 @@ export default function RepairRequestForm() {
           
           {expandedSections.checklist && (
             <div className="p-6 space-y-6">
-              {!isRepairShopApproved && (
+              {!isChecklistEnabled && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
                   <AlertCircle size={16} className="inline mr-2" />
                   수리처 선정이 승인된 후 체크리스트 점검을 진행할 수 있습니다.
@@ -1283,7 +1329,7 @@ export default function RepairRequestForm() {
                 </p>
                 <button
                   onClick={() => navigate(`/repair-shipment-checklist?repairRequestId=${requestId || ''}&moldId=${moldId || moldInfo?.id || ''}`)}
-                  disabled={!isRepairShopApproved}
+                  disabled={!isChecklistEnabled}
                   className="w-full py-3 bg-cyan-500 text-white rounded-lg font-medium hover:bg-cyan-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   체크리스트 점검 시작
@@ -1299,7 +1345,7 @@ export default function RepairRequestForm() {
                       key={opt}
                       type="button"
                       onClick={() => handleChange('checklist_result', opt)}
-                      disabled={!isRepairShopApproved}
+                      disabled={!isChecklistEnabled}
                       className={`py-3 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
                         formData.checklist_result === opt
                           ? opt === '적합' 
@@ -1321,7 +1367,7 @@ export default function RepairRequestForm() {
                   value={formData.checklist_comment || ''}
                   onChange={(e) => handleChange('checklist_comment', e.target.value)}
                   rows={3}
-                  disabled={!isRepairShopApproved}
+                  disabled={!isChecklistEnabled}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-cyan-500"
                   placeholder="점검 의견을 입력하세요"
                 />
@@ -1335,7 +1381,7 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.checklist_inspector || user?.name || ''}
                     onChange={(e) => handleChange('checklist_inspector', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
                     placeholder="점검자명"
                   />
@@ -1346,7 +1392,7 @@ export default function RepairRequestForm() {
                     type="date"
                     value={formData.checklist_date || ''}
                     onChange={(e) => handleChange('checklist_date', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
                   />
                 </div>
@@ -1370,7 +1416,7 @@ export default function RepairRequestForm() {
                   <button
                     type="button"
                     onClick={() => handleChange('checklist_status', '승인')}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition disabled:opacity-50"
                   >
                     승인
@@ -1378,7 +1424,7 @@ export default function RepairRequestForm() {
                   <button
                     type="button"
                     onClick={() => handleChange('checklist_status', '반려')}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="py-3 bg-white text-red-500 border-2 border-red-200 rounded-lg font-medium hover:bg-red-50 transition disabled:opacity-50"
                   >
                     반려
@@ -1524,7 +1570,7 @@ export default function RepairRequestForm() {
                       key={opt}
                       type="button"
                       onClick={() => handleChange('plant_inspection_result', opt)}
-                      disabled={!isRepairShopApproved}
+                      disabled={!isChecklistEnabled}
                       className={`py-3 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
                         formData.plant_inspection_result === opt
                           ? opt === '적합' 
@@ -1546,7 +1592,7 @@ export default function RepairRequestForm() {
                   value={formData.plant_inspection_comment}
                   onChange={(e) => handleChange('plant_inspection_comment', e.target.value)}
                   rows={3}
-                  disabled={!isRepairShopApproved}
+                  disabled={!isChecklistEnabled}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
                   placeholder="검수 의견을 입력하세요"
                 />
@@ -1560,7 +1606,7 @@ export default function RepairRequestForm() {
                     type="text"
                     value={formData.plant_inspection_by || user?.name || ''}
                     onChange={(e) => handleChange('plant_inspection_by', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
                     placeholder="검수자명"
                   />
@@ -1571,7 +1617,7 @@ export default function RepairRequestForm() {
                     type="date"
                     value={formData.plant_inspection_date}
                     onChange={(e) => handleChange('plant_inspection_date', e.target.value)}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
                   />
                 </div>
@@ -1613,7 +1659,7 @@ export default function RepairRequestForm() {
                         handleChange('plant_inspection_rejection_reason', reason);
                       }
                     }}
-                    disabled={!isRepairShopApproved}
+                    disabled={!isChecklistEnabled}
                     className="py-3 bg-white text-red-500 border-2 border-red-500 rounded-lg font-medium hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     반려
@@ -1664,7 +1710,7 @@ export default function RepairRequestForm() {
                       key={opt}
                       type="button"
                       onClick={() => handleChange('liability_type', opt)}
-                      disabled={!isRepairShopApproved}
+                      disabled={!isChecklistEnabled}
                       className={`py-3 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
                         formData.liability_type === opt
                           ? 'bg-violet-500 text-white border-violet-500'
@@ -1720,7 +1766,7 @@ export default function RepairRequestForm() {
                   value={formData.liability_reason}
                   onChange={(e) => handleChange('liability_reason', e.target.value)}
                   rows={3}
-                  disabled={!isRepairShopApproved}
+                  disabled={!isChecklistEnabled}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
                   placeholder="귀책 판정 사유를 입력하세요"
                 />
