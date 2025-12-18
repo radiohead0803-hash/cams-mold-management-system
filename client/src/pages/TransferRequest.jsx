@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  ArrowLeft, Save, Send, Camera, CheckCircle, Clock, AlertCircle, FileText, 
+  ArrowLeft, Send, Camera, CheckCircle, Clock, AlertCircle, FileText, 
   Building2, Building, User, Calendar, Package, Wrench, Truck, ClipboardList,
-  ChevronDown, ChevronUp, Check, Image as ImageIcon
+  ChevronDown, ChevronUp, Check, Image as ImageIcon, Shield
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { transferAPI, moldSpecificationAPI, userAPI } from '../lib/api';
@@ -12,12 +12,13 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 /**
  * PC 이관요청 양식 페이지 - 업무플로 기반 레이아웃
- * 1. 요청 단계 (인계업체): 기본정보 + 금형정보 + 관리현황
- * 2. 인계업체 승인: 인계업체 담당자 승인
- * 3. 개발담당 승인: 개발담당자 승인
- * 4. 점검 체크리스트: 금형 상태 점검
- * 5. 인수업체 검수: 검수 확인 및 승인
- * 6. 완료/관리 단계: 이관 완료 처리
+ * 새로운 업무플로 순서:
+ * 1. 요청 단계 (인계업체 작성) - 금형 기본정보 자동 로딩
+ * 2. 점검 체크리스트 (인계업체 작성)
+ * 3. 인계준비 승인 (개발담당 승인)
+ * 4. 검수승인 (인수업체) - 체크리스트 확인 및 검수
+ * 5. 이관 승인 (개발담당)
+ * 6. 완료/관리 단계
  */
 export default function TransferRequest() {
   const navigate = useNavigate();
@@ -36,10 +37,10 @@ export default function TransferRequest() {
   
   const [expandedSections, setExpandedSections] = useState({
     request: true,
-    fromApproval: false,
-    developerApproval: false,
     checklist: false,
-    toInspection: false,
+    handoverApproval: false,
+    inspectionApproval: false,
+    transferApproval: false,
     complete: false
   });
   
@@ -52,6 +53,8 @@ export default function TransferRequest() {
     priority: '보통',
     from_manager_name: user?.name || '',
     from_manager_contact: '',
+    to_manager_name: '',
+    to_manager_contact: '',
     developer_id: '',
     developer_name: '',
     developer_contact: '',
@@ -63,28 +66,31 @@ export default function TransferRequest() {
     machine_tonnage: '',
     weight: '',
     special_notes: '',
-    from_approval_status: '대기',
-    developer_approval_status: '대기',
-    to_inspection_status: '대기',
+    // 승인 상태
+    checklist_status: '대기',
+    handover_approval_status: '대기',
+    inspection_approval_status: '대기',
+    transfer_approval_status: '대기',
     status: '요청접수'
   });
 
+  // 새로운 업무플로 단계
   const progressSteps = [
-    { key: 'request', label: '요청접수', icon: FileText },
-    { key: 'from_approval', label: '인계승인', icon: Building2 },
-    { key: 'developer_approval', label: '개발승인', icon: User },
-    { key: 'checklist', label: '체크리스트', icon: ClipboardList },
-    { key: 'to_inspection', label: '인수검수', icon: CheckCircle },
-    { key: 'complete', label: '완료', icon: Check }
+    { key: 'request', label: '요청', icon: FileText, color: 'purple' },
+    { key: 'checklist', label: '점검', icon: ClipboardList, color: 'cyan' },
+    { key: 'handover', label: '인계승인', icon: Shield, color: 'blue' },
+    { key: 'inspection', label: '검수승인', icon: CheckCircle, color: 'green' },
+    { key: 'transfer', label: '이관승인', icon: Truck, color: 'orange' },
+    { key: 'complete', label: '완료', icon: Check, color: 'gray' }
   ];
 
   const getCurrentStep = () => {
     const status = formData.status;
     if (status === '요청접수') return 0;
-    if (status === '인계승인대기' || status === '인계승인완료') return 1;
-    if (status === '개발승인대기' || status === '개발승인완료') return 2;
-    if (status === '체크리스트점검') return 3;
-    if (status === '인수검수대기' || status === '인수검수완료') return 4;
+    if (status === '체크리스트작성' || status === '체크리스트완료') return 1;
+    if (status === '인계승인대기' || status === '인계승인완료') return 2;
+    if (status === '검수승인대기' || status === '검수승인완료') return 3;
+    if (status === '이관승인대기' || status === '이관승인완료') return 4;
     if (status === '완료') return 5;
     return 0;
   };
@@ -202,6 +208,8 @@ export default function TransferRequest() {
         current_shots: parseInt(formData.cumulative_shots) || 0,
         from_manager_name: formData.from_manager_name,
         from_manager_contact: formData.from_manager_contact,
+        to_manager_name: formData.to_manager_name,
+        to_manager_contact: formData.to_manager_contact,
         mold_info_snapshot: {
           ...moldInfo,
           cumulative_shots: formData.cumulative_shots,
@@ -218,7 +226,7 @@ export default function TransferRequest() {
       const response = await transferAPI.create(transferData);
       if (response.data.success) {
         alert('이관 요청이 등록되었습니다.');
-        navigate('/transfers');
+        navigate('/workflow?tab=transfer');
       }
     } catch (error) {
       console.error('Failed to create transfer:', error);
@@ -229,8 +237,6 @@ export default function TransferRequest() {
   };
 
   const plantCompanies = companies.filter(c => c.company_type === 'plant');
-  const selectedFromCompany = companies.find(c => c.id === parseInt(formData.from_company_id));
-  const selectedToCompany = companies.find(c => c.id === parseInt(formData.to_company_id));
   const currentStep = getCurrentStep();
 
   const groupedChecklist = checklistItems.reduce((acc, item) => {
@@ -240,6 +246,14 @@ export default function TransferRequest() {
     acc[item.category].items.push(item);
     return acc;
   }, {});
+
+  // 체크리스트 완료율 계산
+  const checklistCompletionRate = () => {
+    const total = checklistItems.length;
+    if (total === 0) return 0;
+    const completed = Object.values(checklistResults).filter(r => r?.result === 'pass' || r?.result === 'fail').length;
+    return Math.round((completed / total) * 100);
+  };
 
   if (loading) {
     return (
@@ -266,7 +280,7 @@ export default function TransferRequest() {
               <Truck className="text-purple-600" size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">이관요청 등록</h1>
+              <h1 className="text-2xl font-bold text-gray-900">금형이관 요청</h1>
               <p className="text-sm text-gray-500">{moldInfo?.part_number || 'P-XXXX-XXXX'} - {moldInfo?.part_name || '금형명'}</p>
             </div>
           </div>
@@ -296,7 +310,10 @@ export default function TransferRequest() {
             const isCompleted = index < currentStep;
             return (
               <div key={step.key} className="flex flex-col items-center flex-1 relative">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all ${isActive ? 'bg-purple-600 text-white ring-4 ring-purple-100' : isCompleted ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
+                {index > 0 && (
+                  <div className={`absolute left-0 top-6 w-full h-0.5 -translate-x-1/2 ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} style={{ width: '100%', left: '-50%' }} />
+                )}
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all z-10 ${isActive ? 'bg-purple-600 text-white ring-4 ring-purple-100' : isCompleted ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400'}`}>
                   {isCompleted ? <Check size={20} /> : <StepIcon size={20} />}
                 </div>
                 <span className={`text-xs font-medium ${isActive ? 'text-purple-600' : isCompleted ? 'text-green-600' : 'text-gray-400'}`}>{step.label}</span>
@@ -307,21 +324,39 @@ export default function TransferRequest() {
       </div>
 
       <form onSubmit={handleSubmit}>
-        {/* 1. 요청 단계 */}
+        {/* 1. 요청 단계 (인계업체 작성) */}
         <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
           <button type="button" onClick={() => toggleSection('request')} className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-purple-50 to-violet-50 hover:from-purple-100 hover:to-violet-100 transition-colors">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 rounded-lg"><FileText className="text-purple-600" size={20} /></div>
               <div className="text-left">
                 <h3 className="font-semibold text-gray-800">1. 요청 단계</h3>
-                <p className="text-xs text-gray-500">인계업체 작성 <span className="text-red-500">* 필수</span></p>
+                <p className="text-xs text-gray-500">인계업체 작성 - 금형 기본정보 자동 로딩 <span className="text-red-500">* 필수</span></p>
               </div>
             </div>
-            {expandedSections.request ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">인계업체</span>
+              {expandedSections.request ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
           </button>
           
           {expandedSections.request && (
             <div className="p-6 space-y-6">
+              {/* 금형 기본 정보 (자동 로딩) */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Package size={16} className="text-blue-600" />금형 기본 정보 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">자동 로딩</span>
+                </h4>
+                <div className="grid grid-cols-6 gap-3">
+                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">차종</p><p className="text-sm font-medium">{moldInfo?.car_model || '-'}</p></div>
+                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">품번</p><p className="text-sm font-medium">{moldInfo?.part_number || '-'}</p></div>
+                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">품명</p><p className="text-sm font-medium">{moldInfo?.part_name || '-'}</p></div>
+                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">제작처</p><p className="text-sm font-medium">{moldInfo?.makerCompany?.company_name || '-'}</p></div>
+                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">현 생산처</p><p className="text-sm font-medium">{moldInfo?.plantCompany?.company_name || '-'}</p></div>
+                  <div className="p-3 bg-purple-50 rounded-lg border border-purple-200"><p className="text-xs text-gray-500 mb-1">누적 타수</p><p className="text-sm font-bold text-purple-600">{formData.cumulative_shots || '-'}</p></div>
+                </div>
+              </div>
+
               {/* 이관 기본 정보 */}
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -391,7 +426,16 @@ export default function TransferRequest() {
                         {plantCompanies.filter(c => c.id !== parseInt(formData.from_company_id)).map(c => (<option key={c.id} value={c.id}>{c.company_name}</option>))}
                       </select>
                     </div>
-                    <div className="p-2 bg-green-100 rounded text-xs text-green-700">인수업체 담당자는 승인 단계에서 자동 입력됩니다.</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">담당자</label>
+                        <input type="text" value={formData.to_manager_name} onChange={(e) => handleChange('to_manager_name', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="담당자명" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">연락처</label>
+                        <input type="text" value={formData.to_manager_contact} onChange={(e) => handleChange('to_manager_contact', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="010-0000-0000" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -411,19 +455,6 @@ export default function TransferRequest() {
                     <label className="block text-xs text-gray-600 mb-1">연락처</label>
                     <input type="text" value={formData.developer_contact} readOnly className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50" placeholder="자동입력" />
                   </div>
-                </div>
-              </div>
-
-              {/* 금형 정보 */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2"><Package size={16} className="text-blue-600" />금형 정보 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">자동연동</span></h4>
-                <div className="grid grid-cols-6 gap-3">
-                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">차종</p><p className="text-sm font-medium">{moldInfo?.car_model || '-'}</p></div>
-                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">품번</p><p className="text-sm font-medium">{moldInfo?.part_number || '-'}</p></div>
-                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">품명</p><p className="text-sm font-medium">{moldInfo?.part_name || '-'}</p></div>
-                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">제작처</p><p className="text-sm font-medium">{moldInfo?.makerCompany?.company_name || '-'}</p></div>
-                  <div className="p-3 bg-gray-50 rounded-lg border"><p className="text-xs text-gray-500 mb-1">현 생산처</p><p className="text-sm font-medium">{moldInfo?.plantCompany?.company_name || '-'}</p></div>
-                  <div className="p-3 bg-purple-50 rounded-lg border border-purple-200"><p className="text-xs text-gray-500 mb-1">누적 타수</p><p className="text-sm font-bold text-purple-600">{formData.cumulative_shots || '-'}</p></div>
                 </div>
               </div>
 
@@ -450,59 +481,27 @@ export default function TransferRequest() {
           )}
         </div>
 
-        {/* 2. 인계업체 승인 */}
-        <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
-          <button type="button" onClick={() => toggleSection('fromApproval')} className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg"><Building2 className="text-orange-600" size={20} /></div>
-              <div className="text-left">
-                <h3 className="font-semibold text-gray-800">2. 인계업체 승인</h3>
-                <p className="text-xs text-gray-500">인계업체 담당자 <span className="text-orange-500">요청접수 후 진행</span></p>
-              </div>
-            </div>
-            {expandedSections.fromApproval ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-          {expandedSections.fromApproval && (
-            <div className="p-6">
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4"><p className="text-sm text-orange-800"><AlertCircle className="inline mr-2" size={16} />인계업체 담당자가 이관 요청 내용을 확인하고 승인합니다.</p></div>
-            </div>
-          )}
-        </div>
-
-        {/* 3. 개발담당 승인 */}
-        <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
-          <button type="button" onClick={() => toggleSection('developerApproval')} className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg"><User className="text-blue-600" size={20} /></div>
-              <div className="text-left">
-                <h3 className="font-semibold text-gray-800">3. 개발담당 승인</h3>
-                <p className="text-xs text-gray-500">개발담당자 <span className="text-blue-500">인계승인 후 진행</span></p>
-              </div>
-            </div>
-            {expandedSections.developerApproval ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-          {expandedSections.developerApproval && (
-            <div className="p-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4"><p className="text-sm text-blue-800"><AlertCircle className="inline mr-2" size={16} />개발담당자가 이관 요청을 검토하고 승인합니다.</p></div>
-            </div>
-          )}
-        </div>
-
-        {/* 4. 점검 체크리스트 */}
+        {/* 2. 점검 체크리스트 (인계업체 작성) */}
         <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
           <button type="button" onClick={() => toggleSection('checklist')} className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-cyan-50 to-teal-50 hover:from-cyan-100 hover:to-teal-100 transition-colors">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-cyan-100 rounded-lg"><ClipboardList className="text-cyan-600" size={20} /></div>
               <div className="text-left">
-                <h3 className="font-semibold text-gray-800">4. 점검 체크리스트</h3>
-                <p className="text-xs text-gray-500">인수업체 작성 <span className="text-cyan-500">개발승인 후 진행</span></p>
+                <h3 className="font-semibold text-gray-800">2. 점검 체크리스트</h3>
+                <p className="text-xs text-gray-500">인계업체 작성 - 금형 상태 점검</p>
               </div>
             </div>
-            {expandedSections.checklist ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-1 rounded-full">인계업체</span>
+              <span className="text-xs bg-cyan-200 text-cyan-800 px-2 py-1 rounded-full">{checklistCompletionRate()}% 완료</span>
+              {expandedSections.checklist ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
           </button>
           {expandedSections.checklist && (
             <div className="p-6">
-              <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-4"><p className="text-sm text-cyan-800"><AlertCircle className="inline mr-2" size={16} />인수업체에서 금형 상태를 점검하고 체크리스트를 작성합니다.</p></div>
+              <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-cyan-800"><AlertCircle className="inline mr-2" size={16} />인계업체에서 금형 상태를 점검하고 체크리스트를 작성합니다. 모든 항목을 점검 후 다음 단계로 진행됩니다.</p>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
                   <thead>
@@ -510,7 +509,7 @@ export default function TransferRequest() {
                       <th className="border px-3 py-2 text-center w-20">구분</th>
                       <th className="border px-3 py-2 text-center w-32">점검항목</th>
                       <th className="border px-3 py-2 text-center">점검내용</th>
-                      <th className="border px-3 py-2 text-center w-16">결과</th>
+                      <th className="border px-3 py-2 text-center w-24">결과</th>
                       <th className="border px-3 py-2 text-center w-20">사진</th>
                     </tr>
                   </thead>
@@ -521,7 +520,14 @@ export default function TransferRequest() {
                           {itemIdx === 0 && (<td className="border px-3 py-2 text-center font-medium bg-gray-50" rowSpan={group.items.length}>{group.name}</td>)}
                           <td className="border px-3 py-2"><div className="font-medium text-gray-800">{item.item_name}</div>{item.guide_description && (<div className="text-xs text-blue-600 mt-1 hidden group-hover:block">📋 {item.guide_description}</div>)}</td>
                           <td className="border px-3 py-2"><div className="text-gray-600">{item.item_description}</div>{item.check_points && item.check_points.length > 0 && (<div className="mt-1 p-1.5 bg-cyan-50 rounded text-xs hidden group-hover:block"><p className="font-medium text-cyan-700 mb-1">점검 포인트:</p>{item.check_points.map((point, pIdx) => (<p key={pIdx} className="text-cyan-600">• {point}</p>))}</div>)}</td>
-                          <td className="border px-3 py-2 text-center"><input type="checkbox" checked={checklistResults[item.id]?.result === 'pass'} onChange={(e) => handleChecklistChange(item.id, 'result', e.target.checked ? 'pass' : '')} className="w-4 h-4 text-cyan-600 rounded" /></td>
+                          <td className="border px-3 py-2 text-center">
+                            <select value={checklistResults[item.id]?.result || ''} onChange={(e) => handleChecklistChange(item.id, 'result', e.target.value)} className="w-full border border-gray-300 rounded px-2 py-1 text-sm">
+                              <option value="">선택</option>
+                              <option value="pass">양호</option>
+                              <option value="fail">불량</option>
+                              <option value="na">N/A</option>
+                            </select>
+                          </td>
                           <td className="border px-3 py-2 text-center">
                             <div className="flex items-center justify-center gap-1">
                               <label className="cursor-pointer p-1 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded transition-colors">
@@ -541,21 +547,104 @@ export default function TransferRequest() {
           )}
         </div>
 
-        {/* 5. 인수업체 검수 */}
+        {/* 3. 인계준비 승인 (개발담당 승인) */}
         <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
-          <button type="button" onClick={() => toggleSection('toInspection')} className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-colors">
+          <button type="button" onClick={() => toggleSection('handoverApproval')} className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg"><Shield className="text-blue-600" size={20} /></div>
+              <div className="text-left">
+                <h3 className="font-semibold text-gray-800">3. 인계준비 승인</h3>
+                <p className="text-xs text-gray-500">개발담당 승인 - 체크리스트 완료 후 진행</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">개발담당</span>
+              {expandedSections.handoverApproval ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
+          </button>
+          {expandedSections.handoverApproval && (
+            <div className="p-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800"><AlertCircle className="inline mr-2" size={16} />개발담당자가 인계업체의 체크리스트 작성 내용을 검토하고 인계준비를 승인합니다.</p>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">승인자</label>
+                    <input type="text" value={formData.developer_name || '-'} readOnly className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">승인상태</label>
+                    <span className="inline-block px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg text-sm">{formData.handover_approval_status}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 4. 검수승인 (인수업체) */}
+        <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
+          <button type="button" onClick={() => toggleSection('inspectionApproval')} className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 transition-colors">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg"><CheckCircle className="text-green-600" size={20} /></div>
               <div className="text-left">
-                <h3 className="font-semibold text-gray-800">5. 인수업체 검수</h3>
-                <p className="text-xs text-gray-500">인수업체 담당자 <span className="text-green-500">체크리스트 점검 후 진행</span></p>
+                <h3 className="font-semibold text-gray-800">4. 검수승인</h3>
+                <p className="text-xs text-gray-500">인수업체 - 체크리스트 확인 및 검수</p>
               </div>
             </div>
-            {expandedSections.toInspection ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">인수업체</span>
+              {expandedSections.inspectionApproval ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
           </button>
-          {expandedSections.toInspection && (
+          {expandedSections.inspectionApproval && (
             <div className="p-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4"><p className="text-sm text-green-800"><AlertCircle className="inline mr-2" size={16} />인수업체 담당자가 금형 상태를 최종 확인하고 검수를 완료합니다.</p></div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-800"><AlertCircle className="inline mr-2" size={16} />인수업체 담당자가 인계업체의 체크리스트 내용을 확인하고 금형 상태를 검수합니다.</p>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">검수자</label>
+                    <input type="text" value={formData.to_manager_name || '-'} readOnly className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">검수상태</label>
+                    <span className="inline-block px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg text-sm">{formData.inspection_approval_status}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 5. 이관 승인 (개발담당) */}
+        <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
+          <button type="button" onClick={() => toggleSection('transferApproval')} className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-orange-50 to-amber-50 hover:from-orange-100 hover:to-amber-100 transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 rounded-lg"><Truck className="text-orange-600" size={20} /></div>
+              <div className="text-left">
+                <h3 className="font-semibold text-gray-800">5. 이관 승인</h3>
+                <p className="text-xs text-gray-500">개발담당 - 최종 이관 승인</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">개발담당</span>
+              {expandedSections.transferApproval ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
+          </button>
+          {expandedSections.transferApproval && (
+            <div className="p-6">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <p className="text-sm text-orange-800"><AlertCircle className="inline mr-2" size={16} />개발담당자가 인수업체 검수 완료 후 최종 이관을 승인합니다.</p>
+                <div className="mt-4 grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">승인자</label>
+                    <input type="text" value={formData.developer_name || '-'} readOnly className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">승인상태</label>
+                    <span className="inline-block px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg text-sm">{formData.transfer_approval_status}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -567,14 +656,17 @@ export default function TransferRequest() {
               <div className="p-2 bg-gray-100 rounded-lg"><Check className="text-gray-600" size={20} /></div>
               <div className="text-left">
                 <h3 className="font-semibold text-gray-800">6. 완료/관리 단계</h3>
-                <p className="text-xs text-gray-500">HQ 작성 <span className="text-gray-500">인수검수 승인 후 진행</span></p>
+                <p className="text-xs text-gray-500">이관 완료 후 관리 정보 기록</p>
               </div>
             </div>
-            {expandedSections.complete ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <div className="flex items-center gap-2">
+              <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">HQ</span>
+              {expandedSections.complete ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            </div>
           </button>
           {expandedSections.complete && (
             <div className="p-6">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4"><p className="text-sm text-gray-800"><AlertCircle className="inline mr-2" size={16} />이관 완료 후 관리 정보를 기록합니다.</p></div>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4"><p className="text-sm text-gray-800"><AlertCircle className="inline mr-2" size={16} />이관 완료 후 관리 정보를 기록합니다. 금형 마스터 정보가 자동으로 업데이트됩니다.</p></div>
             </div>
           )}
         </div>
