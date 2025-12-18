@@ -465,7 +465,7 @@ export function RepairWidget() {
         </div>
         <div className="text-center p-3 bg-orange-50 rounded-lg">
           <div className="text-2xl font-bold text-orange-600">{data.liability}</div>
-          <div className="text-xs text-orange-600">귀책협의</div>
+          <div className="text-xs text-orange-600">수리후귀책</div>
         </div>
       </div>
     </div>

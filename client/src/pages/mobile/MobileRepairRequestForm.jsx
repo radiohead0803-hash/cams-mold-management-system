@@ -112,9 +112,9 @@ export default function MobileRepairRequestForm() {
     } catch (e) { alert('저장 실패'); } finally { setSaving(false); }
   };
 
-  const sections = [{ id: 'request', name: '요청', icon: FileText }, { id: 'product', name: '금형', icon: Package }, { id: 'repairShop', name: '수리처', icon: Building }, { id: 'liability', name: '귀책', icon: Scale }, { id: 'repair', name: '수리', icon: Wrench }, { id: 'complete', name: '관리', icon: ClipboardList }];
+  const sections = [{ id: 'request', name: '요청', icon: FileText }, { id: 'product', name: '금형', icon: Package }, { id: 'repairShop', name: '수리처', icon: Building }, { id: 'liability', name: '수리후귀책', icon: Scale }, { id: 'repair', name: '수리', icon: Wrench }, { id: 'complete', name: '관리', icon: ClipboardList }];
   const priorityOptions = ['높음', '보통', '낮음'];
-  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '귀책협의', '수리진행', '수리완료', '검수중', '완료'];
+  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '수리후귀책처리', '수리진행', '수리완료', '검수중', '완료'];
   const occurrenceOptions = ['신규', '재발'];
   const operationOptions = ['양산', '개발', '시작'];
   const problemTypeOptions = ['내구성', '외관', '치수', '기능', '기타'];

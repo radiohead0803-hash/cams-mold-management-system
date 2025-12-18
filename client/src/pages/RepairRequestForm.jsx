@@ -15,7 +15,7 @@ import { useAuthStore } from '../stores/authStore';
  * 1. 요청 단계 (Plant): 기본정보 + 사진 + 카테고리(EO/현실화/돌발)
  * 2. 제품/금형 정보: 자동연동 (읽기전용)
  * 3. 수리처 선정 (Plant/개발담당자): 수리처 선정 → 개발담당자 승인
- * 4. 귀책 협의 (개발담당자): 귀책 판정
+ * 4. 수리후 귀책처리 (개발담당자): 귀책 판정
  * 5. 수리 단계 (Maker): 수리정보
  * 6. 완료/관리 단계 (HQ): 관리정보
  */
@@ -44,7 +44,7 @@ export default function RepairRequestForm() {
     request: true,    // 요청 단계
     product: true,    // 제품/금형 정보
     repairShop: false, // 수리처 선정
-    liability: false,  // 귀책 협의
+    liability: false,  // 수리후 귀책처리
     repair: false,    // 수리 단계
     complete: false   // 완료/관리 단계
   });
@@ -83,7 +83,7 @@ export default function RepairRequestForm() {
     repair_shop_approved_date: '',                  // 수리처 승인일
     repair_shop_rejection_reason: '',               // 수리처 반려사유
     
-    // ===== 귀책 협의 (개발담당자 작성) =====
+    // ===== 수리후 귀책처리 (개발담당자 작성) =====
     liability_type: '',                             // 귀책 유형 (제작처/생산처/공동/기타)
     liability_ratio_maker: '',                      // 제작처 귀책비율 (%)
     liability_ratio_plant: '',                      // 생산처 귀책비율 (%)
@@ -338,7 +338,7 @@ export default function RepairRequestForm() {
   };
 
   const priorityOptions = ['높음', '보통', '낮음'];
-  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '귀책협의', '수리진행', '수리완료', '검수중', '완료'];
+  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '수리후귀책처리', '수리진행', '수리완료', '검수중', '완료'];
   const occurrenceOptions = ['신규', '재발'];
   const operationOptions = ['양산', '개발', '시작'];
   const problemTypeOptions = ['내구성', '외관', '치수', '기능', '기타'];
@@ -1124,7 +1124,7 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 4. 귀책 협의 (개발담당자 작성) ===== */}
+        {/* ===== 4. 수리후 귀책처리 (개발담당자 작성) ===== */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('liability')}
@@ -1132,7 +1132,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <ClipboardList className="w-5 h-5 text-violet-600" />
-              <span className="font-semibold text-slate-800">4. 귀책 협의</span>
+              <span className="font-semibold text-slate-800">4. 수리후 귀책처리</span>
               <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">개발담당자</span>
               {!isRepairShopApproved && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
@@ -1146,7 +1146,7 @@ export default function RepairRequestForm() {
               {!isRepairShopApproved && (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
                   <AlertCircle size={16} className="inline mr-2" />
-                  수리처 선정이 승인된 후 귀책 협의를 진행할 수 있습니다.
+                  수리처 선정이 승인된 후 수리후 귀책처리를 진행할 수 있습니다.
                 </div>
               )}
 

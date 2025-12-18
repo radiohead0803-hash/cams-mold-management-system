@@ -1,7 +1,7 @@
 /**
  * 수리요청 워크플로우 API
  * - 요청 → 접수 → 진행 → 완료 → 확인(Closed) 종단 흐름
- * - 사진첨부, 상태변경, 담당배정, 귀책협의, 승인/반려
+ * - 사진첨부, 상태변경, 담당배정, 수리후귀책처리, 승인/반려
  */
 
 const express = require('express');
@@ -21,7 +21,7 @@ const REPAIR_STATUS = {
   COMPLETED: 'completed',       // 수리완료 (제작처)
   CONFIRMED: 'confirmed',       // 확인완료 (생산처)
   REJECTED: 'rejected',         // 반려됨
-  LIABILITY_DISCUSSION: 'liability_discussion'  // 귀책협의중
+  LIABILITY_DISCUSSION: 'liability_discussion'  // 수리후귀책처리중
 };
 
 /**
@@ -275,11 +275,11 @@ router.post('/:id/start-liability-discussion', async (req, res) => {
       transaction
     });
 
-    await recordWorkflowHistory(id, 'liability_discussion', userId, `귀책협의 시작: ${reason || ''} ${comment || ''}`, transaction);
+    await recordWorkflowHistory(id, 'liability_discussion', userId, `수리후귀책처리 시작: ${reason || ''} ${comment || ''}`, transaction);
 
     await transaction.commit();
 
-    res.json({ success: true, message: '귀책 협의가 시작되었습니다.', data: { status: 'liability_discussion' } });
+    res.json({ success: true, message: '수리후 귀책처리가 시작되었습니다.', data: { status: 'liability_discussion' } });
   } catch (error) {
     await transaction.rollback();
     console.error('[RepairWorkflow] Liability discussion error:', error);
