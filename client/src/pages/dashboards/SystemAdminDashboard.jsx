@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Factory, LayoutDashboard, Wrench, QrCode, AlertTriangle, TrendingUp, Eye, ChevronDown, ChevronUp, Maximize2 } from 'lucide-react';
 import DashboardHeader from '../../components/DashboardHeader';
 import NaverMoldLocationMap from '../../components/NaverMoldLocationMap';
-import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget, InspectionDueWidget, ApprovalPendingWidget, DevelopmentProgressWidget, RepairWidget, TransferWidget } from '../../components/DashboardWidgets';
+import { ScrappingWidget, RepairWidget, TransferWidget } from '../../components/DashboardWidgets';
 import { useDashboardKpi, useDashboardActivities } from '../../hooks/useDashboardKpi';
 import { useMoldLocations } from '../../hooks/useMoldLocations';
 import { SkeletonDashboard } from '../../components/mobile/Skeleton';
@@ -217,16 +217,10 @@ export default function SystemAdminDashboard() {
             </button>
           </div>
           {showManagement && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <PreProductionChecklistWidget />
-            <MaintenanceWidget />
-            <ScrappingWidget />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <RepairWidget />
             <TransferWidget />
-            <AlertSummaryWidget />
-            <InspectionDueWidget />
-            <ApprovalPendingWidget />
-            <DevelopmentProgressWidget />
+            <ScrappingWidget />
           </div>
           )}
         </section>
