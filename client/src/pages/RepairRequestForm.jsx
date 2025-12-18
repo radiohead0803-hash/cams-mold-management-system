@@ -1275,21 +1275,48 @@ export default function RepairRequestForm() {
                 
                 {/* 항목 예시 */}
                 <div className="space-y-4">
-                  {['수리 요청 내역 일치 여부', '수리 범위 명확화', '추가 수리 발생 여부', '수리 전·후 비교 사진'].map((item, idx) => (
+                  {[
+                    { 
+                      name: '수리 요청 내역 일치 여부', 
+                      icon: '🔍',
+                      description: '수리 요청서에 기재된 내용과 실제 수리 내역이 일치하는지 확인합니다',
+                      checkPoints: ['요청된 수리 항목이 모두 완료되었는지 확인', '수리 방법이 요청사항과 일치하는지 확인', '추가 수리 발생 시 사전 협의 여부 확인']
+                    },
+                    { 
+                      name: '수리 범위 명확화', 
+                      icon: '📐',
+                      description: '수리된 부위와 범위가 명확하게 식별되는지 확인합니다',
+                      checkPoints: ['수리 부위가 명확히 표시되어 있는지 확인', '수리 범위가 적정한지 확인', '주변 부위 영향 여부 확인']
+                    },
+                    { 
+                      name: '추가 수리 발생 여부', 
+                      icon: '➕',
+                      description: '요청 외 추가로 수리된 항목이 있는지 확인합니다',
+                      checkPoints: ['추가 수리 항목 유무 확인', '추가 수리 사유 및 필요성 확인', '추가 비용 발생 여부 확인']
+                    },
+                    { 
+                      name: '수리 전·후 비교 사진', 
+                      icon: '📷',
+                      description: '수리 전후 상태를 비교할 수 있는 사진이 첨부되어 있는지 확인합니다',
+                      checkPoints: ['수리 전 사진이 첨부되어 있는지 확인', '수리 후 사진이 첨부되어 있는지 확인', '동일 각도에서 촬영되어 비교 가능한지 확인']
+                    }
+                  ].map((item, idx) => (
                     <div key={idx} className="border border-slate-200 rounded-xl p-4 bg-white">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-lg">🔍</span>
-                            <h4 className="font-semibold text-slate-900">{item} <span className="text-red-500">*</span></h4>
+                            <span className="text-lg">{item.icon}</span>
+                            <h4 className="font-semibold text-slate-900">{item.name} <span className="text-red-500">*</span></h4>
                           </div>
-                          <p className="text-sm text-slate-500">점검 항목 설명</p>
+                          <p className="text-sm text-slate-500">{item.description}</p>
                           <div className="mt-2 p-2 bg-cyan-50 rounded-lg">
                             <p className="text-xs font-medium text-cyan-700">📋 점검 포인트:</p>
-                            <p className="text-xs text-cyan-600">• 해당 항목을 확인하세요</p>
+                            {item.checkPoints.map((point, pIdx) => (
+                              <p key={pIdx} className="text-xs text-cyan-600">• {point}</p>
+                            ))}
                           </div>
                         </div>
-                        <span className="text-sm text-slate-400">🎬 가이드</span>
+                        <span className="text-sm text-slate-400 cursor-pointer hover:text-cyan-600">🎬 가이드</span>
                       </div>
                       
                       <div className="mb-3">
