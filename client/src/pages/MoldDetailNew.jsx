@@ -987,6 +987,7 @@ export default function MoldDetailNew() {
                   { label: '수리처선정', status: 'completed', icon: Building },
                   { label: '수리진행', status: 'current', icon: Wrench },
                   { label: '체크리스트', status: 'pending', icon: ClipboardList },
+                  { label: '생산처검수', status: 'pending', icon: Box },
                   { label: '귀책처리', status: 'pending', icon: DollarSign },
                   { label: '완료', status: 'pending', icon: CheckCircle }
                 ].map((step, idx, arr) => (
