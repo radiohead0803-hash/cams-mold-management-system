@@ -1289,6 +1289,102 @@ export default function RepairRequestForm() {
                   체크리스트 점검 시작
                 </button>
               </div>
+
+              {/* 점검 결과 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">점검 결과</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['적합', '부적합'].map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => handleChange('checklist_result', opt)}
+                      disabled={!isRepairShopApproved}
+                      className={`py-3 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
+                        formData.checklist_result === opt
+                          ? opt === '적합' 
+                            ? 'bg-green-500 text-white border-green-500'
+                            : 'bg-red-500 text-white border-red-500'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 점검 의견 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">점검 의견</label>
+                <textarea
+                  value={formData.checklist_comment || ''}
+                  onChange={(e) => handleChange('checklist_comment', e.target.value)}
+                  rows={3}
+                  disabled={!isRepairShopApproved}
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-cyan-500"
+                  placeholder="점검 의견을 입력하세요"
+                />
+              </div>
+
+              {/* 점검자, 점검일 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">점검자</label>
+                  <input
+                    type="text"
+                    value={formData.checklist_inspector || user?.name || ''}
+                    onChange={(e) => handleChange('checklist_inspector', e.target.value)}
+                    disabled={!isRepairShopApproved}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
+                    placeholder="점검자명"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">점검일</label>
+                  <input
+                    type="date"
+                    value={formData.checklist_date || ''}
+                    onChange={(e) => handleChange('checklist_date', e.target.value)}
+                    disabled={!isRepairShopApproved}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* 승인요청 버튼 */}
+              <div className="pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-slate-700">체크리스트 점검 승인</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    formData.checklist_status === '승인' 
+                      ? 'bg-green-100 text-green-700' 
+                      : formData.checklist_status === '반려'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {formData.checklist_status || '대기'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleChange('checklist_status', '승인')}
+                    disabled={!isRepairShopApproved}
+                    className="py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition disabled:opacity-50"
+                  >
+                    승인
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleChange('checklist_status', '반려')}
+                    disabled={!isRepairShopApproved}
+                    className="py-3 bg-white text-red-500 border-2 border-red-200 rounded-lg font-medium hover:bg-red-50 transition disabled:opacity-50"
+                  >
+                    반려
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
