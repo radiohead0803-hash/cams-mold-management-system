@@ -1267,22 +1267,20 @@ export default function RepairRequestForm() {
                 </div>
               )}
 
-              {/* 체크리스트 점검 항목 미리보기 - 8개 카테고리 */}
+              {/* 생산처 검수 체크리스트 항목 미리보기 - 6개 카테고리 */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
                 <p className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                   <ClipboardList size={16} className="text-indigo-600" />
-                  수리 후 출하점검 체크리스트 (8개 카테고리, 32개 항목)
+                  생산처 입고 검수 체크리스트 (6개 카테고리, 24개 항목)
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {[
-                    { category: '1. 수리 이력 및 범위 확인', icon: '📋', items: ['수리 요청 내역 일치 여부', '수리 범위 명확화', '추가 수리 발생 여부', '수리 전·후 비교 사진'] },
-                    { category: '2. 성형면 및 외관 상태', icon: '🔍', items: ['성형면 손상', '폴리싱 상태', '파팅라인', '텍스처 영역', '육안 이물'] },
-                    { category: '3. 기능부 작동 점검', icon: '⚙️', items: ['슬라이드 작동', '리프터 작동', '이젝터', '가이드핀/부시', '볼트 체결 상태'] },
-                    { category: '4. 치수 및 맞물림 상태', icon: '📐', items: ['습합 상태', '간섭 흔적', '틈새 과다 여부', 'Shim 변경 여부'] },
-                    { category: '5. 냉각·윤활·방청 상태', icon: '💧', items: ['냉각 회로', '오링/실링', '윤활 상태', '방청 처리', '잔유 제거'] },
-                    { category: '6. 시운전 결과 확인', icon: '🧪', items: ['시운전 실시 여부', '성형품 외관', '기능 불량', '판단 결과'] },
-                    { category: '7. 출하 준비 및 식별 관리', icon: '📦', items: ['금형 세척 상태', '금형 고정', 'QR/명판', '출하 사진', '출하 목적지'] },
-                    { category: '8. 최종 확인 및 승인', icon: '✅', items: ['제작처 확인', '본사 승인'] }
+                    { category: '1. 입고 상태 확인', icon: '�', items: ['포장 상태 확인', '운송 중 손상 여부', '금형 외관 상태', '부속품 확인'] },
+                    { category: '2. 수리 내역 확인', icon: '�', items: ['수리 요청 내용 일치', '수리 완료 보고서 확인', '수리 전후 사진 비교', '추가 수리 사항 확인'] },
+                    { category: '3. 기능 점검', icon: '⚙️', items: ['슬라이드/리프터 작동', '이젝터 작동 확인', '냉각수 순환 테스트', '형개폐 테스트'] },
+                    { category: '4. 외관 품질 확인', icon: '�', items: ['성형면 상태', '파팅라인 상태', '게이트 상태', '텍스처 상태'] },
+                    { category: '5. 시운전 확인', icon: '🧪', items: ['초도품 생산', '치수 검사', '외관 검사', '기능 검사'] },
+                    { category: '6. 최종 검수 승인', icon: '✅', items: ['검수 결과 판정', '생산처 담당자 확인', '캠스 담당자 승인', '생산 투입 승인'] }
                   ].map((section, idx) => (
                     <div key={idx} className="p-3 bg-white rounded-lg border border-slate-100">
                       <p className="text-xs font-medium text-indigo-600 mb-2 flex items-center gap-1">
@@ -1293,7 +1291,7 @@ export default function RepairRequestForm() {
                         {section.items.map((item, itemIdx) => (
                           <li key={itemIdx} className="text-xs text-slate-600 flex items-center gap-2">
                             <span className="w-4 h-4 rounded border border-slate-300 flex items-center justify-center bg-white text-[10px]">
-                              📷
+                              ☐
                             </span>
                             {item}
                           </li>
@@ -1303,7 +1301,7 @@ export default function RepairRequestForm() {
                   ))}
                 </div>
                 <p className="text-xs text-slate-500 mt-3 text-center">
-                  ※ 모든 항목은 사진 첨부 필수입니다
+                  ※ 검수 완료 후 생산 투입 가능
                 </p>
               </div>
 
