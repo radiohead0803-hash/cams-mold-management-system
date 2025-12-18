@@ -112,9 +112,9 @@ export default function MobileRepairRequestForm() {
     } catch (e) { alert('저장 실패'); } finally { setSaving(false); }
   };
 
-  const sections = [{ id: 'request', name: '요청', icon: FileText }, { id: 'product', name: '금형', icon: Package }, { id: 'repairShop', name: '수리처', icon: Building }, { id: 'liability', name: '수리후귀책', icon: Scale }, { id: 'repair', name: '수리', icon: Wrench }, { id: 'complete', name: '관리', icon: ClipboardList }];
+  const sections = [{ id: 'request', name: '요청', icon: FileText }, { id: 'product', name: '금형', icon: Package }, { id: 'repairShop', name: '수리처', icon: Building }, { id: 'repair', name: '수리', icon: Wrench }, { id: 'liability', name: '귀책', icon: Scale }, { id: 'checklist', name: '점검', icon: ClipboardList }, { id: 'complete', name: '관리', icon: ClipboardList }];
   const priorityOptions = ['높음', '보통', '낮음'];
-  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '수리후귀책처리', '수리진행', '수리완료', '검수중', '완료'];
+  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '수리진행', '귀책처리', '체크리스트점검', '수리완료', '검수중', '완료'];
   const occurrenceOptions = ['신규', '재발'];
   const operationOptions = ['양산', '개발', '시작'];
   const problemTypeOptions = ['내구성', '외관', '치수', '기능', '기타'];
@@ -224,6 +224,14 @@ export default function MobileRepairRequestForm() {
         <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">수리 시작일</label><input type="date" value={formData.repair_start_date} onChange={(e) => handleChange('repair_start_date', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">수리 완료일</label><input type="date" value={formData.repair_end_date} onChange={(e) => handleChange('repair_end_date', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div></div>
         <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">수리기간</label><input value={formData.repair_duration} onChange={(e) => handleChange('repair_duration', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="예: 3일" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">완료예정일</label><input type="date" value={formData.completion_date} onChange={(e) => handleChange('completion_date', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" /></div></div>
         <div><label className="block text-sm font-medium text-gray-700 mb-1">수리비용</label><input value={formData.repair_cost} onChange={(e) => handleChange('repair_cost', e.target.value)} disabled={!isRepairShopApproved || !isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="₩" /></div>
+      </div>);
+      
+      case 'checklist': return (<div className={`space-y-4 ${!isRepairShopApproved ? 'opacity-50' : ''}`}>
+        {!isRepairShopApproved && <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700"><AlertCircle size={14} className="inline mr-1" />수리처 승인 후 진행 가능합니다.</div>}
+        <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+          <p className="text-sm text-cyan-700 mb-3 font-medium">📋 수리 후 출하점검 체크리스트</p>
+          <button onClick={() => navigate(`/mobile/repair-shipment-checklist?repairRequestId=${id || ''}&moldId=${moldId || moldInfo?.id || ''}`)} disabled={!isRepairShopApproved} className="w-full py-3 bg-cyan-500 text-white rounded-lg font-medium disabled:opacity-50">체크리스트 점검 시작</button>
+        </div>
       </div>);
       
       case 'complete': return (<div className="space-y-4">

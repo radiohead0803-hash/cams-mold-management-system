@@ -15,9 +15,10 @@ import { useAuthStore } from '../stores/authStore';
  * 1. 요청 단계 (Plant): 기본정보 + 사진 + 카테고리(EO/현실화/돌발)
  * 2. 제품/금형 정보: 자동연동 (읽기전용)
  * 3. 수리처 선정 (Plant/개발담당자): 수리처 선정 → 개발담당자 승인
- * 4. 수리후 귀책처리 (개발담당자): 귀책 판정
- * 5. 수리 단계 (Maker): 수리정보
- * 6. 완료/관리 단계 (HQ): 관리정보
+ * 4. 수리 단계 (Maker): 수리정보
+ * 5. 귀책처리 (개발담당자): 귀책 판정
+ * 6. 체크리스트 점검: 수리 후 출하점검
+ * 7. 완료/관리 단계 (HQ): 관리정보
  */
 export default function RepairRequestForm() {
   const navigate = useNavigate();
@@ -44,8 +45,9 @@ export default function RepairRequestForm() {
     request: true,    // 요청 단계
     product: true,    // 제품/금형 정보
     repairShop: false, // 수리처 선정
-    liability: false,  // 수리후 귀책처리
     repair: false,    // 수리 단계
+    liability: false,  // 귀책처리
+    checklist: false,  // 체크리스트 점검
     complete: false   // 완료/관리 단계
   });
   
@@ -83,7 +85,7 @@ export default function RepairRequestForm() {
     repair_shop_approved_date: '',                  // 수리처 승인일
     repair_shop_rejection_reason: '',               // 수리처 반려사유
     
-    // ===== 수리후 귀책처리 (개발담당자 작성) =====
+    // ===== 귀책처리 (개발담당자 작성) =====
     liability_type: '',                             // 귀책 유형 (제작처/생산처/공동/기타)
     liability_ratio_maker: '',                      // 제작처 귀책비율 (%)
     liability_ratio_plant: '',                      // 생산처 귀책비율 (%)
@@ -338,7 +340,7 @@ export default function RepairRequestForm() {
   };
 
   const priorityOptions = ['높음', '보통', '낮음'];
-  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '수리후귀책처리', '수리진행', '수리완료', '검수중', '완료'];
+  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '수리진행', '귀책처리', '체크리스트점검', '수리완료', '검수중', '완료'];
   const occurrenceOptions = ['신규', '재발'];
   const operationOptions = ['양산', '개발', '시작'];
   const problemTypeOptions = ['내구성', '외관', '치수', '기능', '기타'];
@@ -1124,132 +1126,7 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 4. 수리후 귀책처리 (개발담당자 작성) ===== */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <button
-            onClick={() => toggleSection('liability')}
-            className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-violet-50 to-purple-50 border-b border-slate-200"
-          >
-            <div className="flex items-center gap-3">
-              <ClipboardList className="w-5 h-5 text-violet-600" />
-              <span className="font-semibold text-slate-800">4. 수리후 귀책처리</span>
-              <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">개발담당자</span>
-              {!isRepairShopApproved && (
-                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
-              )}
-            </div>
-            {expandedSections.liability ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-          </button>
-          
-          {expandedSections.liability && (
-            <div className={`p-6 space-y-4 ${!isRepairShopApproved ? 'opacity-50 pointer-events-none' : ''}`}>
-              {!isRepairShopApproved && (
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
-                  <AlertCircle size={16} className="inline mr-2" />
-                  수리처 선정이 승인된 후 수리후 귀책처리를 진행할 수 있습니다.
-                </div>
-              )}
-
-              {/* 귀책 유형 */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">귀책 유형</label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {liabilityTypeOptions.map(opt => (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => handleChange('liability_type', opt)}
-                      disabled={!isRepairShopApproved}
-                      className={`py-3 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
-                        formData.liability_type === opt
-                          ? 'bg-violet-500 text-white border-violet-500'
-                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 귀책 비율 (공동인 경우) */}
-              {formData.liability_type === '공동' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">제작처 귀책비율 (%)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={formData.liability_ratio_maker}
-                      onChange={(e) => {
-                        handleChange('liability_ratio_maker', e.target.value);
-                        handleChange('liability_ratio_plant', String(100 - Number(e.target.value)));
-                      }}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">생산처 귀책비율 (%)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={formData.liability_ratio_plant}
-                      onChange={(e) => {
-                        handleChange('liability_ratio_plant', e.target.value);
-                        handleChange('liability_ratio_maker', String(100 - Number(e.target.value)));
-                      }}
-                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 귀책 판정 사유 */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">귀책 판정 사유</label>
-                <textarea
-                  value={formData.liability_reason}
-                  onChange={(e) => handleChange('liability_reason', e.target.value)}
-                  rows={3}
-                  disabled={!isRepairShopApproved}
-                  className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
-                  placeholder="귀책 판정 사유를 입력하세요"
-                />
-              </div>
-
-              {/* 판정자, 판정일 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">판정자</label>
-                  <input
-                    type="text"
-                    value={formData.liability_decided_by || (isDeveloper ? user?.name : '')}
-                    onChange={(e) => handleChange('liability_decided_by', e.target.value)}
-                    disabled={!isRepairShopApproved || !isDeveloper}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
-                    placeholder="판정자명"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">판정일</label>
-                  <input
-                    type="date"
-                    value={formData.liability_decided_date}
-                    onChange={(e) => handleChange('liability_decided_date', e.target.value)}
-                    disabled={!isRepairShopApproved || !isDeveloper}
-                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ===== 5. 수리 단계 (Maker 작성) ===== */}
+        {/* ===== 4. 수리 단계 (Maker 작성) ===== */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('repair')}
@@ -1257,7 +1134,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <Wrench className="w-5 h-5 text-green-600" />
-              <span className="font-semibold text-slate-800">5. 수리 단계</span>
+              <span className="font-semibold text-slate-800">4. 수리 단계</span>
               <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Maker 작성</span>
               {!isRepairShopApproved && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
@@ -1402,7 +1279,174 @@ export default function RepairRequestForm() {
           )}
         </div>
 
-        {/* ===== 6. 완료/관리 단계 (HQ 작성) ===== */}
+        {/* ===== 5. 귀책처리 (개발담당자 작성) ===== */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <button
+            onClick={() => toggleSection('liability')}
+            className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-violet-50 to-purple-50 border-b border-slate-200"
+          >
+            <div className="flex items-center gap-3">
+              <ClipboardList className="w-5 h-5 text-violet-600" />
+              <span className="font-semibold text-slate-800">5. 귀책처리</span>
+              <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">개발담당자</span>
+              {!isRepairShopApproved && (
+                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
+              )}
+            </div>
+            {expandedSections.liability ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          
+          {expandedSections.liability && (
+            <div className={`p-6 space-y-4 ${!isRepairShopApproved ? 'opacity-50 pointer-events-none' : ''}`}>
+              {!isRepairShopApproved && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                  <AlertCircle size={16} className="inline mr-2" />
+                  수리처 선정이 승인된 후 귀책처리를 진행할 수 있습니다.
+                </div>
+              )}
+
+              {/* 귀책 유형 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">귀책 유형</label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {liabilityTypeOptions.map(opt => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => handleChange('liability_type', opt)}
+                      disabled={!isRepairShopApproved}
+                      className={`py-3 px-4 rounded-lg text-sm font-medium border-2 transition-all ${
+                        formData.liability_type === opt
+                          ? 'bg-violet-500 text-white border-violet-500'
+                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 귀책 비율 (공동인 경우) */}
+              {formData.liability_type === '공동' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">제작처 귀책비율 (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.liability_ratio_maker}
+                      onChange={(e) => {
+                        handleChange('liability_ratio_maker', e.target.value);
+                        handleChange('liability_ratio_plant', String(100 - Number(e.target.value)));
+                      }}
+                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">생산처 귀책비율 (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.liability_ratio_plant}
+                      onChange={(e) => {
+                        handleChange('liability_ratio_plant', e.target.value);
+                        handleChange('liability_ratio_maker', String(100 - Number(e.target.value)));
+                      }}
+                      className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 귀책 판정 사유 */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">귀책 판정 사유</label>
+                <textarea
+                  value={formData.liability_reason}
+                  onChange={(e) => handleChange('liability_reason', e.target.value)}
+                  rows={3}
+                  disabled={!isRepairShopApproved}
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+                  placeholder="귀책 판정 사유를 입력하세요"
+                />
+              </div>
+
+              {/* 판정자, 판정일 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">판정자</label>
+                  <input
+                    type="text"
+                    value={formData.liability_decided_by || (isDeveloper ? user?.name : '')}
+                    onChange={(e) => handleChange('liability_decided_by', e.target.value)}
+                    disabled={!isRepairShopApproved || !isDeveloper}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm bg-slate-50"
+                    placeholder="판정자명"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">판정일</label>
+                  <input
+                    type="date"
+                    value={formData.liability_decided_date}
+                    onChange={(e) => handleChange('liability_decided_date', e.target.value)}
+                    disabled={!isRepairShopApproved || !isDeveloper}
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 6. 체크리스트 점검 (수리 후 출하점검) ===== */}
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <button
+            onClick={() => toggleSection('checklist')}
+            className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-cyan-50 to-teal-50 border-b border-slate-200"
+          >
+            <div className="flex items-center gap-3">
+              <ClipboardList className="w-5 h-5 text-cyan-600" />
+              <span className="font-semibold text-slate-800">6. 체크리스트 점검</span>
+              <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">수리 후 출하점검</span>
+              {!isRepairShopApproved && (
+                <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
+              )}
+            </div>
+            {expandedSections.checklist ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
+          
+          {expandedSections.checklist && (
+            <div className={`p-6 space-y-4 ${!isRepairShopApproved ? 'opacity-50 pointer-events-none' : ''}`}>
+              {!isRepairShopApproved && (
+                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                  <AlertCircle size={16} className="inline mr-2" />
+                  수리처 선정이 승인된 후 체크리스트 점검을 진행할 수 있습니다.
+                </div>
+              )}
+              
+              <div className="p-4 bg-cyan-50 border border-cyan-200 rounded-lg">
+                <p className="text-sm text-cyan-700 mb-3">
+                  <span className="font-medium">📋 수리 후 출하점검 체크리스트</span>
+                </p>
+                <button
+                  onClick={() => navigate(`/repair-shipment-checklist?repairRequestId=${requestId || ''}&moldId=${moldId || moldInfo?.id || ''}`)}
+                  disabled={!isRepairShopApproved}
+                  className="w-full py-3 bg-cyan-500 text-white rounded-lg font-medium hover:bg-cyan-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  체크리스트 점검 시작
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ===== 7. 완료/관리 단계 (HQ 작성) ===== */}
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <button
             onClick={() => toggleSection('complete')}
@@ -1410,7 +1454,7 @@ export default function RepairRequestForm() {
           >
             <div className="flex items-center gap-3">
               <ClipboardList className="w-5 h-5 text-purple-600" />
-              <span className="font-semibold text-slate-800">6. 완료/관리 단계</span>
+              <span className="font-semibold text-slate-800">7. 완료/관리 단계</span>
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">HQ 작성</span>
             </div>
             {expandedSections.complete ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
