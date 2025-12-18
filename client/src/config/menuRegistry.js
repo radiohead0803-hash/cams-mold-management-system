@@ -107,25 +107,16 @@ export const SYSTEM_ADMIN_MENU = [
     ]
   },
   {
-    key: 'repairs',
-    label: '수리 관리',
-    path: '/repairs',
+    key: 'workflow',
+    label: '통합관리',
+    path: '/workflow',
     icon: Wrench,
     allowedRoles: [USER_ROLES.SYSTEM_ADMIN, USER_ROLES.MOLD_DEVELOPER],
     subMenus: [
-      { key: 'repairs-list', label: '수리 현황', path: '/repairs' },
-      { key: 'repairs-hq', label: '본사 수리요청', path: '/hq/repair-requests' }
-    ]
-  },
-  {
-    key: 'transfers',
-    label: '이관 관리',
-    path: '/transfers',
-    icon: Truck,
-    allowedRoles: [USER_ROLES.SYSTEM_ADMIN, USER_ROLES.MOLD_DEVELOPER],
-    subMenus: [
-      { key: 'transfers-list', label: '이관 현황', path: '/transfers' },
-      { key: 'transfers-new', label: '이관 요청', path: '/transfers/new' }
+      { key: 'workflow-all', label: '전체 현황', path: '/workflow' },
+      { key: 'workflow-repair', label: '수리 관리', path: '/workflow?tab=repair' },
+      { key: 'workflow-transfer', label: '이관 관리', path: '/workflow?tab=transfer' },
+      { key: 'workflow-scrapping', label: '금형 폐기', path: '/workflow?tab=scrapping' }
     ]
   },
   {
@@ -136,16 +127,6 @@ export const SYSTEM_ADMIN_MENU = [
     allowedRoles: [USER_ROLES.SYSTEM_ADMIN, USER_ROLES.MOLD_DEVELOPER],
     subMenus: [
       { key: 'maintenance-list', label: '유지보전 기록', path: '/maintenance' }
-    ]
-  },
-  {
-    key: 'scrapping',
-    label: '금형 폐기',
-    path: '/scrapping',
-    icon: Trash2,
-    allowedRoles: [USER_ROLES.SYSTEM_ADMIN, USER_ROLES.MOLD_DEVELOPER],
-    subMenus: [
-      { key: 'scrapping-list', label: '폐기 요청 목록', path: '/scrapping' }
     ]
   },
   {
@@ -241,24 +222,16 @@ export const MOLD_DEVELOPER_MENU = [
     ]
   },
   {
-    key: 'repairs',
-    label: '수리 관리',
-    path: '/repairs',
+    key: 'workflow',
+    label: '통합관리',
+    path: '/workflow',
     icon: Wrench,
     allowedRoles: [USER_ROLES.MOLD_DEVELOPER],
     subMenus: [
-      { key: 'repairs-list', label: '수리 현황', path: '/repairs' },
-      { key: 'repairs-hq', label: '본사 수리요청', path: '/hq/repair-requests' }
-    ]
-  },
-  {
-    key: 'transfers',
-    label: '이관 관리',
-    path: '/transfers',
-    icon: Truck,
-    allowedRoles: [USER_ROLES.MOLD_DEVELOPER],
-    subMenus: [
-      { key: 'transfers-list', label: '이관 현황', path: '/transfers' }
+      { key: 'workflow-all', label: '전체 현황', path: '/workflow' },
+      { key: 'workflow-repair', label: '수리 관리', path: '/workflow?tab=repair' },
+      { key: 'workflow-transfer', label: '이관 관리', path: '/workflow?tab=transfer' },
+      { key: 'workflow-scrapping', label: '금형 폐기', path: '/workflow?tab=scrapping' }
     ]
   },
   {
@@ -462,6 +435,7 @@ export const REGISTERED_ROUTES = [
   '/transfers/new',
   '/maintenance',
   '/scrapping',
+  '/workflow',
   '/companies',
   '/users/internal',
   '/users/partner',

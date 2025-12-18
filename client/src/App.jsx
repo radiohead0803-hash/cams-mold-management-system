@@ -44,6 +44,7 @@ import {
   TransferRequest,
   RepairManagement,
   RepairRequestForm,
+  MoldWorkflowManagement,
   HqRepairListPage,
   MakerRepairListPage,
   MakerMoldDetail,
@@ -335,6 +336,9 @@ function App() {
         <Route path="pre-production-checklist" element={<ChecklistMasterConsole />} />
         <Route path="checklist-master/:id" element={<ChecklistMasterDetail />} />
         <Route path="checklist-master/:id/edit" element={<ChecklistMasterConsole />} />
+        
+        {/* 통합관리 (수리/이관/폐기) */}
+        <Route path="workflow" element={<MoldWorkflowManagement />} />
         
         {/* 금형 폐기 관리 */}
         <Route path="scrapping" element={<ScrappingManagement />} />

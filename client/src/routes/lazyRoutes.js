@@ -74,6 +74,9 @@ export const InternalUsers = lazy(() => import('../pages/InternalUsers'));
 export const PartnerUsers = lazy(() => import('../pages/PartnerUsers'));
 export const MasterData = lazy(() => import('../pages/MasterData'));
 
+// 통합관리 (수리/이관/폐기)
+export const MoldWorkflowManagement = lazy(() => import('../pages/MoldWorkflowManagement'));
+
 // 기타 관리
 export const Alerts = lazy(() => import('../pages/Alerts'));
 export const StandardDocumentMaster = lazy(() => import('../pages/StandardDocumentMaster'));
