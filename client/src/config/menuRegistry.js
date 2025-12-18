@@ -130,18 +130,6 @@ export const SYSTEM_ADMIN_MENU = [
     ]
   },
   {
-    key: 'companies',
-    label: '업체 관리',
-    path: '/companies',
-    icon: Building2,
-    allowedRoles: [USER_ROLES.SYSTEM_ADMIN, USER_ROLES.MOLD_DEVELOPER],
-    subMenus: [
-      { key: 'companies-list', label: '업체 목록', path: '/companies' },
-      { key: 'companies-maker', label: '제작처 관리', path: '/companies?type=maker' },
-      { key: 'companies-plant', label: '생산처 관리', path: '/companies?type=plant' }
-    ]
-  },
-  {
     key: 'users',
     label: '사용자 관리',
     path: '/dashboard/system-admin/users',
@@ -150,7 +138,10 @@ export const SYSTEM_ADMIN_MENU = [
     subMenus: [
       { key: 'users-internal', label: '사내 사용자', path: '/users/internal' },
       { key: 'users-partner', label: '협력사 사용자', path: '/users/partner' },
-      { key: 'users-requests', label: '계정 요청', path: '/user-requests' }
+      { key: 'users-requests', label: '계정 요청', path: '/user-requests' },
+      { key: 'companies-list', label: '업체 목록', path: '/companies' },
+      { key: 'companies-maker', label: '제작처 관리', path: '/companies?type=maker' },
+      { key: 'companies-plant', label: '생산처 관리', path: '/companies?type=plant' }
     ]
   },
   {
@@ -232,16 +223,6 @@ export const MOLD_DEVELOPER_MENU = [
       { key: 'workflow-repair', label: '수리 관리', path: '/workflow?tab=repair' },
       { key: 'workflow-transfer', label: '이관 관리', path: '/workflow?tab=transfer' },
       { key: 'workflow-scrapping', label: '금형 폐기', path: '/workflow?tab=scrapping' }
-    ]
-  },
-  {
-    key: 'companies',
-    label: '업체 관리',
-    path: '/companies',
-    icon: Building2,
-    allowedRoles: [USER_ROLES.MOLD_DEVELOPER],
-    subMenus: [
-      { key: 'companies-list', label: '업체 목록', path: '/companies' }
     ]
   },
   {
