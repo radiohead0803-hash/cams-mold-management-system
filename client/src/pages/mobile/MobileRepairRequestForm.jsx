@@ -280,6 +280,46 @@ export default function MobileRepairRequestForm() {
           <p className="text-sm text-cyan-700 mb-3 font-medium">📋 수리 후 출하점검 체크리스트</p>
           <button onClick={() => navigate(`/mobile/repair-shipment-checklist?repairRequestId=${id || ''}&moldId=${moldId || moldInfo?.id || ''}`)} disabled={!isRepairShopApproved} className="w-full py-3 bg-cyan-500 text-white rounded-lg font-medium disabled:opacity-50">체크리스트 점검 시작</button>
         </div>
+
+        {/* 점검 결과 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">점검 결과</label>
+          <div className="grid grid-cols-2 gap-2">
+            {['적합', '부적합'].map(opt => (
+              <button key={opt} type="button" onClick={() => isRepairShopApproved && handleChange('checklist_result', opt)} disabled={!isRepairShopApproved} className={`py-2.5 rounded-lg text-sm font-medium border-2 ${formData.checklist_result === opt ? opt === '적합' ? 'bg-green-500 text-white border-green-500' : 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-300'}`}>{opt}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* 점검 의견 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">점검 의견</label>
+          <textarea value={formData.checklist_comment || ''} onChange={(e) => handleChange('checklist_comment', e.target.value)} disabled={!isRepairShopApproved} rows={2} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="점검 의견을 입력하세요" />
+        </div>
+
+        {/* 점검자, 점검일 */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">점검자</label>
+            <input type="text" value={formData.checklist_inspector || user?.name || ''} onChange={(e) => handleChange('checklist_inspector', e.target.value)} disabled={!isRepairShopApproved} className="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">점검일</label>
+            <input type="date" value={formData.checklist_date || ''} onChange={(e) => handleChange('checklist_date', e.target.value)} disabled={!isRepairShopApproved} className="w-full border rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+
+        {/* 승인요청 */}
+        <div className="pt-3 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">체크리스트 점검 승인</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${formData.checklist_status === '승인' ? 'bg-green-100 text-green-700' : formData.checklist_status === '반려' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{formData.checklist_status || '대기'}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => handleChange('checklist_status', '승인')} disabled={!isRepairShopApproved} className="py-2.5 bg-green-500 text-white rounded-lg text-sm font-medium disabled:opacity-50">승인</button>
+            <button type="button" onClick={() => handleChange('checklist_status', '반려')} disabled={!isRepairShopApproved} className="py-2.5 bg-white text-red-500 border-2 border-red-200 rounded-lg text-sm font-medium disabled:opacity-50">반려</button>
+          </div>
+        </div>
       </div>);
       
       case 'plantInspection': return (<div className="space-y-4">
