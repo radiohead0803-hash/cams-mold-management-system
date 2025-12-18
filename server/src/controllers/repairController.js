@@ -50,6 +50,7 @@ const createRepairRequest = async (req, res) => {
       stock_schedule_date,
       stock_quantity,
       stock_unit,
+      stock_depletion_days,
       repair_company,
       repair_duration,
       management_type,
@@ -57,6 +58,13 @@ const createRepairRequest = async (req, res) => {
       representative_part_number,
       order_company,
       related_files,
+      // 생산처 담당자
+      plant_manager_name,
+      plant_manager_contact,
+      // 캠스 담당자
+      cams_manager_id,
+      cams_manager_name,
+      cams_manager_contact,
       // 수리처 선정
       repair_shop_type,
       repair_shop_selected_by,
@@ -190,6 +198,7 @@ const createRepairRequest = async (req, res) => {
       stock_schedule_date: stock_schedule_date || null,
       stock_quantity: stock_quantity || null,
       stock_unit: stock_unit || 'EA',
+      stock_depletion_days: stock_depletion_days || null,
       repair_company: repair_company || null,
       repair_duration: repair_duration || null,
       management_type: management_type || null,
@@ -197,6 +206,13 @@ const createRepairRequest = async (req, res) => {
       representative_part_number: representative_part_number || null,
       order_company: order_company || null,
       related_files: related_files || [],
+      // 생산처 담당자
+      plant_manager_name: plant_manager_name || null,
+      plant_manager_contact: plant_manager_contact || null,
+      // 캠스 담당자
+      cams_manager_id: cams_manager_id || null,
+      cams_manager_name: cams_manager_name || null,
+      cams_manager_contact: cams_manager_contact || null,
       // 수리처 선정
       repair_shop_type: repair_shop_type || null,
       repair_shop_selected_by: repair_shop_selected_by || null,
@@ -770,13 +786,22 @@ const updateRepairRequest = async (req, res) => {
       'production_shot', 'maker', 'operation_type', 'problem_type', 'repair_category',
       'repair_cost', 'completion_date', 'temporary_action', 'root_cause_action',
       'mold_arrival_date', 'repair_start_date', 'repair_end_date',
-      'stock_schedule_date', 'stock_quantity', 'stock_unit',
+      'stock_schedule_date', 'stock_quantity', 'stock_unit', 'stock_depletion_days',
       'repair_company', 'repair_duration', 'management_type', 'sign_off_status',
       'representative_part_number', 'order_company', 'related_files', 'status',
+      // 생산처 담당자
+      'plant_manager_name', 'plant_manager_contact',
+      // 캠스 담당자
+      'cams_manager_id', 'cams_manager_name', 'cams_manager_contact',
       // 수리처 선정
       'repair_shop_type', 'repair_shop_selected_by', 'repair_shop_selected_date',
       'repair_shop_approval_status', 'repair_shop_approved_by', 'repair_shop_approved_date',
       'repair_shop_rejection_reason',
+      // 생산처 검수
+      'plant_inspection_status', 'plant_inspection_result', 'plant_inspection_comment',
+      'plant_inspection_by', 'plant_inspection_date', 'plant_inspection_rejection_reason',
+      // 체크리스트 점검
+      'checklist_result', 'checklist_comment', 'checklist_inspector', 'checklist_date', 'checklist_status',
       // 귀책 협의
       'liability_type', 'liability_ratio_maker', 'liability_ratio_plant',
       'liability_reason', 'liability_decided_by', 'liability_decided_date'
