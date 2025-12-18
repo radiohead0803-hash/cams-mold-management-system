@@ -146,14 +146,6 @@ export const SYSTEM_ADMIN_MENU = [
     ]
   },
   {
-    key: 'audit',
-    label: '감사 로그',
-    path: '/dashboard/system-admin/audit-logs',
-    icon: Activity,
-    allowedRoles: [USER_ROLES.SYSTEM_ADMIN],
-    subMenus: []
-  },
-  {
     key: 'notifications',
     label: '알림',
     path: '/dashboard/system-admin/notifications',
