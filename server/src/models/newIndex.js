@@ -1,4 +1,4 @@
-const { Sequelize } = require('sequelize');
+const { Sequelize, Op } = require('sequelize');
 const config = require('../config/database');
 
 const env = process.env.NODE_ENV || 'development';
@@ -137,5 +137,6 @@ Object.values(models).forEach(model => {
 module.exports = {
   sequelize,
   Sequelize,
+  Op,
   ...models
 };

@@ -1,6 +1,9 @@
 const { MoldDevelopmentPlan, MoldProcessStep, MoldSpecification, User } = require('../models/newIndex');
-const { sequelize } = require('../models/newIndex');
+const { sequelize, Op } = require('../models/newIndex');
 const logger = require('../utils/logger');
+
+// 14단계 기본 공정 (개발 12단계 + 금형육성 + 양산이관)
+const DEFAULT_PROCESS_STEPS = MoldProcessStep.PROCESS_STEPS;
 
 /**
  * 금형개발계획 생성 (12단계 자동 생성)
@@ -50,11 +53,16 @@ const createDevelopmentPlan = async (req, res) => {
       status: 'planning'
     }, { transaction });
 
-    // 3. 12단계 공정 자동 생성
-    const processSteps = MoldProcessStep.PROCESS_STEPS.map((step, index) => ({
+    // 3. 14단계 공정 자동 생성 (개발 12단계 + 금형육성 + 양산이관)
+    const processSteps = DEFAULT_PROCESS_STEPS.map((step) => ({
       development_plan_id: developmentPlan.id,
       step_number: step.step_number,
       step_name: step.step_name,
+      category: step.category,
+      default_days: step.default_days,
+      sort_order: step.sort_order,
+      is_custom: false,
+      is_deleted: false,
       status: 'pending',
       status_display: '진행예정'
     }));
@@ -311,10 +319,353 @@ function calculateExportRate(specification) {
   return `${cavityCount}/1000`;
 }
 
+/**
+ * 추진계획 항목 추가 (사용자 정의 단계)
+ */
+const addProcessStep = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { plan_id } = req.params;
+    const {
+      step_name,
+      category = 'development',
+      default_days = 5,
+      insert_after_step_number = null // 특정 단계 뒤에 삽입
+    } = req.body;
+
+    if (!step_name) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: { message: '단계명은 필수입니다.' }
+      });
+    }
+
+    // 개발계획 확인
+    const plan = await MoldDevelopmentPlan.findByPk(plan_id, { transaction });
+    if (!plan) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: { message: '개발계획을 찾을 수 없습니다.' }
+      });
+    }
+
+    // 현재 단계 목록 조회
+    const existingSteps = await MoldProcessStep.findAll({
+      where: { 
+        development_plan_id: plan_id,
+        is_deleted: false
+      },
+      order: [['sort_order', 'ASC']],
+      transaction
+    });
+
+    // 새 단계 번호 및 정렬 순서 계산
+    let newStepNumber = existingSteps.length + 1;
+    let newSortOrder = existingSteps.length + 1;
+
+    if (insert_after_step_number) {
+      // 특정 단계 뒤에 삽입
+      const targetStep = existingSteps.find(s => s.step_number === insert_after_step_number);
+      if (targetStep) {
+        newSortOrder = targetStep.sort_order + 1;
+        // 이후 단계들의 sort_order 증가
+        await MoldProcessStep.update(
+          { sort_order: sequelize.literal('sort_order + 1') },
+          {
+            where: {
+              development_plan_id: plan_id,
+              sort_order: { [Op.gte]: newSortOrder },
+              is_deleted: false
+            },
+            transaction
+          }
+        );
+      }
+    }
+
+    // 새 단계 생성
+    const newStep = await MoldProcessStep.create({
+      development_plan_id: plan_id,
+      step_number: newStepNumber,
+      step_name,
+      category,
+      default_days,
+      sort_order: newSortOrder,
+      is_custom: true,
+      is_deleted: false,
+      status: 'pending',
+      status_display: '진행예정'
+    }, { transaction });
+
+    // 개발계획 total_steps 업데이트
+    await plan.update({
+      total_steps: existingSteps.length + 1,
+      updated_at: new Date()
+    }, { transaction });
+
+    await transaction.commit();
+
+    // 업데이트된 전체 단계 목록 반환
+    const updatedSteps = await MoldProcessStep.findAll({
+      where: { 
+        development_plan_id: plan_id,
+        is_deleted: false
+      },
+      order: [['sort_order', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: {
+        newStep,
+        allSteps: updatedSteps
+      },
+      message: '단계가 추가되었습니다.'
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Add process step error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '단계 추가에 실패했습니다.' }
+    });
+  }
+};
+
+/**
+ * 추진계획 항목 삭제 (soft delete)
+ */
+const deleteProcessStep = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { plan_id, step_id } = req.params;
+
+    const step = await MoldProcessStep.findOne({
+      where: {
+        id: step_id,
+        development_plan_id: plan_id
+      },
+      transaction
+    });
+
+    if (!step) {
+      await transaction.rollback();
+      return res.status(404).json({
+        success: false,
+        error: { message: '단계를 찾을 수 없습니다.' }
+      });
+    }
+
+    // 기본 단계는 삭제 불가 (사용자 정의 단계만 삭제 가능)
+    if (!step.is_custom) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: { message: '기본 단계는 삭제할 수 없습니다. 사용자 정의 단계만 삭제 가능합니다.' }
+      });
+    }
+
+    // Soft delete
+    await step.update({
+      is_deleted: true,
+      updated_at: new Date()
+    }, { transaction });
+
+    // 개발계획 total_steps 업데이트
+    const remainingSteps = await MoldProcessStep.count({
+      where: {
+        development_plan_id: plan_id,
+        is_deleted: false
+      },
+      transaction
+    });
+
+    await MoldDevelopmentPlan.update(
+      { total_steps: remainingSteps, updated_at: new Date() },
+      { where: { id: plan_id }, transaction }
+    );
+
+    await transaction.commit();
+
+    // 업데이트된 전체 단계 목록 반환
+    const updatedSteps = await MoldProcessStep.findAll({
+      where: { 
+        development_plan_id: plan_id,
+        is_deleted: false
+      },
+      order: [['sort_order', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: { allSteps: updatedSteps },
+      message: '단계가 삭제되었습니다.'
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Delete process step error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '단계 삭제에 실패했습니다.' }
+    });
+  }
+};
+
+/**
+ * 추진계획 항목 순서 변경
+ */
+const reorderProcessSteps = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const { plan_id } = req.params;
+    const { step_orders } = req.body; // [{ step_id: 1, sort_order: 1 }, ...]
+
+    if (!step_orders || !Array.isArray(step_orders)) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        error: { message: '순서 정보가 필요합니다.' }
+      });
+    }
+
+    // 각 단계의 순서 업데이트
+    for (const item of step_orders) {
+      await MoldProcessStep.update(
+        { sort_order: item.sort_order, updated_at: new Date() },
+        {
+          where: {
+            id: item.step_id,
+            development_plan_id: plan_id
+          },
+          transaction
+        }
+      );
+    }
+
+    await transaction.commit();
+
+    // 업데이트된 전체 단계 목록 반환
+    const updatedSteps = await MoldProcessStep.findAll({
+      where: { 
+        development_plan_id: plan_id,
+        is_deleted: false
+      },
+      order: [['sort_order', 'ASC']]
+    });
+
+    res.json({
+      success: true,
+      data: { allSteps: updatedSteps },
+      message: '순서가 변경되었습니다.'
+    });
+
+  } catch (error) {
+    await transaction.rollback();
+    logger.error('Reorder process steps error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '순서 변경에 실패했습니다.' }
+    });
+  }
+};
+
+/**
+ * 기본 단계 마스터 목록 조회
+ */
+const getDefaultSteps = async (req, res) => {
+  try {
+    const { category } = req.query;
+
+    let steps = DEFAULT_PROCESS_STEPS;
+    if (category) {
+      steps = steps.filter(s => s.category === category);
+    }
+
+    const categories = MoldProcessStep.CATEGORIES;
+
+    res.json({
+      success: true,
+      data: {
+        steps,
+        categories,
+        totalSteps: DEFAULT_PROCESS_STEPS.length
+      }
+    });
+
+  } catch (error) {
+    logger.error('Get default steps error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '기본 단계 조회에 실패했습니다.' }
+    });
+  }
+};
+
+/**
+ * 금형별 개발계획 조회 (mold_specification_id 기준)
+ */
+const getDevelopmentPlanByMoldSpec = async (req, res) => {
+  try {
+    const { mold_spec_id } = req.params;
+
+    const plan = await MoldDevelopmentPlan.findOne({
+      where: { mold_specification_id: mold_spec_id },
+      include: [
+        {
+          association: 'processSteps',
+          where: { is_deleted: false },
+          required: false,
+          order: [['sort_order', 'ASC']]
+        },
+        {
+          association: 'specification',
+          attributes: ['id', 'part_number', 'part_name', 'car_model', 'cavity_count']
+        }
+      ]
+    });
+
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '개발계획을 찾을 수 없습니다.' }
+      });
+    }
+
+    // 단계를 sort_order로 정렬
+    if (plan.processSteps) {
+      plan.processSteps.sort((a, b) => a.sort_order - b.sort_order);
+    }
+
+    res.json({
+      success: true,
+      data: { developmentPlan: plan }
+    });
+
+  } catch (error) {
+    logger.error('Get development plan by mold spec error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '개발계획 조회에 실패했습니다.' }
+    });
+  }
+};
+
 module.exports = {
   createDevelopmentPlan,
   updateProcessStep,
   getDevelopmentPlan,
   getDevelopmentPlans,
-  getProgressStatistics
+  getProgressStatistics,
+  addProcessStep,
+  deleteProcessStep,
+  reorderProcessSteps,
+  getDefaultSteps,
+  getDevelopmentPlanByMoldSpec
 };
