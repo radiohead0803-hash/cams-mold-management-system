@@ -59,7 +59,7 @@ export default function MoldDetailNew() {
       items: [
         { 
           label: '금형개발', 
-          subItems: ['개발계획', '금형체크리스트', '금형육성', '경도측정'] 
+          subItems: ['개발계획', '금형체크리스트', '금형육성', '경도측정', '양산처이관'] 
         },
         '금형사양',
         '변경이력 현황표'
@@ -500,6 +500,8 @@ export default function MoldDetailNew() {
                                         navigate(`/mold-development/nurturing?moldId=${id}`);
                                       } else if (subItem === '경도측정') {
                                         navigate(`/mold-development/hardness?moldId=${id}`);
+                                      } else if (subItem === '양산처이관') {
+                                        navigate(`/production-transfer-checklist-master?moldId=${id}`);
                                       }
                                     }}
                                   >
