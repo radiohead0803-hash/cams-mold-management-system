@@ -388,9 +388,9 @@ export default function MoldNurturingPage() {
 
   const openEdit = (problem) => {
     setFormData({
-      nurturing_stage: problem.nurturing_stage || 'TRY_1',
+      nurturing_stage: problem.nurturing_stage || 'INITIAL_TO',
       occurrence_date: problem.occurrence_date || '',
-      discovered_by: problem.discovered_by || 'mold_developer',
+      discovered_by: problem.discovered_by || 'maker',
       problem_types: problem.problem_types || [],
       problem_summary: problem.problem_summary || '',
       problem_detail: problem.problem_detail || '',
@@ -401,14 +401,24 @@ export default function MoldNurturingPage() {
       recurrence_risk: problem.recurrence_risk || 'low',
       improvement_required: problem.improvement_required !== false,
       improvement_action: problem.improvement_action || '',
-      action_responsible: problem.action_responsible || 'mold_developer',
+      action_responsible: problem.action_responsible || 'maker',
       improvement_methods: problem.improvement_methods || [],
       planned_completion_date: problem.planned_completion_date || '',
       action_status: problem.action_status || 'not_started',
       verification_stage: problem.verification_stage || '',
       result_description: problem.result_description || '',
-      final_judgment: problem.final_judgment || ''
+      final_judgment: problem.final_judgment || '',
+      occurrence_photos: problem.occurrence_photos || [],
+      // T/O 공통 조건필드
+      try_location: problem.try_location || '',
+      try_date: problem.try_date || '',
+      try_machine: problem.try_machine || '',
+      try_material: problem.try_material || '',
+      shot_count: problem.shot_count || '',
+      cycle_time: problem.cycle_time || '',
+      responsible_company_name: problem.responsible_company_name || ''
     });
+    setTempImages(problem.occurrence_photos || []);
     setSelectedProblem(problem);
     setEditMode(true);
     setShowAddModal(true);
@@ -475,17 +485,23 @@ export default function MoldNurturingPage() {
     }
   };
 
-  const getStageColor = (stage) => {
-    const s = NURTURING_STAGES.find(s => s.code === stage);
-    if (!s) return 'bg-gray-100 text-gray-700';
-    switch (s.color) {
-      case 'blue': return 'bg-blue-100 text-blue-700';
-      case 'indigo': return 'bg-indigo-100 text-indigo-700';
-      case 'purple': return 'bg-purple-100 text-purple-700';
-      case 'orange': return 'bg-orange-100 text-orange-700';
-      case 'green': return 'bg-green-100 text-green-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+  // 육성 단계 색상 (DB에서 로드된 단계 사용)
+  const getStageColor = (stageCode) => {
+    const stage = nurturingStages.find(s => s.stage_code === stageCode);
+    if (!stage) return 'bg-gray-100 text-gray-700';
+    // 고정 단계는 파란색, 나머지는 순서에 따라 색상 지정
+    if (stage.is_fixed) return 'bg-blue-100 text-blue-700';
+    const order = stage.stage_order || 0;
+    if (order <= 2) return 'bg-indigo-100 text-indigo-700';
+    if (order <= 4) return 'bg-purple-100 text-purple-700';
+    if (order <= 5) return 'bg-orange-100 text-orange-700';
+    return 'bg-green-100 text-green-700';
+  };
+
+  // 육성 단계명 가져오기
+  const getStageName = (stageCode) => {
+    const stage = nurturingStages.find(s => s.stage_code === stageCode);
+    return stage?.stage_name || stageCode;
   };
 
   if (loading) {
@@ -595,10 +611,19 @@ export default function MoldNurturingPage() {
               className="border rounded-lg px-3 py-1.5 text-sm"
             >
               <option value="">전체 단계</option>
-              {NURTURING_STAGES.map(stage => (
-                <option key={stage.code} value={stage.code}>{stage.name}</option>
+              {nurturingStages.map(stage => (
+                <option key={stage.stage_code} value={stage.stage_code}>
+                  {stage.stage_name} {stage.is_fixed ? '(고정)' : ''}
+                </option>
               ))}
             </select>
+            <button
+              onClick={() => setShowStageModal(true)}
+              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded"
+              title="육성단계 관리"
+            >
+              <Settings size={16} />
+            </button>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -669,7 +694,7 @@ export default function MoldNurturingPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-1 rounded ${getStageColor(problem.nurturing_stage)}`}>
-                          {NURTURING_STAGES.find(s => s.code === problem.nurturing_stage)?.name || problem.nurturing_stage}
+                          {getStageName(problem.nurturing_stage)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -751,24 +776,26 @@ export default function MoldNurturingPage() {
         <div className="bg-white rounded-xl shadow-sm border p-4">
           <h3 className="font-semibold text-gray-800 mb-4">육성 단계별 문제 현황</h3>
           <div className="flex items-end gap-4 h-40">
-            {NURTURING_STAGES.map(stage => {
-              const count = statistics?.byStage?.find(s => s.nurturing_stage === stage.code)?.count || 0;
+            {nurturingStages.map(stage => {
+              const count = statistics?.byStage?.find(s => s.nurturing_stage === stage.stage_code)?.count || 0;
               const maxCount = Math.max(...(statistics?.byStage?.map(s => parseInt(s.count)) || [1]), 1);
               const height = (count / maxCount) * 100;
+              const order = stage.stage_order || 0;
+              const bgColor = stage.is_fixed ? 'bg-blue-500' :
+                order <= 2 ? 'bg-indigo-500' :
+                order <= 4 ? 'bg-purple-500' :
+                order <= 5 ? 'bg-orange-500' : 'bg-green-500';
               return (
-                <div key={stage.code} className="flex-1 flex flex-col items-center">
+                <div key={stage.stage_code} className="flex-1 flex flex-col items-center">
                   <div className="text-sm font-bold text-gray-700 mb-1">{count}</div>
                   <div 
-                    className={`w-full rounded-t ${
-                      stage.color === 'blue' ? 'bg-blue-500' :
-                      stage.color === 'indigo' ? 'bg-indigo-500' :
-                      stage.color === 'purple' ? 'bg-purple-500' :
-                      stage.color === 'orange' ? 'bg-orange-500' :
-                      'bg-green-500'
-                    }`}
+                    className={`w-full rounded-t ${bgColor}`}
                     style={{ height: `${Math.max(height, 5)}%` }}
                   />
-                  <div className="text-xs text-gray-500 mt-2 text-center">{stage.name}</div>
+                  <div className="text-xs text-gray-500 mt-2 text-center">
+                    {stage.stage_name}
+                    {stage.is_fixed && <Lock size={10} className="inline ml-0.5" />}
+                  </div>
                 </div>
               );
             })}
@@ -798,14 +825,21 @@ export default function MoldNurturingPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">육성단계 *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      육성단계 *
+                      {nurturingStages.find(s => s.stage_code === formData.nurturing_stage)?.is_fixed && (
+                        <Lock size={12} className="inline ml-1 text-blue-500" />
+                      )}
+                    </label>
                     <select
                       value={formData.nurturing_stage}
                       onChange={(e) => handleFormChange('nurturing_stage', e.target.value)}
                       className="w-full border rounded-lg px-3 py-2"
                     >
-                      {NURTURING_STAGES.map(stage => (
-                        <option key={stage.code} value={stage.code}>{stage.name}</option>
+                      {nurturingStages.map(stage => (
+                        <option key={stage.stage_code} value={stage.stage_code}>
+                          {stage.stage_name} {stage.is_fixed ? '(고정)' : ''}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -942,6 +976,88 @@ export default function MoldNurturingPage() {
                       )}
                     </div>
                     <p className="text-xs text-gray-500">클릭하여 이미지를 업로드하세요</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* T/O 공통 조건필드 */}
+              <div className="border rounded-lg p-4">
+                <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <Settings size={18} className="text-purple-500" />
+                  T/O 조건 정보
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">T/O 장소</label>
+                    <input
+                      type="text"
+                      value={formData.try_location || ''}
+                      onChange={(e) => handleFormChange('try_location', e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="예: 본사 사출실"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">T/O 일자</label>
+                    <input
+                      type="date"
+                      value={formData.try_date || ''}
+                      onChange={(e) => handleFormChange('try_date', e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">담당 업체</label>
+                    <input
+                      type="text"
+                      value={formData.responsible_company_name || ''}
+                      onChange={(e) => handleFormChange('responsible_company_name', e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="예: OO금형"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">설비/사출기</label>
+                    <input
+                      type="text"
+                      value={formData.try_machine || ''}
+                      onChange={(e) => handleFormChange('try_machine', e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="예: 350톤 사출기"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">원재료</label>
+                    <input
+                      type="text"
+                      value={formData.try_material || ''}
+                      onChange={(e) => handleFormChange('try_material', e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="예: ABS, PP"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">숏수</label>
+                      <input
+                        type="number"
+                        value={formData.shot_count || ''}
+                        onChange={(e) => handleFormChange('shot_count', e.target.value)}
+                        className="w-full border rounded-lg px-3 py-2"
+                        placeholder="100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">C/T (초)</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={formData.cycle_time || ''}
+                        onChange={(e) => handleFormChange('cycle_time', e.target.value)}
+                        className="w-full border rounded-lg px-3 py-2"
+                        placeholder="45.5"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1176,7 +1292,7 @@ export default function MoldNurturingPage() {
                 <div>
                   <span className="text-xs text-gray-500">육성단계</span>
                   <p className={`text-sm font-medium px-2 py-1 rounded inline-block ${getStageColor(selectedProblem.nurturing_stage)}`}>
-                    {NURTURING_STAGES.find(s => s.code === selectedProblem.nurturing_stage)?.name}
+                    {getStageName(selectedProblem.nurturing_stage)}
                   </p>
                 </div>
                 <div>
@@ -1280,6 +1396,131 @@ export default function MoldNurturingPage() {
                     >
                       {status.name}으로 변경
                     </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 육성단계 관리 모달 */}
+      {showStageModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg max-h-[80vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">육성단계 관리</h2>
+              <button onClick={() => { setShowStageModal(false); setEditingStage(null); setNewStageName(''); }} className="p-2 hover:bg-gray-100 rounded-full">
+                <XCircle size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              {/* 단계 추가/수정 폼 */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h3 className="font-medium text-gray-800 mb-3">
+                  {editingStage ? '단계 수정' : '새 단계 추가'}
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">단계명 *</label>
+                    <input
+                      type="text"
+                      value={newStageName}
+                      onChange={(e) => setNewStageName(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="예: T/O 4차"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">담당 유형</label>
+                    <select
+                      value={newStageResponsible}
+                      onChange={(e) => setNewStageResponsible(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2"
+                    >
+                      <option value="maker">제작처</option>
+                      <option value="plant">생산처</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    {editingStage ? (
+                      <>
+                        <button
+                          onClick={handleUpdateStage}
+                          className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          수정
+                        </button>
+                        <button
+                          onClick={() => { setEditingStage(null); setNewStageName(''); }}
+                          className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                        >
+                          취소
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleAddStage}
+                        className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                      >
+                        추가
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 단계 목록 */}
+              <div>
+                <h3 className="font-medium text-gray-800 mb-3">현재 단계 목록</h3>
+                <div className="space-y-2">
+                  {nurturingStages.map(stage => (
+                    <div 
+                      key={stage.stage_code} 
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        stage.is_fixed ? 'bg-blue-50 border-blue-200' : 'bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-gray-500 w-6">{stage.stage_order}</span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">{stage.stage_name}</span>
+                            {stage.is_fixed && (
+                              <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded flex items-center gap-1">
+                                <Lock size={10} /> 고정
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {stage.responsible_type === 'maker' ? '제작처' : '생산처'}
+                          </span>
+                        </div>
+                      </div>
+                      {!stage.is_fixed && (
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { 
+                              setEditingStage(stage); 
+                              setNewStageName(stage.stage_name); 
+                              setNewStageResponsible(stage.responsible_type || 'maker');
+                            }}
+                            className="p-1.5 text-blue-500 hover:bg-blue-50 rounded"
+                            title="수정"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStage(stage.stage_code)}
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded"
+                            title="삭제"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
