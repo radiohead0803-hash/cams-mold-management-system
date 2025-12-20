@@ -501,7 +501,7 @@ export default function MoldDetailNew() {
                                       } else if (subItem === '경도측정') {
                                         navigate(`/mold-development/hardness?moldId=${id}`);
                                       } else if (subItem === '양산처이관') {
-                                        navigate(`/production-transfer-checklist-master?moldId=${id}`);
+                                        navigate(`/production-transfer/checklist-master?moldId=${id}`);
                                       }
                                     }}
                                   >
