@@ -507,4 +507,221 @@ router.delete('/problems/:id', async (req, res) => {
   }
 });
 
+// ============================================
+// 육성 단계 관리 API
+// ============================================
+
+// GET /api/v1/mold-nurturing/stages - 육성 단계 목록 조회
+router.get('/stages', async (req, res) => {
+  try {
+    const { mold_id } = req.query;
+    
+    // 기본 단계 조회 (is_custom = false)
+    const [defaultStages] = await db.sequelize.query(`
+      SELECT * FROM mold_nurturing_stages 
+      WHERE is_custom = FALSE AND is_active = TRUE
+      ORDER BY stage_order
+    `);
+    
+    // 금형별 사용자 정의 단계 조회
+    let customStages = [];
+    if (mold_id) {
+      const [custom] = await db.sequelize.query(`
+        SELECT * FROM mold_nurturing_stages 
+        WHERE is_custom = TRUE AND mold_id = :mold_id AND is_active = TRUE
+        ORDER BY stage_order
+      `, { replacements: { mold_id } });
+      customStages = custom;
+    }
+    
+    // 병합 및 정렬
+    const allStages = [...defaultStages, ...customStages].sort((a, b) => a.stage_order - b.stage_order);
+    
+    res.json({
+      success: true,
+      data: {
+        stages: allStages,
+        defaultStages,
+        customStages
+      }
+    });
+  } catch (error) {
+    console.error('육성 단계 조회 오류:', error);
+    res.status(500).json({ success: false, error: { message: error.message } });
+  }
+});
+
+// POST /api/v1/mold-nurturing/stages - 육성 단계 추가 (사용자 정의)
+router.post('/stages', async (req, res) => {
+  try {
+    const { stage_name, stage_order, description, responsible_type, mold_id } = req.body;
+    
+    if (!stage_name) {
+      return res.status(400).json({ success: false, error: { message: '단계명을 입력해주세요.' } });
+    }
+    
+    // stage_code 생성 (CUSTOM_YYYYMMDD_XXX)
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const [lastCustom] = await db.sequelize.query(`
+      SELECT stage_code FROM mold_nurturing_stages 
+      WHERE stage_code LIKE 'CUSTOM_${dateStr}%'
+      ORDER BY stage_code DESC LIMIT 1
+    `);
+    
+    let seq = 1;
+    if (lastCustom.length > 0) {
+      const lastSeq = parseInt(lastCustom[0].stage_code.split('_')[2], 10);
+      seq = lastSeq + 1;
+    }
+    const stageCode = `CUSTOM_${dateStr}_${String(seq).padStart(3, '0')}`;
+    
+    // 최대 order 조회
+    let newOrder = stage_order;
+    if (!newOrder) {
+      const [maxOrder] = await db.sequelize.query(`
+        SELECT MAX(stage_order) as max_order FROM mold_nurturing_stages
+        WHERE (is_custom = FALSE) OR (is_custom = TRUE AND mold_id = :mold_id)
+      `, { replacements: { mold_id: mold_id || 0 } });
+      newOrder = (maxOrder[0]?.max_order || 0) + 1;
+    }
+    
+    await db.sequelize.query(`
+      INSERT INTO mold_nurturing_stages (stage_code, stage_name, stage_order, description, is_active, is_fixed, responsible_type, is_custom, mold_id)
+      VALUES (:stageCode, :stage_name, :newOrder, :description, TRUE, FALSE, :responsible_type, TRUE, :mold_id)
+    `, { 
+      replacements: { 
+        stageCode, 
+        stage_name, 
+        newOrder, 
+        description: description || '', 
+        responsible_type: responsible_type || 'maker',
+        mold_id: mold_id || null
+      } 
+    });
+    
+    res.status(201).json({ 
+      success: true, 
+      data: { stage_code: stageCode, stage_name, stage_order: newOrder },
+      message: '육성 단계가 추가되었습니다.' 
+    });
+  } catch (error) {
+    console.error('육성 단계 추가 오류:', error);
+    res.status(500).json({ success: false, error: { message: error.message } });
+  }
+});
+
+// PUT /api/v1/mold-nurturing/stages/:stage_code - 육성 단계 수정
+router.put('/stages/:stage_code', async (req, res) => {
+  try {
+    const { stage_code } = req.params;
+    const { stage_name, stage_order, description, responsible_type } = req.body;
+    
+    // 고정 단계인지 확인
+    const [stage] = await db.sequelize.query(`
+      SELECT * FROM mold_nurturing_stages WHERE stage_code = :stage_code
+    `, { replacements: { stage_code } });
+    
+    if (stage.length === 0) {
+      return res.status(404).json({ success: false, error: { message: '단계를 찾을 수 없습니다.' } });
+    }
+    
+    if (stage[0].is_fixed) {
+      return res.status(400).json({ success: false, error: { message: '고정 단계는 수정할 수 없습니다.' } });
+    }
+    
+    await db.sequelize.query(`
+      UPDATE mold_nurturing_stages 
+      SET stage_name = :stage_name, 
+          stage_order = :stage_order, 
+          description = :description,
+          responsible_type = :responsible_type,
+          updated_at = NOW()
+      WHERE stage_code = :stage_code
+    `, { 
+      replacements: { 
+        stage_code, 
+        stage_name: stage_name || stage[0].stage_name, 
+        stage_order: stage_order || stage[0].stage_order, 
+        description: description !== undefined ? description : stage[0].description,
+        responsible_type: responsible_type || stage[0].responsible_type
+      } 
+    });
+    
+    res.json({ success: true, message: '수정되었습니다.' });
+  } catch (error) {
+    console.error('육성 단계 수정 오류:', error);
+    res.status(500).json({ success: false, error: { message: error.message } });
+  }
+});
+
+// DELETE /api/v1/mold-nurturing/stages/:stage_code - 육성 단계 삭제
+router.delete('/stages/:stage_code', async (req, res) => {
+  try {
+    const { stage_code } = req.params;
+    
+    // 고정 단계인지 확인
+    const [stage] = await db.sequelize.query(`
+      SELECT * FROM mold_nurturing_stages WHERE stage_code = :stage_code
+    `, { replacements: { stage_code } });
+    
+    if (stage.length === 0) {
+      return res.status(404).json({ success: false, error: { message: '단계를 찾을 수 없습니다.' } });
+    }
+    
+    if (stage[0].is_fixed) {
+      return res.status(400).json({ success: false, error: { message: '고정 단계는 삭제할 수 없습니다.' } });
+    }
+    
+    // 해당 단계에 등록된 문제점이 있는지 확인
+    const [problems] = await db.sequelize.query(`
+      SELECT COUNT(*) as count FROM mold_nurturing_problems WHERE nurturing_stage = :stage_code
+    `, { replacements: { stage_code } });
+    
+    if (parseInt(problems[0].count) > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { message: `이 단계에 등록된 문제점이 ${problems[0].count}건 있어 삭제할 수 없습니다.` } 
+      });
+    }
+    
+    await db.sequelize.query(`
+      DELETE FROM mold_nurturing_stages WHERE stage_code = :stage_code
+    `, { replacements: { stage_code } });
+    
+    res.json({ success: true, message: '삭제되었습니다.' });
+  } catch (error) {
+    console.error('육성 단계 삭제 오류:', error);
+    res.status(500).json({ success: false, error: { message: error.message } });
+  }
+});
+
+// PUT /api/v1/mold-nurturing/stages/reorder - 육성 단계 순서 변경
+router.put('/stages/reorder', async (req, res) => {
+  try {
+    const { stages } = req.body; // [{ stage_code, stage_order }, ...]
+    
+    if (!stages || !Array.isArray(stages)) {
+      return res.status(400).json({ success: false, error: { message: '단계 목록이 필요합니다.' } });
+    }
+    
+    for (const stage of stages) {
+      // 고정 단계는 순서 변경 불가
+      const [existing] = await db.sequelize.query(`
+        SELECT is_fixed FROM mold_nurturing_stages WHERE stage_code = :stage_code
+      `, { replacements: { stage_code: stage.stage_code } });
+      
+      if (existing.length > 0 && !existing[0].is_fixed) {
+        await db.sequelize.query(`
+          UPDATE mold_nurturing_stages SET stage_order = :stage_order WHERE stage_code = :stage_code
+        `, { replacements: { stage_code: stage.stage_code, stage_order: stage.stage_order } });
+      }
+    }
+    
+    res.json({ success: true, message: '순서가 변경되었습니다.' });
+  } catch (error) {
+    console.error('순서 변경 오류:', error);
+    res.status(500).json({ success: false, error: { message: error.message } });
+  }
+});
+
 module.exports = router;

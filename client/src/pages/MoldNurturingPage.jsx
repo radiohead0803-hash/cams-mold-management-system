@@ -1,21 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Plus, Search, Filter, AlertTriangle, CheckCircle, Clock, 
   XCircle, RefreshCw, MessageSquare, FileText, Camera, Calendar,
-  ChevronDown, ChevronUp, Edit, Trash2, Eye, AlertCircle, RotateCcw
+  ChevronDown, ChevronUp, Edit, Trash2, Eye, AlertCircle, RotateCcw,
+  Settings, Lock, Unlock, Upload, Image, X
 } from 'lucide-react';
 import api from '../lib/api';
 import { moldSpecificationAPI } from '../lib/api';
-
-// 육성 단계 정의
-const NURTURING_STAGES = [
-  { code: 'TRY_1', name: 'TRY 1차', color: 'blue' },
-  { code: 'TRY_2', name: 'TRY 2차', color: 'indigo' },
-  { code: 'TRY_3', name: 'TRY 3차', color: 'purple' },
-  { code: 'INITIAL_PRODUCTION', name: '초기 양산 (SOP-3개월)', color: 'orange' },
-  { code: 'STABILIZATION', name: '양산 안정화', color: 'green' }
-];
 
 // 상태 정의
 const STATUSES = [
@@ -92,11 +84,23 @@ export default function MoldNurturingPage() {
   const [selectedProblem, setSelectedProblem] = useState(null);
   const [editMode, setEditMode] = useState(false);
   
+  // 육성 단계 (DB에서 로드)
+  const [nurturingStages, setNurturingStages] = useState([]);
+  const [showStageModal, setShowStageModal] = useState(false);
+  const [newStageName, setNewStageName] = useState('');
+  const [newStageResponsible, setNewStageResponsible] = useState('maker');
+  const [editingStage, setEditingStage] = useState(null);
+  
+  // 사진 업로드
+  const fileInputRef = useRef(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [tempImages, setTempImages] = useState([]);
+  
   // 폼 데이터
   const [formData, setFormData] = useState({
-    nurturing_stage: 'TRY_1',
+    nurturing_stage: 'INITIAL_TO',
     occurrence_date: new Date().toISOString().split('T')[0],
-    discovered_by: 'mold_developer',
+    discovered_by: 'maker',
     problem_types: [],
     problem_summary: '',
     problem_detail: '',
@@ -107,22 +111,45 @@ export default function MoldNurturingPage() {
     recurrence_risk: 'low',
     improvement_required: true,
     improvement_action: '',
-    action_responsible: 'mold_developer',
+    action_responsible: 'maker',
     improvement_methods: [],
     planned_completion_date: '',
     action_status: 'not_started',
     verification_stage: '',
     result_description: '',
-    final_judgment: ''
+    final_judgment: '',
+    // T/O 공통 조건필드
+    try_location: '',
+    try_date: new Date().toISOString().split('T')[0],
+    try_machine: '',
+    try_material: '',
+    shot_count: '',
+    cycle_time: '',
+    responsible_company_name: '',
+    // 사진
+    occurrence_photos: []
   });
 
   useEffect(() => {
+    loadStages();
     if (moldId) {
       loadData();
     } else {
       setLoading(false);
     }
   }, [moldId, stageFilter, statusFilter, severityFilter]);
+
+  // 육성 단계 로드
+  const loadStages = async () => {
+    try {
+      const response = await api.get(`/mold-nurturing/stages?mold_id=${moldId || ''}`);
+      if (response.data?.success) {
+        setNurturingStages(response.data.data.stages || []);
+      }
+    } catch (error) {
+      console.error('육성 단계 로드 실패:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -156,6 +183,103 @@ export default function MoldNurturingPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 육성 단계 추가
+  const handleAddStage = async () => {
+    if (!newStageName.trim()) {
+      alert('단계명을 입력해주세요.');
+      return;
+    }
+    try {
+      await api.post('/mold-nurturing/stages', {
+        stage_name: newStageName,
+        responsible_type: newStageResponsible,
+        mold_id: moldId
+      });
+      setNewStageName('');
+      setShowStageModal(false);
+      loadStages();
+      alert('단계가 추가되었습니다.');
+    } catch (error) {
+      console.error('단계 추가 실패:', error);
+      alert('단계 추가에 실패했습니다.');
+    }
+  };
+
+  // 육성 단계 수정
+  const handleUpdateStage = async () => {
+    if (!editingStage || !newStageName.trim()) return;
+    try {
+      await api.put(`/mold-nurturing/stages/${editingStage.stage_code}`, {
+        stage_name: newStageName,
+        responsible_type: newStageResponsible
+      });
+      setEditingStage(null);
+      setNewStageName('');
+      setShowStageModal(false);
+      loadStages();
+      alert('수정되었습니다.');
+    } catch (error) {
+      console.error('단계 수정 실패:', error);
+      alert(error.response?.data?.error?.message || '수정에 실패했습니다.');
+    }
+  };
+
+  // 육성 단계 삭제
+  const handleDeleteStage = async (stageCode) => {
+    if (!confirm('이 단계를 삭제하시겠습니까?')) return;
+    try {
+      await api.delete(`/mold-nurturing/stages/${stageCode}`);
+      loadStages();
+      alert('삭제되었습니다.');
+    } catch (error) {
+      console.error('단계 삭제 실패:', error);
+      alert(error.response?.data?.error?.message || '삭제에 실패했습니다.');
+    }
+  };
+
+  // 이미지 업로드 처리
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    setUploadingImage(true);
+    try {
+      for (const file of files) {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', file);
+        formDataUpload.append('type', 'nurturing_problem');
+        formDataUpload.append('mold_id', moldId);
+        
+        const response = await api.post('/files/upload', formDataUpload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        if (response.data?.success && response.data?.data?.url) {
+          setTempImages(prev => [...prev, response.data.data.url]);
+          setFormData(prev => ({
+            ...prev,
+            occurrence_photos: [...(prev.occurrence_photos || []), response.data.data.url]
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('이미지 업로드 실패:', error);
+      alert('이미지 업로드에 실패했습니다.');
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
+    }
+  };
+
+  // 이미지 삭제
+  const handleRemoveImage = (index) => {
+    setTempImages(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      occurrence_photos: (prev.occurrence_photos || []).filter((_, i) => i !== index)
+    }));
   };
 
   const handleFormChange = (field, value) => {
@@ -292,9 +416,9 @@ export default function MoldNurturingPage() {
 
   const resetForm = () => {
     setFormData({
-      nurturing_stage: 'TRY_1',
+      nurturing_stage: 'INITIAL_TO',
       occurrence_date: new Date().toISOString().split('T')[0],
-      discovered_by: 'mold_developer',
+      discovered_by: 'maker',
       problem_types: [],
       problem_summary: '',
       problem_detail: '',
@@ -305,14 +429,23 @@ export default function MoldNurturingPage() {
       recurrence_risk: 'low',
       improvement_required: true,
       improvement_action: '',
-      action_responsible: 'mold_developer',
+      action_responsible: 'maker',
       improvement_methods: [],
       planned_completion_date: '',
       action_status: 'not_started',
       verification_stage: '',
       result_description: '',
-      final_judgment: ''
+      final_judgment: '',
+      try_location: '',
+      try_date: new Date().toISOString().split('T')[0],
+      try_machine: '',
+      try_material: '',
+      shot_count: '',
+      cycle_time: '',
+      responsible_company_name: '',
+      occurrence_photos: []
     });
+    setTempImages([]);
     setSelectedProblem(null);
     setEditMode(false);
   };
@@ -758,6 +891,58 @@ export default function MoldNurturingPage() {
                       placeholder="예: 캐비티 A면 게이트 부근"
                     />
                   </div>
+                  
+                  {/* 사진 업로드 */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <Camera size={16} className="inline mr-1" />
+                      발생 사진 (최대 5장)
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    
+                    {/* 이미지 미리보기 */}
+                    <div className="flex flex-wrap gap-3 mb-3">
+                      {(formData.occurrence_photos || []).map((url, idx) => (
+                        <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden bg-gray-100 border">
+                          <img src={url} alt={`사진 ${idx + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(idx)}
+                            className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      {/* 업로드 버튼 */}
+                      {(formData.occurrence_photos || []).length < 5 && (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingImage}
+                          className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-green-500 hover:text-green-500 disabled:opacity-50"
+                        >
+                          {uploadingImage ? (
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+                          ) : (
+                            <>
+                              <Upload size={20} />
+                              <span className="text-xs mt-1">사진 추가</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">클릭하여 이미지를 업로드하세요</p>
+                  </div>
                 </div>
               </div>
 
@@ -1011,6 +1196,29 @@ export default function MoldNurturingPage() {
                   <p className="text-sm font-medium">{selectedProblem.occurrence_date}</p>
                 </div>
               </div>
+
+              {/* 발생 사진 */}
+              {selectedProblem.occurrence_photos && selectedProblem.occurrence_photos.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
+                    <Camera size={16} />
+                    발생 사진
+                  </h4>
+                  <div className="flex flex-wrap gap-3">
+                    {selectedProblem.occurrence_photos.map((url, idx) => (
+                      <a 
+                        key={idx} 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 border hover:opacity-80"
+                      >
+                        <img src={url} alt={`사진 ${idx + 1}`} className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 상세 내용 */}
               <div>

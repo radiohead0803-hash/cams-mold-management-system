@@ -3,18 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Plus, Camera, Image, X, CheckCircle, Clock, AlertCircle,
   ChevronDown, ChevronUp, Filter, Search, Edit, Trash2, Eye, RotateCcw,
-  AlertTriangle, Save, Upload, FileText
+  AlertTriangle, Save, Upload, FileText, Settings, Lock
 } from 'lucide-react';
 import api, { moldSpecificationAPI } from '../../lib/api';
-
-// 육성 단계 정의
-const NURTURING_STAGES = [
-  { code: 'TRY_1', name: 'TRY 1차', color: 'blue' },
-  { code: 'TRY_2', name: 'TRY 2차', color: 'indigo' },
-  { code: 'TRY_3', name: 'TRY 3차', color: 'purple' },
-  { code: 'INITIAL_PRODUCTION', name: '초기 양산', color: 'orange' },
-  { code: 'STABILIZATION', name: '양산 안정화', color: 'green' }
-];
 
 // 상태 정의
 const STATUSES = [
@@ -73,6 +64,9 @@ export default function MobileMoldNurturing() {
   const [problems, setProblems] = useState([]);
   const [statistics, setStatistics] = useState(null);
   
+  // 육성 단계 (DB에서 로드)
+  const [nurturingStages, setNurturingStages] = useState([]);
+  
   // 필터
   const [showFilter, setShowFilter] = useState(false);
   const [stageFilter, setStageFilter] = useState('');
@@ -91,9 +85,9 @@ export default function MobileMoldNurturing() {
   
   // 폼 데이터
   const [formData, setFormData] = useState({
-    nurturing_stage: 'TRY_1',
+    nurturing_stage: 'INITIAL_TO',
     occurrence_date: new Date().toISOString().split('T')[0],
-    discovered_by: 'plant',
+    discovered_by: 'maker',
     problem_types: [],
     problem_summary: '',
     problem_detail: '',
@@ -106,14 +100,35 @@ export default function MobileMoldNurturing() {
     improvement_action: '',
     action_responsible: 'maker',
     planned_completion_date: '',
-    occurrence_photos: []
+    occurrence_photos: [],
+    // T/O 공통 조건필드
+    try_location: '',
+    try_date: new Date().toISOString().split('T')[0],
+    try_machine: '',
+    try_material: '',
+    shot_count: '',
+    cycle_time: '',
+    responsible_company_name: ''
   });
 
   useEffect(() => {
+    loadStages();
     if (moldId) {
       loadData();
     }
   }, [moldId, stageFilter, statusFilter]);
+
+  // 육성 단계 로드
+  const loadStages = async () => {
+    try {
+      const response = await api.get(`/mold-nurturing/stages?mold_id=${moldId || ''}`);
+      if (response.data?.success) {
+        setNurturingStages(response.data.data.stages || []);
+      }
+    } catch (error) {
+      console.error('육성 단계 로드 실패:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -329,9 +344,9 @@ export default function MobileMoldNurturing() {
 
   const resetForm = () => {
     setFormData({
-      nurturing_stage: 'TRY_1',
+      nurturing_stage: 'INITIAL_TO',
       occurrence_date: new Date().toISOString().split('T')[0],
-      discovered_by: 'plant',
+      discovered_by: 'maker',
       problem_types: [],
       problem_summary: '',
       problem_detail: '',
@@ -344,7 +359,14 @@ export default function MobileMoldNurturing() {
       improvement_action: '',
       action_responsible: 'maker',
       planned_completion_date: '',
-      occurrence_photos: []
+      occurrence_photos: [],
+      try_location: '',
+      try_date: new Date().toISOString().split('T')[0],
+      try_machine: '',
+      try_material: '',
+      shot_count: '',
+      cycle_time: '',
+      responsible_company_name: ''
     });
     setTempImages([]);
     setSelectedProblem(null);
@@ -373,17 +395,23 @@ export default function MobileMoldNurturing() {
     }
   };
 
-  const getStageColor = (stage) => {
-    const s = NURTURING_STAGES.find(s => s.code === stage);
-    if (!s) return 'bg-gray-100 text-gray-700';
-    switch (s.color) {
-      case 'blue': return 'bg-blue-100 text-blue-700';
-      case 'indigo': return 'bg-indigo-100 text-indigo-700';
-      case 'purple': return 'bg-purple-100 text-purple-700';
-      case 'orange': return 'bg-orange-100 text-orange-700';
-      case 'green': return 'bg-green-100 text-green-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+  // 육성 단계 색상 (DB에서 로드된 단계 사용)
+  const getStageColor = (stageCode) => {
+    const stage = nurturingStages.find(s => s.stage_code === stageCode);
+    if (!stage) return 'bg-gray-100 text-gray-700';
+    // 고정 단계는 파란색, 나머지는 순서에 따라 색상 지정
+    if (stage.is_fixed) return 'bg-blue-100 text-blue-700';
+    const order = stage.stage_order || 0;
+    if (order <= 2) return 'bg-indigo-100 text-indigo-700';
+    if (order <= 4) return 'bg-purple-100 text-purple-700';
+    if (order <= 5) return 'bg-orange-100 text-orange-700';
+    return 'bg-green-100 text-green-700';
+  };
+
+  // 육성 단계명 가져오기
+  const getStageName = (stageCode) => {
+    const stage = nurturingStages.find(s => s.stage_code === stageCode);
+    return stage?.stage_name || stageCode;
   };
 
   if (loading) {
@@ -526,7 +554,7 @@ export default function MobileMoldNurturing() {
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className={`text-xs px-2 py-0.5 rounded ${getStageColor(problem.nurturing_stage)}`}>
-                      {NURTURING_STAGES.find(s => s.code === problem.nurturing_stage)?.name}
+                      {getStageName(problem.nurturing_stage)}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded ${getSeverityColor(problem.severity)}`}>
                       {SEVERITIES.find(s => s.code === problem.severity)?.name}
@@ -601,14 +629,21 @@ export default function MobileMoldNurturing() {
                   </h3>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">육성단계 *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      육성단계 *
+                      {nurturingStages.find(s => s.stage_code === formData.nurturing_stage)?.is_fixed && (
+                        <Lock size={12} className="inline ml-1 text-blue-500" />
+                      )}
+                    </label>
                     <select
                       value={formData.nurturing_stage}
                       onChange={(e) => handleFormChange('nurturing_stage', e.target.value)}
                       className="w-full border rounded-xl px-4 py-3"
                     >
-                      {NURTURING_STAGES.map(stage => (
-                        <option key={stage.code} value={stage.code}>{stage.name}</option>
+                      {nurturingStages.map(stage => (
+                        <option key={stage.stage_code} value={stage.stage_code}>
+                          {stage.stage_name} {stage.is_fixed ? '(고정)' : ''}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -916,7 +951,7 @@ export default function MobileMoldNurturing() {
               {/* 기본 정보 */}
               <div className="flex flex-wrap gap-2">
                 <span className={`text-xs px-2 py-1 rounded ${getStageColor(selectedProblem.nurturing_stage)}`}>
-                  {NURTURING_STAGES.find(s => s.code === selectedProblem.nurturing_stage)?.name}
+                  {getStageName(selectedProblem.nurturing_stage)}
                 </span>
                 <span className={`text-xs px-2 py-1 rounded ${getSeverityColor(selectedProblem.severity)}`}>
                   {SEVERITIES.find(s => s.code === selectedProblem.severity)?.name}
