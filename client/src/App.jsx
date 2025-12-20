@@ -219,6 +219,10 @@ function App() {
       <Route path="/mobile/mold/:moldId/history" element={<MobileMoldHistory />} />
       <Route path="/mobile/mold-history/:moldId" element={<MobileMoldHistory />} />
       
+      {/* Mobile - 양산이관 체크리스트 */}
+      <Route path="/mobile/production-transfer-checklist" element={<MobileProductionTransferChecklist />} />
+      <Route path="/mobile/mold/:moldId/production-transfer-checklist" element={<MobileProductionTransferChecklist />} />
+      
       {/* Mobile - QR 세션 */}
       <Route path="/mobile/qr-sessions" element={<MobileQRSessions />} />
       

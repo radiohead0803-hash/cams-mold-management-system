@@ -182,7 +182,7 @@ export default function MobileMoldDetailNew() {
             { label: '금형체크리스트', action: () => navigate(`/mobile/mold/${moldId}/mold-checklist`) },
             { label: '금형육성', action: () => navigate(`/mobile/mold/${moldId}/nurturing`) },
             { label: '경도측정', action: () => navigate(`/mobile/mold/${moldId}/hardness`) },
-            { label: '양산처이관', action: () => navigate(`/production-transfer/checklist-master?moldId=${moldId}`) }
+            { label: '양산처이관', action: () => navigate(`/mobile/production-transfer-checklist?moldId=${moldId}`) }
           ] 
         },
         { label: '금형사양', action: () => navigate(`/mobile/mold/${moldId}/specification`) },

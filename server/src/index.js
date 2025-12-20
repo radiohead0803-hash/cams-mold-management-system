@@ -99,6 +99,10 @@ app.use('/api/v1/hq', require('./routes/hqDashboard'));
 app.use('/api/v1/dash', require('./routes/dashRoutes'));
 app.use('/api/v1/mobile', require('./routes/mobileDashboard'));
 app.use('/api/v1/plant', require('./routes/plantDashboard'));
+app.use('/api/v1/production-transfer', require('./routes/productionTransferRoutes'));
+
+// Static files for uploads
+app.use('/uploads', express.static('uploads'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
