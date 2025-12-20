@@ -114,6 +114,7 @@ import {
   MobileDailyChecklist,
   MobilePeriodicInspection,
   MobileRepairShipmentChecklist,
+  MobileProductionTransferChecklist,
   RepairShipmentChecklist,
   QrScanPage,
   DailyInspectionPageQr,
