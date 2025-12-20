@@ -59,6 +59,9 @@ const ChecklistItemCycleMap = require('./ChecklistItemCycleMap');
 const InspectionSchedule = require('./InspectionSchedule');
 const InspectionInstanceNew = require('./InspectionInstanceNew');
 const InspectionInstanceItem = require('./InspectionInstanceItem');
+const MoldNurturingProblem = require('./MoldNurturingProblem');
+const MoldNurturingProblemHistory = require('./MoldNurturingProblemHistory');
+const MoldNurturingProblemComment = require('./MoldNurturingProblemComment');
 
 // Helper function to initialize models
 const initModel = (ModelClass, sequelize) => {
@@ -123,7 +126,10 @@ const models = {
   ChecklistItemCycleMap: initModel(ChecklistItemCycleMap, sequelize),
   InspectionSchedule: initModel(InspectionSchedule, sequelize),
   InspectionInstanceNew: initModel(InspectionInstanceNew, sequelize),
-  InspectionInstanceItem: initModel(InspectionInstanceItem, sequelize)
+  InspectionInstanceItem: initModel(InspectionInstanceItem, sequelize),
+  MoldNurturingProblem: initModel(MoldNurturingProblem, sequelize),
+  MoldNurturingProblemHistory: initModel(MoldNurturingProblemHistory, sequelize),
+  MoldNurturingProblemComment: initModel(MoldNurturingProblemComment, sequelize)
 };
 
 // Setup associations

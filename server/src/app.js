@@ -133,6 +133,7 @@ const checklistMastersRouter = require('./routes/checklistMasters');
 const inspectionsNewRouter = require('./routes/inspectionsNew');
 const inspectionPhotosRouter = require('./routes/inspectionPhotos');
 const repairShipmentChecklistRouter = require('./routes/repairShipmentChecklist');
+const moldNurturingRouter = require('./routes/moldNurturing');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -239,6 +240,8 @@ app.use('/api/v1/audit-log', auditLogRouter);
 app.use('/api/v1/inspection-photos', inspectionPhotosRouter);
 // 수리 후 출하점검 체크리스트
 app.use('/api/v1/repair-shipment-checklists', repairShipmentChecklistRouter);
+// 금형육성 문제점 관리
+app.use('/api/v1/mold-nurturing', moldNurturingRouter);
 
 // Health check
 app.get('/health', (req, res) => {

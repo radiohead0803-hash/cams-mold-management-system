@@ -49,6 +49,7 @@ import {
   MakerRepairListPage,
   MakerMoldDetail,
   MoldDevelopmentPlan,
+  MoldNurturingPage,
   HardnessMeasurement,
   MoldSpecification,
   InjectionHistory,
@@ -320,7 +321,7 @@ function App() {
         <Route path="maker/repair-requests" element={<MakerRepairListPage />} />
         <Route path="maker/mold/:id" element={<MakerMoldDetail />} />
         <Route path="mold-development/plan" element={<MoldDevelopmentPlan />} />
-        <Route path="mold-development/nurturing" element={<MoldDevelopmentPlan />} />
+        <Route path="mold-development/nurturing" element={<MoldNurturingPage />} />
         <Route path="mold-development/hardness" element={<HardnessMeasurement />} />
         <Route path="checklist/master" element={<MoldChecklist />} />
         <Route path="mold-checklist" element={<MoldChecklist />} />

@@ -58,6 +58,7 @@ export const MakerMoldDetail = lazy(() => import('../pages/maker/MakerMoldDetail
 
 // 금형 개발
 export const MoldDevelopmentPlan = lazy(() => import('../pages/MoldDevelopmentPlan'));
+export const MoldNurturingPage = lazy(() => import('../pages/MoldNurturingPage'));
 export const HardnessMeasurement = lazy(() => import('../pages/HardnessMeasurement'));
 export const MoldSpecification = lazy(() => import('../pages/MoldSpecification'));
 
