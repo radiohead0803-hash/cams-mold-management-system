@@ -57,7 +57,7 @@ const createInjectionCondition = async (req, res) => {
         hr_temp_1, hr_temp_2, hr_temp_3, hr_temp_4, hr_temp_5, hr_temp_6, hr_temp_7, hr_temp_8,
         valve_gate_count, valve_gate_data,
         chiller_temp_main, chiller_temp_moving, chiller_temp_fixed,
-        cycle_time, status, registered_by, version, is_current, remarks,
+        cycle_time, status, registered_by, writer_type, version, is_current, remarks,
         created_at, updated_at
       ) VALUES (
         :mold_spec_id, :mold_id, :mold_code, :mold_name, :part_name, :material,
@@ -76,7 +76,7 @@ const createInjectionCondition = async (req, res) => {
         :hr_temp_1, :hr_temp_2, :hr_temp_3, :hr_temp_4, :hr_temp_5, :hr_temp_6, :hr_temp_7, :hr_temp_8,
         :valve_gate_count, :valve_gate_data,
         :chiller_temp_main, :chiller_temp_moving, :chiller_temp_fixed,
-        :cycle_time, 'pending', :registered_by, :version, true, :remarks,
+        :cycle_time, 'pending', :registered_by, :writer_type, :version, true, :remarks,
         NOW(), NOW()
       ) RETURNING *
     `;
@@ -162,6 +162,7 @@ const createInjectionCondition = async (req, res) => {
         // 기타
         cycle_time: data.cycle_time || null,
         registered_by,
+        writer_type: data.writer_type || req.user.user_type || 'plant',
         version: nextVersion,
         remarks: data.remarks || null
       }

@@ -74,6 +74,8 @@ export default function InjectionConditionNew() {
     chiller_temp_main: '', chiller_temp_moving: '', chiller_temp_fixed: '',
     // 기타
     cycle_time: '', remarks: '',
+    // 작성처 구분
+    writer_type: '',
     // 원재료
     material_spec: '', material_grade: '', material_supplier: '',
     material_shrinkage: '', mold_shrinkage: ''
@@ -374,6 +376,42 @@ export default function InjectionConditionNew() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">재질</label>
                   <input type="text" value={moldInfo?.material || ''} className="w-full border border-slate-200 rounded-lg px-4 py-2 text-sm bg-slate-50 text-slate-600" readOnly />
                 </div>
+              </div>
+              
+              {/* 작성처 구분 */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <label className="block text-sm font-medium text-slate-700 mb-2">작성처 구분 *</label>
+                <div className="flex gap-3">
+                  {[
+                    { value: 'maker', label: '제작처', color: 'orange' },
+                    { value: 'plant', label: '생산처', color: 'green' },
+                    { value: 'mold_developer', label: '개발담당', color: 'blue' }
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => isEditing && setConditionData(prev => ({ ...prev, writer_type: opt.value }))}
+                      disabled={!isEditing}
+                      className={`flex-1 px-4 py-3 rounded-lg border-2 transition font-medium text-sm ${
+                        conditionData.writer_type === opt.value
+                          ? opt.color === 'orange' ? 'border-orange-500 bg-orange-50 text-orange-700' :
+                            opt.color === 'green' ? 'border-green-500 bg-green-50 text-green-700' :
+                            'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      } ${!isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                {condition?.writer_type && !isEditing && (
+                  <p className="mt-2 text-sm text-slate-500">
+                    현재 작성처: <span className="font-medium">
+                      {condition.writer_type === 'maker' ? '제작처' : 
+                       condition.writer_type === 'plant' ? '생산처' : '개발담당'}
+                    </span>
+                  </p>
+                )}
               </div>
             </div>
           )}

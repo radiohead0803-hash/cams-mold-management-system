@@ -40,7 +40,8 @@ export default function InjectionHistory() {
           reason: item.change_reason || '-',
           changed_by: item.changed_by_name || '-',
           approved_by: item.approved_by_name,
-          status: item.status
+          status: item.status,
+          writer_type: item.writer_type
         })))
       } else {
         // 샘플 데이터
@@ -146,6 +147,15 @@ export default function InjectionHistory() {
       case 'approved': return <span className="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full font-medium">승인</span>
       case 'pending': return <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-sm rounded-full font-medium">대기</span>
       case 'rejected': return <span className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full font-medium">반려</span>
+      default: return null
+    }
+  }
+
+  const getWriterTypeBadge = (writerType) => {
+    switch (writerType) {
+      case 'maker': return <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded font-medium">제작처</span>
+      case 'plant': return <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">생산처</span>
+      case 'mold_developer': return <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-medium">개발담당</span>
       default: return null
     }
   }
@@ -258,6 +268,7 @@ export default function InjectionHistory() {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">날짜</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">작성처</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">유형</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">항목</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">변경 전</th>
@@ -270,7 +281,7 @@ export default function InjectionHistory() {
             <tbody className="divide-y">
               {filteredData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     <History size={48} className="mx-auto mb-3 opacity-30" />
                     <p>변경 이력이 없습니다</p>
                   </td>
@@ -279,6 +290,7 @@ export default function InjectionHistory() {
                 filteredData.map(item => (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-gray-600">{item.change_date}</td>
+                    <td className="px-6 py-4">{getWriterTypeBadge(item.writer_type)}</td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTypeColor(item.change_type)}`}>
                         {item.change_type_label}
