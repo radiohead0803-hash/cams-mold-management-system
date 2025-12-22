@@ -56,7 +56,9 @@ export default function MobileInjectionCondition() {
     // 칠러온도
     chiller_temp_main: '', chiller_temp_moving: '', chiller_temp_fixed: '',
     // 기타
-    cycle_time: '', remarks: ''
+    cycle_time: '', remarks: '',
+    // 중량관리
+    design_weight: '', management_weight: ''
   });
 
   // 카테고리 정의
@@ -732,6 +734,35 @@ export default function MobileInjectionCondition() {
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">sec</span>
                     </div>
                   </div>
+                  
+                  {/* 중량관리 */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">설계중량 (g)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={conditionData.design_weight || moldInfo?.design_weight || ''}
+                        onChange={(e) => handleChange('design_weight', e.target.value)}
+                        disabled={!isEditing}
+                        className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50 bg-blue-50"
+                        placeholder="기본정보 연동"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">관리중량 (g)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={conditionData.management_weight || ''}
+                        onChange={(e) => handleChange('management_weight', e.target.value)}
+                        disabled={!isEditing}
+                        className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50"
+                        placeholder="관리중량 입력"
+                      />
+                    </div>
+                  </div>
+                  
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">비고</label>
                     <textarea

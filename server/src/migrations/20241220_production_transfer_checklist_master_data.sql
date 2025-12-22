@@ -1,4 +1,4 @@
--- 양산이관 체크리스트 마스터 데이터 (8개 카테고리, 52개 항목)
+-- 양산이관 체크리스트 마스터 데이터 (8개 카테고리, 53개 항목)
 -- 기존 데이터 삭제 후 재삽입
 DELETE FROM production_transfer_checklist_master;
 
@@ -53,34 +53,35 @@ INSERT INTO production_transfer_checklist_master (category, item_code, item_name
 ('5.성능기능점검', 'F05', '온도 균일성 확인', '금형 온도 분포가 균일한지 확인', true, true, 'document', 35, true),
 ('5.성능기능점검', 'F06', '유압장치 동작', '유압장치 동작 및 누유 확인', true, false, NULL, 36, true),
 ('5.성능기능점검', 'F07', '히터 동작 확인', '히터 단선, 누전 여부 확인 (핫러너)', false, false, NULL, 37, true),
-('5.성능기능점검', 'F08', '센서 동작 확인', '각종 센서 동작 상태 확인', true, false, NULL, 38, true);
+('5.성능기능점검', 'F08', '센서 동작 확인', '각종 센서 동작 상태 확인', true, false, NULL, 38, true),
+('5.성능기능점검', 'F09', '볼트조림 식별 아이마킹', '볼트조림 식별을 위한 아이마킹 실시 여부 확인', true, true, 'image', 39, true);
 
 -- 6. 금형안전성확인 (4개 항목)
 INSERT INTO production_transfer_checklist_master (category, item_code, item_name, description, is_required, requires_attachment, attachment_type, display_order, is_active) VALUES
-('6.금형안전성확인', 'S01', '클램프 상태 확인', '클램프 볼트 체결 상태 확인', true, true, 'image', 39, true),
-('6.금형안전성확인', 'S02', '인양고리 상태', '인양고리 상태 및 안전성 확인', true, true, 'image', 40, true),
-('6.금형안전성확인', 'S03', '센서 배선 상태', '센서 배선 정리 및 손상 여부 확인', true, true, 'image', 41, true),
-('6.금형안전성확인', 'S04', '안전커버 상태', '안전커버 부착 및 상태 확인', true, true, 'image', 42, true);
+('6.금형안전성확인', 'S01', '클램프 상태 확인', '클램프 볼트 체결 상태 확인', true, true, 'image', 40, true),
+('6.금형안전성확인', 'S02', '인양고리 상태', '인양고리 상태 및 안전성 확인', true, true, 'image', 41, true),
+('6.금형안전성확인', 'S03', '센서 배선 상태', '센서 배선 정리 및 손상 여부 확인', true, true, 'image', 42, true),
+('6.금형안전성확인', 'S04', '안전커버 상태', '안전커버 부착 및 상태 확인', true, true, 'image', 43, true);
 
 -- 7. 시운전결과 (8개 항목)
 INSERT INTO production_transfer_checklist_master (category, item_code, item_name, description, is_required, requires_attachment, attachment_type, display_order, is_active) VALUES
-('7.시운전결과', 'T01', 'Shot 기록 확인', '시운전 Shot 수 및 기록 확인', true, true, 'document', 43, true),
-('7.시운전결과', 'T02', '성형조건 기록', '최적 성형조건 기록 확인', true, true, 'document', 44, true),
-('7.시운전결과', 'T03', 'NG 개선 확인', '시운전 중 발생한 NG 개선 여부 확인', true, true, 'document', 45, true),
-('7.시운전결과', 'T04', '외관 PASS 확인', '제품 외관 품질 PASS 확인', true, true, 'image', 46, true),
-('7.시운전결과', 'T05', '치수 PASS 확인', '제품 치수 품질 PASS 확인', true, true, 'document', 47, true),
-('7.시운전결과', 'T06', '사이클타임 확인', '목표 사이클타임 달성 여부 확인', true, false, NULL, 48, true),
-('7.시운전결과', 'T07', '연속 생산성 확인', '연속 생산 시 안정성 확인', true, false, NULL, 49, true),
-('7.시운전결과', 'T08', '시운전 보고서', '시운전 결과 보고서 첨부', true, true, 'document', 50, true);
+('7.시운전결과', 'T01', 'Shot 기록 확인', '시운전 Shot 수 및 기록 확인', true, true, 'document', 44, true),
+('7.시운전결과', 'T02', '성형조건 기록', '최적 성형조건 기록 확인', true, true, 'document', 45, true),
+('7.시운전결과', 'T03', 'NG 개선 확인', '시운전 중 발생한 NG 개선 여부 확인', true, true, 'document', 46, true),
+('7.시운전결과', 'T04', '외관 PASS 확인', '제품 외관 품질 PASS 확인', true, true, 'image', 47, true),
+('7.시운전결과', 'T05', '치수 PASS 확인', '제품 치수 품질 PASS 확인', true, true, 'document', 48, true),
+('7.시운전결과', 'T06', '사이클타임 확인', '목표 사이클타임 달성 여부 확인', true, false, NULL, 49, true),
+('7.시운전결과', 'T07', '연속 생산성 확인', '연속 생산 시 안정성 확인', true, false, NULL, 50, true),
+('7.시운전결과', 'T08', '시운전 보고서', '시운전 결과 보고서 첨부', true, true, 'document', 51, true);
 
 -- 8. 금형인계물류 (6개 항목)
 INSERT INTO production_transfer_checklist_master (category, item_code, item_name, description, is_required, requires_attachment, attachment_type, display_order, is_active) VALUES
-('8.금형인계물류', 'L01', '세척/방청 처리', '금형 세척 및 방청 처리 완료 확인', true, true, 'image', 51, true),
-('8.금형인계물류', 'L02', '포장 상태 확인', '금형 포장 상태 확인 (운송 중 손상 방지)', true, true, 'image', 52, true),
-('8.금형인계물류', 'L03', 'GPS 위치 기록', 'GPS 위치 정보 기록 확인', true, false, NULL, 53, true),
-('8.금형인계물류', 'L04', 'QR 스캔 기록', 'QR 스캔을 통한 이관 기록 확인', true, false, NULL, 54, true),
-('8.금형인계물류', 'L05', '인수자 서명', '인수자 서명 확인', true, true, 'image', 55, true),
-('8.금형인계물류', 'L06', '인계자 서명', '인계자 서명 확인', true, true, 'image', 56, true);
+('8.금형인계물류', 'L01', '세척/방청 처리', '금형 세척 및 방청 처리 완료 확인', true, true, 'image', 52, true),
+('8.금형인계물류', 'L02', '포장 상태 확인', '금형 포장 상태 확인 (운송 중 손상 방지)', true, true, 'image', 53, true),
+('8.금형인계물류', 'L03', 'GPS 위치 기록', 'GPS 위치 정보 기록 확인', true, false, NULL, 54, true),
+('8.금형인계물류', 'L04', 'QR 스캔 기록', 'QR 스캔을 통한 이관 기록 확인', true, false, NULL, 55, true),
+('8.금형인계물류', 'L05', '인수자 서명', '인수자 서명 확인', true, true, 'image', 56, true),
+('8.금형인계물류', 'L06', '인계자 서명', '인계자 서명 확인', true, true, 'image', 57, true);
 
 -- 결과 확인
 SELECT category, COUNT(*) as item_count FROM production_transfer_checklist_master GROUP BY category ORDER BY category;
