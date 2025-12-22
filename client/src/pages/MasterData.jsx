@@ -210,6 +210,13 @@ export default function MasterData() {
             />
             <input
               type="text"
+              placeholder="프로젝트명 (예: OS, 5X, 3K, TH)"
+              value={formData.project_name || ''}
+              onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
               placeholder="차종코드 (예: DL3)"
               value={formData.model_code || ''}
               onChange={(e) => setFormData({ ...formData, model_code: e.target.value })}
@@ -217,9 +224,9 @@ export default function MasterData() {
             />
             <input
               type="text"
-              placeholder="제조사 (예: 기아)"
-              value={formData.manufacturer || ''}
-              onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+              placeholder="사양 (예: LX, GL, GT)"
+              value={formData.specification || ''}
+              onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
               className="input"
             />
             <input
@@ -231,9 +238,9 @@ export default function MasterData() {
             />
             <input
               type="text"
-              placeholder="사양 (예: 프리미엄)"
-              value={formData.specification || ''}
-              onChange={(e) => setFormData({ ...formData, specification: e.target.value })}
+              placeholder="제조사 (예: 기아)"
+              value={formData.manufacturer || ''}
+              onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
               className="input"
             />
           </div>
@@ -696,6 +703,7 @@ export default function MasterData() {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">순서</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종명</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">프로젝트명</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종코드</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">사양</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">년식</th>
@@ -708,6 +716,7 @@ export default function MasterData() {
                 <tr key={item.id}>
                   <td className="px-4 py-4 whitespace-nowrap text-gray-400 text-sm">{index + 1}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{item.model_name}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{item.project_name || '-'}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{item.model_code || '-'}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{item.specification || '-'}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{item.model_year || '-'}</td>

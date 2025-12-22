@@ -28,11 +28,14 @@ const getCarModels = async (req, res) => {
 
 const createCarModel = async (req, res) => {
   try {
-    const { model_name, model_code, manufacturer, sort_order } = req.body;
+    const { model_name, model_code, project_name, specification, model_year, manufacturer, sort_order } = req.body;
 
     const carModel = await CarModel.create({
       model_name,
       model_code,
+      project_name,
+      specification,
+      model_year,
       manufacturer,
       sort_order: sort_order || 0
     });

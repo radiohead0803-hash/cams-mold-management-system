@@ -25,6 +25,7 @@ export default function MoldNew() {
     part_name: '',
     car_model: '',
     car_model_id: '',
+    project_name: '',
     car_model_code: '',
     car_specification: '',
     car_year: '',
@@ -98,10 +99,11 @@ export default function MoldNew() {
         masterDataAPI.getRawMaterials({ is_active: true }).catch(() => ({ data: { data: [] } }))
       ]);
       
-      // 백엔드 응답 필드명을 프론트엔드 형식으로 변환 (코드, 연식, 사양 포함)
+      // 백엔드 응답 필드명을 프론트엔드 형식으로 변환 (프로젝트명, 코드, 연식, 사양 포함)
       const carModelsData = (carModelsRes.data.data || []).map(item => ({
         id: item.id,
         name: item.model_name || item.name,
+        project_name: item.project_name || '',
         code: item.model_code || item.code || '',
         year: item.model_year || item.year || '',
         specification: item.specification || item.car_specification || '',
@@ -145,7 +147,7 @@ export default function MoldNew() {
     }
   };
 
-  // 차종 선택 시 - 코드/사양/연식 자동 설정
+  // 차종 선택 시 - 프로젝트명/코드/사양/연식 자동 설정
   const handleCarModelChange = (e) => {
     const selectedId = e.target.value;
     const selectedModel = carModels.find(m => m.id === parseInt(selectedId) || m.name === selectedId);
@@ -153,6 +155,7 @@ export default function MoldNew() {
       ...prev,
       car_model: selectedModel?.name || selectedId,
       car_model_id: selectedModel?.id || '',
+      project_name: selectedModel?.project_name || '',
       car_model_code: selectedModel?.code || '',
       car_specification: selectedModel?.specification || '',
       car_year: selectedModel?.year || ''
@@ -653,8 +656,8 @@ export default function MoldNew() {
               />
             </div>
           </div>
-          {/* 차종, 코드, 사양, 연식 - 1열 4항목 */}
-          <div className="grid grid-cols-4 gap-4 mt-4">
+          {/* 차종, 프로젝트명, 코드, 사양, 연식 - 1열 5항목 */}
+          <div className="grid grid-cols-5 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 차종 <span className="text-red-500">*</span>
@@ -672,6 +675,19 @@ export default function MoldNew() {
                   <option key={item.id} value={item.name}>{item.name}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                프로젝트명 <span className="text-xs text-blue-500">(자동)</span>
+              </label>
+              <input
+                type="text"
+                name="project_name"
+                value={formData.project_name || ''}
+                className="input bg-gray-50"
+                placeholder="차종 선택 시 자동"
+                readOnly
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
