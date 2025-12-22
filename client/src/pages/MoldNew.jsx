@@ -19,12 +19,13 @@ export default function MoldNew() {
   const [uploadingImage, setUploadingImage] = useState(false);
   
   const [formData, setFormData] = useState({
-    representative_part_number: '',
-    representative_part_name: '',
+    primary_part_number: '',
+    primary_part_name: '',
     part_number: '',
     part_name: '',
     car_model: '',
-    car_year: new Date().getFullYear().toString(),
+    car_model_id: '',
+    car_year: '',
     mold_type: '',
     cavity_count: 1,
     material: '',
@@ -33,12 +34,21 @@ export default function MoldNew() {
     plant_company_id: '',
     development_stage: '개발',
     production_stage: '시작금형',
+    mold_spec_type: '시작금형',
     order_date: new Date().toISOString().split('T')[0],
     target_delivery_date: '',
     icms_cost: '',
     vendor_quote_cost: '',
     notes: '',
-    part_images: []
+    part_images: [],
+    // 원재료 사양
+    raw_material_id: '',
+    ms_spec: '',
+    material_type: '',
+    supplier: '',
+    grade: '',
+    shrinkage_rate: '',
+    mold_shrinkage: ''
   });
 
   // 기초정보 (마스터 데이터)
@@ -46,6 +56,7 @@ export default function MoldNew() {
   const [materials, setMaterials] = useState([]);
   const [moldTypes, setMoldTypes] = useState([]);
   const [tonnages, setTonnages] = useState([]);
+  const [rawMaterials, setRawMaterials] = useState([]);
   const [masterDataLoading, setMasterDataLoading] = useState(true);
 
   useEffect(() => {
@@ -79,17 +90,19 @@ export default function MoldNew() {
   const loadMasterData = async () => {
     try {
       setMasterDataLoading(true);
-      const [carModelsRes, materialsRes, moldTypesRes, tonnagesRes] = await Promise.all([
+      const [carModelsRes, materialsRes, moldTypesRes, tonnagesRes, rawMaterialsRes] = await Promise.all([
         masterDataAPI.getCarModels(),
         masterDataAPI.getMaterials(),
         masterDataAPI.getMoldTypes(),
-        masterDataAPI.getTonnages()
+        masterDataAPI.getTonnages(),
+        masterDataAPI.getRawMaterials({ is_active: true }).catch(() => ({ data: { data: [] } }))
       ]);
       
-      // 백엔드 응답 필드명을 프론트엔드 형식으로 변환
+      // 백엔드 응답 필드명을 프론트엔드 형식으로 변환 (연식 포함)
       const carModelsData = (carModelsRes.data.data || []).map(item => ({
         id: item.id,
-        name: item.model_name || item.name
+        name: item.model_name || item.name,
+        year: item.model_year || item.year || ''
       }));
       const materialsData = (materialsRes.data.data || []).map(item => ({
         id: item.id,
@@ -104,11 +117,19 @@ export default function MoldNew() {
         name: item.value ? `${item.value}T` : item.name,
         value: item.value
       }));
+      const rawMaterialsData = (rawMaterialsRes.data.data || []).map(item => ({
+        id: item.id,
+        material_name: item.material_name,
+        material_grade: item.material_grade,
+        supplier: item.supplier,
+        shrinkage_rate: item.shrinkage_rate
+      }));
       
       setCarModels(carModelsData.length > 0 ? carModelsData : []);
       setMaterials(materialsData.length > 0 ? materialsData : defaultMaterials);
       setMoldTypes(moldTypesData.length > 0 ? moldTypesData : defaultMoldTypes);
       setTonnages(tonnagesData.length > 0 ? tonnagesData : defaultTonnages);
+      setRawMaterials(rawMaterialsData);
     } catch (error) {
       console.error('Failed to load master data:', error);
       // API 실패 시 기본값 사용
@@ -117,6 +138,42 @@ export default function MoldNew() {
       setTonnages(defaultTonnages);
     } finally {
       setMasterDataLoading(false);
+    }
+  };
+
+  // 차종 선택 시 연식 자동 설정
+  const handleCarModelChange = (e) => {
+    const selectedId = e.target.value;
+    const selectedModel = carModels.find(m => m.id === parseInt(selectedId) || m.name === selectedId);
+    setFormData(prev => ({
+      ...prev,
+      car_model: selectedModel?.name || selectedId,
+      car_model_id: selectedModel?.id || '',
+      car_year: selectedModel?.year || prev.car_year
+    }));
+  };
+
+  // 원재료 선택 시 관련 정보 자동 입력
+  const handleRawMaterialSelect = (materialId) => {
+    const selected = rawMaterials.find(m => m.id === parseInt(materialId));
+    if (selected) {
+      setFormData(prev => ({
+        ...prev,
+        raw_material_id: selected.id,
+        ms_spec: selected.material_name || '',
+        grade: selected.material_grade || '',
+        supplier: selected.supplier || '',
+        shrinkage_rate: selected.shrinkage_rate || ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        raw_material_id: '',
+        ms_spec: '',
+        grade: '',
+        supplier: '',
+        shrinkage_rate: ''
+      }));
     }
   };
 
@@ -475,8 +532,8 @@ export default function MoldNew() {
               </label>
               <input
                 type="text"
-                name="representative_part_number"
-                value={formData.representative_part_number}
+                name="primary_part_number"
+                value={formData.primary_part_number}
                 onChange={handleChange}
                 className="input"
                 placeholder="대표품번 입력"
@@ -488,8 +545,8 @@ export default function MoldNew() {
               </label>
               <input
                 type="text"
-                name="representative_part_name"
-                value={formData.representative_part_name}
+                name="primary_part_name"
+                value={formData.primary_part_name}
                 onChange={handleChange}
                 className="input"
                 placeholder="대표품명 입력"
@@ -530,28 +587,29 @@ export default function MoldNew() {
               <select
                 name="car_model"
                 value={formData.car_model}
-                onChange={handleChange}
+                onChange={handleCarModelChange}
                 required
                 className="input"
                 disabled={masterDataLoading}
               >
                 <option value="">{masterDataLoading ? '로딩 중...' : '차종 선택'}</option>
                 {carModels.map(item => (
-                  <option key={item.id} value={item.name}>{item.name}</option>
+                  <option key={item.id} value={item.name}>{item.name} {item.year ? `(${item.year})` : ''}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                연식
+                연식 <span className="text-xs text-blue-500">(차종 선택 시 자동)</span>
               </label>
               <input
                 type="text"
                 name="car_year"
                 value={formData.car_year}
                 onChange={handleChange}
-                className="input"
-                placeholder="2024"
+                className="input bg-gray-50"
+                placeholder="차종 선택 시 자동 입력"
+                readOnly
               />
             </div>
           </div>
@@ -626,6 +684,103 @@ export default function MoldNew() {
                   <option key={item.id} value={item.value || item.name}>{item.name || `${item.value}T`}</option>
                 ))}
               </select>
+            </div>
+          </div>
+        </div>
+
+        {/* 원재료 사양 */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
+            원재료 사양
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                원재료 선택 <span className="text-xs text-blue-500">(기초정보 연동)</span>
+              </label>
+              <select
+                name="raw_material_id"
+                value={formData.raw_material_id}
+                onChange={(e) => handleRawMaterialSelect(e.target.value)}
+                className="input"
+                disabled={masterDataLoading}
+              >
+                <option value="">{masterDataLoading ? '로딩 중...' : '원재료 선택'}</option>
+                {rawMaterials.map(item => (
+                  <option key={item.id} value={item.id}>
+                    {item.material_name} {item.material_grade ? `(${item.material_grade})` : ''} {item.supplier ? `- ${item.supplier}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                MS SPEC
+              </label>
+              <input
+                type="text"
+                name="ms_spec"
+                value={formData.ms_spec}
+                onChange={handleChange}
+                className="input bg-gray-50"
+                placeholder="원재료 선택 시 자동 입력"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                GRADE
+              </label>
+              <input
+                type="text"
+                name="grade"
+                value={formData.grade}
+                onChange={handleChange}
+                className="input bg-gray-50"
+                placeholder="원재료 선택 시 자동 입력"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                공급업체
+              </label>
+              <input
+                type="text"
+                name="supplier"
+                value={formData.supplier}
+                onChange={handleChange}
+                className="input bg-gray-50"
+                placeholder="원재료 선택 시 자동 입력"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                수축률 (%)
+              </label>
+              <input
+                type="text"
+                name="shrinkage_rate"
+                value={formData.shrinkage_rate}
+                onChange={handleChange}
+                className="input bg-gray-50"
+                placeholder="원재료 선택 시 자동 입력"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                금형 수축률 (%)
+              </label>
+              <input
+                type="text"
+                name="mold_shrinkage"
+                value={formData.mold_shrinkage}
+                onChange={handleChange}
+                className="input"
+                placeholder="금형 수축률 입력"
+              />
             </div>
           </div>
         </div>
