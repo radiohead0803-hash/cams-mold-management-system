@@ -169,13 +169,30 @@ export default function MoldNew() {
     }));
   };
 
-  // 선택된 차종의 사양 목록 가져오기
+  // 선택된 차종의 사양 목록 가져오기 (기초정보 연동)
   const getSpecificationsForModel = () => {
+    if (!formData.car_model) return [];
     const selectedModel = carModels.find(m => m.name === formData.car_model);
+    
+    // 1. 해당 차종에 specifications 배열이 있으면 사용
     if (selectedModel?.specifications && selectedModel.specifications.length > 0) {
       return selectedModel.specifications;
     }
-    // 기본 사양 목록 (기초정보에 없을 경우)
+    
+    // 2. 해당 차종에 단일 specification이 있으면 배열로 반환
+    if (selectedModel?.specification) {
+      return [selectedModel.specification];
+    }
+    
+    // 3. 같은 차종명을 가진 모든 데이터에서 사양 수집 (중복 제거)
+    const specsFromSameModel = carModels
+      .filter(m => m.name === formData.car_model && m.specification)
+      .map(m => m.specification);
+    if (specsFromSameModel.length > 0) {
+      return [...new Set(specsFromSameModel)];
+    }
+    
+    // 4. 기본 사양 목록 (기초정보에 없을 경우)
     return ['기본', '고급', '프리미엄'];
   };
 
