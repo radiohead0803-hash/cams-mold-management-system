@@ -12,8 +12,17 @@ const sequelize = new Sequelize(DATABASE_URL, {
 
 async function checkTables() {
   try {
+    // mold_specifications 테이블 컬럼 (전체)
+    console.log('=== mold_specifications 테이블 (전체 컬럼) ===');
+    const [moldSpecCols] = await sequelize.query(`
+      SELECT column_name, data_type FROM information_schema.columns 
+      WHERE table_name = 'mold_specifications' ORDER BY ordinal_position
+    `);
+    moldSpecCols.forEach(r => console.log(`  ${r.column_name}: ${r.data_type}`));
+    console.log(`\n총 컬럼 수: ${moldSpecCols.length}`);
+
     // car_models 테이블 컬럼
-    console.log('=== car_models 테이블 ===');
+    console.log('\n=== car_models 테이블 ===');
     const [carModelCols] = await sequelize.query(`
       SELECT column_name, data_type FROM information_schema.columns 
       WHERE table_name = 'car_models' ORDER BY ordinal_position
@@ -44,14 +53,13 @@ async function checkTables() {
     `);
     rawMaterialCols.forEach(r => console.log(`  ${r.column_name}: ${r.data_type}`));
 
-    // 샘플 데이터 확인
-    console.log('\n=== car_models 샘플 데이터 ===');
-    const [carModels] = await sequelize.query(`SELECT * FROM car_models LIMIT 3`);
-    console.log(JSON.stringify(carModels, null, 2));
-
-    console.log('\n=== raw_materials 샘플 데이터 ===');
-    const [rawMaterials] = await sequelize.query(`SELECT * FROM raw_materials LIMIT 3`);
-    console.log(JSON.stringify(rawMaterials, null, 2));
+    // companies 테이블 컬럼
+    console.log('\n=== companies 테이블 ===');
+    const [companyCols] = await sequelize.query(`
+      SELECT column_name, data_type FROM information_schema.columns 
+      WHERE table_name = 'companies' ORDER BY ordinal_position
+    `);
+    companyCols.forEach(r => console.log(`  ${r.column_name}: ${r.data_type}`));
 
     process.exit(0);
   } catch (error) {

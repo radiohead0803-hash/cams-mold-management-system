@@ -192,28 +192,35 @@ export default function MoldNew() {
     }));
   };
 
-  // 타입 선택 시
+  // 타입 선택 시 - 공급업체, 그레이드 초기화 (연쇄 필터링)
   const handleMaterialTypeSelect = (type) => {
     setFormData(prev => ({
       ...prev,
-      material_type: type
+      material_type: type,
+      supplier: '',
+      grade: '',
+      shrinkage_rate: '',
+      raw_material_id: ''
     }));
-    updateShrinkageRate(formData.ms_spec, type, formData.supplier, formData.grade);
   };
 
-  // 공급업체 선택 시
-  const handleSupplierSelect = (supplier) => {
+  // 공급업체 선택 시 - 그레이드 초기화 (연쇄 필터링)
+  const handleSupplierSelect = (supplierValue) => {
     setFormData(prev => ({
       ...prev,
-      supplier: supplier
+      supplier: supplierValue,
+      grade: '',
+      shrinkage_rate: '',
+      raw_material_id: ''
     }));
-    updateShrinkageRate(formData.ms_spec, formData.material_type, supplier, formData.grade);
   };
 
-  // 그레이드 선택 시
+  // 그레이드 선택 시 - 수축률 자동 설정
   const handleGradeSelect = (gradeValue) => {
     const matched = rawMaterials.find(m => 
       m.ms_spec === formData.ms_spec && 
+      (!formData.material_type || m.material_type === formData.material_type) &&
+      (!formData.supplier || m.supplier === formData.supplier) &&
       m.grade === gradeValue
     );
     setFormData(prev => ({
@@ -224,21 +231,8 @@ export default function MoldNew() {
     }));
   };
 
-  // 수축률 자동 업데이트
-  const updateShrinkageRate = (spec, type, supplier, gradeValue) => {
-    const matched = rawMaterials.find(m => 
-      m.ms_spec === spec && 
-      (!gradeValue || m.grade === gradeValue)
-    );
-    if (matched) {
-      setFormData(prev => ({
-        ...prev,
-        shrinkage_rate: matched.shrinkage_rate || ''
-      }));
-    }
-  };
-
-  // 필터링 함수들 - DB 필드명에 맞게 수정 (ms_spec, grade 사용)
+  // 필터링 함수들 - 선택 순서에 따른 연쇄 필터링
+  // MS SPEC 선택 후 → 타입 필터링
   const getFilteredTypes = () => {
     if (!formData.ms_spec) return [];
     const types = rawMaterials
@@ -247,19 +241,31 @@ export default function MoldNew() {
     return [...new Set(types)];
   };
 
+  // MS SPEC + 타입 선택 후 → 공급업체 필터링
   const getFilteredSuppliers = () => {
     if (!formData.ms_spec) return [];
-    const suppliers = rawMaterials
-      .filter(m => m.ms_spec === formData.ms_spec && m.supplier)
-      .map(m => m.supplier);
+    let filtered = rawMaterials.filter(m => m.ms_spec === formData.ms_spec);
+    // 타입이 선택되었으면 타입으로도 필터링
+    if (formData.material_type) {
+      filtered = filtered.filter(m => m.material_type === formData.material_type);
+    }
+    const suppliers = filtered.filter(m => m.supplier).map(m => m.supplier);
     return [...new Set(suppliers)];
   };
 
+  // MS SPEC + 타입 + 공급업체 선택 후 → GRADE 필터링
   const getFilteredGrades = () => {
     if (!formData.ms_spec) return [];
-    const grades = rawMaterials
-      .filter(m => m.ms_spec === formData.ms_spec && m.grade)
-      .map(m => m.grade);
+    let filtered = rawMaterials.filter(m => m.ms_spec === formData.ms_spec);
+    // 타입이 선택되었으면 타입으로도 필터링
+    if (formData.material_type) {
+      filtered = filtered.filter(m => m.material_type === formData.material_type);
+    }
+    // 공급업체가 선택되었으면 공급업체로도 필터링
+    if (formData.supplier) {
+      filtered = filtered.filter(m => m.supplier === formData.supplier);
+    }
+    const grades = filtered.filter(m => m.grade).map(m => m.grade);
     return [...new Set(grades)];
   };
 
