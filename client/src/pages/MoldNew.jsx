@@ -25,6 +25,7 @@ export default function MoldNew() {
     part_name: '',
     car_model: '',
     car_model_id: '',
+    car_specification: '',
     car_year: '',
     mold_type: '',
     material: '',
@@ -578,6 +579,9 @@ export default function MoldNew() {
                 placeholder="범퍼 커버 LH"
               />
             </div>
+          </div>
+          {/* 차종, 사양, 연식 - 1열 3항목 */}
+          <div className="grid grid-cols-3 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 차종 <span className="text-red-500">*</span>
@@ -592,13 +596,30 @@ export default function MoldNew() {
               >
                 <option value="">{masterDataLoading ? '로딩 중...' : '차종 선택'}</option>
                 {carModels.map(item => (
-                  <option key={item.id} value={item.name}>{item.name} {item.year ? `(${item.year})` : ''}</option>
+                  <option key={item.id} value={item.name}>{item.name}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                연식 <span className="text-xs text-blue-500">(차종 선택 시 자동)</span>
+                사양 <span className="text-xs text-blue-500">(선택)</span>
+              </label>
+              <select
+                name="car_specification"
+                value={formData.car_specification || ''}
+                onChange={handleChange}
+                className="input"
+                disabled={masterDataLoading}
+              >
+                <option value="">사양 선택</option>
+                <option value="기본">기본</option>
+                <option value="고급">고급</option>
+                <option value="프리미엄">프리미엄</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                연식 <span className="text-xs text-blue-500">(자동)</span>
               </label>
               <input
                 type="text"
@@ -606,7 +627,7 @@ export default function MoldNew() {
                 value={formData.car_year}
                 onChange={handleChange}
                 className="input bg-gray-50"
-                placeholder="차종 선택 시 자동 입력"
+                placeholder="차종 선택 시 자동"
                 readOnly
               />
             </div>
