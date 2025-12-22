@@ -1,5 +1,5 @@
 -- car_models 테이블에 project_name(프로젝트명) 필드 추가
--- 프로젝트명: OS, 5X, 3K, TH 등
+-- 프로젝트명: DL3, KA4, NQ5, CV, MV 등 (개발 코드)
 
 -- 1. project_name 컬럼 추가
 ALTER TABLE car_models ADD COLUMN IF NOT EXISTS project_name VARCHAR(50);
@@ -11,4 +11,4 @@ ALTER TABLE car_models ADD COLUMN IF NOT EXISTS project_name VARCHAR(50);
 CREATE INDEX IF NOT EXISTS idx_car_models_project_name ON car_models(project_name);
 
 -- 4. 코멘트 추가
-COMMENT ON COLUMN car_models.project_name IS '프로젝트명 (OS, 5X, 3K, TH 등)';
+COMMENT ON COLUMN car_models.project_name IS '프로젝트명 (DL3, KA4, NQ5, CV, MV 등 개발 코드)';

@@ -23,12 +23,17 @@ module.exports = (sequelize) => {
       model_code: {
         type: DataTypes.STRING(50),
         allowNull: true,
-        comment: '차종 코드 (예: DL3, EV6)'
+        comment: '차종 코드 (예: OS, 5X, 3K, TH, EV)'
       },
       model_name: {
         type: DataTypes.STRING(100),
         allowNull: false,
         comment: '차종 명칭 (예: K5, EV6)'
+      },
+      project_name: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        comment: '프로젝트명 (예: DL3, KA4, NQ5, CV)'
       },
       manufacturer: {
         type: DataTypes.STRING(50),
