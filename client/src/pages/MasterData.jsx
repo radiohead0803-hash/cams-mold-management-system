@@ -210,14 +210,14 @@ export default function MasterData() {
             />
             <input
               type="text"
-              placeholder="프로젝트명 (예: OS, 5X, 3K, TH)"
+              placeholder="프로젝트명 (예: DL3, KA4, NQ5)"
               value={formData.project_name || ''}
               onChange={(e) => setFormData({ ...formData, project_name: e.target.value })}
               className="input"
             />
             <input
               type="text"
-              placeholder="차종코드 (예: DL3)"
+              placeholder="차종코드 (예: OS, 5X, 3K, TH)"
               value={formData.model_code || ''}
               onChange={(e) => setFormData({ ...formData, model_code: e.target.value })}
               className="input"
