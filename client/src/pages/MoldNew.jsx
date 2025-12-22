@@ -25,6 +25,7 @@ export default function MoldNew() {
     part_name: '',
     car_model: '',
     car_model_id: '',
+    car_model_code: '',
     car_specification: '',
     car_year: '',
     mold_type: '',
@@ -97,10 +98,11 @@ export default function MoldNew() {
         masterDataAPI.getRawMaterials({ is_active: true }).catch(() => ({ data: { data: [] } }))
       ]);
       
-      // 백엔드 응답 필드명을 프론트엔드 형식으로 변환 (연식, 사양 포함)
+      // 백엔드 응답 필드명을 프론트엔드 형식으로 변환 (코드, 연식, 사양 포함)
       const carModelsData = (carModelsRes.data.data || []).map(item => ({
         id: item.id,
         name: item.model_name || item.name,
+        code: item.model_code || item.code || '',
         year: item.model_year || item.year || '',
         specification: item.specification || item.car_specification || '',
         specifications: item.specifications || [] // 해당 차종의 사양 목록
@@ -143,7 +145,7 @@ export default function MoldNew() {
     }
   };
 
-  // 차종 선택 시 - 사양 초기화, 연식은 사양 선택 후 자동
+  // 차종 선택 시 - 코드/사양/연식 자동 설정
   const handleCarModelChange = (e) => {
     const selectedId = e.target.value;
     const selectedModel = carModels.find(m => m.id === parseInt(selectedId) || m.name === selectedId);
@@ -151,49 +153,10 @@ export default function MoldNew() {
       ...prev,
       car_model: selectedModel?.name || selectedId,
       car_model_id: selectedModel?.id || '',
-      car_specification: '',
-      car_year: ''
+      car_model_code: selectedModel?.code || '',
+      car_specification: selectedModel?.specification || '',
+      car_year: selectedModel?.year || ''
     }));
-  };
-
-  // 사양 선택 시 - 연식 자동 설정
-  const handleSpecificationChange = (e) => {
-    const selectedSpec = e.target.value;
-    const selectedModel = carModels.find(m => m.name === formData.car_model);
-    // 사양에 따른 연식 자동 설정 (기초정보에서 연동)
-    const yearFromSpec = selectedModel?.year || new Date().getFullYear().toString();
-    setFormData(prev => ({
-      ...prev,
-      car_specification: selectedSpec,
-      car_year: yearFromSpec
-    }));
-  };
-
-  // 선택된 차종의 사양 목록 가져오기 (기초정보 연동)
-  const getSpecificationsForModel = () => {
-    if (!formData.car_model) return [];
-    const selectedModel = carModels.find(m => m.name === formData.car_model);
-    
-    // 1. 해당 차종에 specifications 배열이 있으면 사용
-    if (selectedModel?.specifications && selectedModel.specifications.length > 0) {
-      return selectedModel.specifications;
-    }
-    
-    // 2. 해당 차종에 단일 specification이 있으면 배열로 반환
-    if (selectedModel?.specification) {
-      return [selectedModel.specification];
-    }
-    
-    // 3. 같은 차종명을 가진 모든 데이터에서 사양 수집 (중복 제거)
-    const specsFromSameModel = carModels
-      .filter(m => m.name === formData.car_model && m.specification)
-      .map(m => m.specification);
-    if (specsFromSameModel.length > 0) {
-      return [...new Set(specsFromSameModel)];
-    }
-    
-    // 4. 기본 사양 목록 (기초정보에 없을 경우)
-    return ['기본', '고급', '프리미엄'];
   };
 
   // MS SPEC 선택 시 - 타입, 공급업체, 그레이드 초기화
@@ -690,8 +653,8 @@ export default function MoldNew() {
               />
             </div>
           </div>
-          {/* 차종, 사양, 연식 - 1열 3항목 */}
-          <div className="grid grid-cols-3 gap-4 mt-4">
+          {/* 차종, 코드, 사양, 연식 - 1열 4항목 */}
+          <div className="grid grid-cols-4 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 차종 <span className="text-red-500">*</span>
@@ -712,20 +675,29 @@ export default function MoldNew() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                사양 <span className="text-xs text-blue-500">(기초정보 연동)</span>
+                코드 <span className="text-xs text-blue-500">(자동)</span>
               </label>
-              <select
+              <input
+                type="text"
+                name="car_model_code"
+                value={formData.car_model_code || ''}
+                className="input bg-gray-50"
+                placeholder="차종 선택 시 자동"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                사양 <span className="text-xs text-blue-500">(자동)</span>
+              </label>
+              <input
+                type="text"
                 name="car_specification"
                 value={formData.car_specification || ''}
-                onChange={handleSpecificationChange}
-                className="input"
-                disabled={masterDataLoading || !formData.car_model}
-              >
-                <option value="">{!formData.car_model ? '차종 먼저 선택' : '사양 선택'}</option>
-                {getSpecificationsForModel().map((spec, idx) => (
-                  <option key={idx} value={spec}>{spec}</option>
-                ))}
-              </select>
+                className="input bg-gray-50"
+                placeholder="차종 선택 시 자동"
+                readOnly
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -735,7 +707,6 @@ export default function MoldNew() {
                 type="text"
                 name="car_year"
                 value={formData.car_year}
-                onChange={handleChange}
                 className="input bg-gray-50"
                 placeholder="차종 선택 시 자동"
                 readOnly
