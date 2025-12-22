@@ -120,11 +120,11 @@ export default function MoldNew() {
       }));
       const rawMaterialsData = (rawMaterialsRes.data.data || []).map(item => ({
         id: item.id,
-        material_name: item.material_name,
-        material_type: item.material_type || item.type || '',
-        material_grade: item.material_grade,
-        supplier: item.supplier,
-        shrinkage_rate: item.shrinkage_rate
+        ms_spec: item.ms_spec || item.material_name || '',
+        material_type: item.material_type || '',
+        grade: item.grade || item.material_grade || '',
+        supplier: item.supplier || '',
+        shrinkage_rate: item.shrinkage_rate || ''
       }));
       
       setCarModels(carModelsData.length > 0 ? carModelsData : []);
@@ -211,24 +211,24 @@ export default function MoldNew() {
   };
 
   // 그레이드 선택 시
-  const handleGradeSelect = (grade) => {
+  const handleGradeSelect = (gradeValue) => {
     const matched = rawMaterials.find(m => 
-      m.material_name === formData.ms_spec && 
-      m.material_grade === grade
+      m.ms_spec === formData.ms_spec && 
+      m.grade === gradeValue
     );
     setFormData(prev => ({
       ...prev,
-      grade: grade,
+      grade: gradeValue,
       raw_material_id: matched?.id || '',
       shrinkage_rate: matched?.shrinkage_rate || ''
     }));
   };
 
   // 수축률 자동 업데이트
-  const updateShrinkageRate = (spec, type, supplier, grade) => {
+  const updateShrinkageRate = (spec, type, supplier, gradeValue) => {
     const matched = rawMaterials.find(m => 
-      m.material_name === spec && 
-      (!grade || m.material_grade === grade)
+      m.ms_spec === spec && 
+      (!gradeValue || m.grade === gradeValue)
     );
     if (matched) {
       setFormData(prev => ({
@@ -238,11 +238,11 @@ export default function MoldNew() {
     }
   };
 
-  // 필터링 함수들
+  // 필터링 함수들 - DB 필드명에 맞게 수정 (ms_spec, grade 사용)
   const getFilteredTypes = () => {
     if (!formData.ms_spec) return [];
     const types = rawMaterials
-      .filter(m => m.material_name === formData.ms_spec && m.material_type)
+      .filter(m => m.ms_spec === formData.ms_spec && m.material_type)
       .map(m => m.material_type);
     return [...new Set(types)];
   };
@@ -250,7 +250,7 @@ export default function MoldNew() {
   const getFilteredSuppliers = () => {
     if (!formData.ms_spec) return [];
     const suppliers = rawMaterials
-      .filter(m => m.material_name === formData.ms_spec && m.supplier)
+      .filter(m => m.ms_spec === formData.ms_spec && m.supplier)
       .map(m => m.supplier);
     return [...new Set(suppliers)];
   };
@@ -258,8 +258,8 @@ export default function MoldNew() {
   const getFilteredGrades = () => {
     if (!formData.ms_spec) return [];
     const grades = rawMaterials
-      .filter(m => m.material_name === formData.ms_spec && m.material_grade)
-      .map(m => m.material_grade);
+      .filter(m => m.ms_spec === formData.ms_spec && m.grade)
+      .map(m => m.grade);
     return [...new Set(grades)];
   };
 
@@ -783,7 +783,7 @@ export default function MoldNew() {
                 disabled={masterDataLoading}
               >
                 <option value="">{masterDataLoading ? '로딩 중...' : 'MS SPEC 선택'}</option>
-                {[...new Set(rawMaterials.map(item => item.material_name).filter(Boolean))].map((spec, idx) => (
+                {[...new Set(rawMaterials.map(item => item.ms_spec).filter(Boolean))].map((spec, idx) => (
                   <option key={idx} value={spec}>{spec}</option>
                 ))}
               </select>
