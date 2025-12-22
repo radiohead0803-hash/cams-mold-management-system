@@ -5,7 +5,7 @@
 
 ## 📊 테이블 구조 개요
 
-총 **54개 테이블**로 구성되며, 11개 카테고리로 분류됩니다.
+총 **59개 테이블**로 구성되며, 12개 카테고리로 분류됩니다.
 
 **주요 변경사항**: 습합점검(`fitting_checks`)과 세척점검(`cleaning_checks`)은 정기점검(`inspections`) 내 체크리스트 항목으로 통합되었습니다.
 
@@ -2264,6 +2264,109 @@ CREATE TABLE production_transfer_approvals (
 );
 
 CREATE INDEX idx_transfer_approvals_request ON production_transfer_approvals(transfer_request_id);
+```
+
+---
+
+## 12. 기초정보 (마스터 데이터)
+
+### 12.1 car_models (차종)
+```sql
+CREATE TABLE car_models (
+  id SERIAL PRIMARY KEY,
+  model_code VARCHAR(50),                    -- 차종 코드 (예: OS, 5X, 3K, TH, EV)
+  model_name VARCHAR(100) NOT NULL,          -- 차종 명칭 (예: K5, EV6, Carnival)
+  project_name VARCHAR(50),                  -- 프로젝트명/개발코드 (예: DL3, KA4, NQ5, CV)
+  manufacturer VARCHAR(50),                  -- 제조사 (현대, 기아 등)
+  model_year VARCHAR(20),                    -- 년식 (예: 2024, 2023~2024)
+  specification VARCHAR(100),                -- 사양 (예: LX, GL, GT, PE)
+  sort_order INTEGER DEFAULT 0,              -- 정렬 순서
+  is_active BOOLEAN DEFAULT TRUE,            -- 활성화 여부
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_car_models_model_name ON car_models(model_name);
+CREATE INDEX idx_car_models_project_name ON car_models(project_name);
+CREATE INDEX idx_car_models_model_code ON car_models(model_code);
+CREATE INDEX idx_car_models_is_active ON car_models(is_active);
+
+COMMENT ON COLUMN car_models.model_code IS '차종 코드 (OS, 5X, 3K, TH, EV)';
+COMMENT ON COLUMN car_models.project_name IS '프로젝트명/개발코드 (DL3, KA4, NQ5, CV, MV 등)';
+```
+
+### 12.2 materials (금형 재질)
+```sql
+CREATE TABLE materials (
+  id SERIAL PRIMARY KEY,
+  material_name VARCHAR(100) NOT NULL,       -- 재질명 (예: NAK80, SKD61)
+  material_code VARCHAR(50),                 -- 재질코드
+  category VARCHAR(50),                      -- 분류 (프리하든강, 탄소강 등)
+  hardness VARCHAR(50),                      -- 경도 (예: HRC 37-43)
+  usage_type VARCHAR(100),                   -- 용도 (예: 코어, 캐비티)
+  heat_treatment VARCHAR(100),               -- 열처리 (예: 담금질+뜨임)
+  sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_materials_name ON materials(material_name);
+CREATE INDEX idx_materials_category ON materials(category);
+```
+
+### 12.3 mold_types (금형 타입)
+```sql
+CREATE TABLE mold_types (
+  id SERIAL PRIMARY KEY,
+  type_name VARCHAR(100) NOT NULL,           -- 타입명 (예: 사출금형, 프레스금형)
+  type_code VARCHAR(50),                     -- 타입코드
+  description TEXT,                          -- 설명
+  sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_mold_types_name ON mold_types(type_name);
+```
+
+### 12.4 tonnages (사출기 톤수)
+```sql
+CREATE TABLE tonnages (
+  id SERIAL PRIMARY KEY,
+  tonnage_value INTEGER NOT NULL,            -- 톤수 값 (예: 150, 450, 850)
+  tonnage_name VARCHAR(50),                  -- 톤수명 (예: 150T, 450T)
+  machine_type VARCHAR(50),                  -- 사출기 타입
+  description TEXT,                          -- 설명
+  sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_tonnages_value ON tonnages(tonnage_value);
+```
+
+### 12.5 raw_materials (원재료)
+```sql
+CREATE TABLE raw_materials (
+  id SERIAL PRIMARY KEY,
+  ms_spec VARCHAR(100),                      -- MS SPEC
+  material_type VARCHAR(100),                -- 타입 (PP, ABS, PC 등)
+  supplier VARCHAR(100),                     -- 공급업체
+  grade VARCHAR(100),                        -- GRADE
+  shrinkage_rate DECIMAL(5,3),               -- 수축률 (%)
+  description TEXT,                          -- 설명
+  sort_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_raw_materials_ms_spec ON raw_materials(ms_spec);
+CREATE INDEX idx_raw_materials_type ON raw_materials(material_type);
+CREATE INDEX idx_raw_materials_supplier ON raw_materials(supplier);
 ```
 
 ---

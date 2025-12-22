@@ -426,7 +426,7 @@ chore: 빌드/설정 변경
 - [Week 4 계획](./WEEK4_PLAN.md) - UI/UX 완성 및 배포
 
 ### 기술 문서
-- [데이터베이스 스키마](./DATABASE_SCHEMA.md) - 전체 테이블 구조 및 관계 (50개 테이블)
+- [데이터베이스 스키마](./DATABASE_SCHEMA.md) - 전체 테이블 구조 및 관계 (59개 테이블)
 - [시스템 사양](./SYSTEM_SPECIFICATIONS.md) - 운영 규칙 및 기준
 - [데이터 흐름 아키텍처](./DATA_FLOW_ARCHITECTURE.md) - 본사→제작처→마스터→생산처 자동 연동
 - [점검 스케줄 가이드](./INSPECTION_SCHEDULE_GUIDE.md) - 생산수량 기반 점검 및 QR 알람
