@@ -147,7 +147,7 @@ export default function MoldNew() {
     }
   };
 
-  // 차종 선택 시 - 프로젝트명/코드/사양/연식 자동 설정
+  // 차종 선택 시 - 프로젝트명/사양 초기화 (선택 필요)
   const handleCarModelChange = (e) => {
     const selectedId = e.target.value;
     const selectedModel = carModels.find(m => m.id === parseInt(selectedId) || m.name === selectedId);
@@ -155,11 +155,61 @@ export default function MoldNew() {
       ...prev,
       car_model: selectedModel?.name || selectedId,
       car_model_id: selectedModel?.id || '',
-      project_name: selectedModel?.project_name || '',
-      car_model_code: selectedModel?.code || '',
-      car_specification: selectedModel?.specification || '',
-      car_year: selectedModel?.year || ''
+      project_name: '',
+      car_model_code: '',
+      car_specification: '',
+      car_year: ''
     }));
+  };
+
+  // 프로젝트명 선택 시 - 코드 자동, 사양 초기화
+  const handleProjectNameChange = (e) => {
+    const selectedProjectName = e.target.value;
+    const matchedModel = carModels.find(m => 
+      m.name === formData.car_model && m.project_name === selectedProjectName
+    );
+    setFormData(prev => ({
+      ...prev,
+      project_name: selectedProjectName,
+      car_model_code: matchedModel?.code || '',
+      car_specification: '',
+      car_year: ''
+    }));
+  };
+
+  // 사양 선택 시 - 연식 자동
+  const handleSpecificationChange = (e) => {
+    const selectedSpec = e.target.value;
+    const matchedModel = carModels.find(m => 
+      m.name === formData.car_model && 
+      m.project_name === formData.project_name &&
+      m.specification === selectedSpec
+    );
+    setFormData(prev => ({
+      ...prev,
+      car_specification: selectedSpec,
+      car_year: matchedModel?.year || ''
+    }));
+  };
+
+  // 선택된 차종의 프로젝트명 목록 가져오기
+  const getProjectNamesForModel = () => {
+    if (!formData.car_model) return [];
+    const projectNames = carModels
+      .filter(m => m.name === formData.car_model && m.project_name)
+      .map(m => m.project_name);
+    return [...new Set(projectNames)];
+  };
+
+  // 선택된 차종+프로젝트명의 사양 목록 가져오기
+  const getSpecificationsForModelAndProject = () => {
+    if (!formData.car_model) return [];
+    let filtered = carModels.filter(m => m.name === formData.car_model);
+    if (formData.project_name) {
+      filtered = filtered.filter(m => m.project_name === formData.project_name);
+    }
+    const specs = filtered.filter(m => m.specification).map(m => m.specification);
+    return [...new Set(specs)];
   };
 
   // MS SPEC 선택 시 - 타입, 공급업체, 그레이드 초기화
@@ -656,7 +706,7 @@ export default function MoldNew() {
               />
             </div>
           </div>
-          {/* 차종, 프로젝트명, 코드, 사양, 연식 - 1열 5항목 */}
+          {/* 차종, 프로젝트명(선택), 코드(자동), 사양(선택), 연식(자동) - 1열 5항목 */}
           <div className="grid grid-cols-5 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -671,23 +721,27 @@ export default function MoldNew() {
                 disabled={masterDataLoading}
               >
                 <option value="">{masterDataLoading ? '로딩 중...' : '차종 선택'}</option>
-                {carModels.map(item => (
-                  <option key={item.id} value={item.name}>{item.name}</option>
+                {[...new Set(carModels.map(item => item.name))].map((name, idx) => (
+                  <option key={idx} value={name}>{name}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                프로젝트명 <span className="text-xs text-blue-500">(자동)</span>
+                프로젝트명 <span className="text-xs text-blue-500">(선택)</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="project_name"
                 value={formData.project_name || ''}
-                className="input bg-gray-50"
-                placeholder="차종 선택 시 자동"
-                readOnly
-              />
+                onChange={handleProjectNameChange}
+                className="input"
+                disabled={masterDataLoading || !formData.car_model}
+              >
+                <option value="">{!formData.car_model ? '차종 먼저 선택' : '프로젝트명 선택'}</option>
+                {getProjectNamesForModel().map((pn, idx) => (
+                  <option key={idx} value={pn}>{pn}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -698,22 +752,26 @@ export default function MoldNew() {
                 name="car_model_code"
                 value={formData.car_model_code || ''}
                 className="input bg-gray-50"
-                placeholder="차종 선택 시 자동"
+                placeholder="프로젝트명 선택 시 자동"
                 readOnly
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                사양 <span className="text-xs text-blue-500">(자동)</span>
+                사양 <span className="text-xs text-blue-500">(선택)</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="car_specification"
                 value={formData.car_specification || ''}
-                className="input bg-gray-50"
-                placeholder="차종 선택 시 자동"
-                readOnly
-              />
+                onChange={handleSpecificationChange}
+                className="input"
+                disabled={masterDataLoading || !formData.project_name}
+              >
+                <option value="">{!formData.project_name ? '프로젝트명 먼저 선택' : '사양 선택'}</option>
+                {getSpecificationsForModelAndProject().map((spec, idx) => (
+                  <option key={idx} value={spec}>{spec}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -724,7 +782,7 @@ export default function MoldNew() {
                 name="car_year"
                 value={formData.car_year}
                 className="input bg-gray-50"
-                placeholder="차종 선택 시 자동"
+                placeholder="사양 선택 시 자동"
                 readOnly
               />
             </div>
