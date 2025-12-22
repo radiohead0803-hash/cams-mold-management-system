@@ -27,9 +27,7 @@ export default function MoldNew() {
     car_model_id: '',
     car_year: '',
     mold_type: '',
-    cavity_count: 1,
     material: '',
-    tonnage: '',
     maker_company_id: '',
     plant_company_id: '',
     development_stage: '개발',
@@ -618,7 +616,7 @@ export default function MoldNew() {
         {/* 금형 사양 */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b">
-            금형 사양
+            금형 사양 <span className="text-xs text-blue-500 font-normal">(기초정보 연동)</span>
           </h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -640,20 +638,7 @@ export default function MoldNew() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                캐비티 수
-              </label>
-              <input
-                type="number"
-                name="cavity_count"
-                value={formData.cavity_count}
-                onChange={handleChange}
-                min="1"
-                className="input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                재질
+                금형 재질
               </label>
               <select
                 name="material"
@@ -662,26 +647,9 @@ export default function MoldNew() {
                 className="input"
                 disabled={masterDataLoading}
               >
-                <option value="">{masterDataLoading ? '로딩 중...' : '재질 선택'}</option>
+                <option value="">{masterDataLoading ? '로딩 중...' : '금형 재질 선택'}</option>
                 {materials.map(item => (
                   <option key={item.id} value={item.name}>{item.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                톤수 (ton)
-              </label>
-              <select
-                name="tonnage"
-                value={formData.tonnage}
-                onChange={handleChange}
-                className="input"
-                disabled={masterDataLoading}
-              >
-                <option value="">{masterDataLoading ? '로딩 중...' : 'ton'}</option>
-                {tonnages.map(item => (
-                  <option key={item.id} value={item.value || item.name}>{item.name || `${item.value}T`}</option>
                 ))}
               </select>
             </div>
