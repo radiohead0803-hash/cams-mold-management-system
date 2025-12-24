@@ -129,9 +129,7 @@ export const SYSTEM_ADMIN_MENU = [
       { key: 'users-internal', label: '사내 사용자', path: '/users/internal' },
       { key: 'users-partner', label: '협력사 사용자', path: '/users/partner' },
       { key: 'users-requests', label: '계정 요청', path: '/user-requests' },
-      { key: 'companies-list', label: '업체 목록', path: '/companies' },
-      { key: 'companies-maker', label: '제작처 관리', path: '/companies?type=maker' },
-      { key: 'companies-plant', label: '생산처 관리', path: '/companies?type=plant' }
+      { key: 'companies-list', label: '업체 목록', path: '/companies' }
     ]
   },
   {

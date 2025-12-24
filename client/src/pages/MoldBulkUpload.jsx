@@ -15,48 +15,92 @@ export default function MoldBulkUpload() {
   const downloadSampleExcel = () => {
     const sampleData = [
       {
-        '대표품번': '',
-        '대표품명': '',
+        // 기본 정보
+        '대표품번': 'RP-2024-001',
+        '대표품명': '도어 트림',
         '품번': 'P-2024-SAMPLE-001',
-        '품명': '프론트 범퍼',
+        '품명': '도어 트림 LH',
         '차종': 'K5',
-        '연식': '2024',
+        '사양': '프리미엄',
+        '년식': '2024',
+        // 금형 사양
         '금형타입': '사출금형',
-        'Cavity수': 1,
+        'Cavity수': 2,
         '재질': 'NAK80',
-        '톤수': 350,
+        '치수': '800x600x500',
+        '중량': 1500,
+        // 원재료 정보
+        'MS스펙': 'MS-PP-001',
+        '원재료타입': 'PP',
+        '공급업체': 'LG화학',
+        '그레이드': 'GP-1001',
+        '원재료수축율': '0.5%',
+        '금형수축율': '0.3%',
+        // 제작 정보
         '제작처ID': 3,
         '생산처ID': 5,
+        '담당자명': '홍길동',
+        // 개발사양
         '제작사양': '시작금형',
         '진행단계': '개발',
-        '상태': '임시저장',
+        '생산단계': '시제',
         '발주일': '2024-01-15',
         '목표납기일': '2024-03-15',
-        'ICMS비용': 45000000,
-        '업체견적가': 42000000,
-        '비고': '샘플 데이터'
+        '도면검토회일정': '2024-02-15',
+        // 예산
+        'ICMS비용': 50000000,
+        '업체견적가': 45000000,
+        // 사출 조건
+        '사이클타임': 60,
+        '사출온도': 220,
+        '사출압력': 1200,
+        '사출속도': 80,
+        // 비고
+        '비고': '샘플 데이터 - 도어 트림 LH'
       },
       {
-        '대표품번': 'P-2024-SAMPLE-001',
-        '대표품명': '프론트 범퍼',
+        // 기본 정보
+        '대표품번': 'RP-2024-001',
+        '대표품명': '도어 트림',
         '품번': 'P-2024-SAMPLE-002',
         '품명': '도어 트림 RH',
         '차종': 'K8',
-        '연식': '2024',
+        '사양': '시그니처',
+        '년식': '2024',
+        // 금형 사양
         '금형타입': '사출금형',
         'Cavity수': 2,
         '재질': 'P20',
-        '톤수': 420,
+        '치수': '850x650x520',
+        '중량': 1650,
+        // 원재료 정보
+        'MS스펙': 'MS-ABS-002',
+        '원재료타입': 'ABS',
+        '공급업체': 'SK케미칼',
+        '그레이드': 'HG-2002',
+        '원재료수축율': '0.4%',
+        '금형수축율': '0.25%',
+        // 제작 정보
         '제작처ID': 3,
         '생산처ID': 5,
+        '담당자명': '김철수',
+        // 개발사양
         '제작사양': '양산금형',
         '진행단계': '개발',
-        '상태': '등록',
+        '생산단계': 'P1',
         '발주일': '2024-01-20',
         '목표납기일': '2024-03-20',
-        'ICMS비용': 48000000,
-        '업체견적가': 45000000,
-        '비고': '샘플 데이터'
+        '도면검토회일정': '2024-02-20',
+        // 예산
+        'ICMS비용': 55000000,
+        '업체견적가': 50000000,
+        // 사출 조건
+        '사이클타임': 55,
+        '사출온도': 230,
+        '사출압력': 1100,
+        '사출속도': 85,
+        // 비고
+        '비고': '샘플 데이터 - 도어 트림 RH'
       }
     ];
 
@@ -66,26 +110,48 @@ export default function MoldBulkUpload() {
 
     // 컬럼 너비 설정
     ws['!cols'] = [
-      { wch: 22 }, // 대표품번
-      { wch: 20 }, // 대표품명
+      // 기본 정보
+      { wch: 18 }, // 대표품번
+      { wch: 15 }, // 대표품명
       { wch: 22 }, // 품번
-      { wch: 20 }, // 품명
-      { wch: 12 }, // 차종
-      { wch: 8 },  // 연식
+      { wch: 18 }, // 품명
+      { wch: 10 }, // 차종
+      { wch: 10 }, // 사양
+      { wch: 8 },  // 년식
+      // 금형 사양
       { wch: 12 }, // 금형타입
       { wch: 10 }, // Cavity수
       { wch: 10 }, // 재질
-      { wch: 8 },  // 톤수
+      { wch: 15 }, // 치수
+      { wch: 8 },  // 중량
+      // 원재료 정보
+      { wch: 15 }, // MS스펙
+      { wch: 12 }, // 원재료타입
+      { wch: 12 }, // 공급업체
+      { wch: 12 }, // 그레이드
+      { wch: 12 }, // 원재료수축율
+      { wch: 12 }, // 금형수축율
+      // 제작 정보
       { wch: 10 }, // 제작처ID
       { wch: 10 }, // 생산처ID
+      { wch: 10 }, // 담당자명
+      // 개발사양
       { wch: 12 }, // 제작사양
       { wch: 10 }, // 진행단계
-      { wch: 10 }, // 상태
+      { wch: 10 }, // 생산단계
       { wch: 12 }, // 발주일
       { wch: 12 }, // 목표납기일
-      { wch: 15 }, // ICMS비용
-      { wch: 15 }, // 업체견적가
-      { wch: 20 }  // 비고
+      { wch: 15 }, // 도면검토회일정
+      // 예산
+      { wch: 12 }, // ICMS비용
+      { wch: 12 }, // 업체견적가
+      // 사출 조건
+      { wch: 10 }, // 사이클타임
+      { wch: 10 }, // 사출온도
+      { wch: 10 }, // 사출압력
+      { wch: 10 }, // 사출속도
+      // 비고
+      { wch: 25 }  // 비고
     ];
 
     XLSX.writeFile(wb, '금형_일괄등록_샘플.xlsx');
@@ -130,25 +196,47 @@ export default function MoldBulkUpload() {
   const transformData = (row, index) => {
     try {
       return {
-        representative_part_number: row['대표품번'] || '',
-        representative_part_name: row['대표품명'] || '',
+        // 기본 정보
+        primary_part_number: row['대표품번'] || '',
+        primary_part_name: row['대표품명'] || '',
         part_number: row['품번'] || row['부품번호'],
         part_name: row['품명'] || row['부품명'],
         car_model: row['차종'],
-        car_year: String(row['연식'] || ''),
+        car_specification: row['사양'] || '',
+        car_year: String(row['년식'] || row['연식'] || ''),
+        // 금형 사양
         mold_type: row['금형타입'],
         cavity_count: Number(row['Cavity수']) || 1,
         material: row['재질'],
-        tonnage: Number(row['톤수']) || null,
-        maker_company_id: Number(row['제작처ID']) || Number(row['목표제작처ID']) || null,
-        plant_company_id: Number(row['생산처ID']) || null,
-        production_stage: row['제작사양'] || row['생산단계'] || '시작금형',
+        dimensions: row['치수'] || '',
+        weight: row['중량'] ? Number(row['중량']) : null,
+        // 원재료 정보
+        ms_spec: row['MS스펙'] || '',
+        material_type: row['원재료타입'] || '',
+        supplier: row['공급업체'] || '',
+        grade: row['그레이드'] || '',
+        shrinkage_rate: row['원재료수축율'] || '',
+        mold_shrinkage: row['금형수축율'] || '',
+        // 제작 정보
+        target_maker_id: Number(row['제작처ID']) || Number(row['목표제작처ID']) || null,
+        target_plant_id: Number(row['생산처ID']) || null,
+        manager_name: row['담당자명'] || '',
+        // 개발사양
+        mold_spec_type: row['제작사양'] || '시작금형',
         development_stage: row['진행단계'] || row['개발단계'] || '개발',
-        status: row['상태'] || '임시저장',
+        production_stage: row['생산단계'] || '시제',
         order_date: row['발주일'],
         target_delivery_date: row['목표납기일'],
+        drawing_review_date: row['도면검토회일정'] || '',
+        // 예산
         icms_cost: Number(row['ICMS비용']) || Number(row['예상비용']) || null,
         vendor_quote_cost: Number(row['업체견적가']) || null,
+        // 사출 조건
+        cycle_time: row['사이클타임'] ? Number(row['사이클타임']) : null,
+        injection_temp: row['사출온도'] ? Number(row['사출온도']) : null,
+        injection_pressure: row['사출압력'] ? Number(row['사출압력']) : null,
+        injection_speed: row['사출속도'] ? Number(row['사출속도']) : null,
+        // 비고
         notes: row['비고'] || ''
       };
     } catch (error) {
@@ -160,18 +248,29 @@ export default function MoldBulkUpload() {
   const validateData = (data) => {
     const errors = [];
     
+    // 필수 항목 검사
     if (!data.part_number) errors.push('품번은 필수입니다');
     if (!data.part_name) errors.push('품명은 필수입니다');
     if (!data.car_model) errors.push('차종은 필수입니다');
+    if (!data.target_maker_id) errors.push('제작처ID는 필수입니다');
+    if (!data.target_delivery_date) errors.push('목표납기일은 필수입니다');
+    
+    // 값 범위 검사
     if (data.cavity_count < 1) errors.push('Cavity수는 1 이상이어야 합니다');
-    if (!['시작금형', '양산금형'].includes(data.production_stage)) {
+    
+    // 제작사양 검사
+    if (!['시작금형', '양산금형'].includes(data.mold_spec_type)) {
       errors.push('제작사양은 시작금형 또는 양산금형이어야 합니다');
     }
+    
+    // 진행단계 검사
     if (!['개발', '양산'].includes(data.development_stage)) {
       errors.push('진행단계는 개발 또는 양산이어야 합니다');
     }
-    if (!['임시저장', '등록'].includes(data.status)) {
-      errors.push('상태는 임시저장 또는 등록이어야 합니다');
+    
+    // 생산단계 검사
+    if (data.production_stage && !['시제', 'P1', 'P2', 'M', 'SOP'].includes(data.production_stage)) {
+      errors.push('생산단계는 시제/P1/P2/M/SOP 중 하나여야 합니다');
     }
 
     return errors;
@@ -263,10 +362,12 @@ export default function MoldBulkUpload() {
             <ul className="list-disc list-inside space-y-1">
               <li>엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.</li>
               <li>샘플 엑셀을 다운로드하여 형식에 맞게 작성해주세요.</li>
-              <li>필수 항목: 품번, 품명, 차종</li>
-              <li>제작사양: 시작금형 / 양산금형</li>
-              <li>진행단계: 개발 / 양산 (양산이관 승인 시 자동 변경)</li>
-              <li>상태: 임시저장 / 등록</li>
+              <li><strong>필수 항목:</strong> 품번, 품명, 차종, 제작처ID, 목표납기일</li>
+              <li><strong>제작사양:</strong> 시작금형 / 양산금형</li>
+              <li><strong>진행단계:</strong> 개발 / 양산 (양산이관 승인 시 자동 변경)</li>
+              <li><strong>생산단계:</strong> 시제 / P1 / P2 / M / SOP</li>
+              <li><strong>원재료 정보:</strong> MS스펙, 타입, 공급업체, 그레이드, 수축율 (선택)</li>
+              <li><strong>사출 조건:</strong> 사이클타임, 사출온도, 사출압력, 사출속도 (선택)</li>
             </ul>
           </div>
         </div>
@@ -364,7 +465,7 @@ export default function MoldBulkUpload() {
                 {errors.map((error, index) => (
                   <div key={index} className="bg-red-50 border border-red-200 rounded-lg p-3">
                     <p className="font-medium text-red-900 mb-1">
-                      {error.row}번째 행 - {error.data['부품번호'] || '부품번호 없음'}
+                      {error.row}번째 행 - {error.data['품번'] || error.data['부품번호'] || '품번 없음'}
                     </p>
                     <ul className="text-sm text-red-700 list-disc list-inside">
                       {error.errors.map((err, i) => (

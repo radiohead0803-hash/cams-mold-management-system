@@ -141,23 +141,14 @@ export default function Layout() {
           ]
         },
         { 
-          to: '/companies', 
-          icon: Building2, 
-          label: '업체 관리',
-          subMenus: [
-            { to: '/companies', label: '업체 목록' },
-            { to: '/companies?type=maker', label: '제작처 관리' },
-            { to: '/companies?type=plant', label: '생산처 관리' }
-          ]
-        },
-        { 
           to: '/user-requests', 
           icon: Users, 
           label: '사용자 관리',
           subMenus: [
-            { to: '/users/internal', label: '사내 사용자 현황' },
-            { to: '/users/partner', label: '협력사 사용자 현황' },
-            { to: '/user-requests', label: '계정 요청 관리' }
+            { to: '/users/internal', label: '사내 사용자' },
+            { to: '/users/partner', label: '협력사 사용자' },
+            { to: '/user-requests', label: '계정 요청' },
+            { to: '/companies', label: '업체 목록' }
           ]
         },
         { 
@@ -266,23 +257,14 @@ export default function Layout() {
           ]
         },
         { 
-          to: '/companies', 
-          icon: Building2, 
-          label: '업체 관리',
-          subMenus: [
-            { to: '/companies', label: '업체 목록' },
-            { to: '/companies?type=maker', label: '제작처 관리' },
-            { to: '/companies?type=plant', label: '생산처 관리' }
-          ]
-        },
-        { 
           to: '/user-requests', 
           icon: Users, 
           label: '사용자 관리',
           subMenus: [
-            { to: '/users/internal', label: '사내 사용자 현황' },
-            { to: '/users/partner', label: '협력사 사용자 현황' },
-            { to: '/user-requests', label: '계정 요청 관리' }
+            { to: '/users/internal', label: '사내 사용자' },
+            { to: '/users/partner', label: '협력사 사용자' },
+            { to: '/user-requests', label: '계정 요청' },
+            { to: '/companies', label: '업체 목록' }
           ]
         },
         { 
