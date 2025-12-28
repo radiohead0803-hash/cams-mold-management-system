@@ -5,7 +5,8 @@ const PRODUCTION_API_URL = 'https://cams-mold-management-system-production-b7d0.
 // VITE_API_URL이 이미 /api/v1을 포함하면 그대로 사용, 아니면 /api/v1 추가
 const API_URL = import.meta.env.VITE_API_URL || PRODUCTION_API_URL || 'http://localhost:3001/api/v1'
 
-// 백엔드 기본 URL (이미지 등 정적 파일용)
+// 백엔드 기본 URL (이미지 등 정적 파일용) - 항상 프로덕션 백엔드 URL 사용
+const BACKEND_BASE_URL = 'https://cams-mold-management-system-production-b7d0.up.railway.app'
 const API_BASE_URL = API_URL.replace('/api/v1', '')
 
 /**
@@ -28,8 +29,8 @@ export const getImageUrl = (imageUrl) => {
     return imageUrl;
   }
   
-  // 상대 경로면 백엔드 URL 붙임
-  return `${API_BASE_URL}${imageUrl}`;
+  // 상대 경로면 백엔드 URL 붙임 (항상 프로덕션 백엔드 사용)
+  return `${BACKEND_BASE_URL}${imageUrl}`;
 }
 
 const api = axios.create({
