@@ -3,6 +3,7 @@ const logger = require('../utils/logger');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const { uploadImageFromPath, deleteImage, getPublicIdFromUrl } = require('../config/cloudinary');
 
 /**
  * 금형 사양 등록 (금형개발 담당)
@@ -476,7 +477,7 @@ const deleteMoldSpecification = async (req, res) => {
 };
 
 /**
- * 부품 사진 업로드 (단일 이미지)
+ * 부품 사진 업로드 (단일 이미지) - Cloudinary 사용
  */
 const uploadPartImage = async (req, res) => {
   try {
@@ -494,30 +495,72 @@ const uploadPartImage = async (req, res) => {
 
     if (!specification) {
       // 업로드된 파일 삭제
-      fs.unlinkSync(req.file.path);
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(404).json({
         success: false,
         error: { message: '금형 사양을 찾을 수 없습니다' }
       });
     }
 
-    // 기존 이미지가 있으면 파일 삭제
-    if (specification.part_images && specification.part_images.url) {
-      const uploadDir = process.env.UPLOAD_PATH || 'uploads/';
-      const oldFilename = path.basename(specification.part_images.url);
-      const oldFilePath = path.join(uploadDir, oldFilename);
-      
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
+    // 기존 Cloudinary 이미지가 있으면 삭제
+    if (specification.part_images && specification.part_images.public_id) {
+      try {
+        await deleteImage(specification.part_images.public_id);
+      } catch (err) {
+        logger.warn('Failed to delete old Cloudinary image:', err);
       }
     }
 
-    // 새 이미지 정보 생성 (단일 객체)
+    // Cloudinary에 업로드
+    let cloudinaryResult;
+    try {
+      cloudinaryResult = await uploadImageFromPath(req.file.path, {
+        folder: `cams-molds/specifications/${id}`,
+        public_id: `part_${Date.now()}`
+      });
+    } catch (cloudErr) {
+      logger.error('Cloudinary upload error:', cloudErr);
+      // Cloudinary 실패 시 로컬 저장으로 폴백
+      const newImage = {
+        url: `/uploads/${req.file.filename}`,
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        uploaded_at: new Date().toISOString(),
+        uploaded_by: req.user.id
+      };
+
+      await specification.update({
+        part_images: newImage,
+        updated_at: new Date()
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          image: newImage,
+          message: '부품 사진이 업로드되었습니다 (로컬 저장)'
+        }
+      });
+    }
+
+    // 로컬 임시 파일 삭제
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    // 새 이미지 정보 생성 (Cloudinary URL 사용)
     const newImage = {
-      url: `/uploads/${req.file.filename}`,
+      url: cloudinaryResult.secure_url,
+      public_id: cloudinaryResult.public_id,
       filename: req.file.originalname,
       size: req.file.size,
       mimetype: req.file.mimetype,
+      width: cloudinaryResult.width,
+      height: cloudinaryResult.height,
+      format: cloudinaryResult.format,
       uploaded_at: new Date().toISOString(),
       uploaded_by: req.user.id
     };
@@ -527,7 +570,7 @@ const uploadPartImage = async (req, res) => {
       updated_at: new Date()
     });
 
-    logger.info(`Part image uploaded for specification ${id} by user ${req.user.id}`);
+    logger.info(`Part image uploaded to Cloudinary for specification ${id} by user ${req.user.id}`);
 
     res.json({
       success: true,
@@ -539,7 +582,7 @@ const uploadPartImage = async (req, res) => {
   } catch (error) {
     logger.error('Upload part image error:', error);
     // 에러 발생 시 업로드된 파일 삭제
-    if (req.file) {
+    if (req.file && fs.existsSync(req.file.path)) {
       try {
         fs.unlinkSync(req.file.path);
       } catch (err) {
@@ -554,7 +597,7 @@ const uploadPartImage = async (req, res) => {
 };
 
 /**
- * 부품 사진 삭제
+ * 부품 사진 삭제 - Cloudinary 지원
  */
 const deletePartImage = async (req, res) => {
   try {
@@ -576,13 +619,22 @@ const deletePartImage = async (req, res) => {
       });
     }
 
-    // 파일 시스템에서 삭제
-    const uploadDir = process.env.UPLOAD_PATH || 'uploads/';
-    const filename = path.basename(specification.part_images.url);
-    const filePath = path.join(uploadDir, filename);
+    // Cloudinary 이미지인 경우 Cloudinary에서 삭제
+    if (specification.part_images.public_id) {
+      try {
+        await deleteImage(specification.part_images.public_id);
+      } catch (err) {
+        logger.warn('Failed to delete Cloudinary image:', err);
+      }
+    } else {
+      // 로컬 파일인 경우 파일 시스템에서 삭제
+      const uploadDir = process.env.UPLOAD_PATH || 'uploads/';
+      const filename = path.basename(specification.part_images.url);
+      const filePath = path.join(uploadDir, filename);
 
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
 
     // DB에서 제거
