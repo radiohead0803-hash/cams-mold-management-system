@@ -4,6 +4,10 @@ const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/cl
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
+const { uploadImage, deleteImage: deleteCloudinaryImage, getPublicIdFromUrl } = require('../config/cloudinary');
+
+// Cloudinary 환경변수 체크
+const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 
 // S3 환경변수 체크
 const S3_ENABLED = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
@@ -120,9 +124,25 @@ const uploadMoldImage = async (req, res) => {
 
     let imageUrl;
     let imageData = null;
+    let cloudinaryPublicId = null;
 
-    // S3 업로드 시도 (환경변수가 있을 때만)
-    if (S3_ENABLED && s3Client) {
+    // 1. Cloudinary 업로드 시도 (우선순위 1)
+    if (CLOUDINARY_ENABLED) {
+      try {
+        const cloudinaryResult = await uploadImage(file.buffer, {
+          folder: `cams-molds/${image_type}/${mold_spec_id || mold_id}`,
+          public_id: `${fileId}`
+        });
+        imageUrl = cloudinaryResult.secure_url;
+        cloudinaryPublicId = cloudinaryResult.public_id;
+        logger.info('Image uploaded to Cloudinary:', imageUrl);
+      } catch (cloudinaryError) {
+        logger.error('Cloudinary upload error, trying S3:', cloudinaryError.message);
+      }
+    }
+
+    // 2. S3 업로드 시도 (Cloudinary 실패 시, 환경변수가 있을 때만)
+    if (!imageUrl && S3_ENABLED && s3Client) {
       try {
         const uploadParams = {
           Bucket: BUCKET_NAME,
@@ -137,12 +157,11 @@ const uploadMoldImage = async (req, res) => {
         logger.info('Image uploaded to S3:', imageUrl);
       } catch (s3Error) {
         logger.error('S3 upload error, falling back to DB storage:', s3Error.message);
-        // S3 실패 시 DB에 직접 저장
-        imageData = file.buffer;
-        imageUrl = `/api/v1/mold-images/file/${fileId}`;
       }
-    } else {
-      // S3 설정이 없으면 PostgreSQL BYTEA에 직접 저장
+    }
+
+    // 3. PostgreSQL BYTEA에 직접 저장 (모든 외부 스토리지 실패 시)
+    if (!imageUrl) {
       imageData = file.buffer;
       imageUrl = `/api/v1/mold-images/file/${fileId}`;
       logger.info('Image will be stored in PostgreSQL BYTEA');
@@ -524,8 +543,20 @@ const deleteMoldImage = async (req, res) => {
 
     const image = deleteImageRows[0];
 
+    // Cloudinary에서 삭제 시도 (Cloudinary URL인 경우)
+    if (image.image_url && image.image_url.includes('cloudinary.com')) {
+      try {
+        const publicId = getPublicIdFromUrl(image.image_url);
+        if (publicId) {
+          await deleteCloudinaryImage(publicId);
+          logger.info('Image deleted from Cloudinary:', publicId);
+        }
+      } catch (cloudinaryError) {
+        logger.error('Cloudinary delete error:', cloudinaryError);
+      }
+    }
     // S3에서 삭제 시도 (S3 URL인 경우)
-    if (image.image_url && image.image_url.includes('s3.') && process.env.AWS_ACCESS_KEY_ID) {
+    else if (image.image_url && image.image_url.includes('s3.') && process.env.AWS_ACCESS_KEY_ID) {
       try {
         const key = image.image_url.split('.com/')[1];
         await s3Client.send(new DeleteObjectCommand({
