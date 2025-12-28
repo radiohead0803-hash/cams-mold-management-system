@@ -1,4 +1,4 @@
-const { Mold, MoldLocationLog, Plant } = require('../models');
+const { Mold, MoldLocationLog } = require('../models/newIndex');
 const { calculateDistanceM, isValidCoordinate } = require('../utils/geo');
 const { notifyAdmins } = require('../services/notificationService');
 

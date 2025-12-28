@@ -42,7 +42,7 @@ const upload = multer({
 // 사진 업로드
 router.post('/upload', upload.single('photo'), async (req, res) => {
   try {
-    const { InspectionPhoto } = require('../models');
+    const { InspectionPhoto } = require('../models/newIndex');
     const { mold_id, checklist_id, item_status_id, item_id, inspection_type, shot_count, category } = req.body;
     
     if (!req.file) {
@@ -90,7 +90,7 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 // 특정 금형의 점검 사진 조회
 router.get('/mold/:moldId', async (req, res) => {
   try {
-    const { InspectionPhoto } = require('../models');
+    const { InspectionPhoto } = require('../models/newIndex');
     const { moldId } = req.params;
     const { inspection_type, item_id, limit = 50 } = req.query;
 
@@ -124,7 +124,7 @@ router.get('/mold/:moldId', async (req, res) => {
 // 특정 점검 항목의 사진 조회
 router.get('/item/:itemId', async (req, res) => {
   try {
-    const { InspectionPhoto } = require('../models');
+    const { InspectionPhoto } = require('../models/newIndex');
     const { itemId } = req.params;
     const { mold_id } = req.query;
 
@@ -153,7 +153,7 @@ router.get('/item/:itemId', async (req, res) => {
 // 사진 삭제
 router.delete('/:photoId', async (req, res) => {
   try {
-    const { InspectionPhoto } = require('../models');
+    const { InspectionPhoto } = require('../models/newIndex');
     const { photoId } = req.params;
 
     const photo = await InspectionPhoto.findByPk(photoId);
@@ -184,7 +184,7 @@ router.delete('/:photoId', async (req, res) => {
 // 사진 상세 조회
 router.get('/:photoId', async (req, res) => {
   try {
-    const { InspectionPhoto } = require('../models');
+    const { InspectionPhoto } = require('../models/newIndex');
     const { photoId } = req.params;
 
     const photo = await InspectionPhoto.findByPk(photoId);

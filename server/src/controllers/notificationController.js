@@ -1,4 +1,4 @@
-const { Notification, Mold } = require('../models');
+const { Notification, Mold } = require('../models/newIndex');
 
 /**
  * 내 알림 목록 조회

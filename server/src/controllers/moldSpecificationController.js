@@ -270,7 +270,7 @@ const getMoldSpecifications = async (req, res) => {
 const getMoldSpecificationById = async (req, res) => {
   try {
     const { id } = req.params;
-    const { sequelize } = require('../models');
+    const { sequelize } = require('../models/newIndex');
     
     const specification = await MoldSpecification.findByPk(id, {
       include: [

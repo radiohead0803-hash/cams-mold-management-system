@@ -1,4 +1,4 @@
-const { Notification, User } = require('../models');
+const { Notification, User } = require('../models/newIndex');
 
 /**
  * 알림 생성 헬퍼 함수

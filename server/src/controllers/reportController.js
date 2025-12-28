@@ -1,7 +1,7 @@
 const PDFDocument = require('pdfkit');
 const ExcelJS = require('exceljs');
 const logger = require('../utils/logger');
-const { DailyCheckItem, Mold, User } = require('../models');
+const { DailyCheckItem, Mold, User } = require('../models/newIndex');
 
 const generateReport = async (req, res) => {
   try {

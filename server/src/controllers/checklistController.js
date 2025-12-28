@@ -7,7 +7,7 @@ const {
   Mold,
   User,
   Alert
-} = require('../models');
+} = require('../models/newIndex');
 const logger = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
 

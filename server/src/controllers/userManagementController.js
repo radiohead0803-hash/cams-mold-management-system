@@ -1,4 +1,4 @@
-const { sequelize } = require('../models');
+const { sequelize } = require('../models/newIndex');
 const bcrypt = require('bcryptjs');
 const logger = require('../utils/logger');
 

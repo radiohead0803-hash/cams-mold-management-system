@@ -7,7 +7,7 @@
  */
 const express = require('express');
 const router = express.Router();
-const db = require('../models');
+const db = require('../models/newIndex');
 const { Op } = require('sequelize');
 
 // 표준 점검 항목 정의 (8개 카테고리) - 전체 항목 사진 필수

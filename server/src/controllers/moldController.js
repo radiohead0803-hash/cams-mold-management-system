@@ -1,4 +1,4 @@
-const { Mold, DailyCheckItem, InspectionPhoto } = require('../models');
+const { Mold, DailyCheckItem, InspectionPhoto } = require('../models/newIndex');
 const logger = require('../utils/logger');
 
 const getMolds = async (req, res) => {
