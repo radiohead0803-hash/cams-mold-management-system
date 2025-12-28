@@ -7,9 +7,13 @@ const { v4: uuidv4 } = require('uuid');
 const { Inspection, InspectionItem, Mold, User, InspectionPhoto } = require('../models/newIndex');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
+const { uploadImage, deleteImage: deleteCloudinaryImage, getPublicIdFromUrl } = require('../config/cloudinary');
 
-// 사진 업로드 설정
-const storage = multer.diskStorage({
+// Cloudinary 환경변수 체크
+const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+
+// 사진 업로드 설정 - Cloudinary 사용 시 메모리 스토리지
+const storage = CLOUDINARY_ENABLED ? multer.memoryStorage() : multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../../uploads/inspection-photos');
     if (!fs.existsSync(uploadDir)) {

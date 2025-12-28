@@ -6,6 +6,10 @@ const path = require('path');
 const { sequelize } = require('../models/newIndex');
 const logger = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
+const { uploadImage, deleteImage: deleteCloudinaryImage, getPublicIdFromUrl } = require('../config/cloudinary');
+
+// Cloudinary 환경변수 체크
+const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 
 // Multer 설정 (메모리 스토리지)
 const upload = multer({
@@ -61,6 +65,24 @@ router.post('/upload', authenticate, upload.single('file'), async (req, res) => 
     const fileName = `${entity_type}/${entity_id}/${fileId}${fileExtension}`;
     const isImage = file.mimetype.startsWith('image/');
 
+    let fileUrl = `/api/v1/files/${fileId}`;
+    let cloudinaryPublicId = null;
+
+    // 이미지인 경우 Cloudinary 업로드 시도
+    if (isImage && CLOUDINARY_ENABLED) {
+      try {
+        const cloudinaryResult = await uploadImage(file.buffer, {
+          folder: `cams-molds/files/${entity_type}/${entity_id}`,
+          public_id: fileId
+        });
+        fileUrl = cloudinaryResult.secure_url;
+        cloudinaryPublicId = cloudinaryResult.public_id;
+        logger.info('File uploaded to Cloudinary:', fileUrl);
+      } catch (cloudErr) {
+        logger.error('Cloudinary upload error, falling back to DB:', cloudErr.message);
+      }
+    }
+
     // file_attachments 테이블에 저장
     const [rows] = await sequelize.query(`
       INSERT INTO file_attachments (
@@ -74,15 +96,15 @@ router.post('/upload', authenticate, upload.single('file'), async (req, res) => 
         entity_type,
         entity_id: parseInt(entity_id),
         file_name: file.originalname,
-        file_url: `/api/v1/files/${fileId}`,
+        file_url: fileUrl,
         file_type: file.mimetype,
         file_size: file.size,
         uploaded_by: req.user?.id || null
       }
     });
 
-    // 파일 데이터를 별도 테이블에 저장 (BYTEA)
-    if (rows && rows[0]) {
+    // Cloudinary에 업로드되지 않은 경우에만 BYTEA에 저장
+    if (!cloudinaryPublicId && rows && rows[0]) {
       try {
         await sequelize.query(`
           UPDATE file_attachments 
@@ -93,7 +115,7 @@ router.post('/upload', authenticate, upload.single('file'), async (req, res) => 
           type: sequelize.QueryTypes.UPDATE
         });
       } catch (e) {
-        // file_data 컬럼이 없으면 추가
+        // file_data 컨럼이 없으면 추가
         try {
           await sequelize.query(`ALTER TABLE file_attachments ADD COLUMN IF NOT EXISTS file_data BYTEA`);
           await sequelize.query(`
@@ -115,10 +137,11 @@ router.post('/upload', authenticate, upload.single('file'), async (req, res) => 
       data: {
         id: rows[0].id,
         file_name: file.originalname,
-        file_url: `/api/v1/files/${rows[0].id}`,
+        file_url: fileUrl,
         file_type: file.mimetype,
         file_size: file.size,
-        is_image: isImage
+        is_image: isImage,
+        cloudinary_public_id: cloudinaryPublicId
       }
     });
   } catch (error) {

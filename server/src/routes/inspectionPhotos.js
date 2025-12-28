@@ -4,15 +4,19 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const { uploadImage, deleteImage: deleteCloudinaryImage, getPublicIdFromUrl } = require('../config/cloudinary');
 
-// 업로드 디렉토리 설정
+// Cloudinary 환경변수 체크
+const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+
+// 업로드 디렉토리 설정 (Cloudinary 실패 시 폴백용)
 const uploadDir = path.join(__dirname, '../../uploads/inspection-photos');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Multer 설정
-const storage = multer.diskStorage({
+// Multer 설정 - Cloudinary 사용 시 메모리 스토리지, 아니면 디스크 스토리지
+const storage = CLOUDINARY_ENABLED ? multer.memoryStorage() : multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },
@@ -49,9 +53,29 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
       return res.status(400).json({ success: false, message: '파일이 없습니다.' });
     }
 
-    // 파일 URL 생성
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    const fileUrl = `${baseUrl}/uploads/inspection-photos/${req.file.filename}`;
+    let fileUrl;
+    let cloudinaryPublicId = null;
+
+    // Cloudinary 업로드 시도
+    if (CLOUDINARY_ENABLED) {
+      try {
+        const cloudinaryResult = await uploadImage(req.file.buffer, {
+          folder: `cams-molds/inspection-photos/${mold_id || 'general'}`,
+          public_id: `photo_${Date.now()}`
+        });
+        fileUrl = cloudinaryResult.secure_url;
+        cloudinaryPublicId = cloudinaryResult.public_id;
+      } catch (cloudErr) {
+        console.error('Cloudinary upload error:', cloudErr);
+        // 폴백: 로컬 저장
+        const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+        fileUrl = `${baseUrl}/uploads/inspection-photos/${req.file.filename || uuidv4() + '.jpg'}`;
+      }
+    } else {
+      // 파일 URL 생성 (로컬)
+      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+      fileUrl = `${baseUrl}/uploads/inspection-photos/${req.file.filename}`;
+    }
 
     // 메타데이터
     const metadata = {
@@ -161,11 +185,23 @@ router.delete('/:photoId', async (req, res) => {
       return res.status(404).json({ success: false, message: '사진을 찾을 수 없습니다.' });
     }
 
-    // 파일 삭제
-    const filename = photo.file_url.split('/').pop();
-    const filePath = path.join(uploadDir, filename);
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // Cloudinary 이미지인 경우 Cloudinary에서 삭제
+    if (photo.file_url && photo.file_url.includes('cloudinary.com')) {
+      try {
+        const publicId = getPublicIdFromUrl(photo.file_url);
+        if (publicId) {
+          await deleteCloudinaryImage(publicId);
+        }
+      } catch (cloudErr) {
+        console.error('Cloudinary delete error:', cloudErr);
+      }
+    } else {
+      // 로컬 파일 삭제
+      const filename = photo.file_url.split('/').pop();
+      const filePath = path.join(uploadDir, filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
 
     // DB에서 삭제
