@@ -30,10 +30,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   restore: () => {
     try {
-      const token = localStorage.getItem('cams_token');
-      const userRaw = localStorage.getItem('cams_user');
-      if (token && userRaw) {
-        const user = JSON.parse(userRaw) as AuthUser;
+      const stored = localStorage.getItem('cams-auth');
+      if (stored) {
+        const { token, user } = JSON.parse(stored) as { token: string; user: AuthUser };
         set({ token, user });
       }
     } catch {
@@ -52,8 +51,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: AuthUser;
       };
 
-      localStorage.setItem('cams_token', token);
-      localStorage.setItem('cams_user', JSON.stringify(user));
+      localStorage.setItem('cams-auth', JSON.stringify({ token, user }));
 
       set({ token, user, loading: false, error: null });
     } catch (err: any) {
@@ -66,8 +64,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
-    localStorage.removeItem('cams_token');
-    localStorage.removeItem('cams_user');
+    localStorage.removeItem('cams-auth');
     set({ token: null, user: null, error: null });
   },
 }));

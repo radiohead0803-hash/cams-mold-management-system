@@ -62,6 +62,13 @@ const InspectionInstanceItem = require('./InspectionInstanceItem');
 const MoldNurturingProblem = require('./MoldNurturingProblem');
 const MoldNurturingProblemHistory = require('./MoldNurturingProblemHistory');
 const MoldNurturingProblemComment = require('./MoldNurturingProblemComment');
+const Approval = require('./Approval');
+const MoldEvent = require('./MoldEvent');
+const MoldLocationLog = require('./MoldLocationLog');
+const RawMaterial = require('./RawMaterial');
+const RepairShipmentChecklist = require('./RepairShipmentChecklist');
+const RepairShipmentChecklistItem = require('./RepairShipmentChecklistItem');
+const SystemRule = require('./SystemRule');
 
 // Helper function to initialize models
 const initModel = (ModelClass, sequelize) => {
@@ -129,7 +136,14 @@ const models = {
   InspectionInstanceItem: initModel(InspectionInstanceItem, sequelize),
   MoldNurturingProblem: initModel(MoldNurturingProblem, sequelize),
   MoldNurturingProblemHistory: initModel(MoldNurturingProblemHistory, sequelize),
-  MoldNurturingProblemComment: initModel(MoldNurturingProblemComment, sequelize)
+  MoldNurturingProblemComment: initModel(MoldNurturingProblemComment, sequelize),
+  Approval: initModel(Approval, sequelize),
+  MoldEvent: initModel(MoldEvent, sequelize),
+  MoldLocationLog: initModel(MoldLocationLog, sequelize),
+  RawMaterial: initModel(RawMaterial, sequelize),
+  RepairShipmentChecklist: initModel(RepairShipmentChecklist, sequelize),
+  RepairShipmentChecklistItem: initModel(RepairShipmentChecklistItem, sequelize),
+  SystemRule: initModel(SystemRule, sequelize)
 };
 
 // Setup associations

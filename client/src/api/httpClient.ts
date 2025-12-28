@@ -13,10 +13,17 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('cams_token');
-  if (token) {
-    config.headers = config.headers || {};
-    config.headers.Authorization = `Bearer ${token}`;
+  const stored = localStorage.getItem('cams-auth');
+  if (stored) {
+    try {
+      const { token } = JSON.parse(stored);
+      if (token) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch {
+      // ignore
+    }
   }
   return config;
 });
