@@ -1,5 +1,9 @@
 const { RepairRequest, Mold, User, Notification, sequelize } = require('../models/newIndex');
 const logger = require('../utils/logger');
+const { uploadImage } = require('../config/cloudinary');
+
+// Cloudinary 환경변수 체크
+const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 
 /**
  * Phase 3-1: 수리요청 생성
@@ -230,14 +234,29 @@ const createRepairRequest = async (req, res) => {
       liability_decided_date: liability_decided_date || null
     }, { transaction });
 
-    // 6. 사진 첨부 파일 저장
+    // 6. 사진 첨부 파일 저장 - Cloudinary 지원
     if (files && files.length > 0) {
       const RepairRequestFile = require('../models/newIndex').RepairRequestFile;
       
       for (const file of files) {
+        let filePath = file.path;
+        
+        // 이미지인 경우 Cloudinary 업로드 시도
+        if (CLOUDINARY_ENABLED && file.buffer && file.mimetype?.startsWith('image/')) {
+          try {
+            const cloudinaryResult = await uploadImage(file.buffer, {
+              folder: `cams-molds/repairs/${repairRequest.id}`,
+              public_id: `photo_${Date.now()}`
+            });
+            filePath = cloudinaryResult.secure_url;
+          } catch (cloudErr) {
+            logger.warn('Cloudinary upload error for repair photo:', cloudErr.message);
+          }
+        }
+        
         await RepairRequestFile.create({
           repair_request_id: repairRequest.id,
-          file_path: file.path,
+          file_path: filePath,
           file_name: file.originalname,
           file_type: 'photo',
           file_size: file.size

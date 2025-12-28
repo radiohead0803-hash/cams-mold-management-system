@@ -6,14 +6,17 @@ const fs = require('fs');
 const { authenticate } = require('../middleware/auth');
 const productionTransferController = require('../controllers/productionTransferController');
 
-// 업로드 디렉토리 설정
+// Cloudinary 환경변수 체크
+const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
+
+// 업로드 디렉토리 설정 (Cloudinary 실패 시 폴백용)
 const uploadDir = path.join(__dirname, '../../uploads/production-transfer');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Multer 설정
-const storage = multer.diskStorage({
+// Multer 설정 - Cloudinary 사용 시 메모리 스토리지
+const storage = CLOUDINARY_ENABLED ? multer.memoryStorage() : multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
   },

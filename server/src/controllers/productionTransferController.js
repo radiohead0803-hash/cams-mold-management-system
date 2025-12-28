@@ -2,6 +2,10 @@ const { sequelize } = require('../config/database');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs').promises;
+const { uploadImage, deleteImage: deleteCloudinaryImage, getPublicIdFromUrl } = require('../config/cloudinary');
+
+// Cloudinary 환경변수 체크
+const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 
 /**
  * 양산이관 체크리스트 마스터 항목 조회
@@ -384,7 +388,7 @@ const rejectTransferRequest = async (req, res) => {
 };
 
 /**
- * 첨부파일 업로드
+ * 첨부파일 업로드 - Cloudinary 지원
  */
 const uploadAttachment = async (req, res) => {
   try {
@@ -399,7 +403,24 @@ const uploadAttachment = async (req, res) => {
     }
 
     const file = req.file;
-    const fileUrl = `/uploads/production-transfer/${file.filename}`;
+    let fileUrl = `/uploads/production-transfer/${file.filename || Date.now()}`;
+    let cloudinaryPublicId = null;
+
+    // 이미지인 경우 Cloudinary 업로드 시도
+    const isImage = file.mimetype && file.mimetype.startsWith('image/');
+    if (isImage && CLOUDINARY_ENABLED && file.buffer) {
+      try {
+        const cloudinaryResult = await uploadImage(file.buffer, {
+          folder: `cams-molds/production-transfer/${mold_id || 'general'}`,
+          public_id: `attachment_${Date.now()}`
+        });
+        fileUrl = cloudinaryResult.secure_url;
+        cloudinaryPublicId = cloudinaryResult.public_id;
+        logger.info('Attachment uploaded to Cloudinary:', fileUrl);
+      } catch (cloudErr) {
+        logger.error('Cloudinary upload error:', cloudErr.message);
+      }
+    }
 
     const [result] = await sequelize.query(`
       INSERT INTO production_transfer_attachments (
@@ -417,7 +438,7 @@ const uploadAttachment = async (req, res) => {
         file_name: file.originalname,
         file_type: file.mimetype,
         file_size: file.size,
-        file_path: file.path,
+        file_path: cloudinaryPublicId || (file.path || null),
         file_url: fileUrl,
         upload_type,
         uploaded_by: userId
@@ -428,7 +449,7 @@ const uploadAttachment = async (req, res) => {
       success: true,
       data: {
         ...result[0],
-        file_url: `${process.env.API_URL || ''}${fileUrl}`
+        file_url: fileUrl
       },
       message: '파일이 업로드되었습니다.'
     });
@@ -442,7 +463,7 @@ const uploadAttachment = async (req, res) => {
 };
 
 /**
- * 첨부파일 삭제
+ * 첨부파일 삭제 - Cloudinary 지원
  */
 const deleteAttachment = async (req, res) => {
   try {
@@ -462,8 +483,19 @@ const deleteAttachment = async (req, res) => {
 
     const file = files[0];
 
-    // 파일 삭제
-    if (file.file_path) {
+    // Cloudinary 이미지인 경우 Cloudinary에서 삭제
+    if (file.file_url && file.file_url.includes('cloudinary.com')) {
+      try {
+        const publicId = getPublicIdFromUrl(file.file_url);
+        if (publicId) {
+          await deleteCloudinaryImage(publicId);
+          logger.info('Attachment deleted from Cloudinary:', publicId);
+        }
+      } catch (cloudErr) {
+        logger.warn('Cloudinary delete error:', cloudErr);
+      }
+    } else if (file.file_path) {
+      // 로컬 파일 삭제
       try {
         await fs.unlink(file.file_path);
       } catch (err) {
