@@ -87,22 +87,48 @@ export default function MoldHistory() {
   const moldId = id || searchParams.get('moldId');
   
   const [mold, setMold] = useState(null);
+  const [molds, setMolds] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
+  const [selectedMoldId, setSelectedMoldId] = useState(moldId);
 
   useEffect(() => {
     if (moldId) {
-      loadData();
+      setSelectedMoldId(moldId);
+      loadData(moldId);
+    } else {
+      loadMoldList();
     }
   }, [moldId]);
 
-  const loadData = async () => {
+  const loadMoldList = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/mold-specifications', { params: { limit: 100 } });
+      const items = response.data?.data?.items || [];
+      setMolds(items);
+    } catch (error) {
+      console.error('Failed to load molds:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMoldSelect = (id) => {
+    setSelectedMoldId(id);
+    loadData(id);
+  };
+
+  const loadData = async (targetMoldId) => {
+    const loadId = targetMoldId || selectedMoldId;
+    if (!loadId) return;
+    
     try {
       setLoading(true);
       
       // 금형 정보 로드
-      const moldRes = await api.get(`/mold-specifications/${moldId}`).catch(() => null);
+      const moldRes = await api.get(`/mold-specifications/${loadId}`).catch(() => null);
       if (moldRes?.data?.data) {
         setMold(moldRes.data.data);
       }
@@ -200,13 +226,89 @@ export default function MoldHistory() {
     );
   }
 
+  // 금형 선택 화면 (moldId가 없을 때)
+  if (!selectedMoldId && molds.length > 0) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <ArrowLeft size={20} className="text-gray-600" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <History className="text-blue-600" size={24} />
+              금형 이력 조회
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">이력을 조회할 금형을 선택하세요</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">금형코드</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">품번</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">품명</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">차종</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">액션</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {molds.map(m => (
+                <tr key={m.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {m.mold?.mold_code || `M-${m.id}`}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{m.part_number || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{m.part_name || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{m.car_model || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      m.status === 'production' ? 'bg-green-100 text-green-700' :
+                      m.status === 'development' ? 'bg-blue-100 text-blue-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {m.status === 'production' ? '양산' : m.status === 'development' ? '개발' : m.status || '-'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => handleMoldSelect(m.id)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      이력 보기
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (moldId) {
+                navigate(-1);
+              } else {
+                setSelectedMoldId(null);
+                setMold(null);
+                setHistory([]);
+                loadMoldList();
+              }
+            }}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <ArrowLeft size={20} className="text-gray-600" />
@@ -226,7 +328,7 @@ export default function MoldHistory() {
         
         <div className="flex items-center gap-2">
           <button
-            onClick={loadData}
+            onClick={() => loadData(selectedMoldId)}
             className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
           >
             <RefreshCw size={16} />
