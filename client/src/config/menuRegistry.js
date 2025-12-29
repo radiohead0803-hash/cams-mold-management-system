@@ -195,6 +195,18 @@ export const MOLD_DEVELOPER_MENU = [
     ]
   },
   {
+    key: 'risk-monitor',
+    label: '운영 모니터링',
+    path: '/dashboard/system-admin/risk-monitor',
+    icon: AlertTriangle,
+    allowedRoles: [USER_ROLES.MOLD_DEVELOPER],
+    subMenus: [
+      { key: 'risk-overview', label: '리스크 현황', path: '/dashboard/system-admin/risk-monitor' },
+      { key: 'gps-tracking', label: 'GPS 추적', path: '/mold-location-map' },
+      { key: 'activity-log', label: '감사 로그', path: '/dashboard/system-admin/audit-logs' }
+    ]
+  },
+  {
     key: 'workflow',
     label: '통합관리',
     path: '/workflow',
