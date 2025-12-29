@@ -360,9 +360,11 @@ export default function MobileMoldDetailNew() {
               <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
                 {roleConfig.label}
               </span>
-              <button onClick={() => setShowMenu(true)} className="p-1">
-                <Menu size={22} />
-              </button>
+              {role === 'system_admin' && (
+                <button onClick={() => setShowMenu(true)} className="p-1">
+                  <Menu size={22} />
+                </button>
+              )}
             </div>
           </div>
         </div>
