@@ -15,6 +15,7 @@ export default function MobileMoldSpecification() {
   const [moldInfo, setMoldInfo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [expandedSection, setExpandedSection] = useState('basic');
+  const [error, setError] = useState(null);
   
   const [specData, setSpecData] = useState({
     // 기본정보
@@ -80,6 +81,7 @@ export default function MobileMoldSpecification() {
       }
     } catch (error) {
       console.error('Failed to load mold data:', error);
+      setError('금형 데이터를 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -107,6 +109,24 @@ export default function MobileMoldSpecification() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+
+  if (error || !moldInfo) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">데이터를 불러올 수 없습니다</h2>
+          <p className="text-gray-600 mb-4">{error || '금형 정보가 존재하지 않습니다.'}</p>
+          <button 
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg"
+          >
+            뒤로 가기
+          </button>
+        </div>
       </div>
     );
   }
