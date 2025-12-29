@@ -4,8 +4,12 @@ import {
   QrCode, ArrowLeft, Search, Download, Printer, 
   Package, RefreshCw, CheckCircle, Filter, Eye
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import api from '../lib/api';
+
+// QR 코드 이미지 URL 생성 (외부 API 사용)
+const getQRImageUrl = (value, size = 150) => {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}`;
+};
 
 // QR 코드 생성 함수
 const generateQRCode = (moldCode) => {
@@ -21,11 +25,10 @@ const QRCodeCard = ({ mold, onPrint, onView }) => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start gap-4">
         <div className="bg-white p-2 border border-gray-200 rounded-lg">
-          <QRCodeSVG 
-            value={qrValue} 
-            size={80} 
-            level="M"
-            includeMargin={false}
+          <img 
+            src={getQRImageUrl(qrValue, 80)} 
+            alt={`QR Code for ${mold.mold_code}`}
+            className="w-20 h-20"
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -107,11 +110,10 @@ const PrintModal = ({ mold, onClose }) => {
         
         <div ref={printRef} className="qr-container bg-gray-50 p-6 rounded-xl">
           <div className="qr-code flex justify-center">
-            <QRCodeSVG 
-              value={qrValue} 
-              size={200} 
-              level="H"
-              includeMargin={true}
+            <img 
+              src={getQRImageUrl(qrValue, 200)} 
+              alt={`QR Code for ${mold.mold_code}`}
+              className="w-48 h-48"
             />
           </div>
           <div className="mold-info mt-4">
