@@ -12,7 +12,7 @@ const getMoldStatistics = async (req, res) => {
 
     // 전체 금형 수 (mold_specifications 기준)
     const [totalResult] = await sequelize.query(`
-      SELECT COUNT(*) as total FROM mold_specifications WHERE is_deleted = false
+      SELECT COUNT(*) as total FROM mold_specifications
     `);
 
     // 상태별 금형 수
@@ -21,7 +21,6 @@ const getMoldStatistics = async (req, res) => {
         COALESCE(status, 'draft') as status,
         COUNT(*) as count
       FROM mold_specifications 
-      WHERE is_deleted = false
       GROUP BY status
     `);
 
@@ -31,7 +30,6 @@ const getMoldStatistics = async (req, res) => {
         COALESCE(development_stage, '미지정') as stage,
         COUNT(*) as count
       FROM mold_specifications
-      WHERE is_deleted = false
       GROUP BY development_stage
       ORDER BY count DESC
     `);
@@ -42,7 +40,6 @@ const getMoldStatistics = async (req, res) => {
         COALESCE(car_model, '미지정') as name,
         COUNT(*) as count
       FROM mold_specifications
-      WHERE is_deleted = false
       GROUP BY car_model
       ORDER BY count DESC
       LIMIT 10
@@ -55,7 +52,6 @@ const getMoldStatistics = async (req, res) => {
         COUNT(*) as count
       FROM mold_specifications ms
       LEFT JOIN companies c ON ms.target_maker_id = c.id
-      WHERE ms.is_deleted = false
       GROUP BY c.name
       ORDER BY count DESC
       LIMIT 10
@@ -68,7 +64,6 @@ const getMoldStatistics = async (req, res) => {
         COUNT(*) as count
       FROM mold_specifications ms
       LEFT JOIN companies c ON ms.target_plant_id = c.id
-      WHERE ms.is_deleted = false
       GROUP BY c.name
       ORDER BY count DESC
       LIMIT 10
@@ -80,8 +75,7 @@ const getMoldStatistics = async (req, res) => {
         EXTRACT(MONTH FROM created_at) as month,
         COUNT(*) as count
       FROM mold_specifications
-      WHERE is_deleted = false
-        AND EXTRACT(YEAR FROM created_at) = :year
+      WHERE EXTRACT(YEAR FROM created_at) = :year
       GROUP BY EXTRACT(MONTH FROM created_at)
       ORDER BY month
     `, { replacements: { year: currentYear } });
@@ -197,12 +191,12 @@ const getRepairStatistics = async (req, res) => {
     const { year } = req.query;
     const currentYear = year || new Date().getFullYear();
 
-    // 상태별 수리 현황
+    // 상태별 수리 현황 (repair_requests 테이블 사용)
     const [statusResult] = await sequelize.query(`
       SELECT 
         status,
         COUNT(*) as count
-      FROM repairs
+      FROM repair_requests
       WHERE EXTRACT(YEAR FROM created_at) = :year
       GROUP BY status
     `, { replacements: { year: currentYear } });
@@ -213,7 +207,7 @@ const getRepairStatistics = async (req, res) => {
         EXTRACT(MONTH FROM created_at) as month,
         COUNT(*) as count,
         SUM(COALESCE(repair_cost, 0)) as total_cost
-      FROM repairs
+      FROM repair_requests
       WHERE EXTRACT(YEAR FROM created_at) = :year
       GROUP BY EXTRACT(MONTH FROM created_at)
       ORDER BY month
@@ -222,12 +216,12 @@ const getRepairStatistics = async (req, res) => {
     // 귀책별 현황
     const [liabilityResult] = await sequelize.query(`
       SELECT 
-        COALESCE(liability_party, '미결정') as party,
+        COALESCE(liability_result, '미결정') as party,
         COUNT(*) as count
-      FROM repairs
+      FROM repair_requests
       WHERE EXTRACT(YEAR FROM created_at) = :year
-        AND liability_party IS NOT NULL
-      GROUP BY liability_party
+        AND liability_result IS NOT NULL
+      GROUP BY liability_result
     `, { replacements: { year: currentYear } });
 
     res.json({
@@ -314,14 +308,13 @@ const getChecklistStatistics = async (req, res) => {
  */
 const getDashboardStatistics = async (req, res) => {
   try {
-    // 금형 현황
+    // 금형 현황 (mold_specifications 테이블 사용)
     const [moldResult] = await sequelize.query(`
       SELECT 
         COUNT(*) as total,
-        COUNT(*) FILTER (WHERE status IN ('active', '양산')) as active,
-        COUNT(*) FILTER (WHERE status IN ('development', '개발')) as development
-      FROM molds
-      WHERE deleted_at IS NULL
+        COUNT(*) FILTER (WHERE status = 'production') as active,
+        COUNT(*) FILTER (WHERE status = 'development') as development
+      FROM mold_specifications
     `);
 
     // 오늘 점검
@@ -331,11 +324,11 @@ const getDashboardStatistics = async (req, res) => {
       WHERE check_date = CURRENT_DATE
     `);
 
-    // 진행 중 수리
+    // 진행 중 수리 (repair_requests 테이블 사용)
     const [repairResult] = await sequelize.query(`
       SELECT COUNT(*) as count
-      FROM repairs
-      WHERE status IN ('requested', 'in_progress', 'pending')
+      FROM repair_requests
+      WHERE status IN ('requested', 'in_progress', 'pending', 'assigned')
     `);
 
     // 읽지 않은 알림
