@@ -11,6 +11,32 @@ import { moldSpecificationAPI, moldAPI, moldImageAPI, getImageUrl } from '../lib
 import { useAuthStore } from '../stores/authStore';
 import NaverMoldLocationMap from '../components/NaverMoldLocationMap';
 
+// part_images에서 URL 추출 헬퍼 함수
+const getPartImageUrl = (partImages) => {
+  if (!partImages) return null;
+  
+  // 이미 객체인 경우
+  if (typeof partImages === 'object' && partImages.url) {
+    return partImages.url;
+  }
+  
+  // 문자열인 경우 JSON 파싱 시도
+  if (typeof partImages === 'string') {
+    try {
+      const parsed = JSON.parse(partImages);
+      return parsed?.url || null;
+    } catch (e) {
+      // JSON이 아닌 경우 URL 자체일 수 있음
+      if (partImages.startsWith('http') || partImages.startsWith('/')) {
+        return partImages;
+      }
+      return null;
+    }
+  }
+  
+  return null;
+};
+
 export default function MoldDetailNew() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -664,9 +690,9 @@ export default function MoldDetailNew() {
                 <span className="text-xs text-gray-400">Ctrl+V 또는 드래그</span>
               </div>
               <div className="aspect-square bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center relative cursor-pointer hover:bg-blue-100/50 transition-colors">
-                {moldImages.product || mold.part_images?.url || mold.product_image_url ? (
+                {moldImages.product || getPartImageUrl(mold.part_images) || mold.product_image_url ? (
                   <img 
-                    src={getImageUrl(moldImages.product || mold.part_images?.url || mold.product_image_url)} 
+                    src={getImageUrl(moldImages.product || getPartImageUrl(mold.part_images) || mold.product_image_url)} 
                     alt="제품" 
                     className="w-full h-full object-contain p-2" 
                   />
