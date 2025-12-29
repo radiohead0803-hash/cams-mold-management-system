@@ -705,7 +705,7 @@ export default function MoldLifecycle() {
                                 </div>
                                 
                                 <div className="mt-3 flex justify-end">
-                                  <button onClick={() => navigate(`/mold-development-plan?moldId=${mold.id}`)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                                  <button onClick={() => navigate(`/mold-development/plan?moldId=${mold.id}`)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
                                     <Eye size={12} /> 개발계획 상세보기
                                   </button>
                                 </div>
