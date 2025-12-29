@@ -398,6 +398,30 @@ export const checklistMasterAPI = {
   getCycles: () => api.get('/checklist-masters/cycles'),
 }
 
+// Development Plan API (금형개발계획 관리)
+export const developmentPlanAPI = {
+  // 개발계획 목록 조회
+  getAll: (params) => api.get('/development/plans', { params }),
+  // 개발계획 상세 조회
+  getById: (planId) => api.get(`/development/plans/${planId}`),
+  // 금형별 개발계획 조회
+  getByMoldSpec: (moldSpecId) => api.get(`/development/mold-spec/${moldSpecId}`),
+  // 개발계획 생성
+  create: (data) => api.post('/development/plans', data),
+  // 공정 단계 업데이트
+  updateStep: (stepId, data) => api.patch(`/development/steps/${stepId}`, data),
+  // 추진계획 항목 추가
+  addStep: (planId, data) => api.post(`/development/plans/${planId}/steps`, data),
+  // 추진계획 항목 삭제
+  deleteStep: (planId, stepId) => api.delete(`/development/plans/${planId}/steps/${stepId}`),
+  // 추진계획 항목 순서 변경
+  reorderSteps: (planId, data) => api.put(`/development/plans/${planId}/steps/reorder`, data),
+  // 기본 단계 마스터 목록 조회
+  getDefaultSteps: () => api.get('/development/default-steps'),
+  // 진행률 통계
+  getProgressStatistics: () => api.get('/development/statistics/progress'),
+}
+
 // Inspection New API (통합 점검 시스템)
 export const inspectionNewAPI = {
   // 점검 수행

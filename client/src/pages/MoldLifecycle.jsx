@@ -3,24 +3,33 @@ import { useNavigate } from 'react-router-dom';
 import { 
   CheckCircle, Clock, AlertCircle, Filter, Search, ArrowLeft, 
   TrendingUp, BarChart3, PieChart, Calendar, Target, Zap,
-  ChevronDown, ChevronRight, Car, Package, Factory
+  ChevronDown, ChevronRight, Car, Package, Factory, RefreshCw, Eye
 } from 'lucide-react';
-import { moldSpecificationAPI } from '../lib/api';
+import { moldSpecificationAPI, developmentPlanAPI } from '../lib/api';
 
-// 12단계 개발 공정
+// 14단계 개발 공정 (개발 12단계 + 금형육성 + 양산이관)
 const DEVELOPMENT_STAGES = [
-  { id: 'drawing_receipt', name: '도면접수', order: 1 },
-  { id: 'mold_base_order', name: '몰드베이스 발주', order: 2 },
-  { id: 'mold_design', name: '금형설계', order: 3 },
-  { id: 'drawing_review', name: '도면검토회', order: 4 },
-  { id: 'upper_machining', name: '상형가공', order: 5 },
-  { id: 'lower_machining', name: '하형가공', order: 6 },
-  { id: 'core_machining', name: '코어가공', order: 7 },
-  { id: 'electrode_machining', name: '전극가공', order: 8 },
-  { id: 'surface_finish', name: '격면사상', order: 9 },
-  { id: 'mold_assembly', name: '금형조립', order: 10 },
-  { id: 'tryout', name: '습합', order: 11 },
-  { id: 'initial_to', name: '초도 T/O', order: 12 }
+  { id: 'drawing_receipt', name: '도면접수', order: 1, category: 'development' },
+  { id: 'mold_base_order', name: '몰드베이스 발주', order: 2, category: 'development' },
+  { id: 'mold_design', name: '금형설계', order: 3, category: 'development' },
+  { id: 'drawing_review', name: '도면검토회', order: 4, category: 'development' },
+  { id: 'upper_machining', name: '상형가공', order: 5, category: 'development' },
+  { id: 'lower_machining', name: '하형가공', order: 6, category: 'development' },
+  { id: 'core_machining', name: '코어가공', order: 7, category: 'development' },
+  { id: 'discharge', name: '방전', order: 8, category: 'development' },
+  { id: 'surface_finish', name: '격면사상', order: 9, category: 'development' },
+  { id: 'mold_assembly', name: '금형조립', order: 10, category: 'development' },
+  { id: 'tryout', name: '습합', order: 11, category: 'development' },
+  { id: 'initial_to', name: '초도 T/O', order: 12, category: 'development' },
+  { id: 'mold_nurturing', name: '초도T/O 이후 금형육성', order: 13, category: 'nurturing' },
+  { id: 'mass_production_transfer', name: '양산이관', order: 14, category: 'transfer' }
+];
+
+// 카테고리 정의
+const CATEGORIES = [
+  { code: 'development', name: '개발', color: 'blue' },
+  { code: 'nurturing', name: '금형육성', color: 'green' },
+  { code: 'transfer', name: '양산이관', color: 'purple' }
 ];
 
 // 상태별 색상
@@ -34,38 +43,86 @@ const STATUS_COLORS = {
 export default function MoldLifecycle() {
   const navigate = useNavigate();
   const [molds, setMolds] = useState([]);
+  const [developmentPlans, setDevelopmentPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedCarModel, setSelectedCarModel] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCarModel, setExpandedCarModel] = useState(null);
+  const [expandedMold, setExpandedMold] = useState(null);
   const [viewMode, setViewMode] = useState('card'); // 'card' | 'table' | 'gantt'
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
     loadMolds();
   }, []);
 
-  const loadMolds = async () => {
+  const loadMolds = async (isRefresh = false) => {
     try {
-      setLoading(true);
-      const response = await moldSpecificationAPI.getAll({ limit: 100 });
-      const specifications = response.data.data.items || [];
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       
-      // DB 데이터를 개발진행현황 형식으로 변환
+      // 금형사양 및 개발계획 데이터 병렬 로드
+      const [specResponse, plansResponse] = await Promise.all([
+        moldSpecificationAPI.getAll({ limit: 100 }),
+        developmentPlanAPI.getAll({ limit: 100 }).catch(() => ({ data: { data: { plans: [] } } }))
+      ]);
+      
+      const specifications = specResponse.data.data.items || [];
+      const plans = plansResponse.data?.data?.plans || [];
+      setDevelopmentPlans(plans);
+      
+      // 개발계획 데이터를 mold_specification_id로 매핑
+      const plansBySpecId = {};
+      plans.forEach(plan => {
+        if (plan.mold_specification_id) {
+          plansBySpecId[plan.mold_specification_id] = plan;
+        }
+      });
+      
+      // DB 데이터를 개발진행현황 형식으로 변환 (개발계획 연동)
       const transformedMolds = specifications.map(spec => {
-        // 상태에 따른 진행률 계산
-        const statusProgress = {
-          'draft': 5,
-          'planning': 15,
-          'design': 25,
-          'manufacturing': 50,
-          'trial': 75,
-          'production': 100,
-          'maintenance': 100,
-          'retired': 100
-        };
+        const plan = plansBySpecId[spec.id];
+        const processSteps = plan?.processSteps || [];
         
-        const progress = statusProgress[spec.status] || 0;
-        const isDelayed = spec.status === 'manufacturing' && progress < 60;
+        // 개발계획이 있으면 실제 진행률 계산
+        let progress = 0;
+        let completedSteps = 0;
+        let inProgressSteps = 0;
+        let delayedSteps = 0;
+        let pendingSteps = 0;
+        
+        if (processSteps.length > 0) {
+          processSteps.forEach(step => {
+            if (step.status === 'completed') completedSteps++;
+            else if (step.status === 'in_progress') inProgressSteps++;
+            else if (step.status === 'delayed') delayedSteps++;
+            else pendingSteps++;
+          });
+          progress = Math.round((completedSteps / processSteps.length) * 100);
+        } else {
+          // 개발계획이 없으면 상태 기반 진행률
+          const statusProgress = {
+            'draft': 5,
+            'planning': 15,
+            'design': 25,
+            'manufacturing': 50,
+            'trial': 75,
+            'production': 100,
+            'maintenance': 100,
+            'retired': 100
+          };
+          progress = statusProgress[spec.status] || 0;
+        }
+        
+        const isDelayed = delayedSteps > 0 || (spec.status === 'manufacturing' && progress < 60);
+        
+        // 현재 진행 단계 찾기
+        const currentStep = processSteps.find(s => s.status === 'in_progress') || 
+                           processSteps.find(s => s.status === 'pending');
         
         return {
           id: spec.id,
@@ -82,19 +139,39 @@ export default function MoldLifecycle() {
           material: spec.material,
           overall_progress: progress,
           is_delayed: isDelayed,
-          delay_days: isDelayed ? Math.floor(Math.random() * 10) + 1 : 0,
+          delay_days: delayedSteps > 0 ? delayedSteps : 0,
           created_at: spec.created_at,
-          updated_at: spec.updated_at
+          updated_at: spec.updated_at,
+          // 개발계획 연동 데이터
+          development_plan: plan,
+          process_steps: processSteps,
+          completed_steps: completedSteps,
+          in_progress_steps: inProgressSteps,
+          delayed_steps: delayedSteps,
+          pending_steps: pendingSteps,
+          total_steps: processSteps.length,
+          current_step: currentStep?.step_name || null,
+          current_step_number: currentStep?.step_number || 0
         };
       });
       
       setMolds(transformedMolds);
+      setLastUpdated(new Date());
     } catch (error) {
       console.error('Failed to load molds:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  // 자동 새로고침 (30초마다)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadMolds(true);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // 차종별 그룹화 및 통계
   const carModelStats = useMemo(() => {
@@ -273,6 +350,21 @@ export default function MoldLifecycle() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* 마지막 업데이트 시간 */}
+              {lastUpdated && (
+                <div className="text-xs text-gray-500 hidden md:block">
+                  마지막 업데이트: {lastUpdated.toLocaleTimeString('ko-KR')}
+                </div>
+              )}
+              {/* 새로고침 버튼 */}
+              <button
+                onClick={() => loadMolds(true)}
+                disabled={refreshing}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                title="새로고침"
+              >
+                <RefreshCw size={18} className={`text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
               {/* 뷰 모드 전환 */}
               <div className="flex bg-gray-100 rounded-lg p-1">
                 <button
@@ -476,7 +568,6 @@ export default function MoldLifecycle() {
               .filter(([model]) => selectedCarModel === 'all' || model === selectedCarModel)
               .map(([carModel, stat]) => (
               <div key={carModel} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                {/* 차종 헤더 */}
                 <button
                   onClick={() => setExpandedCarModel(expandedCarModel === carModel ? null : carModel)}
                   className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -491,7 +582,6 @@ export default function MoldLifecycle() {
                     </div>
                   </div>
                   <div className="flex items-center gap-6">
-                    {/* 미니 진행률 바 */}
                     <div className="hidden md:block w-48">
                       <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                         <span>진도율</span>
@@ -504,28 +594,17 @@ export default function MoldLifecycle() {
                         />
                       </div>
                     </div>
-                    {/* 상태 뱃지 */}
                     <div className="flex gap-2">
-                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium">
-                        완료 {stat.completed}
-                      </span>
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">
-                        진행 {stat.inProgress}
-                      </span>
+                      <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-medium">완료 {stat.completed}</span>
+                      <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs font-medium">진행 {stat.inProgress}</span>
                       {stat.delayed > 0 && (
-                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-medium">
-                          지연 {stat.delayed}
-                        </span>
+                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs font-medium">지연 {stat.delayed}</span>
                       )}
                     </div>
-                    <ChevronDown 
-                      className={`text-gray-400 transition-transform ${expandedCarModel === carModel ? 'rotate-180' : ''}`} 
-                      size={20} 
-                    />
+                    <ChevronDown className={`text-gray-400 transition-transform ${expandedCarModel === carModel ? 'rotate-180' : ''}`} size={20} />
                   </div>
                 </button>
 
-                {/* 금형 목록 */}
                 {expandedCarModel === carModel && (
                   <div className="border-t border-gray-100">
                     <div className="divide-y divide-gray-50">
@@ -536,47 +615,103 @@ export default function MoldLifecycle() {
                           mold.part_number?.toLowerCase().includes(searchTerm.toLowerCase())
                         )
                         .map(mold => (
-                        <div key={mold.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center">
-                                <Package className="text-blue-600" size={20} />
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <h4 className="font-semibold text-gray-900">{mold.mold_code}</h4>
-                                  {getStatusBadge(mold.status)}
-                                  {mold.is_delayed && (
-                                    <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">
-                                      {mold.delay_days}일 지연
-                                    </span>
-                                  )}
+                        <div key={mold.id} className="border-b border-gray-50 last:border-b-0">
+                          <div 
+                            className="px-6 py-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                            onClick={() => setExpandedMold(expandedMold === mold.id ? null : mold.id)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center">
+                                  <Package className="text-blue-600" size={20} />
                                 </div>
-                                <p className="text-sm text-gray-500">{mold.part_name} ({mold.part_number})</p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                  {mold.mold_type} | {mold.cavity_count}CAV | {mold.tonnage}T | {mold.maker_name}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              {/* 진행률 */}
-                              <div className="text-right">
-                                <p className="text-2xl font-bold text-gray-900">{mold.overall_progress}%</p>
-                                <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden mt-1">
-                                  <div 
-                                    className={`h-full ${getProgressColor(mold.overall_progress)} rounded-full transition-all duration-500`}
-                                    style={{ width: `${mold.overall_progress}%` }}
-                                  />
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="font-semibold text-gray-900">{mold.mold_code}</h4>
+                                    {getStatusBadge(mold.status)}
+                                    {mold.is_delayed && <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">{mold.delayed_steps}단계 지연</span>}
+                                    {mold.current_step && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">현재: {mold.current_step}</span>}
+                                  </div>
+                                  <p className="text-sm text-gray-500">{mold.part_name} ({mold.part_number})</p>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    {mold.mold_type} | {mold.cavity_count}CAV | {mold.tonnage}T | {mold.maker_name}
+                                    {mold.total_steps > 0 && <span className="ml-2 text-blue-500">| {mold.completed_steps}/{mold.total_steps}단계 완료</span>}
+                                  </p>
                                 </div>
                               </div>
-                              <button
-                                onClick={() => navigate(`/molds/${mold.id}`)}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                              >
-                                <ChevronRight className="text-gray-400" size={20} />
-                              </button>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-gray-900">{mold.overall_progress}%</p>
+                                  <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden mt-1">
+                                    <div className={`h-full ${getProgressColor(mold.overall_progress)} rounded-full transition-all duration-500`} style={{ width: `${mold.overall_progress}%` }} />
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <button onClick={(e) => { e.stopPropagation(); setExpandedMold(expandedMold === mold.id ? null : mold.id); }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="14단계 상세보기">
+                                    <Eye className={`${expandedMold === mold.id ? 'text-blue-600' : 'text-gray-400'}`} size={18} />
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); navigate(`/molds/${mold.id}`); }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <ChevronRight className="text-gray-400" size={20} />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
+                          
+                          {expandedMold === mold.id && (
+                            <div className="px-6 pb-4 bg-gradient-to-r from-blue-50 to-indigo-50">
+                              <div className="pt-4 pb-2">
+                                <div className="flex items-center justify-between mb-4">
+                                  <h5 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <Calendar size={16} className="text-blue-600" />
+                                    추진계획 ({mold.total_steps || 14}단계)
+                                  </h5>
+                                  <div className="flex gap-2 text-xs">
+                                    <span className="flex items-center gap-1"><div className="w-3 h-1 bg-green-500 rounded"></div> 완료 {mold.completed_steps || 0}</span>
+                                    <span className="flex items-center gap-1"><div className="w-3 h-1 bg-yellow-500 rounded"></div> 진행 {mold.in_progress_steps || 0}</span>
+                                    <span className="flex items-center gap-1"><div className="w-3 h-1 bg-red-500 rounded"></div> 지연 {mold.delayed_steps || 0}</span>
+                                    <span className="flex items-center gap-1"><div className="w-3 h-1 bg-gray-300 rounded"></div> 대기 {mold.pending_steps || 0}</span>
+                                  </div>
+                                </div>
+                                
+                                <div className="overflow-x-auto pb-2">
+                                  <div className="flex items-center gap-1 min-w-max">
+                                    {(mold.process_steps?.length > 0 ? mold.process_steps : DEVELOPMENT_STAGES).map((step, idx) => {
+                                      const stepStatus = step.status || 'pending';
+                                      const stepName = step.step_name || step.name;
+                                      const stepNumber = step.step_number || step.order;
+                                      const category = step.category || 'development';
+                                      const statusColors = { completed: 'bg-green-500 text-white', in_progress: 'bg-blue-500 text-white animate-pulse', delayed: 'bg-red-500 text-white', pending: 'bg-gray-200 text-gray-500' };
+                                      const categoryColors = { development: 'border-blue-300', nurturing: 'border-green-300', transfer: 'border-purple-300' };
+                                      return (
+                                        <div key={idx} className="flex items-center">
+                                          <div className={`flex flex-col items-center min-w-[60px] border-b-2 ${categoryColors[category] || 'border-gray-300'} pb-1`}>
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${statusColors[stepStatus]}`} title={`${stepName} - ${stepStatus === 'completed' ? '완료' : stepStatus === 'in_progress' ? '진행중' : stepStatus === 'delayed' ? '지연' : '대기'}`}>
+                                              {stepStatus === 'completed' ? '✓' : stepNumber}
+                                            </div>
+                                            <span className="text-[10px] text-gray-600 mt-1 text-center leading-tight max-w-[56px] truncate" title={stepName}>{stepName}</span>
+                                          </div>
+                                          {idx < (mold.process_steps?.length || DEVELOPMENT_STAGES.length) - 1 && <div className={`w-4 h-0.5 ${stepStatus === 'completed' ? 'bg-green-400' : 'bg-gray-200'}`} />}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                
+                                <div className="flex gap-4 mt-3 text-xs text-gray-500">
+                                  <span className="flex items-center gap-1"><div className="w-3 h-1 bg-blue-300 rounded"></div> 개발 (12단계)</span>
+                                  <span className="flex items-center gap-1"><div className="w-3 h-1 bg-green-300 rounded"></div> 금형육성</span>
+                                  <span className="flex items-center gap-1"><div className="w-3 h-1 bg-purple-300 rounded"></div> 양산이관</span>
+                                </div>
+                                
+                                <div className="mt-3 flex justify-end">
+                                  <button onClick={() => navigate(`/mold-development-plan?moldId=${mold.id}`)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                                    <Eye size={12} /> 개발계획 상세보기
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -586,7 +721,6 @@ export default function MoldLifecycle() {
             ))}
           </div>
         ) : (
-          /* 테이블 뷰 */
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
@@ -603,14 +737,8 @@ export default function MoldLifecycle() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredMolds.map(mold => (
-                    <tr 
-                      key={mold.id} 
-                      className="hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => navigate(`/molds/${mold.id}`)}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="font-medium text-gray-900">{mold.mold_code}</span>
-                      </td>
+                    <tr key={mold.id} className="hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => navigate(`/molds/${mold.id}`)}>
+                      <td className="px-6 py-4 whitespace-nowrap"><span className="font-medium text-gray-900">{mold.mold_code}</span></td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <p className="text-sm text-gray-900">{mold.part_name}</p>
@@ -623,22 +751,13 @@ export default function MoldLifecycle() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full ${getProgressColor(mold.overall_progress)} rounded-full`}
-                              style={{ width: `${mold.overall_progress}%` }}
-                            />
+                            <div className={`h-full ${getProgressColor(mold.overall_progress)} rounded-full`} style={{ width: `${mold.overall_progress}%` }} />
                           </div>
                           <span className="text-sm font-medium text-gray-900">{mold.overall_progress}%</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {mold.is_delayed ? (
-                          <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
-                            {mold.delay_days}일
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
+                        {mold.is_delayed ? <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">{mold.delay_days}일</span> : <span className="text-gray-400">-</span>}
                       </td>
                     </tr>
                   ))}
@@ -648,7 +767,6 @@ export default function MoldLifecycle() {
           </div>
         )}
 
-        {/* 데이터 없음 */}
         {!loading && filteredMolds.length === 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
             <Package className="mx-auto text-gray-300" size={48} />
