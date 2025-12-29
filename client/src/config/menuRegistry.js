@@ -79,7 +79,8 @@ export const SYSTEM_ADMIN_MENU = [
       { key: 'molds-new', label: '금형 등록', path: '/molds/new' },
       { key: 'molds-bulk', label: '일괄 등록', path: '/molds/bulk-upload' },
       { key: 'molds-lifecycle', label: '개발 진행현황', path: '/molds/lifecycle' },
-      { key: 'molds-history', label: '금형 이력', path: '/mold-history' }
+      { key: 'molds-history', label: '금형 이력', path: '/mold-history' },
+      { key: 'molds-qrcode', label: 'QR 코드 조회/출력', path: '/mold-qrcode' }
     ]
   },
   {
@@ -181,7 +182,8 @@ export const MOLD_DEVELOPER_MENU = [
       { key: 'molds-new', label: '금형 등록', path: '/molds/new' },
       { key: 'molds-bulk', label: '일괄 등록', path: '/molds/bulk-upload' },
       { key: 'molds-lifecycle', label: '개발 진행현황', path: '/molds/lifecycle' },
-      { key: 'molds-history', label: '금형 이력', path: '/mold-history' }
+      { key: 'molds-history', label: '금형 이력', path: '/mold-history' },
+      { key: 'molds-qrcode', label: 'QR 코드 조회/출력', path: '/mold-qrcode' }
     ]
   },
   {
@@ -395,6 +397,7 @@ export const REGISTERED_ROUTES = [
   '/molds/lifecycle',
   '/molds/master',
   '/mold-history',
+  '/mold-qrcode',
   '/checklist/daily',
   '/inspection/periodic',
   '/checklist-master',

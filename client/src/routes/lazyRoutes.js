@@ -34,6 +34,7 @@ export const MoldDetailNew = lazy(() => import('../pages/MoldDetailNew'));
 export const MoldDocuments = lazy(() => import('../pages/MoldDocuments'));
 export const MoldPhotoGallery = lazy(() => import('../pages/MoldPhotoGallery'));
 export const MoldHistory = lazy(() => import('../pages/MoldHistory'));
+export const MoldQRCode = lazy(() => import('../pages/MoldQRCode'));
 
 // 점검 관리
 export const DailyChecklist = lazy(() => import('../pages/DailyChecklistNew'));

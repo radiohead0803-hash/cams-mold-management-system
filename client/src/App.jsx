@@ -68,6 +68,7 @@ import {
   NotificationSettings,
   Reports,
   QRSessionsPage,
+  MoldQRCode,
   MoldLocationMapPage,
   ProductionTransferChecklistMaster,
   ChecklistMasterConsole,
@@ -365,6 +366,9 @@ function App() {
         {/* 금형 이력 */}
         <Route path="mold-history" element={<MoldHistory />} />
         <Route path="mold-history/:id" element={<MoldHistory />} />
+        
+        {/* QR 코드 조회 및 출력 */}
+        <Route path="mold-qrcode" element={<MoldQRCode />} />
         
         {/* QR 세션 */}
         <Route path="qr-sessions" element={<QRSessionsPage />} />
