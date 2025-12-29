@@ -179,7 +179,9 @@ export const MOLD_DEVELOPER_MENU = [
     subMenus: [
       { key: 'molds-list', label: '금형 현황', path: '/molds' },
       { key: 'molds-new', label: '금형 등록', path: '/molds/new' },
-      { key: 'molds-lifecycle', label: '개발 진행현황', path: '/molds/lifecycle' }
+      { key: 'molds-bulk', label: '일괄 등록', path: '/molds/bulk-upload' },
+      { key: 'molds-lifecycle', label: '개발 진행현황', path: '/molds/lifecycle' },
+      { key: 'molds-history', label: '금형 이력', path: '/mold-history' }
     ]
   },
   {
