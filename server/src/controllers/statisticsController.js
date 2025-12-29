@@ -3,48 +3,47 @@ const logger = require('../utils/logger');
 
 /**
  * 금형 통계 조회
+ * - mold_specifications 테이블 기준으로 통계 산출
  */
 const getMoldStatistics = async (req, res) => {
   try {
     const { year } = req.query;
     const currentYear = year || new Date().getFullYear();
 
-    // 전체 금형 수
+    // 전체 금형 수 (mold_specifications 기준)
     const [totalResult] = await sequelize.query(`
-      SELECT COUNT(*) as total FROM molds WHERE deleted_at IS NULL
+      SELECT COUNT(*) as total FROM mold_specifications WHERE is_deleted = false
     `);
 
     // 상태별 금형 수
     const [statusResult] = await sequelize.query(`
       SELECT 
-        status,
+        COALESCE(status, 'draft') as status,
         COUNT(*) as count
-      FROM molds 
-      WHERE deleted_at IS NULL
+      FROM mold_specifications 
+      WHERE is_deleted = false
       GROUP BY status
     `);
 
     // 개발 단계별 금형 수
     const [stageResult] = await sequelize.query(`
       SELECT 
-        COALESCE(ms.development_stage, '미지정') as stage,
+        COALESCE(development_stage, '미지정') as stage,
         COUNT(*) as count
-      FROM molds m
-      LEFT JOIN mold_specifications ms ON m.id = ms.mold_id
-      WHERE m.deleted_at IS NULL
-      GROUP BY ms.development_stage
+      FROM mold_specifications
+      WHERE is_deleted = false
+      GROUP BY development_stage
       ORDER BY count DESC
     `);
 
     // 차종별 금형 수
     const [carModelResult] = await sequelize.query(`
       SELECT 
-        COALESCE(ms.car_model, '미지정') as name,
+        COALESCE(car_model, '미지정') as name,
         COUNT(*) as count
-      FROM molds m
-      LEFT JOIN mold_specifications ms ON m.id = ms.mold_id
-      WHERE m.deleted_at IS NULL
-      GROUP BY ms.car_model
+      FROM mold_specifications
+      WHERE is_deleted = false
+      GROUP BY car_model
       ORDER BY count DESC
       LIMIT 10
     `);
@@ -54,10 +53,9 @@ const getMoldStatistics = async (req, res) => {
       SELECT 
         COALESCE(c.name, '미지정') as name,
         COUNT(*) as count
-      FROM molds m
-      LEFT JOIN mold_specifications ms ON m.id = ms.mold_id
+      FROM mold_specifications ms
       LEFT JOIN companies c ON ms.target_maker_id = c.id
-      WHERE m.deleted_at IS NULL
+      WHERE ms.is_deleted = false
       GROUP BY c.name
       ORDER BY count DESC
       LIMIT 10
@@ -68,9 +66,9 @@ const getMoldStatistics = async (req, res) => {
       SELECT 
         COALESCE(c.name, '미지정') as name,
         COUNT(*) as count
-      FROM molds m
-      LEFT JOIN companies c ON m.current_plant_id = c.id
-      WHERE m.deleted_at IS NULL
+      FROM mold_specifications ms
+      LEFT JOIN companies c ON ms.target_plant_id = c.id
+      WHERE ms.is_deleted = false
       GROUP BY c.name
       ORDER BY count DESC
       LIMIT 10
@@ -81,8 +79,8 @@ const getMoldStatistics = async (req, res) => {
       SELECT 
         EXTRACT(MONTH FROM created_at) as month,
         COUNT(*) as count
-      FROM molds
-      WHERE deleted_at IS NULL
+      FROM mold_specifications
+      WHERE is_deleted = false
         AND EXTRACT(YEAR FROM created_at) = :year
       GROUP BY EXTRACT(MONTH FROM created_at)
       ORDER BY month
@@ -96,10 +94,11 @@ const getMoldStatistics = async (req, res) => {
       success: true,
       data: {
         total: parseInt(totalResult[0]?.total) || 0,
-        active: statusMap['active'] || statusMap['양산'] || 0,
+        active: statusMap['production'] || statusMap['양산'] || 0,
         development: statusMap['development'] || statusMap['개발'] || 0,
         manufacturing: statusMap['manufacturing'] || statusMap['제작'] || 0,
-        scrapped: statusMap['scrapped'] || statusMap['폐기'] || 0,
+        scrapped: statusMap['retired'] || statusMap['폐기'] || 0,
+        draft: statusMap['draft'] || statusMap['임시저장'] || 0,
         by_status: statusResult,
         by_stage: stageResult,
         by_car_model: carModelResult,
