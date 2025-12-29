@@ -92,6 +92,9 @@ export default function MoldHistory() {
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
   const [selectedMoldId, setSelectedMoldId] = useState(moldId);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [carModelFilter, setCarModelFilter] = useState('all');
 
   useEffect(() => {
     if (moldId) {
@@ -226,6 +229,20 @@ export default function MoldHistory() {
     );
   }
 
+  // 차종 목록 추출
+  const carModels = ['all', ...new Set(molds.map(m => m.car_model).filter(Boolean))];
+  
+  // 필터링된 금형 목록
+  const filteredMolds = molds.filter(m => {
+    const matchesSearch = searchTerm === '' || 
+      (m.mold?.mold_code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (m.part_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (m.part_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || m.status === statusFilter;
+    const matchesCarModel = carModelFilter === 'all' || m.car_model === carModelFilter;
+    return matchesSearch && matchesStatus && matchesCarModel;
+  });
+
   // 금형 선택 화면 (moldId가 없을 때)
   if (!selectedMoldId && molds.length > 0) {
     return (
@@ -242,7 +259,46 @@ export default function MoldHistory() {
               <History className="text-blue-600" size={24} />
               금형 이력 조회
             </h1>
-            <p className="text-sm text-gray-500 mt-1">이력을 조회할 금형을 선택하세요</p>
+            <p className="text-sm text-gray-500 mt-1">이력을 조회할 금형을 선택하세요 ({filteredMolds.length}건)</p>
+          </div>
+        </div>
+
+        {/* 검색 및 필터 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="금형코드, 품번, 품명으로 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-4 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={carModelFilter}
+                onChange={(e) => setCarModelFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="all">전체 차종</option>
+                {carModels.filter(c => c !== 'all').map(model => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="all">전체 상태</option>
+                <option value="draft">임시저장</option>
+                <option value="development">개발</option>
+                <option value="production">양산</option>
+                <option value="maintenance">유지보전</option>
+                <option value="retired">폐기</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -259,33 +315,49 @@ export default function MoldHistory() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {molds.map(m => (
-                <tr key={m.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {m.mold?.mold_code || `M-${m.id}`}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{m.part_number || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{m.part_name || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{m.car_model || '-'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      m.status === 'production' ? 'bg-green-100 text-green-700' :
-                      m.status === 'development' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {m.status === 'production' ? '양산' : m.status === 'development' ? '개발' : m.status || '-'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleMoldSelect(m.id)}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      이력 보기
-                    </button>
+              {filteredMolds.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    검색 결과가 없습니다
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filteredMolds.map(m => (
+                  <tr key={m.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {m.mold?.mold_code || `M-${m.id}`}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{m.part_number || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{m.part_name || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{m.car_model || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        m.status === 'production' ? 'bg-green-100 text-green-700' :
+                        m.status === 'development' ? 'bg-blue-100 text-blue-700' :
+                        m.status === 'draft' ? 'bg-gray-100 text-gray-700' :
+                        m.status === 'maintenance' ? 'bg-yellow-100 text-yellow-700' :
+                        m.status === 'retired' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {m.status === 'production' ? '양산' : 
+                         m.status === 'development' ? '개발' : 
+                         m.status === 'draft' ? '임시저장' :
+                         m.status === 'maintenance' ? '유지보전' :
+                         m.status === 'retired' ? '폐기' :
+                         m.status || '-'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => handleMoldSelect(m.id)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        이력 보기
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
