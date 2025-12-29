@@ -139,25 +139,63 @@ export default function DailyChecklist() {
     ))
   }
 
-  const handlePhotoUpload = (itemId, event) => {
+  const [uploadingPhoto, setUploadingPhoto] = useState(null)
+
+  const handlePhotoUpload = async (itemId, event) => {
     const files = Array.from(event.target.files)
     if (files.length === 0) return
 
-    // 파일을 미리보기 URL로 변환
-    const photoUrls = files.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-      name: file.name
-    }))
+    setUploadingPhoto(itemId)
 
-    setCheckItems(prev => prev.map(item =>
-      item.id === itemId
-        ? { ...item, photos: [...item.photos, ...photoUrls] }
-        : item
-    ))
+    try {
+      for (const file of files) {
+        const formData = new FormData()
+        formData.append('photo', file)
+        formData.append('mold_id', realMoldId || moldId || '')
+        formData.append('item_id', String(itemId))
+        formData.append('inspection_type', 'daily')
+        formData.append('shot_count', shotCount || '0')
+
+        const res = await api.post('/inspection-photos/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+
+        if (res.data.success) {
+          const newPhoto = {
+            id: res.data.data.id,
+            file_url: res.data.data.file_url,
+            thumbnail_url: res.data.data.thumbnail_url,
+            preview: res.data.data.file_url
+          }
+
+          setCheckItems(prev => prev.map(item =>
+            item.id === itemId
+              ? { ...item, photos: [...item.photos, newPhoto] }
+              : item
+          ))
+        }
+      }
+    } catch (error) {
+      console.error('사진 업로드 실패:', error)
+      alert('사진 업로드에 실패했습니다.')
+    } finally {
+      setUploadingPhoto(null)
+    }
   }
 
-  const removePhoto = (itemId, photoIndex) => {
+  const removePhoto = async (itemId, photoIndex) => {
+    const item = checkItems.find(i => i.id === itemId)
+    const photo = item?.photos[photoIndex]
+
+    // 서버에 저장된 사진인 경우 삭제 API 호출
+    if (photo?.id) {
+      try {
+        await api.delete(`/inspection-photos/${photo.id}`)
+      } catch (error) {
+        console.error('사진 삭제 실패:', error)
+      }
+    }
+
     setCheckItems(prev => prev.map(item =>
       item.id === itemId
         ? {
@@ -661,9 +699,9 @@ export default function DailyChecklist() {
                           {item.photos.length > 0 && (
                             <div className="grid grid-cols-3 gap-2 mb-2">
                               {item.photos.map((photo, photoIndex) => (
-                                <div key={photoIndex} className="relative group">
+                                <div key={photo.id || photoIndex} className="relative group">
                                   <img
-                                    src={photo.preview}
+                                    src={photo.preview || photo.file_url || photo.thumbnail_url}
                                     alt={`사진 ${photoIndex + 1}`}
                                     className="w-full h-24 object-cover rounded border"
                                   />
@@ -679,17 +717,27 @@ export default function DailyChecklist() {
                           )}
 
                           {/* 업로드 버튼 */}
-                          <label className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors">
-                            <Camera size={20} className="text-gray-400" />
-                            <span className="text-sm text-gray-600">
-                              사진 추가 ({item.photos.length})
-                            </span>
+                          <label className={`flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors ${uploadingPhoto === item.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {uploadingPhoto === item.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500"></div>
+                                <span className="text-sm text-gray-600">업로드 중...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Camera size={20} className="text-gray-400" />
+                                <span className="text-sm text-gray-600">
+                                  사진 추가 ({item.photos.length})
+                                </span>
+                              </>
+                            )}
                             <input
                               type="file"
                               accept="image/*"
                               multiple
                               className="hidden"
                               onChange={(e) => handlePhotoUpload(item.id, e)}
+                              disabled={uploadingPhoto === item.id}
                             />
                           </label>
                         </div>
