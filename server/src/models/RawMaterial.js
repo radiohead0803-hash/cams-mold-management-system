@@ -71,6 +71,10 @@ module.exports = (sequelize) => {
         type: DataTypes.DECIMAL(5, 3),
         comment: '밀도 (g/cm³)'
       },
+      specific_gravity: {
+        type: DataTypes.DECIMAL(5, 3),
+        comment: '비중'
+      },
       mfi: {
         type: DataTypes.DECIMAL(6, 2),
         comment: 'MFI (Melt Flow Index)'

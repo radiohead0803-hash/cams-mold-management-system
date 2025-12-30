@@ -889,6 +889,7 @@ export default function MasterData() {
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">공급업체</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">그레이드코드</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">수축률</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">비중</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">단가(kg)</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">용도</th>
                 <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">장점</th>
@@ -908,6 +909,7 @@ export default function MasterData() {
                   </td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-purple-600">{item.grade_code || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.shrinkage_rate || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-cyan-600">{item.specific_gravity || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs font-medium text-orange-600">{item.unit_price ? `₩${item.unit_price.toLocaleString()}` : '-'}</td>
                   <td className="px-2 py-2 text-xs max-w-[100px] truncate" title={item.usage || ''}>{item.usage || '-'}</td>
                   <td className="px-2 py-2 text-xs max-w-[100px] truncate text-green-600" title={item.advantages || ''}>{item.advantages || '-'}</td>
