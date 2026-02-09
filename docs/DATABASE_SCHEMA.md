@@ -13,6 +13,52 @@
 
 ## 1. 사용자 및 권한
 
+### 1.0 companies (업체 정보)
+```sql
+CREATE TABLE companies (
+  id SERIAL PRIMARY KEY,
+  company_code VARCHAR(50) UNIQUE NOT NULL,     -- 업체 코드 (자동생성: PLT-XXX)
+  company_name VARCHAR(200) NOT NULL,           -- 업체명
+  company_type VARCHAR(20) NOT NULL,            -- 업체 유형: 'maker'(제작처), 'plant'(생산처)
+  business_number VARCHAR(20),                  -- 사업자등록번호
+  representative_name VARCHAR(100),             -- 대표자명
+  email VARCHAR(100),                          -- 대표 이메일
+  phone VARCHAR(20),                           -- 대표 전화번호
+  address TEXT,                                -- 주소
+  status VARCHAR(20) DEFAULT 'active',          -- 상태: 'active', 'inactive'
+  notes TEXT,                                  -- 비고
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_companies_code ON companies(company_code);
+CREATE INDEX idx_companies_type ON companies(company_type);
+CREATE INDEX idx_companies_status ON companies(status);
+```
+
+### 1.0.1 company_contacts (업체 담당자)
+```sql
+CREATE TABLE company_contacts (
+  id SERIAL PRIMARY KEY,
+  company_id INTEGER NOT NULL REFERENCES companies(id),
+  name VARCHAR(100) NOT NULL,                   -- 담당자명
+  position VARCHAR(100),                        -- 직책
+  department VARCHAR(100),                      -- 부서
+  email VARCHAR(100),                          -- 이메일
+  phone VARCHAR(20),                           -- 연락처
+  is_primary BOOLEAN DEFAULT FALSE,             -- 주담당자 여부
+  status VARCHAR(20) DEFAULT 'active',          -- 상태: 'active', 'inactive'
+  notes TEXT,                                  -- 비고
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_company_contacts_company ON company_contacts(company_id);
+CREATE INDEX idx_company_contacts_status ON company_contacts(status);
+```
+
 ### 1.1 users (사용자)
 ```sql
 CREATE TABLE users (
