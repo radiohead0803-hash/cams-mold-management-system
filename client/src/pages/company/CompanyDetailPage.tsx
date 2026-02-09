@@ -348,6 +348,7 @@ export default function CompanyDetailPage() {
       </div>
     </div>
   );
+}
   const { id } = useParams<{ id: string }>();
   const [company, setCompany] = useState<Company | null>(null);
   const [contacts, setContacts] = useState<CompanyContact[]>([]);
