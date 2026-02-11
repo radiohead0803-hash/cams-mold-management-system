@@ -2,6 +2,8 @@
 import api from './httpClient';
 
 export interface DailyInspectionPayload {
+  status?: 'draft' | 'pending_approval' | 'completed';
+  approver_id?: number;
   session_id: string;
   mold_id: number;
   production_quantity: number;
@@ -12,6 +14,8 @@ export interface DailyInspectionPayload {
 
 // CamelCase version for convenience
 export interface DailyInspectionPayloadCamel {
+  status?: 'draft' | 'pending_approval' | 'completed';
+  approverId?: number;
   sessionId: string;
   moldId: number;
   productionQuantity: number;
@@ -56,9 +60,14 @@ export interface PeriodicInspectionPayloadCamel {
   note?: string;
 }
 
-export async function submitDailyInspection(payload: DailyInspectionPayload | DailyInspectionPayloadCamel) {
+export async function submitDailyInspection(
+  payload: DailyInspectionPayload | DailyInspectionPayloadCamel,
+  action: 'save_draft' | 'request_approval' | 'complete' = 'complete'
+) {
   // Convert camelCase to snake_case if needed
   const snakePayload: DailyInspectionPayload = 'session_id' in payload ? payload as DailyInspectionPayload : {
+    status: action === 'save_draft' ? 'draft' : action === 'request_approval' ? 'pending_approval' : 'completed',
+    approver_id: (payload as DailyInspectionPayloadCamel).approverId,
     session_id: (payload as DailyInspectionPayloadCamel).sessionId,
     mold_id: (payload as DailyInspectionPayloadCamel).moldId,
     production_quantity: (payload as DailyInspectionPayloadCamel).productionQuantity,
@@ -72,7 +81,11 @@ export async function submitDailyInspection(payload: DailyInspectionPayload | Da
     notes: (payload as DailyInspectionPayloadCamel).note
   };
   
-  const res = await api.post('/inspections/daily', snakePayload);
+  const endpoint = action === 'save_draft' ? '/inspections/daily/draft' :
+                 action === 'request_approval' ? '/inspections/daily/request-approval' :
+                 '/inspections/daily';
+
+const res = await api.post(endpoint, snakePayload);
   return res.data;
 }
 

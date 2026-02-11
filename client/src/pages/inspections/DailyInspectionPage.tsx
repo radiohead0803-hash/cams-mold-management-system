@@ -2,6 +2,8 @@
 import { FormEvent, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { submitDailyInspection } from '../../api/inspectionApi';
+import { Dialog } from '@/components/ui/Dialog';
+import { searchUsers } from '@/api/userApi';
 
 interface LocationState {
   mold?: {
@@ -23,8 +25,30 @@ export default function DailyInspectionPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isApproverDialogOpen, setIsApproverDialogOpen] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{ id: number; name: string; email: string }>>([]);
+  const [selectedApproverId, setSelectedApproverId] = useState<number | null>(null);
+  const [selectedApproverName, setSelectedApproverName] = useState<string>('');
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSearch = async () => {
+    if (!searchKeyword.trim()) return;
+    
+    try {
+      const results = await searchUsers(searchKeyword);
+      setSearchResults(results.filter(user => user.role === 'system_admin'));
+    } catch (err) {
+      setError('관리자 검색 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleSelectApprover = (user: { id: number; name: string }) => {
+    setSelectedApproverId(user.id);
+    setSelectedApproverName(user.name);
+    setIsApproverDialogOpen(false);
+  };
+
+  const handleSubmit = async (e: FormEvent, action: 'save_draft' | 'request_approval' | 'complete' = 'complete') => {
     e.preventDefault();
     if (!sessionId || !moldId) return;
 
@@ -33,7 +57,13 @@ export default function DailyInspectionPage() {
     setSuccess(null);
 
     try {
+      if (action === 'request_approval' && !selectedApproverId) {
+        setError('승인자를 선택해주세요.');
+        return;
+      }
+
       await submitDailyInspection({
+        approverId: action === 'request_approval' ? selectedApproverId : undefined,
         sessionId,
         moldId: Number(moldId),
         productionQuantity,
@@ -130,14 +160,77 @@ export default function DailyInspectionPage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-2xl bg-sky-500 hover:bg-sky-400 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 mt-1 shadow-lg shadow-sky-500/40 transition-all"
-          >
-            {loading ? '저장 중…' : '일상점검 저장'}
-          </button>
+          <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
+            <button
+              type="button"
+              onClick={(e) => handleSubmit(e, 'save_draft')}
+              disabled={loading}
+              className="flex-1 rounded-2xl bg-slate-600 hover:bg-slate-500 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 transition-all"
+            >
+              {loading ? '저장 중…' : '임시저장'}
+            </button>
+
+            {selectedApproverId ? (
+              <button
+                type="button"
+                onClick={(e) => handleSubmit(e, 'request_approval')}
+                disabled={loading}
+                className="flex-1 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 transition-all"
+              >
+                {selectedApproverName}님께 승인요청
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsApproverDialogOpen(true)}
+                disabled={loading}
+                className="flex-1 rounded-2xl bg-sky-500 hover:bg-sky-400 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 transition-all"
+              >
+                승인자 선택
+              </button>
+            )}
+          </div>
         </form>
+
+        <Dialog
+          open={isApproverDialogOpen}
+          onClose={() => setIsApproverDialogOpen(false)}
+          title="승인자 선택"
+        >
+          <div className="space-y-4">
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                className="flex-1 rounded-2xl bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                placeholder="이름 또는 이메일로 검색"
+                value={searchKeyword}
+                onChange={(e) => setSearchKeyword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <button
+                type="button"
+                onClick={handleSearch}
+                className="rounded-2xl bg-sky-500 hover:bg-sky-400 px-4 py-2 text-sm font-medium text-white"
+              >
+                검색
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {searchResults.map((user) => (
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() => handleSelectApprover(user)}
+                  className="w-full text-left px-3 py-2 rounded-2xl hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                  <div className="font-medium text-sm">{user.name}</div>
+                  <div className="text-xs text-slate-400">{user.email}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </Dialog>
       </div>
     </div>
   );
