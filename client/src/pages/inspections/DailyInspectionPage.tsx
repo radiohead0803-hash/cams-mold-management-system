@@ -48,8 +48,7 @@ export default function DailyInspectionPage() {
     setIsApproverDialogOpen(false);
   };
 
-  const handleSubmit = async (e: FormEvent, action: 'save_draft' | 'request_approval' | 'complete' = 'complete') => {
-    e.preventDefault();
+  const handleSubmit = async (action: 'save_draft' | 'request_approval' | 'complete' = 'complete') => {
     if (!sessionId || !moldId) return;
 
     setLoading(true);
@@ -105,7 +104,7 @@ export default function DailyInspectionPage() {
         </div>
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={(e) => handleSubmit(e)}
           className="bg-slate-900/70 border border-slate-800 rounded-3xl p-4 space-y-3"
         >
           <div>
@@ -163,7 +162,7 @@ export default function DailyInspectionPage() {
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
             <button
               type="button"
-              onClick={(e) => handleSubmit(e, 'save_draft')}
+              onClick={() => handleSubmit('save_draft')}
               disabled={loading}
               className="flex-1 rounded-2xl bg-slate-600 hover:bg-slate-500 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 transition-all"
             >
@@ -173,7 +172,7 @@ export default function DailyInspectionPage() {
             {selectedApproverId ? (
               <button
                 type="button"
-                onClick={(e) => handleSubmit(e, 'request_approval')}
+                onClick={() => handleSubmit('request_approval')}
                 disabled={loading}
                 className="flex-1 rounded-2xl bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 transition-all"
               >
@@ -189,7 +188,17 @@ export default function DailyInspectionPage() {
                 승인자 선택
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => handleSubmit('complete')}
+              disabled={loading}
+              className="flex-1 rounded-2xl bg-sky-500 hover:bg-sky-400 disabled:bg-slate-700 text-white text-sm font-medium py-2.5 transition-all"
+            >
+              {loading ? '저장 중…' : '점검 완료'}
+            </button>
           </div>
+
         </form>
 
         <Dialog
