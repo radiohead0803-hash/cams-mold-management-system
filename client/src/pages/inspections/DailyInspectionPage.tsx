@@ -74,7 +74,7 @@ export default function DailyInspectionPage() {
       setSuccess('일상점검이 저장되었습니다. 금형 타수와 점검 스케줄이 자동 업데이트 됩니다.');
       // 점검 후 다시 QR 화면 또는 대시보드로
       setTimeout(() => {
-        navigate('/dashboard/plant', { replace: true });
+        navigate('/checklist/daily', { replace: true });
       }, 1500);
     } catch (err: any) {
       setError(
