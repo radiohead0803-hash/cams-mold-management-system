@@ -33,7 +33,7 @@ const upload = multer({
 router.post('/upload', upload.single('photo'), async (req, res) => {
   try {
     const { InspectionPhoto } = require('../models/newIndex');
-    const { mold_id, checklist_id, item_status_id, item_id, inspection_type, shot_count, category } = req.body;
+    const { mold_id, checklist_id, item_id, inspection_type, shot_count, category } = req.body;
     
     if (!req.file) {
       return res.status(400).json({ success: false, message: '파일이 없습니다.' });
@@ -80,7 +80,6 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     const photo = await InspectionPhoto.create({
       mold_id: mold_id ? parseInt(mold_id) : null,
       checklist_id: checklist_id ? parseInt(checklist_id) : null,
-      item_status_id: item_status_id ? parseInt(item_status_id) : null,
       file_url: fileUrl,
       thumbnail_url: fileUrl,
       file_type: req.file.mimetype,

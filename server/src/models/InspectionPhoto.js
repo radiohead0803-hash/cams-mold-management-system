@@ -11,9 +11,6 @@ module.exports = (sequelize, DataTypes) => {
     checklist_id: {
       type: DataTypes.INTEGER
     },
-    item_status_id: {
-      type: DataTypes.INTEGER
-    },
     file_url: {
       type: DataTypes.STRING(500),
       allowNull: false
@@ -50,7 +47,6 @@ module.exports = (sequelize, DataTypes) => {
     indexes: [
       { fields: ['mold_id'] },
       { fields: ['checklist_id'] },
-      { fields: ['item_status_id'] },
       { fields: ['uploaded_at'] }
     ]
   });
@@ -69,13 +65,6 @@ module.exports = (sequelize, DataTypes) => {
       InspectionPhoto.belongsTo(models.DailyCheckItem, {
         foreignKey: 'checklist_id',
         as: 'checklist'
-      });
-    }
-    
-    if (models.DailyCheckItemStatus) {
-      InspectionPhoto.belongsTo(models.DailyCheckItemStatus, {
-        foreignKey: 'item_status_id',
-        as: 'itemStatus'
       });
     }
     
