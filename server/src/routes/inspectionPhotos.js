@@ -69,10 +69,6 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 
     // 메타데이터
     const metadata = {
-      originalName: req.file.originalname,
-      item_id: item_id ? parseInt(item_id) : null,
-      inspection_type: inspection_type || 'daily',
-      category: category || null,
       uploadedFrom: req.headers['user-agent'] || 'unknown'
     };
 
@@ -80,9 +76,15 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     const photo = await InspectionPhoto.create({
       mold_id: mold_id ? parseInt(mold_id) : null,
       checklist_id: checklist_id ? parseInt(checklist_id) : null,
+      item_id: item_id ? parseInt(item_id) : null,
+      category: category || null,
+      inspection_type: inspection_type || 'daily',
+      file_name: `photo_${Date.now()}_${req.file.originalname}`,
+      original_name: req.file.originalname,
       file_url: fileUrl,
       thumbnail_url: fileUrl,
       file_type: req.file.mimetype,
+      mime_type: req.file.mimetype,
       file_size: req.file.size,
       uploaded_by: req.user?.id || 1,
       shot_count: shot_count ? parseInt(shot_count) : null,

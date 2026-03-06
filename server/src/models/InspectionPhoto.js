@@ -11,6 +11,21 @@ module.exports = (sequelize, DataTypes) => {
     checklist_id: {
       type: DataTypes.INTEGER
     },
+    checklist_type: {
+      type: DataTypes.STRING(100)
+    },
+    item_id: {
+      type: DataTypes.INTEGER
+    },
+    category: {
+      type: DataTypes.STRING(100)
+    },
+    file_name: {
+      type: DataTypes.STRING(500)
+    },
+    original_name: {
+      type: DataTypes.STRING(500)
+    },
     file_url: {
       type: DataTypes.STRING(500),
       allowNull: false
@@ -19,12 +34,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(500)
     },
     file_type: {
-      type: DataTypes.STRING(50),
-      comment: 'image/jpeg, image/png, application/pdf, etc.'
+      type: DataTypes.STRING(50)
     },
     file_size: {
-      type: DataTypes.INTEGER,
-      comment: 'File size in bytes'
+      type: DataTypes.INTEGER
+    },
+    mime_type: {
+      type: DataTypes.STRING(100)
     },
     uploaded_by: {
       type: DataTypes.INTEGER,
@@ -33,13 +49,29 @@ module.exports = (sequelize, DataTypes) => {
     shot_count: {
       type: DataTypes.INTEGER
     },
+    description: {
+      type: DataTypes.TEXT
+    },
     metadata: {
-      type: DataTypes.JSONB,
-      comment: 'Additional metadata like camera info, location, etc.'
+      type: DataTypes.JSONB
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true
     },
     uploaded_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW
+    },
+    inspection_type: {
+      type: DataTypes.STRING(50)
+    },
+    inspection_id: {
+      type: DataTypes.INTEGER
     }
   }, {
     tableName: 'inspection_photos',
