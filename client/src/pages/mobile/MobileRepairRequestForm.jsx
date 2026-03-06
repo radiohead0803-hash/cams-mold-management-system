@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle, Clock, Calendar, FileText, Package, Wrench, Building, ClipboardList, Scale, Link2, User, WifiOff } from 'lucide-react';
-import { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI } from '../../lib/api';
+import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
 
@@ -111,7 +111,25 @@ export default function MobileRepairRequestForm() {
   };
 
   const handleChange = (f, v) => setFormData(p => ({ ...p, [f]: v }));
-  const handleImageUpload = (e) => { Array.from(e.target.files).forEach(f => { if (f.type.startsWith('image/')) { const r = new FileReader(); r.onload = (ev) => setImages(p => [...p, { id: Date.now() + Math.random(), file: f, preview: ev.target.result, name: f.name }]); r.readAsDataURL(f); } }); e.target.value = ''; };
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    for (const f of files) {
+      if (!f.type.startsWith('image/')) continue;
+      try {
+        const fd = new FormData();
+        fd.append('photo', f);
+        fd.append('mold_id', moldId || '');
+        fd.append('inspection_type', 'repair');
+        const res = await api.post('/inspection-photos/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        if (res.data.success) {
+          setImages(p => [...p, { id: res.data.data.id, file_url: res.data.data.file_url, preview: res.data.data.file_url, name: f.name }]);
+        }
+      } catch (err) {
+        console.error('사진 업로드 실패:', err);
+      }
+    }
+    e.target.value = '';
+  };
   const handleImageRemove = (imgId) => setImages(p => p.filter(i => i.id !== imgId));
 
   const handleSave = async (type = 'draft') => {
