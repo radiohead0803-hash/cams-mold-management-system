@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Send, Camera, CheckCircle, AlertCircle, FileText,
   Package, Building2, Building, User, Wrench, Truck, ClipboardList,
-  ChevronDown, ChevronUp, Check, Wifi, WifiOff, Shield
+  ChevronDown, ChevronUp, Check, Wifi, WifiOff, Shield, Save
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { transferAPI, moldSpecificationAPI, userAPI } from '../../lib/api';
@@ -27,6 +27,7 @@ export default function MobileTransferRequest() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
   const [moldInfo, setMoldInfo] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [checklistItems, setChecklistItems] = useState([]);
@@ -181,6 +182,50 @@ export default function MobileTransferRequest() {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
+  const buildTransferData = () => ({
+    mold_id: parseInt(moldId),
+    transfer_type: formData.transfer_type,
+    from_company_id: parseInt(formData.from_company_id) || null,
+    to_company_id: parseInt(formData.to_company_id) || null,
+    developer_id: parseInt(formData.developer_id) || null,
+    request_date: formData.transfer_date,
+    planned_transfer_date: formData.transfer_date,
+    reason: formData.reason,
+    priority: formData.priority,
+    current_shots: parseInt(formData.cumulative_shots) || 0,
+    from_manager_name: formData.from_manager_name,
+    from_manager_contact: formData.from_manager_contact,
+    to_manager_name: formData.to_manager_name,
+    to_manager_contact: formData.to_manager_contact,
+    mold_info_snapshot: {
+      ...moldInfo,
+      cumulative_shots: formData.cumulative_shots,
+      cleaning_grade: formData.cleaning_grade,
+      last_cleaning_date: formData.last_cleaning_date,
+      fitting_grade: formData.fitting_grade,
+      last_fitting_date: formData.last_fitting_date,
+      weight: formData.weight,
+      machine_tonnage: formData.machine_tonnage,
+      special_notes: formData.special_notes
+    },
+    checklist_results: checklistResults
+  });
+
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      await transferAPI.create({ ...buildTransferData(), status: 'draft' });
+      setSaveMessage({ type: 'success', text: '임시저장 완료' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Draft save failed:', error);
+      setSaveMessage({ type: 'error', text: '임시저장 실패' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!formData.from_company_id || !formData.to_company_id) {
       alert('인계 업체와 인수 업체를 선택해주세요.');
@@ -188,34 +233,7 @@ export default function MobileTransferRequest() {
     }
     try {
       setSaving(true);
-      const transferData = {
-        mold_id: parseInt(moldId),
-        transfer_type: formData.transfer_type,
-        from_company_id: parseInt(formData.from_company_id),
-        to_company_id: parseInt(formData.to_company_id),
-        developer_id: parseInt(formData.developer_id) || null,
-        request_date: formData.transfer_date,
-        planned_transfer_date: formData.transfer_date,
-        reason: formData.reason,
-        priority: formData.priority,
-        current_shots: parseInt(formData.cumulative_shots) || 0,
-        from_manager_name: formData.from_manager_name,
-        from_manager_contact: formData.from_manager_contact,
-        to_manager_name: formData.to_manager_name,
-        to_manager_contact: formData.to_manager_contact,
-        mold_info_snapshot: {
-          ...moldInfo,
-          cumulative_shots: formData.cumulative_shots,
-          cleaning_grade: formData.cleaning_grade,
-          last_cleaning_date: formData.last_cleaning_date,
-          fitting_grade: formData.fitting_grade,
-          last_fitting_date: formData.last_fitting_date,
-          weight: formData.weight,
-          machine_tonnage: formData.machine_tonnage,
-          special_notes: formData.special_notes
-        },
-        checklist_results: checklistResults
-      };
+      const transferData = buildTransferData();
       const response = await transferAPI.create(transferData);
       if (response.data.success) {
         alert('이관 요청이 등록되었습니다.');
@@ -558,11 +576,19 @@ export default function MobileTransferRequest() {
         </div>
       </div>
 
+      {/* 저장 메시지 */}
+      {saveMessage && (
+        <div className={`mx-4 mb-2 p-2.5 rounded-lg text-xs font-medium ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{saveMessage.text}</div>
+      )}
+
       {/* 하단 버튼 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 flex gap-3">
-        <button type="button" onClick={() => navigate(-1)} className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-700 font-medium">취소</button>
-        <button type="button" onClick={handleSubmit} disabled={saving} className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50">
-          {saving ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>저장 중...</>) : (<><Send size={18} />제출</>)}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 flex gap-2">
+        <button type="button" onClick={() => navigate(-1)} className="py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium text-sm">취소</button>
+        <button type="button" onClick={handleSaveDraft} disabled={saving} className="flex-1 py-3 border border-slate-300 rounded-xl text-slate-700 font-medium flex items-center justify-center gap-2 disabled:opacity-50 text-sm">
+          <Save size={16} />임시저장
+        </button>
+        <button type="button" onClick={handleSubmit} disabled={saving} className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 text-sm">
+          {saving ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>저장 중...</>) : (<><Send size={16} />제출</>)}
         </button>
       </div>
     </div>

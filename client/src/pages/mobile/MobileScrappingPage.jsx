@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Trash2, ArrowLeft, Plus, AlertTriangle, CheckCircle, 
-  Clock, ChevronRight, X, Camera, FileText
+  Clock, ChevronRight, X, Camera, FileText, Save
 } from 'lucide-react';
 import api from '../../lib/api';
 
@@ -277,6 +277,7 @@ function ScrappingForm() {
     estimated_disposal_cost: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
 
   useEffect(() => {
     loadMolds();
@@ -288,6 +289,20 @@ function ScrappingForm() {
       setMolds(response.data.data.items || response.data.data || []);
     } catch (error) {
       console.error('Failed to load molds:', error);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setSubmitting(true);
+    setSaveMessage(null);
+    try {
+      await api.post('/scrapping', { ...formData, status: 'draft', estimated_disposal_cost: formData.estimated_disposal_cost ? parseInt(formData.estimated_disposal_cost) : null });
+      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -389,15 +404,29 @@ function ScrappingForm() {
           />
         </div>
 
-        {/* 제출 버튼 */}
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="w-full py-3 bg-red-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          <Trash2 size={18} />
-          {submitting ? '등록 중...' : '폐기 요청 등록'}
-        </button>
+        {saveMessage && (
+          <div className={`p-3 rounded-xl text-xs font-medium ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{saveMessage.text}</div>
+        )}
+
+        {/* 임시저장 + 제출 버튼 */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleSaveDraft}
+            disabled={submitting}
+            className="flex-1 py-3 border border-slate-300 text-slate-700 rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Save size={18} />
+            임시저장
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            className="flex-1 py-3 bg-red-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Trash2 size={18} />
+            {submitting ? '등록 중...' : '폐기 요청'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Wrench, Plus, ArrowLeft, Eye, Calendar, BarChart3,
-  Clock, CheckCircle, Settings, Droplets, Cog
+  Clock, CheckCircle, Settings, Droplets, Cog, Save
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -410,6 +410,7 @@ function MaintenanceForm() {
   const [molds, setMolds] = useState([]);
   const [types, setTypes] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
 
   useEffect(() => {
     loadMolds();
@@ -431,6 +432,26 @@ function MaintenanceForm() {
       setTypes(response.data.data || []);
     } catch (error) {
       console.error('Failed to load types:', error);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setSubmitting(true);
+    setSaveMessage(null);
+    try {
+      await api.post('/maintenance', {
+        ...formData,
+        status: 'draft',
+        cost: formData.cost ? parseInt(formData.cost) : null,
+        next_maintenance_shots: formData.next_maintenance_shots ? parseInt(formData.next_maintenance_shots) : null
+      });
+      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Draft save failed:', error);
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -588,6 +609,10 @@ function MaintenanceForm() {
             />
           </div>
 
+          {saveMessage && (
+            <div className={`p-3 rounded-lg text-sm font-medium ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{saveMessage.text}</div>
+          )}
+
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
@@ -595,6 +620,15 @@ function MaintenanceForm() {
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               취소
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={submitting}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              <Save size={18} />
+              임시저장
             </button>
             <button
               type="submit"

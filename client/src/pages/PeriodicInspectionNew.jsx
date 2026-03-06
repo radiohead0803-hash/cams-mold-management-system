@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin, ArrowLeft, Loader2, Info, Hash } from 'lucide-react'
+import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin, ArrowLeft, Loader2, Info, Hash, Save, Send, Search, X, User } from 'lucide-react'
 import api from '../lib/api'
 
 // 정기점검 대항목/소항목 구조 (템플릿 마스터 + 기존 항목 통합)
@@ -240,6 +240,12 @@ export default function PeriodicInspectionNew() {
   const [mold, setMold] = useState(null)
   const [showGuide, setShowGuide] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState(null)
+  const [showApproverModal, setShowApproverModal] = useState(false)
+  const [approverKeyword, setApproverKeyword] = useState('')
+  const [approverResults, setApproverResults] = useState([])
+  const [selectedApprover, setSelectedApprover] = useState(null)
 
   // 금형 정보 로드
   useEffect(() => {
@@ -348,6 +354,72 @@ export default function PeriodicInspectionNew() {
     }
   }
 
+  const buildPayload = (status, approverId = null) => {
+    const allItems = selectedType.categories.flatMap(cat => cat.items)
+    return {
+      mold_id: mold.id,
+      category: 'periodic',
+      status,
+      approver_id: approverId,
+      check_date: new Date().toISOString(),
+      results: { ...checkResults, inspection_type: selectedType.id, cleaning_method: cleaningMethod, cleaning_ratio: cleaningRatio, gps_location: gpsLocation },
+      summary: {
+        total: allItems.length,
+        completed: Object.keys(checkResults).length,
+        good: Object.values(checkResults).filter(r => r.status === '양호').length,
+        warning: Object.values(checkResults).filter(r => r.status === '정비 필요').length,
+        bad: Object.values(checkResults).filter(r => r.status === '수리 필요').length
+      }
+    }
+  }
+
+  const handleSaveDraft = async () => {
+    setSaving(true)
+    setSaveMessage(null)
+    try {
+      await api.post('/checklist-instances/daily/draft', buildPayload('draft'))
+      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' })
+      setTimeout(() => setSaveMessage(null), 3000)
+    } catch (err) {
+      console.error('임시저장 실패:', err)
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSearchApprover = async () => {
+    if (!approverKeyword.trim()) return
+    try {
+      const res = await api.get('/workflow/admins/search', { params: { name: approverKeyword } })
+      if (res.data.success) setApproverResults(res.data.data)
+    } catch (err) {
+      console.error('관리자 검색 실패:', err)
+    }
+  }
+
+  const handleRequestApproval = async () => {
+    if (!selectedApprover) { setShowApproverModal(true); return }
+    const allItems = selectedType.categories.flatMap(cat => cat.items)
+    const requiredItems = allItems.filter(item => item.required)
+    const completedRequired = requiredItems.filter(item => checkResults[item.id]?.status)
+    if (completedRequired.length < requiredItems.length) {
+      alert(`필수 항목을 모두 완료해주세요. (${completedRequired.length}/${requiredItems.length})`)
+      return
+    }
+    setSaving(true)
+    try {
+      await api.post('/checklist-instances/daily/request-approval', buildPayload('pending_approval', selectedApprover.id))
+      setSaveMessage({ type: 'success', text: `${selectedApprover.name}님께 승인요청 완료` })
+      setTimeout(() => navigate('/molds'), 2000)
+    } catch (err) {
+      console.error('승인요청 실패:', err)
+      setSaveMessage({ type: 'error', text: '승인요청에 실패했습니다.' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleComplete = () => {
     const allItems = selectedType.categories.flatMap(cat => cat.items)
     const requiredItems = allItems.filter(item => item.required)
@@ -360,24 +432,8 @@ export default function PeriodicInspectionNew() {
       return
     }
 
-    const summary = {
-      mold_id: mold.id,
-      inspection_type: selectedType.id,
-      inspection_date: new Date().toISOString(),
-      gps_location: gpsLocation,
-      cleaning_method: cleaningMethod,
-      cleaning_ratio: cleaningRatio,
-      results: checkResults,
-      summary: {
-        total: allItems.length,
-        completed: Object.keys(checkResults).length,
-        good: Object.values(checkResults).filter(r => r.status === '양호').length,
-        warning: Object.values(checkResults).filter(r => r.status === '정비 필요').length,
-        bad: Object.values(checkResults).filter(r => r.status === '수리 필요').length
-      }
-    }
-
-    console.log('정기점검 완료:', summary)
+    const payload = buildPayload('completed')
+    console.log('정기점검 완료:', payload)
     alert('정기점검이 완료되었습니다!')
     navigate('/molds')
   }
@@ -807,6 +863,38 @@ export default function PeriodicInspectionNew() {
         </div>
       </div>
 
+      {/* 저장 메시지 */}
+      {saveMessage && (
+        <div className={`mb-4 p-3 rounded-lg text-sm font-medium ${
+          saveMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>{saveMessage.text}</div>
+      )}
+
+      {/* 승인자 표시 */}
+      {selectedApprover && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <User size={16} className="text-blue-600" />
+            <span className="text-sm text-blue-800">승인자: <strong>{selectedApprover.name}</strong> ({selectedApprover.email})</span>
+          </div>
+          <button onClick={() => setSelectedApprover(null)} className="text-blue-400 hover:text-blue-600"><X size={16} /></button>
+        </div>
+      )}
+
+      {/* 임시저장 / 승인요청 버튼 */}
+      <div className="flex gap-3 mb-4">
+        <button onClick={handleSaveDraft} disabled={saving}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-slate-300 rounded-lg text-slate-700 text-sm font-medium hover:bg-slate-50 disabled:opacity-50">
+          <Save size={16} />{saving ? '저장중...' : '임시저장'}
+        </button>
+        <button onClick={handleRequestApproval} disabled={saving}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium disabled:opacity-50 ${
+            selectedApprover ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
+          }`}>
+          <Send size={16} />{selectedApprover ? `${selectedApprover.name}님 승인요청` : '승인자 선택'}
+        </button>
+      </div>
+
       {/* 네비게이션 버튼 */}
       <div className="flex gap-3 mb-6">
         <button
@@ -836,6 +924,33 @@ export default function PeriodicInspectionNew() {
           </button>
         )}
       </div>
+
+      {/* 승인자 검색 모달 */}
+      {showApproverModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[70vh] overflow-y-auto">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-sm font-semibold">승인자(관리자) 선택</h3>
+              <button onClick={() => setShowApproverModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <div className="p-4">
+              <div className="flex gap-2 mb-4">
+                <input type="text" className="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500" placeholder="이름 또는 이메일 검색" value={approverKeyword} onChange={(e) => setApproverKeyword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()} />
+                <button onClick={handleSearchApprover} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm"><Search size={16} /></button>
+              </div>
+              <div className="space-y-2">
+                {approverResults.length === 0 && approverKeyword && <p className="text-xs text-gray-500 text-center py-4">검색 결과가 없습니다.</p>}
+                {approverResults.map(u => (
+                  <button key={u.id} onClick={() => { setSelectedApprover(u); setShowApproverModal(false); setApproverKeyword(''); setApproverResults([]); }} className="w-full text-left p-3 rounded-lg border hover:bg-blue-50 hover:border-blue-300 transition">
+                    <div className="text-sm font-medium">{u.name}</div>
+                    <div className="text-xs text-gray-500">{u.email} {u.company_name && `| ${u.company_name}`}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 가이드 모달 */}
       {showGuide && (

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Trash2, Plus, ArrowLeft, Eye, CheckCircle, XCircle, 
-  AlertTriangle, Clock, FileText, BarChart3
+  AlertTriangle, Clock, FileText, BarChart3, Save
 } from 'lucide-react';
 import api from '../lib/api';
 
@@ -466,6 +466,7 @@ function ScrappingForm() {
   });
   const [molds, setMolds] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
 
   useEffect(() => {
     loadMolds();
@@ -477,6 +478,21 @@ function ScrappingForm() {
       setMolds(response.data.data.items || response.data.data || []);
     } catch (error) {
       console.error('Failed to load molds:', error);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setSubmitting(true);
+    setSaveMessage(null);
+    try {
+      await api.post('/scrapping', { ...formData, status: 'draft' });
+      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -586,6 +602,10 @@ function ScrappingForm() {
             />
           </div>
 
+          {saveMessage && (
+            <div className={`p-3 rounded-lg text-sm font-medium ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{saveMessage.text}</div>
+          )}
+
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
@@ -593,6 +613,15 @@ function ScrappingForm() {
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               취소
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={submitting}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              <Save size={18} />
+              임시저장
             </button>
             <button
               type="submit"

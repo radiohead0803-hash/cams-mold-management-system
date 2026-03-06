@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, Send, Camera, CheckCircle, Clock, AlertCircle, FileText, 
   Building2, Building, User, Calendar, Package, Wrench, Truck, ClipboardList,
-  ChevronDown, ChevronUp, Check, Image as ImageIcon, Shield
+  ChevronDown, ChevronUp, Check, Image as ImageIcon, Shield, Save
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import { transferAPI, moldSpecificationAPI, userAPI } from '../lib/api';
@@ -29,6 +29,7 @@ export default function TransferRequest() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
   const [moldInfo, setMoldInfo] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [checklistItems, setChecklistItems] = useState([]);
@@ -187,6 +188,51 @@ export default function TransferRequest() {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
+  const buildTransferData = () => ({
+    mold_id: parseInt(moldId),
+    transfer_type: formData.transfer_type,
+    from_company_id: parseInt(formData.from_company_id) || null,
+    to_company_id: parseInt(formData.to_company_id) || null,
+    developer_id: parseInt(formData.developer_id) || null,
+    request_date: formData.transfer_date,
+    planned_transfer_date: formData.transfer_date,
+    reason: formData.reason,
+    priority: formData.priority,
+    current_shots: parseInt(formData.cumulative_shots) || 0,
+    from_manager_name: formData.from_manager_name,
+    from_manager_contact: formData.from_manager_contact,
+    to_manager_name: formData.to_manager_name,
+    to_manager_contact: formData.to_manager_contact,
+    mold_info_snapshot: {
+      ...moldInfo,
+      cumulative_shots: formData.cumulative_shots,
+      cleaning_grade: formData.cleaning_grade,
+      last_cleaning_date: formData.last_cleaning_date,
+      fitting_grade: formData.fitting_grade,
+      last_fitting_date: formData.last_fitting_date,
+      weight: formData.weight,
+      machine_tonnage: formData.machine_tonnage,
+      special_notes: formData.special_notes
+    },
+    checklist_results: checklistResults
+  });
+
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      const data = { ...buildTransferData(), status: 'draft' };
+      await transferAPI.create(data);
+      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Draft save failed:', error);
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.from_company_id || !formData.to_company_id) {
@@ -195,34 +241,7 @@ export default function TransferRequest() {
     }
     try {
       setSaving(true);
-      const transferData = {
-        mold_id: parseInt(moldId),
-        transfer_type: formData.transfer_type,
-        from_company_id: parseInt(formData.from_company_id),
-        to_company_id: parseInt(formData.to_company_id),
-        developer_id: parseInt(formData.developer_id) || null,
-        request_date: formData.transfer_date,
-        planned_transfer_date: formData.transfer_date,
-        reason: formData.reason,
-        priority: formData.priority,
-        current_shots: parseInt(formData.cumulative_shots) || 0,
-        from_manager_name: formData.from_manager_name,
-        from_manager_contact: formData.from_manager_contact,
-        to_manager_name: formData.to_manager_name,
-        to_manager_contact: formData.to_manager_contact,
-        mold_info_snapshot: {
-          ...moldInfo,
-          cumulative_shots: formData.cumulative_shots,
-          cleaning_grade: formData.cleaning_grade,
-          last_cleaning_date: formData.last_cleaning_date,
-          fitting_grade: formData.fitting_grade,
-          last_fitting_date: formData.last_fitting_date,
-          weight: formData.weight,
-          machine_tonnage: formData.machine_tonnage,
-          special_notes: formData.special_notes
-        },
-        checklist_results: checklistResults
-      };
+      const transferData = buildTransferData();
       const response = await transferAPI.create(transferData);
       if (response.data.success) {
         alert('이관 요청이 등록되었습니다.');
@@ -285,9 +304,9 @@ export default function TransferRequest() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={() => alert('임시저장 되었습니다.')} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-              <FileText size={16} />
-              임시저장
+            <button type="button" onClick={handleSaveDraft} disabled={saving} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
+              <Save size={16} />
+              {saving ? '저장중...' : '임시저장'}
             </button>
             <button type="button" onClick={handleSubmit} disabled={saving} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2">
               <Send size={16} />
@@ -674,7 +693,8 @@ export default function TransferRequest() {
         {/* 하단 버튼 */}
         <div className="flex justify-end gap-4 mt-6">
           <button type="button" onClick={() => navigate(-1)} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">취소</button>
-          <button type="button" onClick={() => alert('임시저장 되었습니다.')} className="px-6 py-2 border border-purple-300 rounded-lg text-purple-700 hover:bg-purple-50">임시저장</button>
+          {saveMessage && <div className={`px-4 py-2 rounded-lg text-sm font-medium ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{saveMessage.text}</div>}
+          <button type="button" onClick={handleSaveDraft} disabled={saving} className="px-6 py-2 border border-purple-300 rounded-lg text-purple-700 hover:bg-purple-50 disabled:opacity-50 flex items-center gap-2"><Save size={16} />{saving ? '저장중...' : '임시저장'}</button>
           <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center">
             {saving ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>저장 중...</>) : (<><Send size={18} className="mr-2" />제출</>)}
           </button>

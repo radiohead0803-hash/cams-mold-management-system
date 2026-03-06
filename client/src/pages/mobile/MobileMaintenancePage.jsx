@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Wrench, ArrowLeft, Plus, Calendar, Clock, 
-  CheckCircle, ChevronRight, Cog, Droplets, Settings
+  CheckCircle, ChevronRight, Cog, Droplets, Settings, Save
 } from 'lucide-react';
 import api from '../../lib/api';
 
@@ -32,6 +32,7 @@ export default function MobileMaintenancePage() {
     cost: ''
   });
   const [submitting, setSubmitting] = useState(false);
+  const [saveMessage, setSaveMessage] = useState(null);
 
   useEffect(() => {
     loadRecords();
@@ -47,6 +48,27 @@ export default function MobileMaintenancePage() {
       console.error('Failed to load records:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setSubmitting(true);
+    setSaveMessage(null);
+    try {
+      await api.post('/maintenance', {
+        mold_id: moldId,
+        ...formData,
+        status: 'draft',
+        cost: formData.cost ? parseInt(formData.cost) : null,
+        performed_at: new Date().toISOString()
+      });
+      setSaveMessage({ type: 'success', text: '임시저장 완료' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Draft save failed:', error);
+      setSaveMessage({ type: 'error', text: '임시저장 실패' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -214,13 +236,27 @@ export default function MobileMaintenancePage() {
                 />
               </div>
 
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="w-full py-3 bg-orange-600 text-white rounded-lg font-medium disabled:opacity-50"
-              >
-                {submitting ? '등록 중...' : '등록하기'}
-              </button>
+              {saveMessage && (
+                <div className={`p-2.5 rounded-lg text-xs font-medium ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{saveMessage.text}</div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={submitting}
+                  className="flex-1 py-3 border border-slate-300 text-slate-700 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Save size={16} />
+                  임시저장
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-orange-600 text-white rounded-lg font-medium disabled:opacity-50"
+                >
+                  {submitting ? '등록 중...' : '등록하기'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
