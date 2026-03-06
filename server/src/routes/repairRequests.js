@@ -19,9 +19,9 @@ const { authenticate } = require('../middleware/auth');
 // Cloudinary 환경변수 체크
 const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 
-// Multer 설정 - Cloudinary 사용 시 메모리 스토리지
+// 항상 메모리 스토리지 사용 (Railway는 ephemeral filesystem)
 const upload = multer({ 
-  storage: CLOUDINARY_ENABLED ? multer.memoryStorage() : multer.diskStorage({ destination: 'uploads/repairs/' }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 

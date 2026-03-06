@@ -403,10 +403,10 @@ const uploadAttachment = async (req, res) => {
     }
 
     const file = req.file;
-    let fileUrl = `/uploads/production-transfer/${file.filename || Date.now()}`;
+    let fileUrl = null;
     let cloudinaryPublicId = null;
 
-    // 이미지인 경우 Cloudinary 업로드 시도
+    // 1. Cloudinary 업로드 시도
     const isImage = file.mimetype && file.mimetype.startsWith('image/');
     if (isImage && CLOUDINARY_ENABLED && file.buffer) {
       try {
@@ -420,6 +420,33 @@ const uploadAttachment = async (req, res) => {
       } catch (cloudErr) {
         logger.error('Cloudinary upload error:', cloudErr.message);
       }
+    }
+
+    // 2. DB에 먼저 메타데이터 저장
+    // production_transfer_attachments 테이블 확인/생성
+    try {
+      await sequelize.query(`
+        CREATE TABLE IF NOT EXISTS production_transfer_attachments (
+          id SERIAL PRIMARY KEY,
+          request_id INTEGER,
+          item_id INTEGER,
+          mold_id INTEGER,
+          file_name VARCHAR(255),
+          file_type VARCHAR(100),
+          file_size INTEGER,
+          file_path TEXT,
+          file_url TEXT,
+          file_data BYTEA,
+          upload_type VARCHAR(50) DEFAULT 'image',
+          uploaded_by INTEGER,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+      `);
+    } catch (e) { /* already exists */ }
+
+    // Cloudinary 미사용 시 임시 URL
+    if (!fileUrl) {
+      fileUrl = '/api/v1/files/temp';
     }
 
     const [result] = await sequelize.query(`
@@ -438,12 +465,29 @@ const uploadAttachment = async (req, res) => {
         file_name: file.originalname,
         file_type: file.mimetype,
         file_size: file.size,
-        file_path: cloudinaryPublicId || (file.path || null),
+        file_path: cloudinaryPublicId || null,
         file_url: fileUrl,
         upload_type,
         uploaded_by: userId
       }
     });
+
+    // 3. Cloudinary 미사용 시 file_data에 BYTEA 저장
+    if (!cloudinaryPublicId && result && result[0] && file.buffer) {
+      try {
+        try {
+          await sequelize.query('ALTER TABLE production_transfer_attachments ADD COLUMN IF NOT EXISTS file_data BYTEA');
+        } catch (e) { /* ignore */ }
+        await sequelize.query(
+          'UPDATE production_transfer_attachments SET file_data = $1, file_url = $2 WHERE id = $3',
+          { bind: [file.buffer, `/api/v1/files/${result[0].id}`, result[0].id] }
+        );
+        fileUrl = `/api/v1/files/${result[0].id}`;
+        result[0].file_url = fileUrl;
+      } catch (dbErr) {
+        logger.warn('DB BYTEA 저장 실패:', dbErr.message);
+      }
+    }
 
     res.status(201).json({
       success: true,

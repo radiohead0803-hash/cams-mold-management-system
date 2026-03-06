@@ -12,20 +12,8 @@ const { uploadImage, deleteImage: deleteCloudinaryImage, getPublicIdFromUrl } = 
 // Cloudinary 환경변수 체크
 const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 
-// 사진 업로드 설정 - Cloudinary 사용 시 메모리 스토리지
-const storage = CLOUDINARY_ENABLED ? multer.memoryStorage() : multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/inspection-photos');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  }
-});
+// 항상 메모리 스토리지 사용 (Railway는 ephemeral filesystem)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -363,18 +351,58 @@ router.post('/:id/photos', upload.array('photos', 10), async (req, res) => {
 
     const photos = [];
     for (const file of req.files) {
+      let fileUrl;
+      let storeInDb = false;
+
+      // 1. Cloudinary 업로드 시도
+      if (CLOUDINARY_ENABLED) {
+        try {
+          const cloudinaryResult = await uploadImage(file.buffer, {
+            folder: `cams-molds/periodic-inspections/${inspectionId}`,
+            public_id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+          });
+          fileUrl = cloudinaryResult.secure_url;
+        } catch (cloudErr) {
+          console.error('Cloudinary upload error, falling back to DB BYTEA:', cloudErr.message);
+          storeInDb = true;
+        }
+      } else {
+        storeInDb = true;
+      }
+
+      if (storeInDb) {
+        fileUrl = `/api/v1/inspection-photos/file/temp`;
+      }
+
       const photo = await InspectionPhoto.create({
         inspection_id: inspectionId,
         mold_id: mold_id || inspection.mold_id,
         inspection_type: inspection_type || inspection.inspection_type,
         category: category || '점검사진',
         description: description || '',
-        file_url: `/uploads/inspection-photos/${file.filename}`,
+        file_url: fileUrl,
         file_type: file.mimetype,
         file_size: file.size,
         uploaded_by: userId,
         uploaded_at: new Date()
       });
+
+      // DB BYTEA에 이미지 데이터 저장
+      if (storeInDb && photo.id) {
+        try {
+          try {
+            await sequelize.query('ALTER TABLE inspection_photos ADD COLUMN IF NOT EXISTS image_data BYTEA');
+          } catch (e) { /* ignore */ }
+          await sequelize.query(
+            'UPDATE inspection_photos SET image_data = $1, file_url = $2, thumbnail_url = $2 WHERE id = $3',
+            { bind: [file.buffer, `/api/v1/inspection-photos/file/${photo.id}`, photo.id] }
+          );
+          photo.file_url = `/api/v1/inspection-photos/file/${photo.id}`;
+        } catch (dbErr) {
+          console.error('DB BYTEA 저장 실패:', dbErr.message);
+        }
+      }
+
       photos.push(photo);
     }
 

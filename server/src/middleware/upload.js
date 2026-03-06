@@ -2,24 +2,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// 업로드 디렉토리 생성
-const uploadDir = process.env.UPLOAD_PATH || 'uploads/';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// 파일 저장 설정 (로컬)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    const basename = path.basename(file.originalname, ext);
-    cb(null, `${basename}-${uniqueSuffix}${ext}`);
-  }
-});
+// 항상 메모리 스토리지 사용 (Railway는 ephemeral filesystem)
+const storage = multer.memoryStorage();
 
 // 파일 필터 (이미지, PDF만 허용)
 const fileFilter = (req, file, cb) => {

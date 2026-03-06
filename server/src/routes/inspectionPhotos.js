@@ -9,22 +9,8 @@ const { uploadImage, deleteImage: deleteCloudinaryImage, getPublicIdFromUrl } = 
 // Cloudinary 환경변수 체크
 const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 
-// 업로드 디렉토리 설정 (Cloudinary 실패 시 폴백용)
-const uploadDir = path.join(__dirname, '../../uploads/inspection-photos');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Multer 설정 - Cloudinary 사용 시 메모리 스토리지, 아니면 디스크 스토리지
-const storage = CLOUDINARY_ENABLED ? multer.memoryStorage() : multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  }
-});
+// 항상 메모리 스토리지 사용 (Railway는 ephemeral filesystem)
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -55,8 +41,9 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 
     let fileUrl;
     let cloudinaryPublicId = null;
+    let storeInDb = false;
 
-    // Cloudinary 업로드 시도
+    // 1. Cloudinary 업로드 시도
     if (CLOUDINARY_ENABLED) {
       try {
         const cloudinaryResult = await uploadImage(req.file.buffer, {
@@ -66,15 +53,18 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
         fileUrl = cloudinaryResult.secure_url;
         cloudinaryPublicId = cloudinaryResult.public_id;
       } catch (cloudErr) {
-        console.error('Cloudinary upload error:', cloudErr);
-        // 폴백: 로컬 저장
-        const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-        fileUrl = `${baseUrl}/uploads/inspection-photos/${req.file.filename || uuidv4() + '.jpg'}`;
+        console.error('Cloudinary upload error, falling back to DB BYTEA:', cloudErr.message);
+        storeInDb = true;
       }
     } else {
-      // 파일 URL 생성 (로컬)
-      const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-      fileUrl = `${baseUrl}/uploads/inspection-photos/${req.file.filename}`;
+      // Cloudinary 미설정 → DB BYTEA 저장
+      storeInDb = true;
+    }
+
+    // 2. DB BYTEA 폴백: inspection_photos에 image_data 컬럼 사용
+    if (storeInDb) {
+      const photoId = uuidv4();
+      fileUrl = `/api/v1/inspection-photos/file/${photoId}`;
     }
 
     // 메타데이터
@@ -92,13 +82,37 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
       checklist_id: checklist_id ? parseInt(checklist_id) : null,
       item_status_id: item_status_id ? parseInt(item_status_id) : null,
       file_url: fileUrl,
-      thumbnail_url: fileUrl, // 썸네일은 동일하게 사용 (추후 리사이징 구현 가능)
+      thumbnail_url: fileUrl,
       file_type: req.file.mimetype,
       file_size: req.file.size,
-      uploaded_by: req.user?.id || 1, // 인증된 사용자 ID 또는 기본값
+      uploaded_by: req.user?.id || 1,
       shot_count: shot_count ? parseInt(shot_count) : null,
       metadata
     });
+
+    // DB BYTEA에 이미지 데이터 저장 (Cloudinary 미사용 시)
+    if (storeInDb && photo.id) {
+      try {
+        const { sequelize } = require('../models/newIndex');
+        // image_data 컬럼 확인 및 추가
+        try {
+          await sequelize.query('ALTER TABLE inspection_photos ADD COLUMN IF NOT EXISTS image_data BYTEA');
+        } catch (e) { /* 이미 존재하면 무시 */ }
+        await sequelize.query(
+          'UPDATE inspection_photos SET image_data = $1 WHERE id = $2',
+          { bind: [req.file.buffer, photo.id], type: sequelize.QueryTypes.UPDATE }
+        );
+        // fileUrl을 DB ID 기반으로 업데이트
+        await sequelize.query(
+          'UPDATE inspection_photos SET file_url = $1, thumbnail_url = $1 WHERE id = $2',
+          { bind: [`/api/v1/inspection-photos/file/${photo.id}`, photo.id], type: sequelize.QueryTypes.UPDATE }
+        );
+        photo.file_url = `/api/v1/inspection-photos/file/${photo.id}`;
+        photo.thumbnail_url = photo.file_url;
+      } catch (dbErr) {
+        console.error('DB BYTEA 저장 실패:', dbErr.message);
+      }
+    }
 
     res.json({
       success: true,
@@ -108,6 +122,48 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
   } catch (error) {
     console.error('사진 업로드 오류:', error);
     res.status(500).json({ success: false, message: '사진 업로드 중 오류가 발생했습니다.', error: error.message });
+  }
+});
+
+// DB BYTEA에서 이미지 파일 조회
+router.get('/file/:id', async (req, res) => {
+  try {
+    const { sequelize } = require('../models/newIndex');
+    const { id } = req.params;
+
+    // UUID 형식이면 file_url에서 매칭, 숫자면 id로 매칭
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let query, replacements;
+    if (isUUID) {
+      query = 'SELECT * FROM inspection_photos WHERE file_url LIKE $1 LIMIT 1';
+      replacements = [`%${id}%`];
+    } else {
+      query = 'SELECT * FROM inspection_photos WHERE id = $1 LIMIT 1';
+      replacements = [id];
+    }
+    const [rows] = await sequelize.query(query, { bind: replacements });
+    const photo = rows[0];
+
+    if (!photo) {
+      return res.status(404).json({ success: false, message: '이미지를 찾을 수 없습니다.' });
+    }
+
+    // image_data가 있으면 BYTEA에서 직접 반환
+    if (photo.image_data) {
+      res.set('Content-Type', photo.mime_type || photo.file_type || 'image/jpeg');
+      res.set('Cache-Control', 'public, max-age=31536000');
+      return res.send(photo.image_data);
+    }
+
+    // 외부 URL이면 리다이렉트
+    if (photo.file_url && photo.file_url.startsWith('http')) {
+      return res.redirect(photo.file_url);
+    }
+
+    res.status(404).json({ success: false, message: '이미지 데이터를 찾을 수 없습니다.' });
+  } catch (error) {
+    console.error('이미지 파일 조회 오류:', error);
+    res.status(500).json({ success: false, message: '이미지 조회 실패', error: error.message });
   }
 });
 
@@ -185,7 +241,7 @@ router.delete('/:photoId', async (req, res) => {
       return res.status(404).json({ success: false, message: '사진을 찾을 수 없습니다.' });
     }
 
-    // Cloudinary 이미지인 경우 Cloudinary에서 삭제
+    // Cloudinary 이미지인 경우 Cloudinary에서도 삭제
     if (photo.file_url && photo.file_url.includes('cloudinary.com')) {
       try {
         const publicId = getPublicIdFromUrl(photo.file_url);
@@ -195,16 +251,9 @@ router.delete('/:photoId', async (req, res) => {
       } catch (cloudErr) {
         console.error('Cloudinary delete error:', cloudErr);
       }
-    } else {
-      // 로컬 파일 삭제
-      const filename = photo.file_url.split('/').pop();
-      const filePath = path.join(uploadDir, filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
     }
 
-    // DB에서 삭제
+    // DB에서 삭제 (BYTEA 데이터 포함)
     await photo.destroy();
 
     res.json({

@@ -234,33 +234,74 @@ const createRepairRequest = async (req, res) => {
       liability_decided_date: liability_decided_date || null
     }, { transaction });
 
-    // 6. 사진 첨부 파일 저장 - Cloudinary 지원
+    // 6. 사진 첨부 파일 저장 - Cloudinary → DB BYTEA 폴백
     if (files && files.length > 0) {
-      const RepairRequestFile = require('../models/newIndex').RepairRequestFile;
+      // repair_attachments 테이블 사용 (file_data BYTEA 포함)
+      try {
+        await sequelize.query(`
+          CREATE TABLE IF NOT EXISTS repair_attachments (
+            id SERIAL PRIMARY KEY,
+            repair_request_id INTEGER,
+            file_path TEXT,
+            file_name VARCHAR(255),
+            file_type VARCHAR(50),
+            file_size INTEGER,
+            file_data BYTEA,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+          )
+        `);
+        try {
+          await sequelize.query('ALTER TABLE repair_attachments ADD COLUMN IF NOT EXISTS file_data BYTEA');
+        } catch (e) { /* ignore */ }
+      } catch (e) { /* ignore */ }
       
       for (const file of files) {
-        let filePath = file.path;
+        let filePath = null;
+        let storeInDb = false;
         
         // 이미지인 경우 Cloudinary 업로드 시도
         if (CLOUDINARY_ENABLED && file.buffer && file.mimetype?.startsWith('image/')) {
           try {
             const cloudinaryResult = await uploadImage(file.buffer, {
               folder: `cams-molds/repairs/${repairRequest.id}`,
-              public_id: `photo_${Date.now()}`
+              public_id: `photo_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`
             });
             filePath = cloudinaryResult.secure_url;
           } catch (cloudErr) {
             logger.warn('Cloudinary upload error for repair photo:', cloudErr.message);
+            storeInDb = true;
+          }
+        } else {
+          storeInDb = true;
+        }
+
+        // DB에 메타데이터 저장
+        const [insertResult] = await sequelize.query(`
+          INSERT INTO repair_attachments (repair_request_id, file_path, file_name, file_type, file_size, created_at)
+          VALUES (:repair_request_id, :file_path, :file_name, :file_type, :file_size, NOW())
+          RETURNING *
+        `, {
+          replacements: {
+            repair_request_id: repairRequest.id,
+            file_path: filePath || '/api/v1/files/temp',
+            file_name: file.originalname,
+            file_type: 'photo',
+            file_size: file.size
+          },
+          transaction
+        });
+
+        // DB BYTEA에 파일 데이터 저장
+        if (storeInDb && insertResult && insertResult[0] && file.buffer) {
+          try {
+            await sequelize.query(
+              'UPDATE repair_attachments SET file_data = $1, file_path = $2 WHERE id = $3',
+              { bind: [file.buffer, `/api/v1/mold-images/file/${insertResult[0].id}`, insertResult[0].id], transaction }
+            );
+          } catch (dbErr) {
+            logger.warn('DB BYTEA 저장 실패:', dbErr.message);
           }
         }
-        
-        await RepairRequestFile.create({
-          repair_request_id: repairRequest.id,
-          file_path: filePath,
-          file_name: file.originalname,
-          file_type: 'photo',
-          file_size: file.size
-        }, { transaction });
       }
     }
 
