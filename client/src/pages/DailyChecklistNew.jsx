@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, ArrowLeft, Loader2, Info, Hash, Save, Send, Search, X, User } from 'lucide-react'
 import api from '../lib/api'
@@ -144,6 +144,8 @@ export default function DailyChecklistNew() {
   const [approverSearchResults, setApproverSearchResults] = useState([])
   const [selectedApprover, setSelectedApprover] = useState(null)
   const [saveMessage, setSaveMessage] = useState(null)
+  const photoInputRef = useRef(null)
+  const [photoTargetItem, setPhotoTargetItem] = useState(null)
 
   const currentCategory = CHECK_CATEGORIES[currentCategoryIndex]
   const totalCategories = CHECK_CATEGORIES.length
@@ -220,7 +222,49 @@ export default function DailyChecklistNew() {
   }
 
   const handlePhotoAdd = (itemId) => {
-    alert('사진 추가 기능은 추후 구현됩니다.')
+    setPhotoTargetItem(itemId)
+    photoInputRef.current?.click()
+  }
+
+  const handlePhotoUpload = async (e) => {
+    const files = Array.from(e.target.files)
+    if (!files.length || !photoTargetItem) return
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) continue
+      try {
+        const fd = new FormData()
+        fd.append('photo', file)
+        fd.append('mold_id', mold?.id || moldId || '')
+        fd.append('inspection_type', 'daily')
+        fd.append('item_id', String(photoTargetItem))
+        const res = await api.post('/inspection-photos/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+        if (res.data?.success) {
+          const photo = { id: res.data.data.id, url: res.data.data.file_url, name: file.name }
+          setCheckResults(prev => ({
+            ...prev,
+            [photoTargetItem]: {
+              ...prev[photoTargetItem],
+              photos: [...(prev[photoTargetItem]?.photos || []), photo]
+            }
+          }))
+        }
+      } catch (err) {
+        console.error('사진 업로드 실패:', err)
+        alert('사진 업로드에 실패했습니다.')
+      }
+    }
+    e.target.value = ''
+    setPhotoTargetItem(null)
+  }
+
+  const handlePhotoRemove = (itemId, photoId) => {
+    setCheckResults(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        photos: (prev[itemId]?.photos || []).filter(p => p.id !== photoId)
+      }
+    }))
   }
 
   const handleNext = () => {
@@ -378,6 +422,7 @@ export default function DailyChecklistNew() {
 
   return (
     <div className="max-w-4xl mx-auto">
+      <input ref={photoInputRef} type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
       {/* 헤더 */}
       <div className="mb-6 flex items-center gap-4">
         <button 
@@ -603,12 +648,25 @@ export default function DailyChecklistNew() {
 
                 {/* 사진 추가 */}
                 <div>
+                  {result.photos && result.photos.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2 mb-2">
+                      {result.photos.map(photo => (
+                        <div key={photo.id} className="relative group">
+                          <img src={photo.url} alt={photo.name} className="w-full h-16 object-cover rounded-lg border" />
+                          <button
+                            onClick={() => handlePhotoRemove(item.id, photo.id)}
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          >&times;</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <button
                     onClick={() => handlePhotoAdd(item.id)}
                     className="btn-secondary flex items-center gap-2 text-sm"
                   >
                     <Camera size={16} />
-                    점검 사진 추가
+                    점검 사진 추가 {result.photos?.length ? `(${result.photos.length})` : ''}
                   </button>
                 </div>
               </div>
