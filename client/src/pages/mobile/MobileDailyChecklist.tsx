@@ -1,7 +1,7 @@
 // client/src/pages/mobile/MobileDailyChecklist.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, AlertTriangle, X, ChevronRight, ChevronLeft, Camera, Loader2, BookOpen, Image, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, AlertTriangle, X, ChevronRight, ChevronLeft, Camera, Loader2, BookOpen, Image, Trash2, Save, Send, Search, User } from 'lucide-react';
 import { useRef } from 'react';
 import api from '../../lib/api';
 
@@ -157,6 +157,12 @@ export default function MobileDailyChecklist() {
   const [uploadingItemId, setUploadingItemId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPhotoItemId, setCurrentPhotoItemId] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [showApproverModal, setShowApproverModal] = useState(false);
+  const [approverSearchKeyword, setApproverSearchKeyword] = useState('');
+  const [approverSearchResults, setApproverSearchResults] = useState<any[]>([]);
+  const [selectedApprover, setSelectedApprover] = useState<any>(null);
+  const [saveMessage, setSaveMessage] = useState<{type: string, text: string} | null>(null);
 
   const currentCategory = CHECK_CATEGORIES[currentCategoryIndex];
   const totalCategories = CHECK_CATEGORIES.length;
@@ -315,6 +321,89 @@ export default function MobileDailyChecklist() {
     }
   };
 
+  const buildPayload = (status: string, approverId: number | null = null) => ({
+    mold_id: mold?.id,
+    check_date: new Date().toISOString(),
+    status,
+    approver_id: approverId,
+    results: checkResults,
+    production_quantity: checkResults[1001]?.value ? parseInt(checkResults[1001].value) : 0,
+    summary: {
+      total: totalItems,
+      completed: completedItems,
+      good: Object.values(checkResults).filter(r => r.status === '양호').length,
+      warning: Object.values(checkResults).filter(r => r.status === '주의').length,
+      bad: Object.values(checkResults).filter(r => r.status === '불량').length
+    }
+  });
+
+  const handleSaveDraft = async () => {
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      await api.post('/checklist-instances/daily/draft', buildPayload('draft'));
+      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (err) {
+      console.error('임시저장 실패:', err);
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSearchApprover = async () => {
+    if (!approverSearchKeyword.trim()) return;
+    try {
+      const res = await api.get('/workflow/admins/search', {
+        params: { name: approverSearchKeyword }
+      });
+      if (res.data.success) {
+        setApproverSearchResults(res.data.data);
+      }
+    } catch (err) {
+      console.error('관리자 검색 실패:', err);
+    }
+  };
+
+  const handleSelectApprover = (approver: any) => {
+    setSelectedApprover(approver);
+    setShowApproverModal(false);
+    setApproverSearchKeyword('');
+    setApproverSearchResults([]);
+  };
+
+  const handleRequestApproval = async () => {
+    if (!selectedApprover) {
+      setShowApproverModal(true);
+      return;
+    }
+
+    const requiredItems = CHECK_CATEGORIES.flatMap(cat =>
+      cat.items.filter(item => item.required)
+    );
+    const completedRequired = requiredItems.filter(item =>
+      checkResults[item.id]?.status
+    );
+    if (completedRequired.length < requiredItems.length) {
+      setError(`필수 항목을 모두 완료해주세요. (${completedRequired.length}/${requiredItems.length})`);
+      return;
+    }
+
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      await api.post('/checklist-instances/daily/request-approval', buildPayload('pending_approval', selectedApprover.id));
+      setSaveMessage({ type: 'success', text: `${selectedApprover.name}님께 승인요청 완료` });
+      setTimeout(() => navigate(-1), 2000);
+    } catch (err) {
+      console.error('승인요청 실패:', err);
+      setSaveMessage({ type: 'error', text: '승인요청에 실패했습니다.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleComplete = async () => {
     const requiredItems = CHECK_CATEGORIES.flatMap(cat =>
       cat.items.filter(item => item.required)
@@ -332,21 +421,8 @@ export default function MobileDailyChecklist() {
     setError('');
 
     try {
-      // API 호출 (추후 구현)
-      const summary = {
-        mold_id: mold?.id,
-        check_date: new Date().toISOString(),
-        results: checkResults,
-        summary: {
-          total: totalItems,
-          completed: completedItems,
-          good: Object.values(checkResults).filter(r => r.status === '양호').length,
-          warning: Object.values(checkResults).filter(r => r.status === '주의').length,
-          bad: Object.values(checkResults).filter(r => r.status === '불량').length
-        }
-      };
-
-      console.log('일상점검 완료:', summary);
+      const payload = buildPayload('completed');
+      console.log('일상점검 완료:', payload);
       setSuccess('일상점검이 완료되었습니다!');
       setTimeout(() => {
         navigate(-1);
@@ -603,36 +679,138 @@ export default function MobileDailyChecklist() {
         )}
       </main>
 
-      {/* 하단 네비게이션 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 flex gap-3">
-        <button
-          onClick={handlePrevious}
-          disabled={currentCategoryIndex === 0}
-          className="flex-1 flex items-center justify-center gap-1 py-3 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium disabled:opacity-50"
-        >
-          <ChevronLeft size={18} />
-          이전
-        </button>
-
-        {currentCategoryIndex === totalCategories - 1 ? (
-          <button
-            onClick={handleComplete}
-            disabled={submitting}
-            className="flex-1 flex items-center justify-center gap-1 py-3 rounded-xl bg-blue-500 text-white text-sm font-medium disabled:opacity-50"
-          >
-            {submitting ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
-            점검 완료
-          </button>
-        ) : (
-          <button
-            onClick={handleNext}
-            className="flex-1 flex items-center justify-center gap-1 py-3 rounded-xl bg-blue-500 text-white text-sm font-medium"
-          >
-            다음
-            <ChevronRight size={18} />
-          </button>
+      {/* 하단 고정 영역 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 pb-safe">
+        {/* 저장 메시지 */}
+        {saveMessage && (
+          <div className={`mx-4 mt-2 p-2 rounded-lg text-xs font-medium text-center ${
+            saveMessage.type === 'success'
+              ? 'bg-green-50 text-green-700 border border-green-200'
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {saveMessage.text}
+          </div>
         )}
+
+        {/* 승인자 선택 표시 */}
+        {selectedApprover && (
+          <div className="mx-4 mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <User size={14} className="text-blue-600" />
+              <span className="text-xs text-blue-800">
+                승인자: <strong>{selectedApprover.name}</strong>
+              </span>
+            </div>
+            <button onClick={() => setSelectedApprover(null)} className="text-blue-400">
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* 임시저장 / 승인요청 버튼 */}
+        <div className="flex gap-2 px-4 pt-2">
+          <button
+            onClick={handleSaveDraft}
+            disabled={saving}
+            className="flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-medium disabled:opacity-50"
+          >
+            <Save size={14} />
+            {saving ? '저장중...' : '임시저장'}
+          </button>
+          <button
+            onClick={handleRequestApproval}
+            disabled={saving}
+            className={`flex-1 flex items-center justify-center gap-1 py-2.5 rounded-xl text-xs font-medium disabled:opacity-50 ${
+              selectedApprover
+                ? 'bg-emerald-500 text-white'
+                : 'bg-blue-50 text-blue-700 border border-blue-200'
+            }`}
+          >
+            <Send size={14} />
+            {selectedApprover ? `${selectedApprover.name}님 승인요청` : '승인자 선택'}
+          </button>
+        </div>
+
+        {/* 네비게이션 버튼 */}
+        <div className="flex gap-2 px-4 pt-2 pb-4">
+          <button
+            onClick={handlePrevious}
+            disabled={currentCategoryIndex === 0}
+            className="flex-1 flex items-center justify-center gap-1 py-3 rounded-xl border border-slate-300 text-slate-700 text-sm font-medium disabled:opacity-50"
+          >
+            <ChevronLeft size={18} />
+            이전
+          </button>
+
+          {currentCategoryIndex === totalCategories - 1 ? (
+            <button
+              onClick={handleComplete}
+              disabled={submitting}
+              className="flex-1 flex items-center justify-center gap-1 py-3 rounded-xl bg-blue-500 text-white text-sm font-medium disabled:opacity-50"
+            >
+              {submitting ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+              점검 완료
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              className="flex-1 flex items-center justify-center gap-1 py-3 rounded-xl bg-blue-500 text-white text-sm font-medium"
+            >
+              다음
+              <ChevronRight size={18} />
+            </button>
+          )}
+        </div>
       </div>
+      {/* 승인자 검색 모달 */}
+      {showApproverModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-2xl max-h-[70vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">승인자(관리자) 선택</h3>
+              <button onClick={() => setShowApproverModal(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4">
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  className="flex-1 rounded-lg bg-slate-50 border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="이름 또는 이메일로 검색"
+                  value={approverSearchKeyword}
+                  onChange={(e) => setApproverSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()}
+                />
+                <button
+                  onClick={handleSearchApprover}
+                  className="px-4 py-2.5 bg-blue-500 text-white rounded-lg flex items-center gap-1 text-sm"
+                >
+                  <Search size={16} />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {approverSearchResults.length === 0 && approverSearchKeyword && (
+                  <p className="text-xs text-slate-500 text-center py-6">검색 결과가 없습니다.</p>
+                )}
+                {approverSearchResults.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => handleSelectApprover(user)}
+                    className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  >
+                    <div className="text-sm font-medium text-slate-900">{user.name}</div>
+                    <div className="text-[10px] text-slate-500">{user.email} {user.company_name && `| ${user.company_name}`}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 가이드 모달 */}
       {showGuide && (
         <div className="fixed inset-0 bg-black/50 flex items-end z-50">

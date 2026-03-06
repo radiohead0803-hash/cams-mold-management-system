@@ -42,6 +42,46 @@ router.get('/developers/search', async (req, res) => {
 });
 
 /**
+ * 관리자(CAMS) 검색 (이름으로)
+ * GET /api/v1/workflow/admins/search?name=홍길동
+ */
+router.get('/admins/search', async (req, res) => {
+  try {
+    const { name, limit = 10 } = req.query;
+
+    const where = {
+      user_type: 'system_admin',
+      is_active: true
+    };
+
+    if (name) {
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${name}%` } },
+        { email: { [Op.iLike]: `%${name}%` } }
+      ];
+    }
+
+    const admins = await User.findAll({
+      where,
+      attributes: ['id', 'name', 'username', 'email', 'phone', 'company_name'],
+      limit: parseInt(limit),
+      order: [['name', 'ASC']]
+    });
+
+    return res.json({
+      success: true,
+      data: admins
+    });
+  } catch (error) {
+    console.error('[Admin Search] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '관리자 검색 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+/**
  * 제작처(업체) 검색
  * GET /api/v1/workflow/makers/search?name=A제작소
  */
