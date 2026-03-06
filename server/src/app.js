@@ -135,6 +135,8 @@ const inspectionPhotosRouter = require('./routes/inspectionPhotos');
 const repairShipmentChecklistRouter = require('./routes/repairShipmentChecklist');
 const moldNurturingRouter = require('./routes/moldNurturing');
 const checklistInstancesRouter = require('./routes/checklistInstances');
+const checklistsRouter = require('./routes/checklists');
+const productionTransferRoutesRouter = require('./routes/productionTransferRoutes');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -245,6 +247,10 @@ app.use('/api/v1/repair-shipment-checklists', repairShipmentChecklistRouter);
 app.use('/api/v1/mold-nurturing', moldNurturingRouter);
 // 점검 인스턴스 (임시저장/승인요청)
 app.use('/api/v1/checklist-instances', checklistInstancesRouter);
+// 체크리스트 CRUD (일상점검 시작/업데이트/이력)
+app.use('/api/v1/checklists', checklistsRouter);
+// 양산이관 첨부파일 업로드
+app.use('/api/v1/production-transfer', productionTransferRoutesRouter);
 
 // Health check
 app.get('/health', (req, res) => {
