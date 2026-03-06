@@ -5,6 +5,7 @@ import { ArrowLeft, Check, AlertTriangle, Wrench, ChevronRight, ChevronLeft, Cam
 import { useRef } from 'react';
 import api from '../../lib/api';
 import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../../lib/draftStorage';
+import InspectionPhotoSection from '../../components/InspectionPhotoSection';
 
 // 웹버전과 동일한 정기점검 유형/카테고리/항목 구조
 const INSPECTION_TYPES = [
@@ -314,9 +315,6 @@ export default function MobilePeriodicInspection() {
   const [success, setSuccess] = useState('');
   const [showGuide, setShowGuide] = useState<Item | null>(null);
   const [gpsLocation, setGpsLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [uploadingItemId, setUploadingItemId] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [currentPhotoItemId, setCurrentPhotoItemId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: string; text: string } | null>(null);
   const [showApproverModal, setShowApproverModal] = useState(false);
@@ -420,74 +418,14 @@ export default function MobilePeriodicInspection() {
     }));
   };
 
-  // 카메라/갤러리 열기
-  const handleCameraClick = (itemId: number) => {
-    setCurrentPhotoItemId(itemId);
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // 사진 업로드 처리
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !currentPhotoItemId) return;
-
-    setUploadingItemId(currentPhotoItemId);
-
-    try {
-      const formData = new FormData();
-      formData.append('photo', file);
-      formData.append('mold_id', moldId || '');
-      formData.append('item_id', String(currentPhotoItemId));
-      formData.append('inspection_type', selectedType?.id || 'periodic');
-      formData.append('shot_count', String(mold?.current_shots || 0));
-
-      const res = await api.post('/inspection-photos/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-
-      if (res.data.success) {
-        const newPhoto: PhotoItem = {
-          id: res.data.data.id,
-          file_url: res.data.data.file_url,
-          thumbnail_url: res.data.data.thumbnail_url
-        };
-
-        setCheckResults(prev => ({
-          ...prev,
-          [currentPhotoItemId]: {
-            ...prev[currentPhotoItemId],
-            photos: [...(prev[currentPhotoItemId]?.photos || []), newPhoto]
-          }
-        }));
+  const handlePhotosChange = (itemId: number, photos: PhotoItem[]) => {
+    setCheckResults(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        photos
       }
-    } catch (err) {
-      console.error('사진 업로드 실패:', err);
-      setError('사진 업로드에 실패했습니다.');
-    } finally {
-      setUploadingItemId(null);
-      setCurrentPhotoItemId(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  // 사진 삭제
-  const handleDeletePhoto = async (itemId: number, photoId: string) => {
-    try {
-      await api.delete(`/inspection-photos/${photoId}`);
-      setCheckResults(prev => ({
-        ...prev,
-        [itemId]: {
-          ...prev[itemId],
-          photos: prev[itemId]?.photos?.filter((p: PhotoItem) => p.id !== photoId) || []
-        }
-      }));
-    } catch (err) {
-      console.error('사진 삭제 실패:', err);
-    }
+    }));
   };
 
   const handleNext = () => {
@@ -757,15 +695,6 @@ export default function MobilePeriodicInspection() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
-      {/* 숨겨진 파일 입력 (카메라/갤러리) */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleFileChange}
-        className="hidden"
-      />
 
       {/* 헤더 */}
       <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
@@ -856,26 +785,13 @@ export default function MobilePeriodicInspection() {
                     {item.name}
                     {item.required && <span className="text-red-500 ml-1">*</span>}
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowGuide(item)}
-                      className="text-blue-500 flex items-center gap-1 text-[10px]"
-                    >
-                      <BookOpen size={14} />
-                      가이드
-                    </button>
-                    <button
-                      onClick={() => handleCameraClick(item.id)}
-                      className={`flex items-center justify-center w-10 h-10 rounded-full ${uploadingItemId === item.id ? 'bg-blue-100' : 'bg-blue-50 hover:bg-blue-100'} text-blue-600 transition-all`}
-                      disabled={uploadingItemId === item.id}
-                    >
-                      {uploadingItemId === item.id ? (
-                        <Loader2 size={20} className="animate-spin" />
-                      ) : (
-                        <Camera size={20} />
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setShowGuide(item)}
+                    className="text-blue-500 flex items-center gap-1 text-[10px]"
+                  >
+                    <BookOpen size={14} />
+                    가이드
+                  </button>
                 </div>
                 <p className="text-[10px] text-slate-500 mt-0.5">{item.description}</p>
               </div>
@@ -921,32 +837,15 @@ export default function MobilePeriodicInspection() {
                 </div>
               )}
 
-              {/* 업로드된 사진 표시 */}
-              {result.photos && result.photos.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-100">
-                  <div className="flex items-center gap-1 mb-2">
-                    <Image size={12} className="text-slate-400" />
-                    <span className="text-[10px] text-slate-500">업로드된 사진 ({result.photos.length})</span>
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {result.photos.map((photo: PhotoItem) => (
-                      <div key={photo.id} className="relative flex-shrink-0">
-                        <img
-                          src={photo.thumbnail_url || photo.file_url}
-                          alt="점검 사진"
-                          className="w-16 h-16 object-cover rounded-lg border border-slate-200"
-                        />
-                        <button
-                          onClick={() => handleDeletePhoto(item.id, photo.id)}
-                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-sm"
-                        >
-                          <Trash2 size={10} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* 사진 추가 */}
+              <InspectionPhotoSection
+                photos={result.photos || []}
+                onPhotosChange={(photos: PhotoItem[]) => handlePhotosChange(item.id, photos)}
+                moldId={moldId}
+                itemId={item.id}
+                inspectionType="periodic"
+                maxPhotos={10}
+              />
             </div>
           );
         })}
