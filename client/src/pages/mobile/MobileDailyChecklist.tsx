@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, AlertTriangle, X, ChevronRight, ChevronLeft, Camera, Loader2, BookOpen, Image, Trash2, Save, Send, Search, User } from 'lucide-react';
 import { useRef } from 'react';
 import api from '../../lib/api';
+import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../../lib/draftStorage';
 
 // 웹버전과 동일한 일상점검 카테고리/항목 구조 (checkPoints 포함)
 const CHECK_CATEGORIES = [
@@ -207,6 +208,21 @@ export default function MobileDailyChecklist() {
     loadMoldData();
   }, [moldId]);
 
+  // Draft 복원
+  useEffect(() => {
+    (async () => {
+      const draft = await loadDraft('m_daily_checklist', moldId || 'new');
+      if (draft && draft.data) {
+        const d = draft.data;
+        if (d.checkResults) setCheckResults(d.checkResults);
+        if (d.currentCategoryIndex !== undefined) setCurrentCategoryIndex(d.currentCategoryIndex);
+        if (d.selectedApprover) setSelectedApprover(d.selectedApprover);
+        setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` });
+        setTimeout(() => setSaveMessage(null), 4000);
+      }
+    })();
+  }, [moldId]);
+
   const handleStatusChange = (itemId: number, status: CheckStatus) => {
     setCheckResults(prev => ({
       ...prev,
@@ -342,11 +358,22 @@ export default function MobileDailyChecklist() {
     setSaveMessage(null);
     try {
       await api.post('/checklist-instances/daily/draft', buildPayload('draft'));
+      await saveDraftLocal('m_daily_checklist', moldId || 'new', {
+        checkResults,
+        currentCategoryIndex,
+        selectedApprover
+      });
       setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
       console.error('임시저장 실패:', err);
-      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
+      await saveDraftLocal('m_daily_checklist', moldId || 'new', {
+        checkResults,
+        currentCategoryIndex,
+        selectedApprover
+      });
+      setSaveMessage({ type: 'success', text: '로컬 임시저장이 완료되었습니다.' });
+      setTimeout(() => setSaveMessage(null), 3000);
     } finally {
       setSaving(false);
     }

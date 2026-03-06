@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, ArrowLeft, Loader2, Info, Hash, Save, Send, Search, X, User } from 'lucide-react'
 import api from '../lib/api'
+import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../lib/draftStorage'
 
 // 일상점검 대항목/소항목 구조 (템플릿 마스터 + 기존 항목 통합)
 const CHECK_CATEGORIES = [
@@ -200,6 +201,22 @@ export default function DailyChecklistNew() {
     loadMoldData()
   }, [moldId])
 
+  // Draft 복원
+  useEffect(() => {
+    (async () => {
+      const draft = await loadDraft('daily_checklist', moldId || 'new')
+      if (draft && draft.data) {
+        const d = draft.data
+        if (d.checkResults) setCheckResults(d.checkResults)
+        if (d.currentCategoryIndex !== undefined) setCurrentCategoryIndex(d.currentCategoryIndex)
+        if (d.productionQty) setProductionQty(d.productionQty)
+        if (d.selectedApprover) setSelectedApprover(d.selectedApprover)
+        setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` })
+        setTimeout(() => setSaveMessage(null), 4000)
+      }
+    })()
+  }, [moldId])
+
   const handleStatusChange = (itemId, status) => {
     setCheckResults(prev => ({
       ...prev,
@@ -299,12 +316,26 @@ export default function DailyChecklistNew() {
     setSaving(true)
     setSaveMessage(null)
     try {
-      await api.post('/checklist-instances/daily/draft', buildPayload('draft'))
+      const payload = buildPayload('draft')
+      await api.post('/checklist-instances/daily/draft', payload)
+      await saveDraftLocal('daily_checklist', moldId || 'new', {
+        checkResults,
+        currentCategoryIndex,
+        productionQty,
+        selectedApprover
+      })
       setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' })
       setTimeout(() => setSaveMessage(null), 3000)
     } catch (err) {
       console.error('임시저장 실패:', err)
-      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' })
+      await saveDraftLocal('daily_checklist', moldId || 'new', {
+        checkResults,
+        currentCategoryIndex,
+        productionQty,
+        selectedApprover
+      })
+      setSaveMessage({ type: 'success', text: '로컬 임시저장이 완료되었습니다.' })
+      setTimeout(() => setSaveMessage(null), 3000)
     } finally {
       setSaving(false)
     }
@@ -352,6 +383,7 @@ export default function DailyChecklistNew() {
     setSaveMessage(null)
     try {
       await api.post('/checklist-instances/daily/request-approval', buildPayload('pending_approval', selectedApprover.id))
+      await clearDraft('daily_checklist', moldId || 'new')
       setSaveMessage({ type: 'success', text: `${selectedApprover.name}님께 승인요청이 완료되었습니다.` })
       setTimeout(() => navigate('/molds'), 2000)
     } catch (err) {
