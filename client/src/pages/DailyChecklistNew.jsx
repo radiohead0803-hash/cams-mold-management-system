@@ -307,7 +307,7 @@ export default function DailyChecklistNew() {
   const handleSearchApprover = async () => {
     if (!approverSearchKeyword.trim()) return
     try {
-      const res = await api.get('/workflow/developers/search', {
+      const res = await api.get('/workflow/approvers/search', {
         params: { name: approverSearchKeyword }
       })
       if (res.data.success) {
@@ -778,7 +778,12 @@ export default function DailyChecklistNew() {
                   onClick={() => handleSelectApprover(user)}
                   className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors"
                 >
-                  <div className="font-medium text-gray-900">{user.name}</div>
+                  <div className="font-medium text-gray-900">
+                    {user.name}
+                    <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${user.user_type === 'system_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {user.user_type === 'system_admin' ? '관리자' : '금형개발'}
+                    </span>
+                  </div>
                   <div className="text-xs text-gray-500">{user.email} {user.company_name && `| ${user.company_name}`}</div>
                 </button>
               ))}

@@ -1,8 +1,7 @@
 // client/src/pages/mobile/MobileDailyChecklist.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check, AlertTriangle, X, ChevronRight, ChevronLeft, Camera, Loader2, BookOpen, Image, Trash2, Save, Send, Search, User } from 'lucide-react';
-import { useRef } from 'react';
+import { ArrowLeft, Check, AlertTriangle, X, ChevronRight, ChevronLeft, Loader2, BookOpen, Save, Send, Search, User } from 'lucide-react';
 import api from '../../lib/api';
 import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../../lib/draftStorage';
 import InspectionPhotoSection from '../../components/InspectionPhotoSection';
@@ -320,7 +319,7 @@ export default function MobileDailyChecklist() {
   const handleSearchApprover = async () => {
     if (!approverSearchKeyword.trim()) return;
     try {
-      const res = await api.get('/workflow/admins/search', {
+      const res = await api.get('/workflow/approvers/search', {
         params: { name: approverSearchKeyword }
       });
       if (res.data.success) {
@@ -693,7 +692,7 @@ export default function MobileDailyChecklist() {
         <div className="fixed inset-0 bg-black/50 flex items-end z-50">
           <div className="bg-white w-full rounded-t-2xl max-h-[70vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-slate-200 p-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-900">승인자(관리자) 선택</h3>
+              <h3 className="text-sm font-semibold text-slate-900">승인자(금형개발 담당자) 선택</h3>
               <button onClick={() => setShowApproverModal(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
                 <X size={18} />
               </button>
@@ -727,7 +726,12 @@ export default function MobileDailyChecklist() {
                     onClick={() => handleSelectApprover(user)}
                     className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-blue-50 hover:border-blue-300 transition-colors"
                   >
-                    <div className="text-sm font-medium text-slate-900">{user.name}</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      {user.name}
+                      <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${user.user_type === 'system_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {user.user_type === 'system_admin' ? '관리자' : '금형개발'}
+                      </span>
+                    </div>
                     <div className="text-[10px] text-slate-500">{user.email} {user.company_name && `| ${user.company_name}`}</div>
                   </button>
                 ))}

@@ -82,6 +82,46 @@ router.get('/admins/search', async (req, res) => {
 });
 
 /**
+ * 승인자 통합 검색 (관리자 + 금형개발 담당자)
+ * GET /api/v1/workflow/approvers/search?name=홍길동
+ */
+router.get('/approvers/search', async (req, res) => {
+  try {
+    const { name, limit = 20 } = req.query;
+
+    const where = {
+      user_type: { [Op.in]: ['system_admin', 'mold_developer'] },
+      is_active: true
+    };
+
+    if (name) {
+      where[Op.or] = [
+        { name: { [Op.iLike]: `%${name}%` } },
+        { email: { [Op.iLike]: `%${name}%` } }
+      ];
+    }
+
+    const approvers = await User.findAll({
+      where,
+      attributes: ['id', 'name', 'username', 'email', 'phone', 'company_name', 'user_type'],
+      limit: parseInt(limit),
+      order: [['name', 'ASC']]
+    });
+
+    return res.json({
+      success: true,
+      data: approvers
+    });
+  } catch (error) {
+    console.error('[Approver Search] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '승인자 검색 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+/**
  * 제작처(업체) 검색
  * GET /api/v1/workflow/makers/search?name=A제작소
  */

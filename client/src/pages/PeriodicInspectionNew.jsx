@@ -437,7 +437,7 @@ export default function PeriodicInspectionNew() {
   const handleSearchApprover = async () => {
     if (!approverKeyword.trim()) return
     try {
-      const res = await api.get('/workflow/developers/search', { params: { name: approverKeyword } })
+      const res = await api.get('/workflow/approvers/search', { params: { name: approverKeyword } })
       if (res.data.success) setApproverResults(res.data.data)
     } catch (err) {
       console.error('관리자 검색 실패:', err)
@@ -988,7 +988,12 @@ export default function PeriodicInspectionNew() {
                 {approverResults.length === 0 && approverKeyword && <p className="text-xs text-gray-500 text-center py-4">검색 결과가 없습니다.</p>}
                 {approverResults.map(u => (
                   <button key={u.id} onClick={() => { setSelectedApprover(u); setShowApproverModal(false); setApproverKeyword(''); setApproverResults([]); }} className="w-full text-left p-3 rounded-lg border hover:bg-blue-50 hover:border-blue-300 transition">
-                    <div className="text-sm font-medium">{u.name}</div>
+                    <div className="text-sm font-medium">
+                      {u.name}
+                      <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${u.user_type === 'system_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {u.user_type === 'system_admin' ? '관리자' : '금형개발'}
+                      </span>
+                    </div>
                     <div className="text-xs text-gray-500">{u.email} {u.company_name && `| ${u.company_name}`}</div>
                   </button>
                 ))}

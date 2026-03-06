@@ -51,7 +51,7 @@ export default function RepairRequestListPage({ showStatusOnly = false }: Props)
       return;
     }
     try {
-      const res = await api.get('/workflow/developers/search', { params: { name, limit: 5 } });
+      const res = await api.get('/workflow/approvers/search', { params: { name, limit: 5 } });
       setDevelopers(res.data.data || []);
     } catch (err) {
       console.error('Developer search error:', err);
