@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const approvalController = require('../controllers/approvalController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 
 /**
  * 승인 대기 목록 조회
@@ -34,13 +34,13 @@ router.post('/', authenticate, approvalController.createApproval);
  * 승인 처리
  * PATCH /api/v1/approvals/:id/approve
  */
-router.patch('/:id/approve', authenticate, approvalController.approveRequest);
+router.patch('/:id/approve', authenticate, authorize(['mold_developer', 'system_admin']), approvalController.approveRequest);
 
 /**
  * 반려 처리
  * PATCH /api/v1/approvals/:id/reject
  */
-router.patch('/:id/reject', authenticate, approvalController.rejectRequest);
+router.patch('/:id/reject', authenticate, authorize(['mold_developer', 'system_admin']), approvalController.rejectRequest);
 
 /**
  * 승인 요청 취소

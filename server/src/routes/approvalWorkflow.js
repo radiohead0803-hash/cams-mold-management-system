@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const { User, Company, RepairRequest, Notification, MoldSpecification, sequelize } = require('../models/newIndex');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
 
 /**
  * 개발담당자 검색 (이름으로)
@@ -189,7 +189,7 @@ const createNotification = async (params) => {
  * 수리요청 생성 (생산처)
  * POST /api/v1/workflow/repair-requests
  */
-router.post('/repair-requests', authenticate, async (req, res) => {
+router.post('/repair-requests', authenticate, authorize(['plant', 'mold_developer', 'system_admin']), async (req, res) => {
   try {
     const {
       mold_id,
@@ -255,7 +255,7 @@ router.post('/repair-requests', authenticate, async (req, res) => {
  * 1차 승인 (개발담당 → 제작처 배정)
  * POST /api/v1/workflow/repair-requests/:id/first-approve
  */
-router.post('/repair-requests/:id/first-approve', authenticate, async (req, res) => {
+router.post('/repair-requests/:id/first-approve', authenticate, authorize(['mold_developer', 'system_admin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { maker_company_id, maker_company_name, notes } = req.body;
@@ -330,7 +330,7 @@ router.post('/repair-requests/:id/first-approve', authenticate, async (req, res)
  * 제작처 수리 시작
  * POST /api/v1/workflow/repair-requests/:id/start-repair
  */
-router.post('/repair-requests/:id/start-repair', authenticate, async (req, res) => {
+router.post('/repair-requests/:id/start-repair', authenticate, authorize(['maker']), async (req, res) => {
   try {
     const { id } = req.params;
     const { notes } = req.body;
@@ -381,7 +381,7 @@ router.post('/repair-requests/:id/start-repair', authenticate, async (req, res) 
  * 제작처 수리 완료
  * POST /api/v1/workflow/repair-requests/:id/complete-repair
  */
-router.post('/repair-requests/:id/complete-repair', authenticate, async (req, res) => {
+router.post('/repair-requests/:id/complete-repair', authenticate, authorize(['maker']), async (req, res) => {
   try {
     const { id } = req.params;
     const { notes, actual_cost } = req.body;
@@ -435,7 +435,7 @@ router.post('/repair-requests/:id/complete-repair', authenticate, async (req, re
  * 최종 승인 (개발담당)
  * POST /api/v1/workflow/repair-requests/:id/final-approve
  */
-router.post('/repair-requests/:id/final-approve', authenticate, async (req, res) => {
+router.post('/repair-requests/:id/final-approve', authenticate, authorize(['mold_developer', 'system_admin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { notes } = req.body;
@@ -490,7 +490,7 @@ router.post('/repair-requests/:id/final-approve', authenticate, async (req, res)
  * 생산처 확인
  * POST /api/v1/workflow/repair-requests/:id/plant-confirm
  */
-router.post('/repair-requests/:id/plant-confirm', authenticate, async (req, res) => {
+router.post('/repair-requests/:id/plant-confirm', authenticate, authorize(['plant']), async (req, res) => {
   try {
     const { id } = req.params;
     const { notes } = req.body;
@@ -554,7 +554,7 @@ router.post('/repair-requests/:id/plant-confirm', authenticate, async (req, res)
  * 반려
  * POST /api/v1/workflow/repair-requests/:id/reject
  */
-router.post('/repair-requests/:id/reject', authenticate, async (req, res) => {
+router.post('/repair-requests/:id/reject', authenticate, authorize(['mold_developer', 'system_admin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { reason } = req.body;
@@ -640,7 +640,7 @@ router.get('/repair-requests', async (req, res) => {
  * 알림 발송 (프론트엔드에서 직접 호출)
  * POST /api/v1/workflow/notifications/send
  */
-router.post('/notifications/send', async (req, res) => {
+router.post('/notifications/send', authenticate, async (req, res) => {
   try {
     const {
       recipient_id,
