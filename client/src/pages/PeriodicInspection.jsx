@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { moldAPI, periodicInspectionAPI } from '../lib/api'
+import api, { moldAPI, periodicInspectionAPI } from '../lib/api'
 import { AlertCircle, CheckCircle, Camera, FileText, X, Upload, Image, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 
 export default function PeriodicInspection() {
@@ -132,18 +132,30 @@ export default function PeriodicInspection() {
     try {
       const newPhotos = []
       for (const file of files) {
-        const reader = new FileReader()
-        const photoData = await new Promise((resolve) => {
-          reader.onload = (e) => resolve({
-            id: Date.now() + Math.random(),
-            file,
-            preview: e.target.result,
-            itemId: currentItemId,
-            name: file.name
+        const fd = new FormData()
+        fd.append('photo', file)
+        fd.append('mold_id', moldId || '')
+        fd.append('inspection_type', inspectionType || 'periodic')
+        fd.append('shot_count', shotCount || '0')
+        if (currentItemId) fd.append('item_id', String(currentItemId))
+
+        try {
+          const res = await api.post('/inspection-photos/upload', fd, {
+            headers: { 'Content-Type': 'multipart/form-data' }
           })
-          reader.readAsDataURL(file)
-        })
-        newPhotos.push(photoData)
+          if (res.data.success) {
+            newPhotos.push({
+              id: res.data.data.id,
+              file,
+              file_url: res.data.data.file_url,
+              preview: res.data.data.file_url,
+              itemId: currentItemId,
+              name: file.name
+            })
+          }
+        } catch (uploadErr) {
+          console.error('Individual photo upload error:', uploadErr)
+        }
       }
       
       if (currentItemId) {

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { FileText, Upload, Download, Trash2, Eye, Plus, Filter } from 'lucide-react'
 import { format } from 'date-fns'
+import api from '../lib/api'
 
 export default function MoldDocuments() {
   const { id } = useParams()
@@ -9,73 +10,28 @@ export default function MoldDocuments() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadForm, setUploadForm] = useState({ document_type: '', document_name: '', version: '1.0' })
+  const fileInputRef = useRef(null)
+  const [selectedFile, setSelectedFile] = useState(null)
 
-  // 임시 데이터
   useEffect(() => {
-    setDocuments([
-      {
-        id: 1,
-        document_type: 'drawing',
-        document_name: '금형 조립도 v2.1',
-        file_path: '/documents/mold-001-assembly.pdf',
-        file_size: 2048576,
-        file_type: 'pdf',
-        version: '2.1',
-        uploaded_by: 'admin',
-        created_at: '2025-11-15T10:00:00',
-        is_active: true
-      },
-      {
-        id: 2,
-        document_type: 'specification',
-        document_name: '금형 사양서',
-        file_path: '/documents/mold-001-spec.xlsx',
-        file_size: 512000,
-        file_type: 'xlsx',
-        version: '1.0',
-        uploaded_by: 'hq_manager',
-        created_at: '2025-11-10T14:30:00',
-        is_active: true
-      },
-      {
-        id: 3,
-        document_type: 'manual',
-        document_name: '유지보수 매뉴얼',
-        file_path: '/documents/mold-001-manual.pdf',
-        file_size: 1536000,
-        file_type: 'pdf',
-        version: '1.2',
-        uploaded_by: 'maker1',
-        created_at: '2025-11-05T09:15:00',
-        is_active: true
-      },
-      {
-        id: 4,
-        document_type: 'report',
-        document_name: '시운전 보고서',
-        file_path: '/documents/mold-001-tryout.pdf',
-        file_size: 3072000,
-        file_type: 'pdf',
-        version: '1.0',
-        uploaded_by: 'plant1',
-        created_at: '2025-10-20T16:45:00',
-        is_active: true
-      },
-      {
-        id: 5,
-        document_type: 'certificate',
-        document_name: '품질 검사 성적서',
-        file_path: '/documents/mold-001-certificate.pdf',
-        file_size: 1024000,
-        file_type: 'pdf',
-        version: '1.0',
-        uploaded_by: 'admin',
-        created_at: '2025-10-15T11:00:00',
-        is_active: true
-      }
-    ])
-    setLoading(false)
+    loadDocuments()
   }, [id])
+
+  const loadDocuments = async () => {
+    setLoading(true)
+    try {
+      const res = await api.get('/files', { params: { entity_type: 'mold_document', entity_id: id } })
+      if (res.data.success) {
+        setDocuments(res.data.data || [])
+      }
+    } catch (error) {
+      console.error('문서 로드 실패:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const documentTypes = {
     all: { label: '전체', icon: FileText, color: 'text-gray-600' },
@@ -102,12 +58,52 @@ export default function MoldDocuments() {
     : documents.filter(doc => doc.document_type === filter)
 
   const handleDownload = (doc) => {
-    alert(`다운로드: ${doc.document_name}`)
+    const url = doc.file_url || doc.url
+    if (url) {
+      window.open(url.startsWith('http') ? url : `${api.defaults.baseURL}${url}`, '_blank')
+    } else {
+      alert('다운로드 URL이 없습니다.')
+    }
   }
 
-  const handleDelete = (docId) => {
-    if (confirm('정말 삭제하시겠습니까?')) {
+  const handleDelete = async (docId) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return
+    try {
+      await api.delete(`/files/${docId}`)
       setDocuments(documents.filter(d => d.id !== docId))
+    } catch (error) {
+      console.error('문서 삭제 실패:', error)
+      alert('삭제에 실패했습니다.')
+    }
+  }
+
+  const handleUploadSubmit = async () => {
+    if (!selectedFile) {
+      alert('파일을 선택해주세요.')
+      return
+    }
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', selectedFile)
+      fd.append('entity_type', 'mold_document')
+      fd.append('entity_id', id)
+      fd.append('description', uploadForm.document_name || selectedFile.name)
+      fd.append('category', uploadForm.document_type || 'document')
+      const res = await api.post('/files/upload', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      if (res.data.success) {
+        setUploadModalOpen(false)
+        setSelectedFile(null)
+        setUploadForm({ document_type: '', document_name: '', version: '1.0' })
+        loadDocuments()
+      }
+    } catch (error) {
+      console.error('문서 업로드 실패:', error)
+      alert('업로드에 실패했습니다.')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -266,14 +262,30 @@ export default function MoldDocuments() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   파일 선택
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 cursor-pointer">
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 cursor-pointer"
+                >
                   <Upload className="mx-auto mb-2 text-gray-400" size={32} />
-                  <p className="text-sm text-gray-600">
-                    클릭하여 파일 선택 또는 드래그 앤 드롭
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    PDF, DWG, XLSX, DOCX (최대 10MB)
-                  </p>
+                  {selectedFile ? (
+                    <p className="text-sm text-primary-600 font-medium">{selectedFile.name}</p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        클릭하여 파일 선택 또는 드래그 앤 드롭
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        PDF, DWG, XLSX, DOCX (최대 10MB)
+                      </p>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.dwg,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                  />
                 </div>
               </div>
             </div>
@@ -286,13 +298,11 @@ export default function MoldDocuments() {
                 취소
               </button>
               <button
-                onClick={() => {
-                  alert('업로드 기능은 추후 구현됩니다.')
-                  setUploadModalOpen(false)
-                }}
-                className="flex-1 btn-primary"
+                onClick={handleUploadSubmit}
+                disabled={uploading || !selectedFile}
+                className="flex-1 btn-primary disabled:opacity-50"
               >
-                업로드
+                {uploading ? '업로드 중...' : '업로드'}
               </button>
             </div>
           </div>

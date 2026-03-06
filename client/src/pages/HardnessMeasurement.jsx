@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Upload, Camera, Send, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
-import { moldSpecificationAPI } from '../lib/api';
+import api, { moldSpecificationAPI } from '../lib/api';
 
 // 금형 재질별 경도 기준 (min, max 값 포함)
 const HARDNESS_STANDARDS = [
@@ -169,9 +169,25 @@ export default function HardnessMeasurement() {
     }
   };
 
-  const handleImageUpload = (type, event) => {
+  const handleImageUpload = async (type, event) => {
     const file = event.target.files[0];
-    if (file) {
+    if (!file) return;
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      fd.append('mold_id', moldId || '');
+      fd.append('inspection_type', 'hardness');
+      fd.append('category', type);
+      const res = await api.post('/inspection-photos/upload', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const url = res.data.success ? res.data.data.file_url : URL.createObjectURL(file);
+      if (type === 'nameplate') setNameplateImage(url);
+      else if (type === 'cavity') setCavityImage(url);
+      else if (type === 'core') setCoreImage(url);
+    } catch (error) {
+      console.error('사진 업로드 실패:', error);
+      // 폴백: 로컬 미리보기
       const reader = new FileReader();
       reader.onloadend = () => {
         if (type === 'nameplate') setNameplateImage(reader.result);
@@ -180,6 +196,7 @@ export default function HardnessMeasurement() {
       };
       reader.readAsDataURL(file);
     }
+    event.target.value = '';
   };
 
   if (loading) {

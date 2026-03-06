@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Image as ImageIcon, Upload, X, ZoomIn, Download, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
+import api, { moldImageAPI, getImageUrl } from '../lib/api'
 
 export default function MoldPhotoGallery() {
   const { id } = useParams()
@@ -10,85 +11,37 @@ export default function MoldPhotoGallery() {
   const [filter, setFilter] = useState('all')
   const [selectedPhoto, setSelectedPhoto] = useState(null)
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadForm, setUploadForm] = useState({ photo_type: '', description: '', tags: '' })
+  const fileInputRef = useRef(null)
+  const [selectedFile, setSelectedFile] = useState(null)
 
-  // 임시 데이터
   useEffect(() => {
-    setPhotos([
-      {
-        id: 1,
-        photo_type: 'overview',
-        photo_path: 'https://via.placeholder.com/800x600/0ea5e9/ffffff?text=Mold+Overview',
-        thumbnail_path: 'https://via.placeholder.com/200x150/0ea5e9/ffffff?text=Mold+Overview',
-        file_size: 1024000,
-        taken_by: 'admin',
-        taken_at: '2025-11-20T10:00:00',
-        description: '금형 전체 사진',
-        tags: '전체,외관,정면',
-        is_primary: true
-      },
-      {
-        id: 2,
-        photo_type: 'detail',
-        photo_path: 'https://via.placeholder.com/800x600/10b981/ffffff?text=Core+Detail',
-        thumbnail_path: 'https://via.placeholder.com/200x150/10b981/ffffff?text=Core+Detail',
-        file_size: 856000,
-        taken_by: 'maker1',
-        taken_at: '2025-11-19T14:30:00',
-        description: '코어 상세',
-        tags: '코어,상세,부품',
-        is_primary: false
-      },
-      {
-        id: 3,
-        photo_type: 'defect',
-        photo_path: 'https://via.placeholder.com/800x600/ef4444/ffffff?text=Defect+Found',
-        thumbnail_path: 'https://via.placeholder.com/200x150/ef4444/ffffff?text=Defect+Found',
-        file_size: 720000,
-        taken_by: 'plant1',
-        taken_at: '2025-11-18T09:15:00',
-        description: '파팅면 손상',
-        tags: '불량,손상,파팅면',
-        is_primary: false
-      },
-      {
-        id: 4,
-        photo_type: 'repair',
-        photo_path: 'https://via.placeholder.com/800x600/f59e0b/ffffff?text=After+Repair',
-        thumbnail_path: 'https://via.placeholder.com/200x150/f59e0b/ffffff?text=After+Repair',
-        file_size: 980000,
-        taken_by: 'maker1',
-        taken_at: '2025-11-17T16:45:00',
-        description: '수리 완료 후',
-        tags: '수리,완료,복구',
-        is_primary: false
-      },
-      {
-        id: 5,
-        photo_type: 'inspection',
-        photo_path: 'https://via.placeholder.com/800x600/8b5cf6/ffffff?text=Inspection',
-        thumbnail_path: 'https://via.placeholder.com/200x150/8b5cf6/ffffff?text=Inspection',
-        file_size: 640000,
-        taken_by: 'hq_manager',
-        taken_at: '2025-11-16T11:00:00',
-        description: '정기점검 사진',
-        tags: '점검,정기,확인',
-        is_primary: false
-      },
-      {
-        id: 6,
-        photo_type: 'detail',
-        photo_path: 'https://via.placeholder.com/800x600/06b6d4/ffffff?text=Cavity+Detail',
-        thumbnail_path: 'https://via.placeholder.com/200x150/06b6d4/ffffff?text=Cavity+Detail',
-        file_size: 890000,
-        taken_by: 'admin',
-        taken_at: '2025-11-15T13:20:00',
-        description: '캐비티 상세',
-        tags: '캐비티,상세,내부',
-        is_primary: false
-      }
-    ])
-    setLoading(false)
+    loadPhotos()
   }, [id])
+
+  const loadPhotos = async () => {
+    setLoading(true)
+    try {
+      const res = await moldImageAPI.getAll({ mold_spec_id: id })
+      if (res.data.success) {
+        setPhotos((res.data.data || []).map(img => ({
+          ...img,
+          photo_type: img.image_type || 'overview',
+          photo_path: getImageUrl(img.image_url || img.file_url),
+          thumbnail_path: getImageUrl(img.thumbnail_url || img.image_url || img.file_url),
+          taken_by: img.uploaded_by_name || 'unknown',
+          taken_at: img.created_at || img.uploaded_at,
+          description: img.description || img.original_name || '사진',
+          tags: img.tags || '',
+        })))
+      }
+    } catch (error) {
+      console.error('사진 로드 실패:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const photoTypes = {
     all: { label: '전체', color: 'bg-gray-100 text-gray-800' },
@@ -109,20 +62,52 @@ export default function MoldPhotoGallery() {
     ? photos 
     : photos.filter(photo => photo.photo_type === filter)
 
-  const handleDelete = (photoId) => {
-    if (confirm('정말 삭제하시겠습니까?')) {
+  const handleDelete = async (photoId) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return
+    try {
+      await moldImageAPI.delete(photoId)
       setPhotos(photos.filter(p => p.id !== photoId))
-      if (selectedPhoto?.id === photoId) {
-        setSelectedPhoto(null)
-      }
+      if (selectedPhoto?.id === photoId) setSelectedPhoto(null)
+    } catch (error) {
+      console.error('사진 삭제 실패:', error)
+      alert('삭제에 실패했습니다.')
     }
   }
 
-  const handleSetPrimary = (photoId) => {
-    setPhotos(photos.map(p => ({
-      ...p,
-      is_primary: p.id === photoId
-    })))
+  const handleSetPrimary = async (photoId) => {
+    try {
+      await moldImageAPI.setPrimary(photoId)
+      setPhotos(photos.map(p => ({ ...p, is_primary: p.id === photoId })))
+    } catch (error) {
+      console.error('대표 사진 설정 실패:', error)
+    }
+  }
+
+  const handleUploadSubmit = async () => {
+    if (!selectedFile) {
+      alert('사진을 선택해주세요.')
+      return
+    }
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', selectedFile)
+      fd.append('mold_spec_id', id)
+      fd.append('image_type', uploadForm.photo_type || 'overview')
+      fd.append('description', uploadForm.description || '')
+      const res = await moldImageAPI.upload(fd)
+      if (res.data.success) {
+        setUploadModalOpen(false)
+        setSelectedFile(null)
+        setUploadForm({ photo_type: '', description: '', tags: '' })
+        loadPhotos()
+      }
+    } catch (error) {
+      console.error('사진 업로드 실패:', error)
+      alert('업로드에 실패했습니다.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -330,14 +315,30 @@ export default function MoldPhotoGallery() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   사진 선택
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 cursor-pointer">
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 cursor-pointer"
+                >
                   <ImageIcon className="mx-auto mb-2 text-gray-400" size={32} />
-                  <p className="text-sm text-gray-600">
-                    클릭하여 사진 선택 또는 드래그 앤 드롭
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    JPG, PNG (최대 5MB)
-                  </p>
+                  {selectedFile ? (
+                    <p className="text-sm text-primary-600 font-medium">{selectedFile.name}</p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        클릭하여 사진 선택 또는 드래그 앤 드롭
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        JPG, PNG (최대 10MB)
+                      </p>
+                    </>
+                  )}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => setSelectedFile(e.target.files[0] || null)}
+                  />
                 </div>
               </div>
             </div>
@@ -350,13 +351,11 @@ export default function MoldPhotoGallery() {
                 취소
               </button>
               <button
-                onClick={() => {
-                  alert('업로드 기능은 추후 구현됩니다.')
-                  setUploadModalOpen(false)
-                }}
-                className="flex-1 btn-primary"
+                onClick={handleUploadSubmit}
+                disabled={uploading || !selectedFile}
+                className="flex-1 btn-primary disabled:opacity-50"
               >
-                업로드
+                {uploading ? '업로드 중...' : '업로드'}
               </button>
             </div>
           </div>

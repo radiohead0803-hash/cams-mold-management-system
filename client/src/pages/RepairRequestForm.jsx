@@ -6,7 +6,7 @@ import {
   Building, Truck, DollarSign, ClipboardList, Link2, ChevronDown, ChevronUp,
   Image, Plus, Trash2
 } from 'lucide-react';
-import { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, userAPI } from '../lib/api';
+import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, userAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -33,6 +33,7 @@ export default function RepairRequestForm() {
   const [saving, setSaving] = useState(false);
   const [moldInfo, setMoldInfo] = useState(null);
   const [images, setImages] = useState([]); // 첨부 이미지
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [inspectionInfo, setInspectionInfo] = useState({
     lastDailyCheck: null,
     lastPeriodicCheck: null,
@@ -359,23 +360,36 @@ export default function RepairRequestForm() {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // 이미지 추가
-  const handleImageUpload = (e) => {
+  // 이미지 추가 (서버 업로드)
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
-    files.forEach(file => {
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
+    if (files.length === 0) return;
+    setUploadingImage(true);
+    try {
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        const fd = new FormData();
+        fd.append('photo', file);
+        fd.append('mold_id', moldId || '');
+        fd.append('inspection_type', 'repair');
+        const res = await api.post('/inspection-photos/upload', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        if (res.data.success) {
           setImages(prev => [...prev, {
-            id: Date.now() + Math.random(),
-            file,
-            preview: event.target.result,
+            id: res.data.data.id,
+            file_url: res.data.data.file_url,
+            preview: res.data.data.file_url,
             name: file.name
           }]);
-        };
-        reader.readAsDataURL(file);
+        }
       }
-    });
+    } catch (error) {
+      console.error('사진 업로드 실패:', error);
+      alert('사진 업로드에 실패했습니다.');
+    } finally {
+      setUploadingImage(false);
+    }
     e.target.value = '';
   };
 
@@ -384,8 +398,8 @@ export default function RepairRequestForm() {
     setImages(prev => prev.filter(img => img.id !== imageId));
   };
 
-  // 클립보드 붙여넣기
-  const handlePaste = (e) => {
+  // 클립보드 붙여넣기 (서버 업로드)
+  const handlePaste = async (e) => {
     const items = e.clipboardData?.items;
     if (!items) return;
     
@@ -394,16 +408,28 @@ export default function RepairRequestForm() {
         e.preventDefault();
         const file = item.getAsFile();
         if (file) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            setImages(prev => [...prev, {
-              id: Date.now() + Math.random(),
-              file,
-              preview: event.target.result,
-              name: `캡처_${new Date().toLocaleString()}.png`
-            }]);
-          };
-          reader.readAsDataURL(file);
+          setUploadingImage(true);
+          try {
+            const fd = new FormData();
+            fd.append('photo', file);
+            fd.append('mold_id', moldId || '');
+            fd.append('inspection_type', 'repair');
+            const res = await api.post('/inspection-photos/upload', fd, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            if (res.data.success) {
+              setImages(prev => [...prev, {
+                id: res.data.data.id,
+                file_url: res.data.data.file_url,
+                preview: res.data.data.file_url,
+                name: `캡처_${new Date().toLocaleString()}.png`
+              }]);
+            }
+          } catch (error) {
+            console.error('사진 업로드 실패:', error);
+          } finally {
+            setUploadingImage(false);
+          }
         }
         break;
       }
