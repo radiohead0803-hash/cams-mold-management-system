@@ -267,7 +267,7 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.json({
     message: 'CAMS API Server',
-    version: '04-02',
+    version: '04-03',
     endpoints: {
       auth: '/api/v1/auth',
       moldSpecifications: '/api/v1/mold-specifications',

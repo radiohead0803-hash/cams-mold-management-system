@@ -29,18 +29,18 @@ const upload = multer({
   }
 });
 
-// 사진 업로드
+// 사진 업로드 (직접 SQL INSERT - 모델 불일치 우회)
 router.post('/upload', upload.single('photo'), async (req, res) => {
   try {
-    const { InspectionPhoto } = require('../models/newIndex');
+    const { sequelize } = require('../models/newIndex');
     const { mold_id, checklist_id, item_id, inspection_type, shot_count, category } = req.body;
     
     if (!req.file) {
       return res.status(400).json({ success: false, message: '파일이 없습니다.' });
     }
 
+    const photoId = uuidv4();
     let fileUrl;
-    let cloudinaryPublicId = null;
     let storeInDb = false;
 
     // 1. Cloudinary 업로드 시도
@@ -51,65 +51,62 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
           public_id: `photo_${Date.now()}`
         });
         fileUrl = cloudinaryResult.secure_url;
-        cloudinaryPublicId = cloudinaryResult.public_id;
       } catch (cloudErr) {
         console.error('Cloudinary upload error, falling back to DB BYTEA:', cloudErr.message);
         storeInDb = true;
       }
     } else {
-      // Cloudinary 미설정 → DB BYTEA 저장
       storeInDb = true;
     }
 
-    // 2. DB BYTEA 폴백: inspection_photos에 image_data 컬럼 사용
     if (storeInDb) {
-      const photoId = uuidv4();
       fileUrl = `/api/v1/inspection-photos/file/${photoId}`;
     }
 
-    // 메타데이터
-    const metadata = {
-      uploadedFrom: req.headers['user-agent'] || 'unknown'
-    };
+    const metadata = JSON.stringify({ uploadedFrom: req.headers['user-agent'] || 'unknown' });
+    const fileName = `photo_${Date.now()}_${req.file.originalname}`;
+    const uploadedBy = req.user?.id || 1;
 
-    // DB 저장
-    const photo = await InspectionPhoto.create({
-      mold_id: mold_id ? parseInt(mold_id) : null,
-      checklist_id: checklist_id ? parseInt(checklist_id) : null,
-      item_id: item_id ? parseInt(item_id) : null,
-      category: category || null,
-      inspection_type: inspection_type || 'daily',
-      file_name: `photo_${Date.now()}_${req.file.originalname}`,
-      original_name: req.file.originalname,
-      file_url: fileUrl,
-      thumbnail_url: fileUrl,
-      file_type: req.file.mimetype,
-      mime_type: req.file.mimetype,
-      file_size: req.file.size,
-      uploaded_by: req.user?.id || 1,
-      shot_count: shot_count ? parseInt(shot_count) : null,
-      metadata
-    });
+    // 직접 SQL INSERT (Sequelize 모델 우회)
+    await sequelize.query(
+      `INSERT INTO inspection_photos 
+        (id, mold_id, checklist_id, item_id, category, inspection_type, 
+         file_name, original_name, file_url, thumbnail_url, file_type, mime_type, 
+         file_size, uploaded_by, shot_count, metadata, is_active, uploaded_at, created_at)
+       VALUES 
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, true, NOW(), NOW())`,
+      {
+        bind: [
+          photoId,
+          mold_id ? parseInt(mold_id) : null,
+          checklist_id ? parseInt(checklist_id) : null,
+          item_id ? parseInt(item_id) : null,
+          category || null,
+          inspection_type || 'daily',
+          fileName,
+          req.file.originalname,
+          fileUrl,
+          fileUrl,
+          req.file.mimetype,
+          req.file.mimetype,
+          req.file.size,
+          uploadedBy,
+          shot_count ? parseInt(shot_count) : null,
+          metadata
+        ]
+      }
+    );
 
     // DB BYTEA에 이미지 데이터 저장 (Cloudinary 미사용 시)
-    if (storeInDb && photo.id) {
+    if (storeInDb) {
       try {
-        const { sequelize } = require('../models/newIndex');
-        // image_data 컬럼 확인 및 추가
         try {
           await sequelize.query('ALTER TABLE inspection_photos ADD COLUMN IF NOT EXISTS image_data BYTEA');
         } catch (e) { /* 이미 존재하면 무시 */ }
         await sequelize.query(
           'UPDATE inspection_photos SET image_data = $1 WHERE id = $2',
-          { bind: [req.file.buffer, photo.id], type: sequelize.QueryTypes.UPDATE }
+          { bind: [req.file.buffer, photoId] }
         );
-        // fileUrl을 DB ID 기반으로 업데이트
-        await sequelize.query(
-          'UPDATE inspection_photos SET file_url = $1, thumbnail_url = $1 WHERE id = $2',
-          { bind: [`/api/v1/inspection-photos/file/${photo.id}`, photo.id], type: sequelize.QueryTypes.UPDATE }
-        );
-        photo.file_url = `/api/v1/inspection-photos/file/${photo.id}`;
-        photo.thumbnail_url = photo.file_url;
       } catch (dbErr) {
         console.error('DB BYTEA 저장 실패:', dbErr.message);
       }
@@ -118,7 +115,15 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     res.json({
       success: true,
       message: '사진이 업로드되었습니다.',
-      data: photo
+      data: {
+        id: photoId,
+        file_url: fileUrl,
+        thumbnail_url: fileUrl,
+        file_name: fileName,
+        original_name: req.file.originalname,
+        file_type: req.file.mimetype,
+        file_size: req.file.size
+      }
     });
   } catch (error) {
     console.error('사진 업로드 오류:', error);
