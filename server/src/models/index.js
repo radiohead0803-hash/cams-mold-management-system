@@ -33,6 +33,9 @@ db.Material = require('./Material')(sequelize, Sequelize.DataTypes);
 db.MoldType = require('./MoldType')(sequelize, Sequelize.DataTypes);
 db.Tonnage = require('./Tonnage')(sequelize, Sequelize.DataTypes);
 
+// Draft model
+db.Draft = require('./Draft')(sequelize, Sequelize.DataTypes);
+
 // Repair Shipment Checklist models
 db.RepairShipmentChecklist = require('./RepairShipmentChecklist')(sequelize, Sequelize.DataTypes);
 db.RepairShipmentChecklistItem = require('./RepairShipmentChecklistItem')(sequelize, Sequelize.DataTypes);

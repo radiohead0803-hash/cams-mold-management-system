@@ -5,6 +5,7 @@ import {
   CheckCircle, ChevronRight, Cog, Droplets, Settings, Save
 } from 'lucide-react';
 import api from '../../lib/api';
+import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../../lib/draftStorage';
 
 // 유지보전 유형 아이콘
 const TYPE_ICONS = {
@@ -36,6 +37,15 @@ export default function MobileMaintenancePage() {
 
   useEffect(() => {
     loadRecords();
+    (async () => {
+      const draft = await loadDraft('m_maintenance', moldId || 'new');
+      if (draft && draft.data) {
+        setFormData(prev => ({ ...prev, ...draft.data }));
+        setShowForm(true);
+        setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` });
+        setTimeout(() => setSaveMessage(null), 4000);
+      }
+    })();
   }, [moldId]);
 
   const loadRecords = async () => {
@@ -62,11 +72,13 @@ export default function MobileMaintenancePage() {
         cost: formData.cost ? parseInt(formData.cost) : null,
         performed_at: new Date().toISOString()
       });
+      await saveDraftLocal('m_maintenance', moldId || 'new', formData);
       setSaveMessage({ type: 'success', text: '임시저장 완료' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
       console.error('Draft save failed:', error);
-      setSaveMessage({ type: 'error', text: '임시저장 실패' });
+      await saveDraftLocal('m_maintenance', moldId || 'new', formData);
+      setSaveMessage({ type: 'success', text: '로컬 임시저장 완료' });
     } finally {
       setSubmitting(false);
     }
@@ -86,6 +98,7 @@ export default function MobileMaintenancePage() {
         cost: formData.cost ? parseInt(formData.cost) : null,
         performed_at: new Date().toISOString()
       });
+      await clearDraft('m_maintenance', moldId || 'new');
       alert('등록되었습니다.');
       setShowForm(false);
       setFormData({ maintenance_type: '', description: '', work_details: '', cost: '' });

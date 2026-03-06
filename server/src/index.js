@@ -100,6 +100,7 @@ app.use('/api/v1/dash', require('./routes/dashRoutes'));
 app.use('/api/v1/mobile', require('./routes/mobileDashboard'));
 app.use('/api/v1/plant', require('./routes/plantDashboard'));
 app.use('/api/v1/production-transfer', require('./routes/productionTransferRoutes'));
+app.use('/api/v1/drafts', require('./routes/drafts'));
 
 // Static files for uploads
 app.use('/uploads', express.static('uploads'));

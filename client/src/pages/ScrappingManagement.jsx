@@ -5,6 +5,7 @@ import {
   AlertTriangle, Clock, FileText, BarChart3, Save
 } from 'lucide-react';
 import api from '../lib/api';
+import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../lib/draftStorage';
 
 // 상태 배지 컴포넌트
 const StatusBadge = ({ status }) => {
@@ -470,6 +471,14 @@ function ScrappingForm() {
 
   useEffect(() => {
     loadMolds();
+    (async () => {
+      const draft = await loadDraft('scrapping', 'new');
+      if (draft && draft.data) {
+        setFormData(prev => ({ ...prev, ...draft.data }));
+        setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` });
+        setTimeout(() => setSaveMessage(null), 4000);
+      }
+    })();
   }, []);
 
   const loadMolds = async () => {
@@ -486,11 +495,13 @@ function ScrappingForm() {
     setSaveMessage(null);
     try {
       await api.post('/scrapping', { ...formData, status: 'draft' });
+      await saveDraftLocal('scrapping', 'new', formData);
       setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
       console.error('Failed to save draft:', error);
-      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
+      await saveDraftLocal('scrapping', 'new', formData);
+      setSaveMessage({ type: 'success', text: '로컬 임시저장 완료 (서버 저장 실패)' });
     } finally {
       setSubmitting(false);
     }
@@ -506,6 +517,7 @@ function ScrappingForm() {
     try {
       setSubmitting(true);
       await api.post('/scrapping', formData);
+      await clearDraft('scrapping', 'new');
       alert('폐기 요청이 등록되었습니다.');
       navigate('/scrapping');
     } catch (error) {

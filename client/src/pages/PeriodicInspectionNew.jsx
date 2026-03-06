@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin, ArrowLeft, Loader2, Info, Hash, Save, Send, Search, X, User } from 'lucide-react'
 import api from '../lib/api'
+import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../lib/draftStorage'
 
 // 정기점검 대항목/소항목 구조 (템플릿 마스터 + 기존 항목 통합)
 const INSPECTION_TYPES = [
@@ -311,6 +312,27 @@ export default function PeriodicInspectionNew() {
     }
   }, [moldId])
 
+  // Draft 복원
+  useEffect(() => {
+    (async () => {
+      const draft = await loadDraft('periodic_inspection', moldId || 'new')
+      if (draft && draft.data) {
+        const d = draft.data
+        if (d.selectedTypeId) {
+          const foundType = INSPECTION_TYPES.find(t => t.id === d.selectedTypeId)
+          if (foundType) setSelectedType(foundType)
+        }
+        if (d.currentCategoryIndex != null) setCurrentCategoryIndex(d.currentCategoryIndex)
+        if (d.checkResults) setCheckResults(d.checkResults)
+        if (d.cleaningMethod) setCleaningMethod(d.cleaningMethod)
+        if (d.cleaningRatio) setCleaningRatio(d.cleaningRatio)
+        if (d.selectedApprover) setSelectedApprover(d.selectedApprover)
+        setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` })
+        setTimeout(() => setSaveMessage(null), 4000)
+      }
+    })()
+  }, [moldId])
+
   const handleTypeSelect = (type) => {
     setSelectedType(type)
     setCurrentCategoryIndex(0)
@@ -377,12 +399,29 @@ export default function PeriodicInspectionNew() {
     setSaving(true)
     setSaveMessage(null)
     try {
-      await api.post('/checklist-instances/daily/draft', buildPayload('draft'))
+      const payload = buildPayload('draft')
+      await api.post('/checklist-instances/daily/draft', payload)
+      await saveDraftLocal('periodic_inspection', moldId || 'new', {
+        selectedTypeId: selectedType?.id,
+        currentCategoryIndex,
+        checkResults,
+        cleaningMethod,
+        cleaningRatio,
+        selectedApprover
+      })
       setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' })
       setTimeout(() => setSaveMessage(null), 3000)
     } catch (err) {
       console.error('임시저장 실패:', err)
-      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' })
+      await saveDraftLocal('periodic_inspection', moldId || 'new', {
+        selectedTypeId: selectedType?.id,
+        currentCategoryIndex,
+        checkResults,
+        cleaningMethod,
+        cleaningRatio,
+        selectedApprover
+      })
+      setSaveMessage({ type: 'success', text: '로컬 임시저장 완료 (서버 저장 실패)' })
     } finally {
       setSaving(false)
     }
@@ -420,7 +459,7 @@ export default function PeriodicInspectionNew() {
     }
   }
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const allItems = selectedType.categories.flatMap(cat => cat.items)
     const requiredItems = allItems.filter(item => item.required)
     const completedRequired = requiredItems.filter(item => 
@@ -434,6 +473,7 @@ export default function PeriodicInspectionNew() {
 
     const payload = buildPayload('completed')
     console.log('정기점검 완료:', payload)
+    await clearDraft('periodic_inspection', moldId || 'new')
     alert('정기점검이 완료되었습니다!')
     navigate('/molds')
   }
