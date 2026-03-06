@@ -292,7 +292,7 @@ const getChecklistHistory = async (req, res) => {
  */
 const uploadPhotos = async (req, res) => {
   try {
-    const { mold_id, checklist_id, item_status_id, shot_count, metadata } = req.body;
+    const { mold_id, checklist_id, item_id, inspection_type, shot_count, metadata } = req.body;
     const user_id = req.user.id;
 
     if (!req.files || req.files.length === 0) {
@@ -308,9 +308,13 @@ const uploadPhotos = async (req, res) => {
       const photo = await InspectionPhoto.create({
         mold_id: mold_id || null,
         checklist_id: checklist_id || null,
-        item_status_id: item_status_id || null,
+        item_id: item_id || null,
+        inspection_type: inspection_type || 'daily',
+        file_name: file.filename,
+        original_name: file.originalname,
         file_url: `/uploads/${file.filename}`,
         file_type: file.mimetype,
+        mime_type: file.mimetype,
         file_size: file.size,
         uploaded_by: user_id,
         shot_count: shot_count || null,

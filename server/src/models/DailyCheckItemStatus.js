@@ -60,12 +60,6 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
     
-    if (models.InspectionPhoto) {
-      DailyCheckItemStatus.hasMany(models.InspectionPhoto, {
-        foreignKey: 'item_status_id',
-        as: 'photos'
-      });
-    }
   };
 
   return DailyCheckItemStatus;
