@@ -220,6 +220,8 @@ export const repairRequestAPI = {
   getByMold: (moldId) => api.get('/repair-requests', { params: { mold_id: moldId } }),
   // 통계 조회
   getStats: (params) => api.get('/repair-requests/stats', { params }),
+  // 알림 발송
+  sendNotification: (data) => api.post('/workflow/notifications/send', data),
 }
 
 // Report API
@@ -437,6 +439,36 @@ export const inspectionNewAPI = {
   getDueSchedules: (params) => api.get('/inspections-new/schedules/due', { params }),
   getSchedules: (params) => api.get('/inspections-new/schedules', { params }),
   recalcSchedules: (params) => api.post('/inspections-new/schedules/recalc', null, { params }),
+}
+
+// Workflow API (승인 워크플로우)
+export const workflowAPI = {
+  // 금형개발 담당자 검색
+  searchDevelopers: (params) => api.get('/workflow/developers/search', { params }),
+  // 관리자(CAMS) 검색
+  searchAdmins: (params) => api.get('/workflow/admins/search', { params }),
+  // 제작처 검색
+  searchMakers: (params) => api.get('/workflow/makers/search', { params }),
+  // 생산처 검색
+  searchPlants: (params) => api.get('/workflow/plants/search', { params }),
+  // 수리요청 워크플로우
+  createRepairRequest: (data) => api.post('/workflow/repair-requests', data),
+  firstApprove: (id, data) => api.post(`/workflow/repair-requests/${id}/first-approve`, data),
+  startRepair: (id, data) => api.post(`/workflow/repair-requests/${id}/start-repair`, data),
+  completeRepair: (id, data) => api.post(`/workflow/repair-requests/${id}/complete-repair`, data),
+  finalApprove: (id, data) => api.post(`/workflow/repair-requests/${id}/final-approve`, data),
+  plantConfirm: (id, data) => api.post(`/workflow/repair-requests/${id}/plant-confirm`, data),
+  reject: (id, data) => api.post(`/workflow/repair-requests/${id}/reject`, data),
+  getRequests: (params) => api.get('/workflow/repair-requests', { params }),
+}
+
+// Notification API (알림)
+export const notificationAPI = {
+  getAll: (params) => api.get('/notifications', { params }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch('/notifications/read-all'),
+  send: (data) => api.post('/notifications', data),
 }
 
 export default api

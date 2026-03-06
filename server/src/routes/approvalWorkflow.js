@@ -636,4 +636,50 @@ router.get('/repair-requests', async (req, res) => {
   }
 });
 
+/**
+ * 알림 발송 (프론트엔드에서 직접 호출)
+ * POST /api/v1/workflow/notifications/send
+ */
+router.post('/notifications/send', async (req, res) => {
+  try {
+    const {
+      recipient_id,
+      recipient_name,
+      notification_type,
+      message,
+      repair_request_id,
+      plant_manager_name,
+      plant_manager_contact
+    } = req.body;
+
+    if (!recipient_id) {
+      return res.status(400).json({
+        success: false,
+        message: '수신자 ID가 필요합니다.'
+      });
+    }
+
+    await createNotification({
+      userId: recipient_id,
+      type: notification_type || 'repair_request',
+      title: '수리요청 알림',
+      message: message || '새로운 수리요청이 등록되었습니다.',
+      repairRequestId: repair_request_id,
+      workflowAction: 'request',
+      priority: 'normal'
+    });
+
+    return res.json({
+      success: true,
+      message: '알림이 발송되었습니다.'
+    });
+  } catch (error) {
+    console.error('[Send Notification] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '알림 발송 중 오류가 발생했습니다.'
+    });
+  }
+});
+
 module.exports = router;

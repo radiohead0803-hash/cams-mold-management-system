@@ -6,7 +6,7 @@ import {
   Building, Truck, DollarSign, ClipboardList, Link2, ChevronDown, ChevronUp,
   Image, Plus, Trash2
 } from 'lucide-react';
-import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, userAPI } from '../lib/api';
+import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, userAPI, workflowAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -43,6 +43,9 @@ export default function RepairRequestForm() {
   const [moldSpec, setMoldSpec] = useState(null);
   const [repairProgress, setRepairProgress] = useState(null);
   const [camsManagerList, setCamsManagerList] = useState([]); // 캠스 담당자 목록
+  const [developerSearch, setDeveloperSearch] = useState(''); // 개발담당자 검색어
+  const [showDeveloperDropdown, setShowDeveloperDropdown] = useState(false); // 검색 드롭다운 표시
+  const [searchingDeveloper, setSearchingDeveloper] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     request: true,    // 요청 단계 (금형정보 포함)
     repairShop: false, // 수리처 선정
@@ -264,33 +267,71 @@ export default function RepairRequestForm() {
     }
   };
 
-  // 캠스 담당자 목록 로드 (개발팀/HQ 사용자)
-  const loadCamsManagers = async () => {
+  // 금형개발 담당자 검색 (workflow API 연동)
+  const searchDevelopers = async (searchName) => {
+    if (!searchName || searchName.length < 1) {
+      setCamsManagerList([]);
+      return;
+    }
+    setSearchingDeveloper(true);
     try {
-      const response = await userAPI.getAll({ role: 'developer' });
-      if (response.data?.data) {
+      const response = await workflowAPI.searchDevelopers({ name: searchName, limit: 10 });
+      if (response.data?.success && response.data?.data) {
         setCamsManagerList(response.data.data.map(u => ({
           id: u.id,
           name: u.name,
+          username: u.username,
           contact: u.phone || u.email || '',
-          department: u.department || '개발팀'
+          email: u.email || '',
+          company_name: u.company_name || ''
         })));
       }
     } catch (error) {
-      console.error('Load CAMS managers error:', error);
-      // 기본 담당자 목록 (API 실패 시)
-      setCamsManagerList([
-        { id: '1', name: '김개발', contact: '010-1234-5678', department: '개발팀' },
-        { id: '2', name: '이품질', contact: '010-2345-6789', department: '품질팀' },
-        { id: '3', name: '박관리', contact: '010-3456-7890', department: '관리팀' }
-      ]);
+      console.error('Search developers error:', error);
+      setCamsManagerList([]);
+    } finally {
+      setSearchingDeveloper(false);
     }
   };
+
+  // 초기 로드 시 전체 개발담당자 목록
+  const loadCamsManagers = async () => {
+    try {
+      const response = await workflowAPI.searchDevelopers({ limit: 50 });
+      if (response.data?.success && response.data?.data) {
+        setCamsManagerList(response.data.data.map(u => ({
+          id: u.id,
+          name: u.name,
+          username: u.username,
+          contact: u.phone || u.email || '',
+          email: u.email || '',
+          company_name: u.company_name || ''
+        })));
+      }
+    } catch (error) {
+      console.error('Load developers error:', error);
+      setCamsManagerList([]);
+    }
+  };
+
+  // 검색어 변경 시 디바운스 검색
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (developerSearch.trim()) {
+        searchDevelopers(developerSearch.trim());
+        setShowDeveloperDropdown(true);
+      } else {
+        loadCamsManagers();
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [developerSearch]);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // ...
   const handleSave = async (submitType = 'draft') => {
     // 필수 필드 검증
     if (!formData.problem.trim()) {
@@ -791,35 +832,64 @@ export default function RepairRequestForm() {
                 </div>
               </div>
 
-              {/* 캠스 담당자 (조회 기능) */}
+              {/* 금형개발 담당자 검색 */}
               <div className="mt-4 pt-4 border-t border-slate-200">
                 <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                   <User size={16} className="text-blue-600" />
-                  캠스 담당자 <span className="text-xs text-red-500">* 필수</span>
+                  금형개발 담당자 <span className="text-xs text-red-500">* 필수</span>
                 </h4>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">담당자 선택</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">담당자 검색</label>
                     <div className="relative">
-                      <select
-                        value={formData.cams_manager_id}
+                      <input
+                        type="text"
+                        value={developerSearch}
                         onChange={(e) => {
-                          const selectedUser = camsManagerList.find(u => u.id === e.target.value);
-                          if (selectedUser) {
-                            handleChange('cams_manager_id', selectedUser.id);
-                            handleChange('cams_manager_name', selectedUser.name);
-                            handleChange('cams_manager_contact', selectedUser.contact || '');
+                          setDeveloperSearch(e.target.value);
+                          if (!e.target.value) {
+                            handleChange('cams_manager_id', '');
+                            handleChange('cams_manager_name', '');
+                            handleChange('cams_manager_contact', '');
                           }
                         }}
+                        onFocus={() => setShowDeveloperDropdown(true)}
+                        placeholder="담당자 이름을 입력하여 검색..."
                         className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
-                      >
-                        <option value="">캠스 담당자 선택</option>
-                        {camsManagerList.map(manager => (
-                          <option key={manager.id} value={manager.id}>
-                            {manager.name} ({manager.department || '개발팀'})
-                          </option>
-                        ))}
-                      </select>
+                      />
+                      {searchingDeveloper && (
+                        <div className="absolute right-3 top-2.5">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-500"></div>
+                        </div>
+                      )}
+                      {showDeveloperDropdown && camsManagerList.length > 0 && (
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {camsManagerList.map(dev => (
+                            <button
+                              key={dev.id}
+                              type="button"
+                              onClick={() => {
+                                handleChange('cams_manager_id', dev.id);
+                                handleChange('cams_manager_name', dev.name);
+                                handleChange('cams_manager_contact', dev.contact || dev.email || '');
+                                setDeveloperSearch(dev.name);
+                                setShowDeveloperDropdown(false);
+                              }}
+                              className="w-full text-left px-4 py-2.5 hover:bg-amber-50 border-b border-slate-100 last:border-b-0 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="text-sm font-medium text-slate-800">{dev.name}</span>
+                                  {dev.company_name && (
+                                    <span className="ml-2 text-xs text-slate-500">{dev.company_name}</span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-slate-400">{dev.contact || dev.email}</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div>

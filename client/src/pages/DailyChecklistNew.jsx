@@ -269,7 +269,7 @@ export default function DailyChecklistNew() {
   const handleSearchApprover = async () => {
     if (!approverSearchKeyword.trim()) return
     try {
-      const res = await api.get('/workflow/admins/search', {
+      const res = await api.get('/workflow/developers/search', {
         params: { name: approverSearchKeyword }
       })
       if (res.data.success) {
@@ -706,7 +706,7 @@ export default function DailyChecklistNew() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[70vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">승인자(관리자) 선택</h2>
+              <h2 className="text-lg font-bold text-gray-900">승인자(금형개발 담당자) 선택</h2>
               <button onClick={() => setShowApproverModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Upload, Camera, Send, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
-import api, { moldSpecificationAPI } from '../lib/api';
+import api, { moldSpecificationAPI, workflowAPI } from '../lib/api';
 
 // 금형 재질별 경도 기준 (min, max 값 포함)
 const HARDNESS_STANDARDS = [
@@ -54,6 +54,10 @@ export default function HardnessMeasurement() {
   const [approver, setApprover] = useState('');
   const [approvalDate, setApprovalDate] = useState(null);
   const [approvalComment, setApprovalComment] = useState('');
+  const [showApproverModal, setShowApproverModal] = useState(false);
+  const [approverKeyword, setApproverKeyword] = useState('');
+  const [approverResults, setApproverResults] = useState([]);
+  const [selectedApprover, setSelectedApprover] = useState(null);
 
   useEffect(() => {
     if (moldId) {
@@ -112,21 +116,45 @@ export default function HardnessMeasurement() {
   const coreNGResult = checkNG(coreMaterial, coreAverage);
 
   // 승인 요청
-  const handleRequestApproval = () => {
+  const handleSearchApprover = async () => {
+    if (!approverKeyword.trim()) return;
+    try {
+      const res = await workflowAPI.searchDevelopers({ name: approverKeyword });
+      if (res.data?.success) setApproverResults(res.data.data || []);
+    } catch (err) {
+      console.error('담당자 검색 실패:', err);
+    }
+  };
+
+  const handleRequestApproval = async () => {
     if (!cavityAverage && !coreAverage) {
       alert('측정값을 먼저 입력해주세요.');
       return;
     }
+    if (!selectedApprover) {
+      setShowApproverModal(true);
+      return;
+    }
     setApprovalStatus('pending');
     setApprovalRequestDate(new Date().toISOString());
-    alert('승인 요청이 완료되었습니다.');
+    setApprover(selectedApprover.name);
+    // 알림 발송
+    try {
+      await workflowAPI.searchDevelopers({ name: '' }); // warm-up
+      await api.post('/workflow/notifications/send', {
+        recipient_id: selectedApprover.id,
+        notification_type: 'hardness_approval',
+        message: `경도측정 승인요청이 등록되었습니다. (금형: ${moldInfo?.part_name || moldId})`
+      });
+    } catch (e) { console.error('알림 발송 실패:', e); }
+    alert(`${selectedApprover.name}님께 승인 요청이 완료되었습니다.`);
   };
 
   // 승인 처리
   const handleApprove = () => {
     setApprovalStatus('approved');
     setApprovalDate(new Date().toISOString());
-    setApprover('관리자');
+    setApprover(selectedApprover?.name || '관리자');
     alert('승인 처리되었습니다.');
   };
 
@@ -136,7 +164,7 @@ export default function HardnessMeasurement() {
     if (comment) {
       setApprovalStatus('rejected');
       setApprovalDate(new Date().toISOString());
-      setApprover('관리자');
+      setApprover(selectedApprover?.name || '관리자');
       setApprovalComment(comment);
       alert('반려 처리되었습니다.');
     }
@@ -817,7 +845,67 @@ export default function HardnessMeasurement() {
             </div>
           </div>
         )}
+
+        {/* 승인자 선택 표시 */}
+        {selectedApprover && approvalStatus === 'draft' && (
+          <div className="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Send size={16} className="text-blue-600" />
+              <span className="text-sm text-blue-800">
+                승인자: <strong>{selectedApprover.name}</strong> ({selectedApprover.email || ''})
+              </span>
+            </div>
+            <button onClick={() => setSelectedApprover(null)} className="text-blue-400 hover:text-blue-600">
+              <XCircle size={16} />
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* 승인자 검색 모달 */}
+      {showApproverModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[70vh] overflow-y-auto">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-sm font-semibold">승인자(금형개발 담당자) 선택</h3>
+              <button onClick={() => setShowApproverModal(false)} className="text-gray-400 hover:text-gray-600"><XCircle size={18} /></button>
+            </div>
+            <div className="p-4">
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  placeholder="이름으로 검색"
+                  value={approverKeyword}
+                  onChange={(e) => setApproverKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()}
+                />
+                <button onClick={handleSearchApprover} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm">검색</button>
+              </div>
+              <div className="space-y-2">
+                {approverResults.length === 0 && approverKeyword && (
+                  <p className="text-xs text-gray-500 text-center py-4">검색 결과가 없습니다.</p>
+                )}
+                {approverResults.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => {
+                      setSelectedApprover(u);
+                      setShowApproverModal(false);
+                      setApproverKeyword('');
+                      setApproverResults([]);
+                    }}
+                    className="w-full text-left p-3 rounded-lg border hover:bg-blue-50 hover:border-blue-300 transition"
+                  >
+                    <div className="text-sm font-medium">{u.name}</div>
+                    <div className="text-xs text-gray-500">{u.email} {u.company_name && `| ${u.company_name}`}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

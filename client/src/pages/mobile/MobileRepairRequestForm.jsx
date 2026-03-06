@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle, Clock, Calendar, FileText, Package, Wrench, Building, ClipboardList, Scale, Link2, User, WifiOff } from 'lucide-react';
-import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI } from '../../lib/api';
+import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, workflowAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
 
@@ -20,6 +20,10 @@ export default function MobileRepairRequestForm() {
   const { online, syncing, pendingCount, processQueue } = useOfflineSync();
   const [activeSection, setActiveSection] = useState('request');
   const [images, setImages] = useState([]);
+  const [developerSearch, setDeveloperSearch] = useState('');
+  const [developerList, setDeveloperList] = useState([]);
+  const [showDevDropdown, setShowDevDropdown] = useState(false);
+  const [searchingDev, setSearchingDev] = useState(false);
   const [inspectionInfo, setInspectionInfo] = useState({ lastDailyCheck: null, lastPeriodicCheck: null, loading: false });
   const [injectionCondition, setInjectionCondition] = useState(null);
   const [moldSpec, setMoldSpec] = useState(null);
@@ -54,6 +58,37 @@ export default function MobileRepairRequestForm() {
 
   useEffect(() => { if (id) loadRepairRequest(); else if (moldInfo?.id || moldId) loadMoldInfo(moldInfo?.id || moldId); }, [id, moldInfo?.id, moldId]);
   useEffect(() => { if (moldId || moldInfo?.id) { loadInspectionInfo(moldId || moldInfo?.id); loadInjectionCondition(moldId || moldInfo?.id); loadRepairProgress(moldId || moldInfo?.id); } }, [moldId, moldInfo?.id]);
+
+  // 금형개발 담당자 검색 디바운스
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (developerSearch.trim()) {
+        searchDevelopers(developerSearch.trim());
+        setShowDevDropdown(true);
+      } else {
+        loadAllDevelopers();
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [developerSearch]);
+
+  const searchDevelopers = async (name) => {
+    setSearchingDev(true);
+    try {
+      const res = await workflowAPI.searchDevelopers({ name, limit: 10 });
+      if (res.data?.success) setDeveloperList(res.data.data || []);
+    } catch (e) { console.error(e); setDeveloperList([]); }
+    finally { setSearchingDev(false); }
+  };
+
+  const loadAllDevelopers = async () => {
+    try {
+      const res = await workflowAPI.searchDevelopers({ limit: 50 });
+      if (res.data?.success) setDeveloperList(res.data.data || []);
+    } catch (e) { console.error(e); }
+  };
+
+  useEffect(() => { loadAllDevelopers(); }, []);
 
   const loadMoldInfo = async (specId) => {
     try {
@@ -171,9 +206,26 @@ export default function MobileRepairRequestForm() {
         <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">문제유형</label><select value={formData.problem_type} onChange={(e) => handleChange('problem_type', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50"><option value="">선택</option>{problemTypeOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></div><div><label className="block text-sm font-medium text-gray-700 mb-1">발생유형</label><div className="flex gap-2">{occurrenceOptions.map(o => (<button key={o} onClick={() => isEditing && handleChange('occurrence_type', o)} className={`flex-1 py-2 rounded-lg text-sm font-medium border ${formData.occurrence_type === o ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-600 border-gray-300'} ${!isEditing ? 'opacity-60' : ''}`}>{o}</button>))}</div></div></div>
         {/* 생산처 담당자 */}
         <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">생산처 담당자</label><input type="text" value={formData.plant_manager_name} onChange={(e) => handleChange('plant_manager_name', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="담당자명" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">연락처</label><input type="tel" value={formData.plant_manager_contact} onChange={(e) => handleChange('plant_manager_contact', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="010-0000-0000" /></div></div>
-        {/* 캠스 담당자 */}
-        <div className="grid grid-cols-2 gap-3"><div><label className="block text-sm font-medium text-gray-700 mb-1">캠스 담당자</label><input type="text" value={formData.cams_manager_name} onChange={(e) => handleChange('cams_manager_name', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="담당자명" /></div><div><label className="block text-sm font-medium text-gray-700 mb-1">연락처</label><input type="tel" value={formData.cams_manager_contact} onChange={(e) => handleChange('cams_manager_contact', e.target.value)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="자동입력" readOnly /></div></div>
-        {formData.cams_manager_name && <div className="p-2 bg-blue-50 rounded-lg border border-blue-200"><p className="text-xs text-blue-700">선택된 담당자: {formData.cams_manager_name} {formData.cams_manager_contact && `(${formData.cams_manager_contact})`}</p></div>}
+        {/* 금형개발 담당자 검색 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">금형개발 담당자 <span className="text-red-500">*</span></label>
+          <div className="relative">
+            <input type="text" value={developerSearch} onChange={(e) => { setDeveloperSearch(e.target.value); if (!e.target.value) { handleChange('cams_manager_id', ''); handleChange('cams_manager_name', ''); handleChange('cams_manager_contact', ''); } }} onFocus={() => setShowDevDropdown(true)} disabled={!isEditing} className="w-full border rounded-lg px-3 py-2 text-sm disabled:bg-gray-50" placeholder="담당자 이름 검색..." />
+            {searchingDev && <div className="absolute right-3 top-2.5"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amber-500"></div></div>}
+            {showDevDropdown && developerList.length > 0 && (
+              <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {developerList.map(dev => (
+                  <button key={dev.id} type="button" onClick={() => { handleChange('cams_manager_id', dev.id); handleChange('cams_manager_name', dev.name); handleChange('cams_manager_contact', dev.phone || dev.email || ''); setDeveloperSearch(dev.name); setShowDevDropdown(false); }} className="w-full text-left px-3 py-2 hover:bg-amber-50 border-b border-gray-100 last:border-b-0">
+                    <span className="text-sm font-medium">{dev.name}</span>
+                    {dev.company_name && <span className="ml-1 text-xs text-gray-500">{dev.company_name}</span>}
+                    <span className="float-right text-xs text-gray-400">{dev.phone || dev.email}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        {formData.cams_manager_name && <div className="p-2 bg-blue-50 rounded-lg border border-blue-200"><p className="text-xs text-blue-700">선택된 담당자: {formData.cams_manager_name} {formData.cams_manager_contact && `(${formData.cams_manager_contact})`}</p><p className="text-xs text-blue-600 mt-0.5">수리요청 등록 시 해당 담당자에게 알림이 발송됩니다.</p></div>}
         {/* 재고 현황 */}
         <div className="mt-3 pt-3 border-t border-gray-200">
           <label className="block text-sm font-medium text-gray-700 mb-2">📦 재고 현황</label>

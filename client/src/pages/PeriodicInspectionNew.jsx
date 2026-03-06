@@ -430,7 +430,7 @@ export default function PeriodicInspectionNew() {
   const handleSearchApprover = async () => {
     if (!approverKeyword.trim()) return
     try {
-      const res = await api.get('/workflow/admins/search', { params: { name: approverKeyword } })
+      const res = await api.get('/workflow/developers/search', { params: { name: approverKeyword } })
       if (res.data.success) setApproverResults(res.data.data)
     } catch (err) {
       console.error('관리자 검색 실패:', err)
@@ -970,7 +970,7 @@ export default function PeriodicInspectionNew() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full max-h-[70vh] overflow-y-auto">
             <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="text-sm font-semibold">승인자(관리자) 선택</h3>
+              <h3 className="text-sm font-semibold">승인자(금형개발 담당자) 선택</h3>
               <button onClick={() => setShowApproverModal(false)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
             </div>
             <div className="p-4">
