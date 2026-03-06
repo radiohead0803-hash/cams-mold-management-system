@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, Check, Image as ImageIcon, Shield, Save
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import { transferAPI, moldSpecificationAPI, userAPI } from '../lib/api';
+import api, { transferAPI, moldSpecificationAPI, userAPI } from '../lib/api';
 import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../lib/draftStorage';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
@@ -564,7 +564,7 @@ export default function TransferRequest() {
                             <div className="flex items-center justify-center gap-1">
                               <label className="cursor-pointer p-1 text-gray-400 hover:text-cyan-600 hover:bg-cyan-50 rounded transition-colors">
                                 <Camera size={16} />
-                                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => { handleChecklistChange(item.id, 'photos', [...(checklistResults[item.id]?.photos || []), { url: ev.target.result, name: file.name, timestamp: new Date().toISOString() }]); }; reader.readAsDataURL(file); }}} />
+                                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (file) { try { const fd = new FormData(); fd.append('photo', file); fd.append('mold_id', formData.mold_id || ''); fd.append('inspection_type', 'transfer'); fd.append('item_id', String(item.id)); const res = await api.post('/inspection-photos/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } }); if (res.data?.success) { handleChecklistChange(item.id, 'photos', [...(checklistResults[item.id]?.photos || []), { url: res.data.data.file_url, name: file.name, timestamp: new Date().toISOString() }]); } } catch (err) { console.error('사진 업로드 실패:', err); alert('사진 업로드에 실패했습니다.'); } e.target.value = ''; }}} />
                               </label>
                               {checklistResults[item.id]?.photos?.length > 0 && (<span className="text-xs bg-cyan-100 text-cyan-700 px-1.5 py-0.5 rounded-full">{checklistResults[item.id].photos.length}</span>)}
                             </div>

@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, Check, Wifi, WifiOff, Shield, Save
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { transferAPI, moldSpecificationAPI, userAPI } from '../../lib/api';
+import api, { transferAPI, moldSpecificationAPI, userAPI } from '../../lib/api';
 import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../../lib/draftStorage';
 import useOfflineSync from '../../hooks/useOfflineSync.jsx';
 
@@ -476,7 +476,7 @@ export default function MobileTransferRequest() {
                             </select>
                             <label className="p-2 text-gray-400 hover:text-cyan-600 rounded-lg cursor-pointer relative">
                               <Camera size={18} />
-                              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => { handleChecklistChange(item.id, 'photos', [...(checklistResults[item.id]?.photos || []), { url: ev.target.result, name: file.name }]); }; reader.readAsDataURL(file); }}} />
+                              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (file) { try { const fd = new FormData(); fd.append('photo', file); fd.append('mold_id', formData.mold_id || ''); fd.append('inspection_type', 'transfer'); fd.append('item_id', String(item.id)); const res = await api.post('/inspection-photos/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } }); if (res.data?.success) { handleChecklistChange(item.id, 'photos', [...(checklistResults[item.id]?.photos || []), { url: res.data.data.file_url, name: file.name }]); } } catch (err) { console.error('사진 업로드 실패:', err); alert('사진 업로드에 실패했습니다.'); } e.target.value = ''; }}} />
                               {checklistResults[item.id]?.photos?.length > 0 && (<span className="absolute -top-1 -right-1 text-[10px] bg-cyan-500 text-white w-4 h-4 rounded-full flex items-center justify-center">{checklistResults[item.id].photos.length}</span>)}
                             </label>
                           </div>
