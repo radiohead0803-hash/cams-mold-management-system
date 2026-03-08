@@ -7,7 +7,7 @@ import {
   ClipboardCheck, Calendar, Activity, Camera, Shield, X, History, Printer, Star,
   Building, ClipboardList, DollarSign
 } from 'lucide-react';
-import { moldSpecificationAPI, moldAPI, moldImageAPI, getImageUrl } from '../lib/api';
+import api, { moldSpecificationAPI, moldAPI, moldImageAPI, getImageUrl } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import NaverMoldLocationMap from '../components/NaverMoldLocationMap';
 
@@ -56,6 +56,7 @@ export default function MoldDetailNew() {
   const [uploadingImage, setUploadingImage] = useState(null); // 'mold' | 'product' | null
   const [moldImages, setMoldImages] = useState({ mold: null, product: null });
   const [isFavorite, setIsFavorite] = useState(false);
+  const [inspectionStatus, setInspectionStatus] = useState({ daily: null, periodic: null });
 
   // 즐겨찾기 로드
   useEffect(() => {
@@ -137,7 +138,19 @@ export default function MoldDetailNew() {
 
   useEffect(() => {
     loadMoldData();
+    loadInspectionStatus();
   }, [id]);
+
+  const loadInspectionStatus = async () => {
+    try {
+      const res = await api.get(`/checklist-instances/mold/${id}/status`);
+      if (res.data?.success) {
+        setInspectionStatus(res.data.data);
+      }
+    } catch (err) {
+      console.log('점검 현황 로드 실패:', err);
+    }
+  };
 
   const loadMoldData = async () => {
     try {
@@ -746,6 +759,53 @@ export default function MoldDetailNew() {
                  mold.status === 'in_production' ? '생산중' :
                  mold.status || '대기'}
               </p>
+              {/* 일상점검 / 정기점검 상태 */}
+              <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
+                {(() => {
+                  const daily = inspectionStatus?.daily?.latest;
+                  const statusColors = {
+                    draft: 'bg-yellow-100 text-yellow-700',
+                    pending_approval: 'bg-blue-100 text-blue-700',
+                    completed: 'bg-green-100 text-green-700',
+                    rejected: 'bg-red-100 text-red-700',
+                    in_progress: 'bg-indigo-100 text-indigo-700'
+                  };
+                  return (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">일상점검</span>
+                      {daily ? (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColors[daily.status] || 'bg-gray-100 text-gray-600'}`}>
+                          {daily.statusLabel}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-400">기록없음</span>
+                      )}
+                    </div>
+                  );
+                })()}
+                {(() => {
+                  const periodic = inspectionStatus?.periodic?.latest;
+                  const statusColors = {
+                    draft: 'bg-yellow-100 text-yellow-700',
+                    pending_approval: 'bg-blue-100 text-blue-700',
+                    completed: 'bg-green-100 text-green-700',
+                    rejected: 'bg-red-100 text-red-700',
+                    in_progress: 'bg-indigo-100 text-indigo-700'
+                  };
+                  return (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">정기점검</span>
+                      {periodic ? (
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusColors[periodic.status] || 'bg-gray-100 text-gray-600'}`}>
+                          {periodic.statusLabel}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-gray-400">기록없음</span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
 
             {/* 위치 - 클릭 시 지도 표시, 더블클릭 시 상세 정보 */}

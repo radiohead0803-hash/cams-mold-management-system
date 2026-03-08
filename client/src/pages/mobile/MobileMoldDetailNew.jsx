@@ -293,12 +293,12 @@ export default function MobileMoldDetailNew() {
     } catch (e) {}
   }
 
-  // 점검 현황 로드
+  // 점검 현황 로드 (일상/정기 통합)
   const loadInspectionStatus = async () => {
     try {
-      const res = await api.get(`/daily-checks?mold_id=${moldId}&limit=1`).catch(() => null)
-      if (res?.data?.data?.[0]) {
-        setInspectionStatus(res.data.data[0])
+      const res = await api.get(`/checklist-instances/mold/${moldId}/status`)
+      if (res?.data?.success) {
+        setInspectionStatus(res.data.data)
       }
     } catch (e) {}
   }
@@ -523,6 +523,29 @@ export default function MobileMoldDetailNew() {
                   <p className="font-bold text-green-600">
                     {mold.status === 'active' ? '사용중' : mold.status || '대기'}
                   </p>
+                  {/* 일상/정기점검 상태 */}
+                  <div className="mt-2 pt-2 border-t border-gray-100 space-y-1.5">
+                    {(() => {
+                      const daily = inspectionStatus?.daily?.latest;
+                      const sc = { draft: 'bg-yellow-100 text-yellow-700', pending_approval: 'bg-blue-100 text-blue-700', completed: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700' };
+                      return (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-500">일상점검</span>
+                          {daily ? <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${sc[daily.status] || 'bg-gray-100 text-gray-600'}`}>{daily.statusLabel}</span> : <span className="text-[10px] text-gray-400">기록없음</span>}
+                        </div>
+                      );
+                    })()}
+                    {(() => {
+                      const periodic = inspectionStatus?.periodic?.latest;
+                      const sc = { draft: 'bg-yellow-100 text-yellow-700', pending_approval: 'bg-blue-100 text-blue-700', completed: 'bg-green-100 text-green-700', rejected: 'bg-red-100 text-red-700' };
+                      return (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-500">정기점검</span>
+                          {periodic ? <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${sc[periodic.status] || 'bg-gray-100 text-gray-600'}`}>{periodic.statusLabel}</span> : <span className="text-[10px] text-gray-400">기록없음</span>}
+                        </div>
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 <div className="bg-white rounded-xl p-3 shadow-sm">

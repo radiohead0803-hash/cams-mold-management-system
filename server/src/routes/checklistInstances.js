@@ -208,4 +208,77 @@ router.post('/:id/reject', authenticate, async (req, res) => {
   }
 });
 
+/**
+ * 금형별 점검 현황 조회 (최근 일상/정기 점검 상태)
+ * GET /api/v1/checklist-instances/mold/:moldId/status
+ */
+router.get('/mold/:moldId/status', async (req, res) => {
+  try {
+    const { moldId } = req.params;
+
+    // 일상점검 최근 기록
+    const [dailyRows] = await sequelize.query(`
+      SELECT id, status, inspector_name, check_date, created_at, approver_id,
+             summary, requested_at, approved_at, rejected_at, rejection_reason
+      FROM checklist_instances
+      WHERE mold_id = :moldId AND category = 'daily'
+      ORDER BY created_at DESC
+      LIMIT 5
+    `, { replacements: { moldId } });
+
+    // 정기점검 최근 기록
+    const [periodicRows] = await sequelize.query(`
+      SELECT id, status, inspector_name, check_date, created_at, approver_id,
+             summary, requested_at, approved_at, rejected_at, rejection_reason
+      FROM checklist_instances
+      WHERE mold_id = :moldId AND category = 'periodic'
+      ORDER BY created_at DESC
+      LIMIT 5
+    `, { replacements: { moldId } });
+
+    const statusLabel = (s) => ({
+      'draft': '임시저장',
+      'pending_approval': '승인대기',
+      'completed': '완료',
+      'rejected': '반려',
+      'in_progress': '진행중'
+    }[s] || s || '없음');
+
+    const mapRow = (r) => ({
+      id: r.id,
+      status: r.status,
+      statusLabel: statusLabel(r.status),
+      inspectorName: r.inspector_name,
+      checkDate: r.check_date,
+      createdAt: r.created_at,
+      requestedAt: r.requested_at,
+      approvedAt: r.approved_at,
+      rejectedAt: r.rejected_at,
+      rejectionReason: r.rejection_reason
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        daily: {
+          latest: dailyRows.length > 0 ? mapRow(dailyRows[0]) : null,
+          count: dailyRows.length,
+          history: dailyRows.map(mapRow)
+        },
+        periodic: {
+          latest: periodicRows.length > 0 ? mapRow(periodicRows[0]) : null,
+          count: periodicRows.length,
+          history: periodicRows.map(mapRow)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[Mold Inspection Status] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '점검 현황 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
 module.exports = router;
