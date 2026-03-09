@@ -177,33 +177,72 @@ export default function ChecklistMaster() {
     ]}
   ]
 
-  // API에서 템플릿 목록 로드
+  // API에서 템플릿 목록 로드 (구 hq/checklist-templates + 신 checklist-masters 통합)
   const loadTemplates = async () => {
     try {
       setLoading(true)
-      const response = await api.get('/hq/checklist-templates')
-      if (response.data.success && response.data.data.templates) {
-        // API 데이터를 UI 형식으로 변환
-        const apiTemplates = response.data.data.templates.map(t => ({
-          id: t.id,
-          name: t.template_name,
-          version: t.version || '1.0',
-          status: t.is_active ? 'active' : 'draft',
-          type: t.template_type,
-          itemCount: t.item_count || 0,
-          deployedTo: t.deployed_to || [],
-          lastModified: t.updated_at?.split('T')[0] || t.created_at?.split('T')[0],
-          createdBy: t.created_by || 'admin',
-          description: t.description
-        }))
-        setTemplates(apiTemplates)
+      const results = []
+
+      // 1) 구 시스템: hq/checklist-templates
+      try {
+        const response = await api.get('/hq/checklist-templates')
+        if (response.data.success && response.data.data.templates) {
+          response.data.data.templates.forEach(t => {
+            results.push({
+              id: `tpl_${t.id}`,
+              dbId: t.id,
+              source: 'template',
+              name: t.template_name,
+              version: t.version || '1.0',
+              status: t.is_active ? 'active' : 'draft',
+              type: t.template_type,
+              itemCount: t.item_count || 0,
+              deployedTo: t.deployed_to || [],
+              lastModified: t.updated_at?.split('T')[0] || t.created_at?.split('T')[0],
+              createdBy: t.created_by || 'admin',
+              description: t.description
+            })
+          })
+        }
+      } catch (e) {
+        console.warn('Old template API failed:', e.message)
+      }
+
+      // 2) 신 시스템: checklist-masters (마스터 버전)
+      try {
+        const response = await api.get('/checklist-masters')
+        if (response.data.success && response.data.data) {
+          const versions = Array.isArray(response.data.data) ? response.data.data : []
+          versions.forEach(v => {
+            results.push({
+              id: `mv_${v.id}`,
+              dbId: v.id,
+              source: 'master_version',
+              name: v.name,
+              version: `${v.version || 1}`,
+              status: v.status === 'deployed' ? 'active' : v.status || 'draft',
+              type: v.target_type === 'all' ? 'periodic' : v.target_type,
+              itemCount: v.itemMaps?.length || 0,
+              deployedTo: v.is_current_deployed ? ['현재 배포'] : [],
+              lastModified: v.deployed_at?.split('T')[0] || v.updated_at?.split('T')[0] || v.created_at?.split('T')[0],
+              createdBy: v.creator?.name || 'admin',
+              description: v.description,
+              masterStatus: v.status,
+              isCurrentDeployed: v.is_current_deployed
+            })
+          })
+        }
+      } catch (e) {
+        console.warn('New master API failed:', e.message)
+      }
+
+      if (results.length > 0) {
+        setTemplates(results)
       } else {
-        // API 실패 시 기본 데이터 사용
         loadDefaultTemplates()
       }
     } catch (error) {
       console.error('Failed to load templates:', error)
-      // API 실패 시 기본 데이터 사용
       loadDefaultTemplates()
     } finally {
       setLoading(false)
@@ -560,13 +599,21 @@ export default function ChecklistMaster() {
 
     try {
       if (editingTemplate) {
-        // API로 수정
-        await api.put(`/hq/checklist-templates/${editingTemplate.id}`, {
-          template_name: templateForm.name,
-          template_type: templateForm.type,
-          description: templateForm.description,
-          is_active: templateForm.status !== 'draft'
-        })
+        // source에 따라 올바른 API 호출
+        if (editingTemplate.source === 'master_version') {
+          await api.patch(`/checklist-masters/${editingTemplate.dbId}`, {
+            name: templateForm.name,
+            description: templateForm.description,
+            target_type: templateForm.type
+          })
+        } else {
+          await api.put(`/hq/checklist-templates/${editingTemplate.dbId || editingTemplate.id}`, {
+            template_name: templateForm.name,
+            template_type: templateForm.type,
+            description: templateForm.description,
+            is_active: templateForm.status !== 'draft'
+          })
+        }
 
         // 로컬 상태 업데이트
         setTemplates(prev => prev.map(t => 
@@ -584,7 +631,7 @@ export default function ChecklistMaster() {
             : t
         ))
       } else {
-        // API로 새로 생성
+        // API로 새로 생성 (구 시스템 + 신 시스템 동시)
         const response = await api.post('/hq/checklist-templates', {
           template_name: templateForm.name,
           template_type: templateForm.type,
@@ -594,7 +641,9 @@ export default function ChecklistMaster() {
         if (response.data.success) {
           const newId = response.data.data.template.id
           const newTemplate = {
-            id: newId,
+            id: `tpl_${newId}`,
+            dbId: newId,
+            source: 'template',
             ...templateForm,
             status: 'draft',
             checkItems: (templateForm.type === 'daily' || templateForm.type === 'periodic') ? editingCheckItems : undefined,
@@ -628,15 +677,18 @@ export default function ChecklistMaster() {
     setTemplates([...templates, newTemplate])
   }
 
-  const handleDelete = async (templateId) => {
+  const handleDelete = async (template) => {
     if (confirm('정말 삭제하시겠습니까?')) {
       try {
-        await api.delete(`/hq/checklist-templates/${templateId}`)
-        setTemplates(templates.filter(t => t.id !== templateId))
+        if (template.source === 'master_version') {
+          await api.delete(`/checklist-masters/${template.dbId}`)
+        } else {
+          await api.delete(`/hq/checklist-templates/${template.dbId || template.id}`)
+        }
+        setTemplates(templates.filter(t => t.id !== template.id))
       } catch (error) {
         console.error('Delete template error:', error)
-        // API 실패해도 로컬에서는 삭제
-        setTemplates(templates.filter(t => t.id !== templateId))
+        setTemplates(templates.filter(t => t.id !== template.id))
       }
     }
   }
@@ -658,13 +710,22 @@ export default function ChecklistMaster() {
             체크리스트 템플릿 생성, 수정 및 배포 관리
           </p>
         </div>
-        <button
-          onClick={handleCreateNew}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={20} />
-          새 템플릿 생성
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/pre-production-checklist')}
+            className="btn-secondary flex items-center gap-2 text-sm"
+          >
+            <FileText size={16} />
+            점검 마스터 콘솔
+          </button>
+          <button
+            onClick={handleCreateNew}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={20} />
+            새 템플릿 생성
+          </button>
+        </div>
       </div>
 
       {/* 템플릿 목록 */}
@@ -682,6 +743,12 @@ export default function ChecklistMaster() {
                     <h3 className="font-semibold text-gray-900">{template.name}</h3>
                     {getStatusBadge(template.status)}
                     {getTypeBadge(template.type)}
+                    {template.source === 'master_version' && (
+                      <span className="px-2 py-0.5 text-xs font-medium rounded bg-indigo-100 text-indigo-700">마스터</span>
+                    )}
+                    {template.isCurrentDeployed && (
+                      <span className="px-2 py-0.5 text-xs font-medium rounded bg-green-500 text-white">현재 배포</span>
+                    )}
                   </div>
                   <p className="text-sm text-gray-600">버전 {template.version}</p>
                 </div>
@@ -726,7 +793,7 @@ export default function ChecklistMaster() {
                   복제
                 </button>
                 <button
-                  onClick={() => handleDelete(template.id)}
+                  onClick={() => handleDelete(template)}
                   className="px-3 btn-secondary text-sm text-red-600 hover:bg-red-50"
                 >
                   <Trash2 size={16} />

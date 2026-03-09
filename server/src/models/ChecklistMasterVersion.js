@@ -24,7 +24,7 @@ class ChecklistMasterVersion extends Model {
           comment: '설명'
         },
         status: {
-          type: DataTypes.ENUM('draft', 'review', 'approved', 'deployed'),
+          type: DataTypes.STRING(20),
           defaultValue: 'draft',
           comment: '상태: draft, review, approved, deployed'
         },

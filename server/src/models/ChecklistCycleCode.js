@@ -21,7 +21,7 @@ class ChecklistCycleCode extends Model {
           comment: 'DAILY, 20000, 50000, 80000, 100000'
         },
         cycle_type: {
-          type: DataTypes.ENUM('daily', 'shots'),
+          type: DataTypes.STRING(10),
           allowNull: false,
           comment: 'daily: 날짜 기반, shots: 타수 기반'
         },

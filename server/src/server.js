@@ -229,6 +229,178 @@ const runSystemRulesMigration = async () => {
   }
 };
 
+// Run checklist master new system tables migration (5 tables + seed)
+const runChecklistMasterNewMigration = async () => {
+  console.log('🔄 Running checklist master new system migration...');
+  try {
+    // 1) checklist_items_master - 점검항목 마스터
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_items_master (
+        id SERIAL PRIMARY KEY,
+        major_category VARCHAR(100) NOT NULL,
+        item_name VARCHAR(200) NOT NULL,
+        description TEXT,
+        check_method TEXT,
+        required_photo BOOLEAN DEFAULT false,
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_checklist_items_master_category ON checklist_items_master(major_category);
+      CREATE INDEX IF NOT EXISTS idx_checklist_items_master_active ON checklist_items_master(is_active);
+      CREATE INDEX IF NOT EXISTS idx_checklist_items_master_sort ON checklist_items_master(sort_order);
+    `);
+    console.log('  ✅ checklist_items_master table OK');
+
+    // 2) checklist_cycle_codes - 점검주기 코드
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_cycle_codes (
+        id SERIAL PRIMARY KEY,
+        label VARCHAR(50) NOT NULL UNIQUE,
+        cycle_type VARCHAR(10) NOT NULL,
+        cycle_shots INTEGER,
+        description TEXT,
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_checklist_cycle_codes_type ON checklist_cycle_codes(cycle_type);
+      CREATE INDEX IF NOT EXISTS idx_checklist_cycle_codes_sort ON checklist_cycle_codes(sort_order);
+    `);
+    console.log('  ✅ checklist_cycle_codes table OK');
+
+    // 3) checklist_master_versions - 마스터 버전 관리
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_master_versions (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        description TEXT,
+        status VARCHAR(20) DEFAULT 'draft',
+        version INTEGER DEFAULT 1,
+        target_type VARCHAR(50) DEFAULT 'all',
+        created_by INTEGER REFERENCES users(id),
+        approved_by INTEGER REFERENCES users(id),
+        deployed_by INTEGER REFERENCES users(id),
+        approved_at TIMESTAMP WITH TIME ZONE,
+        deployed_at TIMESTAMP WITH TIME ZONE,
+        change_reason TEXT,
+        is_active BOOLEAN DEFAULT true,
+        is_current_deployed BOOLEAN DEFAULT false,
+        snapshot_data JSONB,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_cmv_status ON checklist_master_versions(status);
+      CREATE INDEX IF NOT EXISTS idx_cmv_deployed ON checklist_master_versions(is_current_deployed);
+      CREATE INDEX IF NOT EXISTS idx_cmv_target ON checklist_master_versions(target_type);
+    `);
+    console.log('  ✅ checklist_master_versions table OK');
+
+    // 4) checklist_version_item_maps - 버전-항목 매핑
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_version_item_maps (
+        id SERIAL PRIMARY KEY,
+        checklist_version_id INTEGER NOT NULL REFERENCES checklist_master_versions(id) ON DELETE CASCADE,
+        item_id INTEGER NOT NULL REFERENCES checklist_items_master(id) ON DELETE CASCADE,
+        is_required BOOLEAN DEFAULT true,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(checklist_version_id, item_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_cvim_version ON checklist_version_item_maps(checklist_version_id);
+      CREATE INDEX IF NOT EXISTS idx_cvim_item ON checklist_version_item_maps(item_id);
+    `);
+    console.log('  ✅ checklist_version_item_maps table OK');
+
+    // 5) checklist_item_cycle_maps - 항목-주기 매핑
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS checklist_item_cycle_maps (
+        id SERIAL PRIMARY KEY,
+        checklist_version_id INTEGER NOT NULL REFERENCES checklist_master_versions(id) ON DELETE CASCADE,
+        item_id INTEGER NOT NULL REFERENCES checklist_items_master(id) ON DELETE CASCADE,
+        cycle_code_id INTEGER NOT NULL REFERENCES checklist_cycle_codes(id) ON DELETE CASCADE,
+        is_enabled BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(checklist_version_id, item_id, cycle_code_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_cicm_version ON checklist_item_cycle_maps(checklist_version_id);
+      CREATE INDEX IF NOT EXISTS idx_cicm_item ON checklist_item_cycle_maps(item_id);
+      CREATE INDEX IF NOT EXISTS idx_cicm_cycle ON checklist_item_cycle_maps(cycle_code_id);
+    `);
+    console.log('  ✅ checklist_item_cycle_maps table OK');
+
+    // === Auto-seed: cycle codes ===
+    const defaultCycles = [
+      { label: 'DAILY', cycle_type: 'daily', cycle_shots: null, description: '매일 생산 전 점검', sort_order: 0 },
+      { label: '20000', cycle_type: 'shots', cycle_shots: 20000, description: '20,000 SHOT 점검', sort_order: 1 },
+      { label: '50000', cycle_type: 'shots', cycle_shots: 50000, description: '50,000 SHOT 점검', sort_order: 2 },
+      { label: '80000', cycle_type: 'shots', cycle_shots: 80000, description: '80,000 SHOT 점검', sort_order: 3 },
+      { label: '100000', cycle_type: 'shots', cycle_shots: 100000, description: '100,000 SHOT 점검', sort_order: 4 }
+    ];
+    for (const c of defaultCycles) {
+      try {
+        await sequelize.query(
+          `INSERT INTO checklist_cycle_codes (label, cycle_type, cycle_shots, description, sort_order)
+           VALUES ($1, $2, $3, $4, $5) ON CONFLICT (label) DO NOTHING`,
+          { bind: [c.label, c.cycle_type, c.cycle_shots, c.description, c.sort_order] }
+        );
+      } catch (e) { /* ignore duplicates */ }
+    }
+    console.log('  ✅ checklist_cycle_codes seed OK');
+
+    // === Auto-seed: default inspection items ===
+    const defaultItems = [
+      // 금형 외관 점검
+      { major_category: '금형 외관 점검', item_name: '금형 전체 외관 상태', description: '금형 외관 균열, 변형, 파손 여부 확인', check_method: '육안 검사', required_photo: false, sort_order: 1 },
+      { major_category: '금형 외관 점검', item_name: '금형 외관 도색 상태', description: '도색 벗겨짐, 변색 여부 확인', check_method: '육안 검사', required_photo: false, sort_order: 2 },
+      { major_category: '금형 외관 점검', item_name: '금형 명판 부착 상태', description: '명판 존재 및 정보 일치 확인', check_method: '육안 검사', required_photo: false, sort_order: 3 },
+      { major_category: '금형 외관 점검', item_name: '파팅라인 상태', description: '파팅라인 손상, 버 발생 여부', check_method: '육안 검사', required_photo: true, sort_order: 4 },
+      // 냉각 시스템
+      { major_category: '냉각 시스템', item_name: '냉각수 연결 상태', description: '냉각 호스 연결 및 누수 확인', check_method: '육안 검사', required_photo: false, sort_order: 10 },
+      { major_category: '냉각 시스템', item_name: '냉각 채널 청소 상태', description: '냉각 채널 막힘 및 스케일 확인', check_method: '유량 측정', required_photo: false, sort_order: 11 },
+      { major_category: '냉각 시스템', item_name: '온도센서 작동 상태', description: '온도센서 정상 작동 확인', check_method: '온도 측정', required_photo: false, sort_order: 12 },
+      // 작동부 점검
+      { major_category: '작동부 점검', item_name: '이젝터 작동 상태', description: '이젝터 핀 원활한 작동 확인', check_method: '수동 작동 확인', required_photo: false, sort_order: 20 },
+      { major_category: '작동부 점검', item_name: '이젝터 핀 마모 상태', description: '이젝터 핀 마모, 파손 여부', check_method: '육안 검사 및 유격 확인', required_photo: true, sort_order: 21 },
+      { major_category: '작동부 점검', item_name: '슬라이드 작동 상태', description: '슬라이드 코어 작동 원활성', check_method: '수동 작동 확인', required_photo: false, sort_order: 22 },
+      { major_category: '작동부 점검', item_name: '슬라이드 마모 상태', description: '슬라이드 마모, 유격 확인', check_method: '유격 측정', required_photo: true, sort_order: 23 },
+      { major_category: '작동부 점검', item_name: '가이드 핀/부시 마모', description: '가이드 핀 및 부시 마모 확인', check_method: '유격 측정', required_photo: false, sort_order: 24 },
+      // 성형부 점검
+      { major_category: '성형부 점검', item_name: '캐비티/코어 손상', description: '캐비티, 코어 표면 스크래치, 손상 확인', check_method: '육안 검사', required_photo: true, sort_order: 30 },
+      { major_category: '성형부 점검', item_name: '게이트 상태', description: '게이트 마모, 이물 잔류 확인', check_method: '육안 검사', required_photo: true, sort_order: 31 },
+      { major_category: '성형부 점검', item_name: '벤트 상태', description: '가스 벤트 막힘 확인', check_method: '육안 검사', required_photo: false, sort_order: 32 },
+      // 체결부 점검
+      { major_category: '체결부 점검', item_name: '볼트/너트 체결 상태', description: '체결 토크 및 풀림 확인', check_method: '토크렌치 확인', required_photo: false, sort_order: 40 },
+      { major_category: '체결부 점검', item_name: '스프링 상태', description: '리턴 스프링 파손, 피로 확인', check_method: '육안 검사 및 길이 측정', required_photo: false, sort_order: 41 },
+      // 핫러너 시스템
+      { major_category: '핫러너 시스템', item_name: '히터/온도센서 상태', description: '히터 단선, 온도센서 정상 작동 확인', check_method: '저항 측정', required_photo: false, sort_order: 50 },
+      { major_category: '핫러너 시스템', item_name: '핫러너 누수 확인', description: '핫러너 매니폴드 수지 누출 확인', check_method: '육안 검사', required_photo: true, sort_order: 51 }
+    ];
+
+    const [existingItems] = await sequelize.query('SELECT COUNT(*) as cnt FROM checklist_items_master');
+    if (parseInt(existingItems[0].cnt) === 0) {
+      for (const item of defaultItems) {
+        await sequelize.query(
+          `INSERT INTO checklist_items_master (major_category, item_name, description, check_method, required_photo, sort_order)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          { bind: [item.major_category, item.item_name, item.description, item.check_method, item.required_photo, item.sort_order] }
+        );
+      }
+      console.log('  ✅ checklist_items_master seed OK (19 default items)');
+    } else {
+      console.log('  ℹ️ checklist_items_master already has data, skipping seed');
+    }
+
+    console.log('✅ Checklist master new system migration completed.');
+  } catch (error) {
+    console.error('⚠️ Checklist master new system migration warning:', error.message);
+  }
+};
+
 // Run SQL migrations for weight columns and history table
 const runWeightColumnsMigration = async () => {
   console.log('🔄 Running weight columns migration...');
@@ -979,6 +1151,9 @@ const startServer = async () => {
     
     // Run system_rules table migration + auto-seed
     await runSystemRulesMigration();
+    
+    // Run checklist master new system migration (5 tables + seed)
+    await runChecklistMasterNewMigration();
     
     // Sync models (development only)
     if (process.env.NODE_ENV === 'development') {
