@@ -61,7 +61,10 @@ export default function PlantMoldSelect() {
         params: { limit: 500 }
       });
       if (response.data.success) {
-        setMolds(response.data.data || []);
+        const data = response.data.data;
+        // API는 { total, items } 형식으로 반환
+        const items = Array.isArray(data) ? data : (data?.items || []);
+        setMolds(items);
       }
     } catch (error) {
       console.error('Failed to load molds:', error);

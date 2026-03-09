@@ -1,27 +1,36 @@
-const { MakerSpecification, MoldSpecification, User, Mold } = require('../models/newIndex');
+const { MakerSpecification, MoldSpecification, User, Mold, Company } = require('../models/newIndex');
 const logger = require('../utils/logger');
 
 /**
  * 제작처에 할당된 금형 사양 목록 조회
+ * - maker_specifications에 maker_id 컬럼 없음
+ * - mold_specifications.maker_company_id를 통해 company 기반 필터링
  */
 const getMakerSpecifications = async (req, res) => {
   try {
     const { status, current_stage } = req.query;
-    const makerId = req.user.id;
+    const companyId = req.user.company_id;
 
-    const where = { maker_id: makerId };
+    const where = {};
     if (status) where.status = status;
     if (current_stage) where.current_stage = current_stage;
 
+    // company_id가 있으면 mold_specifications.maker_company_id로 필터링
+    const specInclude = {
+      model: MoldSpecification,
+      as: 'specification',
+      attributes: ['id', 'part_number', 'part_name', 'car_model', 'car_year', 'mold_type',
+        'tonnage', 'material', 'cavity_count', 'order_date', 'target_delivery_date',
+        'development_stage', 'status', 'maker_company_id', 'plant_company_id']
+    };
+    if (companyId) {
+      specInclude.where = { maker_company_id: companyId };
+      specInclude.required = true;
+    }
+
     const specifications = await MakerSpecification.findAll({
       where,
-      include: [
-        {
-          model: MoldSpecification,
-          as: 'specification',
-          attributes: ['id', 'part_number', 'part_name', 'car_model', 'order_date', 'target_delivery_date']
-        }
-      ],
+      include: [specInclude],
       order: [['created_at', 'DESC']]
     });
 
@@ -44,10 +53,9 @@ const getMakerSpecifications = async (req, res) => {
 const getMakerSpecificationById = async (req, res) => {
   try {
     const { id } = req.params;
-    const makerId = req.user.id;
 
     const specification = await MakerSpecification.findOne({
-      where: { id, maker_id: makerId },
+      where: { id },
       include: [
         {
           model: MoldSpecification,
@@ -139,51 +147,44 @@ const updateMakerSpecification = async (req, res) => {
  */
 const getMakerDashboardStats = async (req, res) => {
   try {
-    const makerId = req.user.id;
+    const companyId = req.user.company_id;
+
+    // company_id 기반 include 조건
+    const companyInclude = companyId ? {
+      model: MoldSpecification,
+      as: 'specification',
+      where: { maker_company_id: companyId },
+      required: true,
+      attributes: []
+    } : null;
+
+    const countOpts = (extraWhere) => {
+      const opts = { where: { ...extraWhere } };
+      if (companyInclude) opts.include = [companyInclude];
+      return opts;
+    };
 
     // 단계별 현황
-    const design = await MakerSpecification.count({
-      where: { maker_id: makerId, current_stage: '설계' }
-    });
-
-    const machining = await MakerSpecification.count({
-      where: { maker_id: makerId, current_stage: '가공' }
-    });
-
-    const assembly = await MakerSpecification.count({
-      where: { maker_id: makerId, current_stage: '조립' }
-    });
-
-    const trialWaiting = await MakerSpecification.count({
-      where: { maker_id: makerId, current_stage: '시운전대기' }
-    });
+    const design = await MakerSpecification.count(countOpts({ current_stage: '설계' }));
+    const machining = await MakerSpecification.count(countOpts({ current_stage: '가공' }));
+    const assembly = await MakerSpecification.count(countOpts({ current_stage: '조립' }));
+    const trialWaiting = await MakerSpecification.count(countOpts({ current_stage: '시운전대기' }));
 
     // 상태별 현황
-    const pending = await MakerSpecification.count({
-      where: { maker_id: makerId, status: 'pending' }
-    });
-
-    const inProgress = await MakerSpecification.count({
-      where: { maker_id: makerId, status: 'in_progress' }
-    });
-
-    const completed = await MakerSpecification.count({
-      where: { maker_id: makerId, status: 'completed' }
-    });
+    const pending = await MakerSpecification.count(countOpts({ status: 'pending' }));
+    const inProgress = await MakerSpecification.count(countOpts({ status: 'in_progress' }));
+    const completed = await MakerSpecification.count(countOpts({ status: 'completed' }));
 
     // 이번 주 완료
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const weekCompleted = await MakerSpecification.count({
-      where: {
-        maker_id: makerId,
-        status: 'completed',
-        updated_at: {
-          [require('sequelize').Op.gte]: weekAgo
-        }
+    const weekCompleted = await MakerSpecification.count(countOpts({
+      status: 'completed',
+      updated_at: {
+        [require('sequelize').Op.gte]: weekAgo
       }
-    });
+    }));
 
     res.json({
       success: true,

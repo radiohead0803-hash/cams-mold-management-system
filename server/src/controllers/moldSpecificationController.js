@@ -216,6 +216,15 @@ const getMoldSpecifications = async (req, res) => {
     if (development_stage) where.development_stage = development_stage;
     if (target_maker_id) where.target_maker_id = target_maker_id;
 
+    // maker/plant 유저는 자기 업체 금형만 조회
+    const userType = req.user?.user_type;
+    const companyId = req.user?.company_id;
+    if (userType === 'maker' && companyId) {
+      where.maker_company_id = companyId;
+    } else if (userType === 'plant' && companyId) {
+      where.plant_company_id = companyId;
+    }
+
     const specifications = await MoldSpecification.findAndCountAll({
       where,
       include: [
