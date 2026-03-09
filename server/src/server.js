@@ -191,6 +191,44 @@ const runTryoutIssuesMigration = async () => {
   }
 };
 
+// Run system_rules table creation + auto-seed
+const runSystemRulesMigration = async () => {
+  console.log('🔄 Running system_rules table migration...');
+  try {
+    await sequelize.query(`
+      CREATE TABLE IF NOT EXISTS system_rules (
+        id SERIAL PRIMARY KEY,
+        rule_key VARCHAR(100) NOT NULL UNIQUE,
+        category VARCHAR(50) NOT NULL,
+        name VARCHAR(200) NOT NULL,
+        description TEXT,
+        value VARCHAR(500) NOT NULL,
+        value_type VARCHAR(20) DEFAULT 'number',
+        unit VARCHAR(50),
+        min_value DECIMAL(10,2),
+        max_value DECIMAL(10,2),
+        default_value VARCHAR(500),
+        applies_to VARCHAR(100) DEFAULT 'all',
+        is_active BOOLEAN DEFAULT true,
+        is_editable BOOLEAN DEFAULT true,
+        updated_by INTEGER,
+        updated_by_name VARCHAR(100),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_system_rules_category ON system_rules(category);
+      CREATE INDEX IF NOT EXISTS idx_system_rules_is_active ON system_rules(is_active);
+    `);
+    console.log('✅ system_rules table migration completed.');
+
+    // Auto-seed default rules
+    const { autoSeedRules } = require('./controllers/systemRuleController');
+    await autoSeedRules();
+  } catch (error) {
+    console.error('⚠️ system_rules migration warning:', error.message);
+  }
+};
+
 // Run SQL migrations for weight columns and history table
 const runWeightColumnsMigration = async () => {
   console.log('🔄 Running weight columns migration...');
@@ -938,6 +976,9 @@ const startServer = async () => {
     
     // Run tryout issues table migration
     await runTryoutIssuesMigration();
+    
+    // Run system_rules table migration + auto-seed
+    await runSystemRulesMigration();
     
     // Sync models (development only)
     if (process.env.NODE_ENV === 'development') {

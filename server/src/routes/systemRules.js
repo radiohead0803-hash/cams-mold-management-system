@@ -37,6 +37,12 @@ router.patch('/:key', authenticate, authorize(['system_admin']), systemRuleContr
 router.post('/', authenticate, authorize(['system_admin']), systemRuleController.createRule);
 
 /**
+ * 규칙 삭제
+ * DELETE /api/v1/system-rules/:key
+ */
+router.delete('/:key', authenticate, authorize(['system_admin']), systemRuleController.deleteRule);
+
+/**
  * 규칙 초기화
  * POST /api/v1/system-rules/:key/reset
  */

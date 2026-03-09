@@ -19,14 +19,7 @@ module.exports = (sequelize) => {
     },
     // 규칙 카테고리
     category: {
-      type: DataTypes.ENUM(
-        'inspection',      // 점검 관련
-        'shot_count',      // 타수 관련
-        'gps',             // GPS 관련
-        'notification',    // 알림 관련
-        'approval',        // 승인 관련
-        'system'           // 시스템 설정
-      ),
+      type: DataTypes.STRING(50),
       allowNull: false
     },
     // 규칙 이름 (표시용)
@@ -46,7 +39,7 @@ module.exports = (sequelize) => {
     },
     // 값 타입
     value_type: {
-      type: DataTypes.ENUM('number', 'string', 'boolean', 'json'),
+      type: DataTypes.STRING(20),
       defaultValue: 'number'
     },
     // 단위 (일, 시간, km, 회 등)
