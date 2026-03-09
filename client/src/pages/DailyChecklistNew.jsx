@@ -144,6 +144,8 @@ export default function DailyChecklistNew() {
   const [showApproverModal, setShowApproverModal] = useState(false)
   const [approverSearchKeyword, setApproverSearchKeyword] = useState('')
   const [approverSearchResults, setApproverSearchResults] = useState([])
+  const [allApprovers, setAllApprovers] = useState([])
+  const [approverLoading, setApproverLoading] = useState(false)
   const [selectedApprover, setSelectedApprover] = useState(null)
   const [saveMessage, setSaveMessage] = useState(null)
 
@@ -304,30 +306,49 @@ export default function DailyChecklistNew() {
     }
   }
 
-  const handleSearchApprover = async () => {
-    if (!approverSearchKeyword.trim()) return
+  // 승인자 목록 프리로드 (모달 오픈 시 1회)
+  const loadApprovers = async () => {
+    if (allApprovers.length > 0) return
+    setApproverLoading(true)
     try {
-      const res = await api.get('/workflow/approvers/search', {
-        params: { name: approverSearchKeyword }
-      })
+      const res = await api.get('/workflow/approvers/search', { params: { limit: 100 } })
       if (res.data.success) {
+        setAllApprovers(res.data.data)
         setApproverSearchResults(res.data.data)
       }
     } catch (err) {
-      console.error('관리자 검색 실패:', err)
+      console.error('승인자 목록 로드 실패:', err)
+    } finally {
+      setApproverLoading(false)
     }
+  }
+
+  // 클라이언트 측 즉시 필터링
+  const filterApprovers = (keyword) => {
+    const term = (keyword || '').trim().toLowerCase()
+    if (!term) {
+      setApproverSearchResults(allApprovers)
+      return
+    }
+    setApproverSearchResults(
+      allApprovers.filter(u =>
+        (u.name || '').toLowerCase().includes(term) ||
+        (u.email || '').toLowerCase().includes(term)
+      )
+    )
   }
 
   const handleSelectApprover = (approver) => {
     setSelectedApprover(approver)
     setShowApproverModal(false)
     setApproverSearchKeyword('')
-    setApproverSearchResults([])
+    setApproverSearchResults(allApprovers)
   }
 
   const handleRequestApproval = async () => {
     if (!selectedApprover) {
       setShowApproverModal(true)
+      loadApprovers()
       return
     }
 
@@ -742,7 +763,7 @@ export default function DailyChecklistNew() {
       {/* 승인자 검색 모달 */}
       {showApproverModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[70vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[70vh] flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-gray-900">승인자(금형개발 담당자) 선택</h2>
               <button onClick={() => setShowApproverModal(false)} className="text-gray-400 hover:text-gray-600">
@@ -756,38 +777,38 @@ export default function DailyChecklistNew() {
                 className="input flex-1"
                 placeholder="이름 또는 이메일로 검색"
                 value={approverSearchKeyword}
-                onChange={(e) => setApproverSearchKeyword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()}
+                onChange={(e) => { const v = e.target.value; setApproverSearchKeyword(v); filterApprovers(v) }}
+                autoFocus
               />
-              <button
-                onClick={handleSearchApprover}
-                className="btn-primary flex items-center gap-1 px-4"
-              >
-                <Search size={16} />
-                검색
-              </button>
             </div>
 
-            <div className="space-y-2">
-              {approverSearchResults.length === 0 && approverSearchKeyword && (
+            <div className="space-y-2 overflow-y-auto flex-1">
+              {approverLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 size={24} className="animate-spin text-blue-500" />
+                  <span className="ml-2 text-sm text-gray-500">승인자 목록 로딩 중...</span>
+                </div>
+              ) : approverSearchResults.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-4">검색 결과가 없습니다.</p>
+              ) : (
+                approverSearchResults.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => handleSelectApprover(user)}
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">
+                      {user.name}
+                      <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${user.user_type === 'system_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {user.user_type === 'system_admin' ? '관리자' : '금형개발'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500">{user.email} {user.company_name && `| ${user.company_name}`}</div>
+                  </button>
+                ))
               )}
-              {approverSearchResults.map((user) => (
-                <button
-                  key={user.id}
-                  onClick={() => handleSelectApprover(user)}
-                  className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                >
-                  <div className="font-medium text-gray-900">
-                    {user.name}
-                    <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${user.user_type === 'system_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                      {user.user_type === 'system_admin' ? '관리자' : '금형개발'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500">{user.email} {user.company_name && `| ${user.company_name}`}</div>
-                </button>
-              ))}
             </div>
+            <p className="text-xs text-gray-400 mt-2 text-center">{approverSearchResults.length}명 표시</p>
           </div>
         </div>
       )}
