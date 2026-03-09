@@ -738,7 +738,7 @@ const getMyCompanyProfile = async (req, res) => {
       include: [{
         model: User,
         as: 'users',
-        attributes: ['id', 'name', 'username', 'email', 'role', 'phone']
+        attributes: ['id', 'name', 'username', 'email', 'user_type', 'phone']
       }]
     });
 
@@ -791,7 +791,7 @@ const updateMyCompanyProfile = async (req, res) => {
     try {
       const { Notification } = require('../models/newIndex');
       const developers = await User.findAll({
-        where: { role: 'mold_developer', is_active: true },
+        where: { user_type: 'mold_developer', is_active: true },
         attributes: ['id']
       });
 
