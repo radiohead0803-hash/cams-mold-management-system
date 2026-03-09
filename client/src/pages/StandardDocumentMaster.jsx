@@ -172,20 +172,19 @@ export default function StandardDocumentMaster() {
   const loadDocuments = async () => {
     try {
       setLoading(true);
-      // API 호출 시도
-      const response = await api.get('/hq/checklist-templates');
-      if (response.data.success && response.data.data.templates) {
-        const apiDocs = response.data.data.templates.map(t => ({
+      const response = await api.get('/standard-document-templates');
+      if (response.data.success && response.data.data) {
+        const apiDocs = (Array.isArray(response.data.data) ? response.data.data : []).map(t => ({
           id: t.id,
           name: t.template_name,
           type: t.template_type,
           version: t.version || '1.0',
-          status: t.is_active ? 'deployed' : 'draft',
+          status: t.status || 'draft',
           itemCount: t.item_count || 0,
           categoryCount: t.category_count || 1,
           deployedTo: t.deployed_to || [],
           lastModified: t.updated_at?.split('T')[0] || t.created_at?.split('T')[0],
-          createdBy: t.created_by || 'admin',
+          createdBy: t.created_by_name || 'admin',
           description: t.description
         }));
         setDocuments(apiDocs.length > 0 ? apiDocs : DEFAULT_DOCUMENTS);
@@ -247,7 +246,7 @@ export default function StandardDocumentMaster() {
     try {
       if (editingDoc) {
         // 수정
-        await api.put(`/hq/checklist-templates/${editingDoc.id}`, {
+        await api.patch(`/standard-document-templates/${editingDoc.id}`, {
           template_name: formData.name,
           template_type: formData.type,
           description: formData.description,
@@ -260,13 +259,13 @@ export default function StandardDocumentMaster() {
         ));
       } else {
         // 신규 생성
-        const response = await api.post('/hq/checklist-templates', {
+        const response = await api.post('/standard-document-templates', {
           template_name: formData.name,
           template_type: formData.type,
           description: formData.description
         });
         const newDoc = {
-          id: response.data?.data?.template?.id || Date.now(),
+          id: response.data?.data?.id || Date.now(),
           ...formData,
           status: 'draft',
           itemCount: 0,
@@ -309,7 +308,7 @@ export default function StandardDocumentMaster() {
   const handleApprove = async (doc) => {
     if (!confirm(`"${doc.name}"을(를) 승인하시겠습니까?`)) return;
     try {
-      await api.post(`/hq/checklist-templates/${doc.id}/approve`);
+      await api.post(`/standard-document-templates/${doc.id}/approve`);
     } catch (error) {
       console.error('Approve error:', error);
     }
@@ -323,7 +322,7 @@ export default function StandardDocumentMaster() {
   const handleDeploy = async (doc) => {
     if (!confirm(`"${doc.name}"을(를) 배포하시겠습니까? 배포 후 협력사에서 사용할 수 있습니다.`)) return;
     try {
-      await api.post(`/hq/checklist-templates/${doc.id}/deploy`);
+      await api.post(`/standard-document-templates/${doc.id}/deploy`);
     } catch (error) {
       console.error('Deploy error:', error);
     }
@@ -354,7 +353,7 @@ export default function StandardDocumentMaster() {
   const handleDelete = async (doc) => {
     if (!confirm(`"${doc.name}"을(를) 삭제하시겠습니까?`)) return;
     try {
-      await api.delete(`/hq/checklist-templates/${doc.id}`);
+      await api.delete(`/standard-document-templates/${doc.id}`);
     } catch (error) {
       console.error('Delete error:', error);
     }

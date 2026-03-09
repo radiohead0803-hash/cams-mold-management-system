@@ -138,6 +138,7 @@ const checklistInstancesRouter = require('./routes/checklistInstances');
 const checklistsRouter = require('./routes/checklists');
 const productionTransferRoutesRouter = require('./routes/productionTransferRoutes');
 const draftsRouter = require('./routes/drafts');
+const standardDocumentTemplatesRouter = require('./routes/standardDocumentTemplates');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -253,6 +254,8 @@ app.use('/api/v1/checklists', checklistsRouter);
 // 양산이관 첨부파일 업로드
 app.use('/api/v1/production-transfer', productionTransferRoutesRouter);
 app.use('/api/v1/drafts', draftsRouter);
+// 표준문서 마스터 관리
+app.use('/api/v1/standard-document-templates', standardDocumentTemplatesRouter);
 
 // Health check
 app.get('/health', (req, res) => {

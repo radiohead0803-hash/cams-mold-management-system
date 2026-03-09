@@ -90,8 +90,9 @@ export const SYSTEM_ADMIN_MENU = [
     icon: Settings,
     allowedRoles: [USER_ROLES.SYSTEM_ADMIN],
     subMenus: [
-      { key: 'masters-checklist', label: '점검표 템플릿', path: '/checklist-master' },
-      { key: 'masters-document', label: '표준문서 마스터', path: '/pre-production-checklist' },
+      { key: 'masters-checklist', label: '체크리스트 마스터', path: '/checklist-master' },
+      { key: 'masters-inspection', label: '점검 마스터 콘솔', path: '/pre-production-checklist' },
+      { key: 'masters-document', label: '표준문서 마스터', path: '/standard-document-master' },
       { key: 'masters-transfer', label: '이관 체크리스트', path: '/production-transfer/checklist-master' },
       { key: 'master-data', label: '기초정보 관리', path: '/master-data' }
     ]
@@ -104,7 +105,7 @@ export const SYSTEM_ADMIN_MENU = [
     allowedRoles: [USER_ROLES.SYSTEM_ADMIN],
     subMenus: [
       { key: 'rules-threshold', label: '기준값 관리', path: '/dashboard/system-admin/rules' },
-      { key: 'rules-notification', label: '알림 규칙', path: '/dashboard/system-admin/rules/notifications' }
+      { key: 'rules-notification', label: '알림 설정', path: '/notification-settings' }
     ]
   },
   {
@@ -402,6 +403,7 @@ export const REGISTERED_ROUTES = [
   '/inspection/periodic',
   '/checklist-master',
   '/pre-production-checklist',
+  '/standard-document-master',
   '/production-transfer/checklist-master',
   '/master-data',
   '/repairs',

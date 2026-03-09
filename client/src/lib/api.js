@@ -404,6 +404,18 @@ export const checklistMasterAPI = {
   getCycles: () => api.get('/checklist-masters/cycles'),
 }
 
+// Standard Document Template API (표준문서 마스터 관리)
+export const standardDocumentAPI = {
+  getAll: (params) => api.get('/standard-document-templates', { params }),
+  getById: (id) => api.get(`/standard-document-templates/${id}`),
+  create: (data) => api.post('/standard-document-templates', data),
+  update: (id, data) => api.patch(`/standard-document-templates/${id}`, data),
+  approve: (id) => api.post(`/standard-document-templates/${id}/approve`),
+  deploy: (id, data) => api.post(`/standard-document-templates/${id}/deploy`, data),
+  duplicate: (id, data) => api.post(`/standard-document-templates/${id}/duplicate`, data),
+  delete: (id) => api.delete(`/standard-document-templates/${id}`),
+}
+
 // Development Plan API (금형개발계획 관리)
 export const developmentPlanAPI = {
   // 개발계획 목록 조회

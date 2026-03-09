@@ -376,6 +376,9 @@ function App() {
         {/* 금형 위치 지도 (전체화면) */}
         <Route path="mold-location-map" element={<MoldLocationMapPage />} />
         
+        {/* 표준문서 마스터 관리 */}
+        <Route path="standard-document-master" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><StandardDocumentMaster /></ProtectedRoute>} />
+        
         {/* 양산이관 체크리스트 마스터 관리 */}
         <Route path="production-transfer/checklist-master" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><ProductionTransferChecklistMaster /></ProtectedRoute>} />
         

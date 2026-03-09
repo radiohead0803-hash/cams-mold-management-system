@@ -69,6 +69,7 @@ const RawMaterial = require('./RawMaterial');
 const RepairShipmentChecklist = require('./RepairShipmentChecklist');
 const RepairShipmentChecklistItem = require('./RepairShipmentChecklistItem');
 const SystemRule = require('./SystemRule');
+const StandardDocumentTemplate = require('./StandardDocumentTemplate');
 
 // Helper function to initialize models
 const initModel = (ModelClass, sequelize) => {
@@ -143,7 +144,8 @@ const models = {
   RawMaterial: initModel(RawMaterial, sequelize),
   RepairShipmentChecklist: initModel(RepairShipmentChecklist, sequelize),
   RepairShipmentChecklistItem: initModel(RepairShipmentChecklistItem, sequelize),
-  SystemRule: initModel(SystemRule, sequelize)
+  SystemRule: initModel(SystemRule, sequelize),
+  StandardDocumentTemplate: initModel(StandardDocumentTemplate, sequelize)
 };
 
 // Setup associations
