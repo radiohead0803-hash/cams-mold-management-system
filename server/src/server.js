@@ -614,13 +614,15 @@ const runValveGateMigration = async () => {
     // injection_conditions 테이블에 밸브게이트 시퀀스 컬럼 추가
     const injectionColumns = [
       { sql: "ALTER TABLE injection_conditions ADD COLUMN IF NOT EXISTS valve_gate_sequence JSONB DEFAULT '[]'::jsonb" },
-      { sql: 'ALTER TABLE injection_conditions ADD COLUMN IF NOT EXISTS valve_gate_used BOOLEAN DEFAULT FALSE' }
+      { sql: 'ALTER TABLE injection_conditions ADD COLUMN IF NOT EXISTS valve_gate_used BOOLEAN DEFAULT FALSE' },
+      { sql: 'ALTER TABLE injection_conditions ADD COLUMN IF NOT EXISTS approver_id INTEGER REFERENCES users(id)' },
+      { sql: 'ALTER TABLE injection_conditions ADD COLUMN IF NOT EXISTS requested_at TIMESTAMP' }
     ];
     
     for (const col of injectionColumns) {
       try { await sequelize.query(col.sql); } catch (e) { }
     }
-    console.log('✅ Valve gate sequence columns added to injection_conditions.');
+    console.log('✅ Valve gate sequence + approver columns added to injection_conditions.');
 
   } catch (error) {
     console.error('⚠️ Valve gate migration warning:', error.message);

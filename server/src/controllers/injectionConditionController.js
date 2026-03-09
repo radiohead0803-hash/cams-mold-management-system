@@ -455,11 +455,13 @@ const getInjectionCondition = async (req, res) => {
     let query = `
       SELECT ic.*, 
              u1.name as registered_by_name,
-             u2.name as approved_by_name
+             u2.name as approved_by_name,
+             u3.name as approver_name
       FROM injection_conditions ic
       LEFT JOIN users u1 ON ic.registered_by = u1.id
       LEFT JOIN users u2 ON ic.approved_by = u2.id
-      WHERE ic.is_current = true
+      LEFT JOIN users u3 ON ic.approver_id = u3.id
+      WHERE (ic.is_current = true OR ic.status = 'draft')
     `;
     const replacements = {};
 
@@ -765,6 +767,227 @@ async function createResultNotification(condition, approverId, action, rejection
   }
 }
 
+/**
+ * 사출조건 임시저장 (draft)
+ * POST /api/v1/injection-conditions/draft
+ */
+const saveDraft = async (req, res) => {
+  try {
+    const data = req.body;
+    const registered_by = req.user.id;
+
+    // 금형 기본정보 자동 연결
+    let moldInfo = {};
+    if (data.mold_spec_id) {
+      const [moldRows] = await sequelize.query(`
+        SELECT mold_code, mold_name, part_name, material
+        FROM mold_specifications WHERE id = :mold_spec_id
+      `, { replacements: { mold_spec_id: data.mold_spec_id } });
+      if (moldRows.length > 0) moldInfo = moldRows[0];
+    }
+
+    // 기존 draft가 있으면 업데이트, 없으면 새로 생성
+    const [existingDraft] = await sequelize.query(`
+      SELECT id FROM injection_conditions
+      WHERE mold_spec_id = :mold_spec_id AND status = 'draft' AND registered_by = :registered_by
+      ORDER BY created_at DESC LIMIT 1
+    `, { replacements: { mold_spec_id: data.mold_spec_id, registered_by } });
+
+    const buildReplacements = () => ({
+      mold_spec_id: data.mold_spec_id || null,
+      mold_id: data.mold_id || null,
+      mold_code: moldInfo.mold_code || data.mold_code || null,
+      mold_name: moldInfo.mold_name || data.mold_name || null,
+      part_name: moldInfo.part_name || data.part_name || null,
+      material: moldInfo.material || data.material || null,
+      speed_1: data.speed_1 || null, speed_2: data.speed_2 || null, speed_3: data.speed_3 || null, speed_4: data.speed_4 || null, speed_cooling: data.speed_cooling || null,
+      position_pv: data.position_pv || null, position_1: data.position_1 || null, position_2: data.position_2 || null, position_3: data.position_3 || null,
+      pressure_1: data.pressure_1 || null, pressure_2: data.pressure_2 || null, pressure_3: data.pressure_3 || null, pressure_4: data.pressure_4 || null,
+      time_injection: data.time_injection || null, time_holding: data.time_holding || null, time_holding_3: data.time_holding_3 || null, time_holding_4: data.time_holding_4 || null, time_cooling: data.time_cooling || null,
+      metering_speed_vp: data.metering_speed_vp || null, metering_speed_1: data.metering_speed_1 || null, metering_speed_2: data.metering_speed_2 || null, metering_speed_3: data.metering_speed_3 || null,
+      metering_position_1: data.metering_position_1 || null, metering_position_2: data.metering_position_2 || null,
+      metering_pressure_2: data.metering_pressure_2 || null, metering_pressure_3: data.metering_pressure_3 || null, metering_pressure_4: data.metering_pressure_4 || null,
+      holding_pressure_1: data.holding_pressure_1 || null, holding_pressure_2: data.holding_pressure_2 || null, holding_pressure_3: data.holding_pressure_3 || null, holding_pressure_4: data.holding_pressure_4 || null,
+      holding_pressure_1h: data.holding_pressure_1h || null, holding_pressure_2h: data.holding_pressure_2h || null, holding_pressure_3h: data.holding_pressure_3h || null,
+      barrel_temp_1: data.barrel_temp_1 || null, barrel_temp_2: data.barrel_temp_2 || null, barrel_temp_3: data.barrel_temp_3 || null, barrel_temp_4: data.barrel_temp_4 || null, barrel_temp_5: data.barrel_temp_5 || null,
+      barrel_temp_6: data.barrel_temp_6 || null, barrel_temp_7: data.barrel_temp_7 || null, barrel_temp_8: data.barrel_temp_8 || null, barrel_temp_9: data.barrel_temp_9 || null,
+      hot_runner_installed: data.hot_runner_installed || false, hot_runner_type: data.hot_runner_type || null,
+      hr_temp_1: data.hr_temp_1 || null, hr_temp_2: data.hr_temp_2 || null, hr_temp_3: data.hr_temp_3 || null, hr_temp_4: data.hr_temp_4 || null,
+      hr_temp_5: data.hr_temp_5 || null, hr_temp_6: data.hr_temp_6 || null, hr_temp_7: data.hr_temp_7 || null, hr_temp_8: data.hr_temp_8 || null,
+      valve_gate_count: data.valve_gate_count || 0,
+      valve_gate_data: JSON.stringify(data.valve_gate_data || []),
+      chiller_temp_main: data.chiller_temp_main || null, chiller_temp_moving: data.chiller_temp_moving || null, chiller_temp_fixed: data.chiller_temp_fixed || null,
+      cycle_time: data.cycle_time || null,
+      design_weight: data.design_weight || null, management_weight: data.management_weight || null,
+      registered_by,
+      writer_type: data.writer_type || req.user.user_type || 'plant',
+      remarks: data.remarks || null,
+      material_spec: data.material_spec || null, material_grade: data.material_grade || null,
+      material_supplier: data.material_supplier || null, material_shrinkage: data.material_shrinkage || null, mold_shrinkage: data.mold_shrinkage || null
+    });
+
+    let savedId;
+    if (existingDraft.length > 0) {
+      // 기존 draft 업데이트
+      const rp = buildReplacements();
+      await sequelize.query(`
+        UPDATE injection_conditions SET
+          mold_code = :mold_code, mold_name = :mold_name, part_name = :part_name, material = :material,
+          speed_1 = :speed_1, speed_2 = :speed_2, speed_3 = :speed_3, speed_4 = :speed_4, speed_cooling = :speed_cooling,
+          position_pv = :position_pv, position_1 = :position_1, position_2 = :position_2, position_3 = :position_3,
+          pressure_1 = :pressure_1, pressure_2 = :pressure_2, pressure_3 = :pressure_3, pressure_4 = :pressure_4,
+          time_injection = :time_injection, time_holding = :time_holding, time_holding_3 = :time_holding_3, time_holding_4 = :time_holding_4, time_cooling = :time_cooling,
+          metering_speed_vp = :metering_speed_vp, metering_speed_1 = :metering_speed_1, metering_speed_2 = :metering_speed_2, metering_speed_3 = :metering_speed_3,
+          metering_position_1 = :metering_position_1, metering_position_2 = :metering_position_2,
+          metering_pressure_2 = :metering_pressure_2, metering_pressure_3 = :metering_pressure_3, metering_pressure_4 = :metering_pressure_4,
+          holding_pressure_1 = :holding_pressure_1, holding_pressure_2 = :holding_pressure_2, holding_pressure_3 = :holding_pressure_3, holding_pressure_4 = :holding_pressure_4,
+          holding_pressure_1h = :holding_pressure_1h, holding_pressure_2h = :holding_pressure_2h, holding_pressure_3h = :holding_pressure_3h,
+          barrel_temp_1 = :barrel_temp_1, barrel_temp_2 = :barrel_temp_2, barrel_temp_3 = :barrel_temp_3, barrel_temp_4 = :barrel_temp_4, barrel_temp_5 = :barrel_temp_5,
+          barrel_temp_6 = :barrel_temp_6, barrel_temp_7 = :barrel_temp_7, barrel_temp_8 = :barrel_temp_8, barrel_temp_9 = :barrel_temp_9,
+          hot_runner_installed = :hot_runner_installed, hot_runner_type = :hot_runner_type,
+          hr_temp_1 = :hr_temp_1, hr_temp_2 = :hr_temp_2, hr_temp_3 = :hr_temp_3, hr_temp_4 = :hr_temp_4,
+          hr_temp_5 = :hr_temp_5, hr_temp_6 = :hr_temp_6, hr_temp_7 = :hr_temp_7, hr_temp_8 = :hr_temp_8,
+          valve_gate_count = :valve_gate_count, valve_gate_data = :valve_gate_data,
+          chiller_temp_main = :chiller_temp_main, chiller_temp_moving = :chiller_temp_moving, chiller_temp_fixed = :chiller_temp_fixed,
+          cycle_time = :cycle_time, design_weight = :design_weight, management_weight = :management_weight,
+          writer_type = :writer_type, remarks = :remarks, updated_at = NOW()
+        WHERE id = :id
+      `, { replacements: { ...rp, id: existingDraft[0].id } });
+      savedId = existingDraft[0].id;
+    } else {
+      // 새 버전 번호 계산
+      const [versionRows] = await sequelize.query(`
+        SELECT COALESCE(MAX(version), 0) + 1 as next_version
+        FROM injection_conditions WHERE mold_spec_id = :mold_spec_id
+      `, { replacements: { mold_spec_id: data.mold_spec_id || 0 } });
+      const nextVersion = versionRows[0]?.next_version || 1;
+      const rp = buildReplacements();
+
+      const [rows] = await sequelize.query(`
+        INSERT INTO injection_conditions (
+          mold_spec_id, mold_id, mold_code, mold_name, part_name, material,
+          speed_1, speed_2, speed_3, speed_4, speed_cooling,
+          position_pv, position_1, position_2, position_3,
+          pressure_1, pressure_2, pressure_3, pressure_4,
+          time_injection, time_holding, time_holding_3, time_holding_4, time_cooling,
+          metering_speed_vp, metering_speed_1, metering_speed_2, metering_speed_3,
+          metering_position_1, metering_position_2,
+          metering_pressure_2, metering_pressure_3, metering_pressure_4,
+          holding_pressure_1, holding_pressure_2, holding_pressure_3, holding_pressure_4,
+          holding_pressure_1h, holding_pressure_2h, holding_pressure_3h,
+          barrel_temp_1, barrel_temp_2, barrel_temp_3, barrel_temp_4, barrel_temp_5,
+          barrel_temp_6, barrel_temp_7, barrel_temp_8, barrel_temp_9,
+          hot_runner_installed, hot_runner_type,
+          hr_temp_1, hr_temp_2, hr_temp_3, hr_temp_4, hr_temp_5, hr_temp_6, hr_temp_7, hr_temp_8,
+          valve_gate_count, valve_gate_data,
+          chiller_temp_main, chiller_temp_moving, chiller_temp_fixed,
+          cycle_time, design_weight, management_weight,
+          status, registered_by, writer_type, version, is_current, remarks,
+          created_at, updated_at
+        ) VALUES (
+          :mold_spec_id, :mold_id, :mold_code, :mold_name, :part_name, :material,
+          :speed_1, :speed_2, :speed_3, :speed_4, :speed_cooling,
+          :position_pv, :position_1, :position_2, :position_3,
+          :pressure_1, :pressure_2, :pressure_3, :pressure_4,
+          :time_injection, :time_holding, :time_holding_3, :time_holding_4, :time_cooling,
+          :metering_speed_vp, :metering_speed_1, :metering_speed_2, :metering_speed_3,
+          :metering_position_1, :metering_position_2,
+          :metering_pressure_2, :metering_pressure_3, :metering_pressure_4,
+          :holding_pressure_1, :holding_pressure_2, :holding_pressure_3, :holding_pressure_4,
+          :holding_pressure_1h, :holding_pressure_2h, :holding_pressure_3h,
+          :barrel_temp_1, :barrel_temp_2, :barrel_temp_3, :barrel_temp_4, :barrel_temp_5,
+          :barrel_temp_6, :barrel_temp_7, :barrel_temp_8, :barrel_temp_9,
+          :hot_runner_installed, :hot_runner_type,
+          :hr_temp_1, :hr_temp_2, :hr_temp_3, :hr_temp_4, :hr_temp_5, :hr_temp_6, :hr_temp_7, :hr_temp_8,
+          :valve_gate_count, :valve_gate_data,
+          :chiller_temp_main, :chiller_temp_moving, :chiller_temp_fixed,
+          :cycle_time, :design_weight, :management_weight,
+          'draft', :registered_by, :writer_type, :version, false, :remarks,
+          NOW(), NOW()
+        ) RETURNING id
+      `, { replacements: { ...rp, version: nextVersion } });
+      savedId = rows[0].id;
+    }
+
+    logger.info('[Injection Draft] Saved:', { id: savedId, moldSpecId: data.mold_spec_id, userId: registered_by });
+
+    res.json({
+      success: true,
+      message: '임시저장이 완료되었습니다.',
+      data: { id: savedId }
+    });
+  } catch (error) {
+    logger.error('[Injection Draft] Error:', error);
+    res.status(500).json({ success: false, error: { message: '임시저장 중 오류가 발생했습니다.', details: error.message } });
+  }
+};
+
+/**
+ * 사출조건 승인요청 (draft → pending)
+ * POST /api/v1/injection-conditions/request-approval
+ */
+const requestApproval = async (req, res) => {
+  try {
+    const { id, approver_id, mold_spec_id } = req.body;
+    const user = req.user;
+
+    if (!approver_id) {
+      return res.status(400).json({ success: false, error: { message: '승인자를 선택해주세요.' } });
+    }
+
+    // 승인자 확인
+    const [approverRows] = await sequelize.query(
+      'SELECT id, name FROM users WHERE id = :approver_id AND is_active = true',
+      { replacements: { approver_id } }
+    );
+    if (approverRows.length === 0) {
+      return res.status(404).json({ success: false, error: { message: '승인자를 찾을 수 없습니다.' } });
+    }
+    const approver = approverRows[0];
+
+    let conditionId = id;
+
+    if (conditionId) {
+      // 기존 draft/rejected 상태를 pending으로 변경
+      await sequelize.query(`
+        UPDATE injection_conditions
+        SET status = 'pending', approver_id = :approver_id, requested_at = NOW(), updated_at = NOW()
+        WHERE id = :id AND status IN ('draft', 'rejected')
+      `, { replacements: { id: conditionId, approver_id } });
+    } else {
+      return res.status(400).json({ success: false, error: { message: '사출조건 ID가 필요합니다. 먼저 임시저장 해주세요.' } });
+    }
+
+    // 승인자에게 알림
+    try {
+      await sequelize.query(`
+        INSERT INTO notifications (user_id, title, message, type, reference_type, reference_id, priority, is_read, created_at)
+        VALUES (:user_id, :title, :message, 'approval_request', 'injection_condition', :reference_id, 'normal', false, NOW())
+      `, {
+        replacements: {
+          user_id: approver_id,
+          title: '사출조건 승인 요청',
+          message: `${user.name}님이 사출조건 승인을 요청했습니다. (금형 ID: ${mold_spec_id || conditionId})`,
+          reference_id: conditionId
+        }
+      });
+    } catch (notifErr) {
+      logger.error('[Injection RequestApproval] Notification error:', notifErr);
+    }
+
+    logger.info('[Injection RequestApproval] Saved:', { id: conditionId, approverId: approver_id, userId: user.id });
+
+    res.json({
+      success: true,
+      message: `${approver.name}님께 승인요청이 완료되었습니다.`,
+      data: { id: conditionId }
+    });
+  } catch (error) {
+    logger.error('[Injection RequestApproval] Error:', error);
+    res.status(500).json({ success: false, error: { message: '승인요청 중 오류가 발생했습니다.', details: error.message } });
+  }
+};
+
 module.exports = {
   createInjectionCondition,
   updateInjectionCondition,
@@ -772,5 +995,7 @@ module.exports = {
   getInjectionCondition,
   getInjectionHistory,
   getInjectionStats,
-  getPendingApprovals
+  getPendingApprovals,
+  saveDraft,
+  requestApproval
 };

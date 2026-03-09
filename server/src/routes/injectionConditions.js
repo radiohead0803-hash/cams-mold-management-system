@@ -9,6 +9,12 @@ router.use(authenticate);
 // 사출조건 등록 (제작처/생산처)
 router.post('/', injectionConditionController.createInjectionCondition);
 
+// 사출조건 임시저장
+router.post('/draft', injectionConditionController.saveDraft);
+
+// 사출조건 승인요청 (임시저장 → 승인대기)
+router.post('/request-approval', injectionConditionController.requestApproval);
+
 // 사출조건 조회
 router.get('/', injectionConditionController.getInjectionCondition);
 

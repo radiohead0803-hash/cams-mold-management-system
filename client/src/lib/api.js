@@ -272,6 +272,10 @@ export const makerSpecificationAPI = {
 export const injectionConditionAPI = {
   // 사출조건 등록 (제작처/생산처)
   create: (data) => api.post('/injection-conditions', data),
+  // 사출조건 임시저장
+  saveDraft: (data) => api.post('/injection-conditions/draft', data),
+  // 사출조건 승인요청
+  requestApproval: (data) => api.post('/injection-conditions/request-approval', data),
   // 사출조건 조회 (금형별)
   get: (params) => api.get('/injection-conditions', { params }),
   // 사출조건 수정

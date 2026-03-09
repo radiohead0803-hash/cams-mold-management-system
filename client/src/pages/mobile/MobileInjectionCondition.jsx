@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Save, Edit3, CheckCircle, AlertCircle, Clock,
   ChevronRight, RotateCcw, Zap, Target, Timer, Gauge, Thermometer,
-  Droplets, Settings, ToggleLeft, ToggleRight, Plus, Minus, History
+  Droplets, Settings, ToggleLeft, ToggleRight, Plus, Minus, History,
+  Search, Send, X, User
 } from 'lucide-react';
-import { moldSpecificationAPI, injectionConditionAPI, weightAPI, materialAPI, masterDataAPI } from '../../lib/api';
+import api, { moldSpecificationAPI, injectionConditionAPI, weightAPI, materialAPI, masterDataAPI } from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function MobileInjectionCondition() {
@@ -21,6 +22,11 @@ export default function MobileInjectionCondition() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [changeReason, setChangeReason] = useState('');
   const [rawMaterials, setRawMaterials] = useState([]);
+  const [showApproverModal, setShowApproverModal] = useState(false);
+  const [approverSearchKeyword, setApproverSearchKeyword] = useState('');
+  const [approverSearchResults, setApproverSearchResults] = useState([]);
+  const [selectedApprover, setSelectedApprover] = useState(null);
+  const [draftId, setDraftId] = useState(null);
   
   const isDeveloper = ['mold_developer', 'system_admin'].includes(user?.user_type);
   const canEdit = !isDeveloper || condition?.status === 'draft';
@@ -187,60 +193,76 @@ export default function MobileInjectionCondition() {
     }
   };
 
-  const handleSave = async () => {
+  // 임시저장
+  const handleDraftSave = async () => {
     try {
       setSaving(true);
-      
-      // 중량 데이터 별도 저장
-      if (conditionData.design_weight && isDeveloper) {
-        await weightAPI.update(moldId, {
-          weight_type: 'design',
-          weight_value: conditionData.design_weight,
-          weight_unit: conditionData.design_weight_unit || 'g',
-          change_reason: changeReason
-        });
+      const dataToSave = { ...conditionData, mold_spec_id: moldId };
+      const res = await injectionConditionAPI.saveDraft(dataToSave);
+      if (res.data?.success) {
+        setDraftId(res.data.data.id);
+        alert('임시저장이 완료되었습니다.');
       }
-      if (conditionData.actual_weight && !isDeveloper) {
-        await weightAPI.update(moldId, {
-          weight_type: 'actual',
-          weight_value: conditionData.actual_weight,
-          weight_unit: conditionData.actual_weight_unit || 'g',
-          change_reason: changeReason
-        });
-      }
-      
-      // 원재료 정보 별도 저장 (개발담당자만, 이력관리)
-      if (isDeveloper && (conditionData.material_spec || conditionData.material_grade || 
-          conditionData.material_supplier || conditionData.material_shrinkage || conditionData.mold_shrinkage)) {
-        await materialAPI.update(moldId, {
-          material_spec: conditionData.material_spec,
-          material_grade: conditionData.material_grade,
-          material_supplier: conditionData.material_supplier,
-          material_shrinkage: conditionData.material_shrinkage,
-          mold_shrinkage: conditionData.mold_shrinkage,
-          change_reason: changeReason
-        });
-      }
-      
-      const dataToSave = { ...conditionData, mold_spec_id: moldId, change_reason: changeReason };
-
-      if (condition?.id) {
-        await injectionConditionAPI.update(condition.id, dataToSave);
-        alert('사출조건이 수정되었습니다.');
-      } else {
-        await injectionConditionAPI.create(dataToSave);
-        alert('사출조건이 등록되었습니다.');
-      }
-
-      setIsEditing(false);
-      setChangeReason('');
-      loadData();
     } catch (error) {
-      console.error('Save failed:', error);
-      alert('저장에 실패했습니다.');
+      console.error('Draft save failed:', error);
+      alert('임시저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
+  };
+
+  // 승인요청
+  const handleRequestApproval = async () => {
+    if (!selectedApprover) {
+      setShowApproverModal(true);
+      return;
+    }
+    try {
+      setSaving(true);
+      const dataToSave = { ...conditionData, mold_spec_id: moldId };
+      const draftRes = await injectionConditionAPI.saveDraft(dataToSave);
+      const savedId = draftRes.data?.data?.id || draftId || condition?.id;
+      if (!savedId) {
+        alert('먼저 임시저장을 해주세요.');
+        setSaving(false);
+        return;
+      }
+      const res = await injectionConditionAPI.requestApproval({
+        id: savedId,
+        approver_id: selectedApprover.id,
+        mold_spec_id: moldId
+      });
+      if (res.data?.success) {
+        alert(res.data.message);
+        setIsEditing(false);
+        setSelectedApprover(null);
+        setDraftId(null);
+        loadData();
+      }
+    } catch (error) {
+      console.error('Request approval failed:', error);
+      alert('승인요청에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 승인자 검색
+  const handleSearchApprover = async () => {
+    if (!approverSearchKeyword.trim()) return;
+    try {
+      const res = await api.get('/workflow/approvers/search', { params: { name: approverSearchKeyword } });
+      if (res.data.success) setApproverSearchResults(res.data.data);
+    } catch (err) {
+      console.error('승인자 검색 실패:', err);
+    }
+  };
+
+  const handleSelectApprover = (approver) => {
+    setSelectedApprover(approver);
+    setShowApproverModal(false);
+    setApproverSearchKeyword('');
+    setApproverSearchResults([]);
   };
 
   const handleApprove = async (action) => {
@@ -1120,17 +1142,91 @@ export default function MobileInjectionCondition() {
         )}
       </div>
 
+      {/* 승인자 선택 영역 */}
+      {isEditing && !activeCategory && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mx-4 mt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">승인자</span>
+            {selectedApprover ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
+                  <User size={14} className="inline mr-1" />{selectedApprover.name}
+                </span>
+                <button onClick={() => setSelectedApprover(null)} className="text-gray-400"><X size={16} /></button>
+              </div>
+            ) : (
+              <button onClick={() => setShowApproverModal(true)} className="text-sm text-blue-600 flex items-center gap-1">
+                <Search size={14} /> 승인자 검색
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 하단 저장/제출 버튼 */}
       {isEditing && !activeCategory && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 space-y-2">
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex gap-3">
           <button
-            onClick={handleSave}
+            onClick={handleDraftSave}
             disabled={saving}
-            className="w-full bg-blue-500 text-white py-3 rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            <Save size={20} />
-            {saving ? '저장 중...' : (condition ? '수정 완료' : '작성 완료')}
+            <Save size={18} />
+            임시저장
           </button>
+          <button
+            onClick={handleRequestApproval}
+            disabled={saving || !selectedApprover}
+            className="flex-1 bg-blue-500 text-white py-3 rounded-xl font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <Send size={18} />
+            {saving ? '처리 중...' : '승인요청'}
+          </button>
+        </div>
+      )}
+
+      {/* 승인자 검색 모달 */}
+      {showApproverModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+          <div className="bg-white w-full rounded-t-2xl max-h-[70vh] overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <h3 className="font-semibold">승인자 선택</h3>
+              <button onClick={() => { setShowApproverModal(false); setApproverSearchKeyword(''); setApproverSearchResults([]); }}><X size={20} className="text-gray-500" /></button>
+            </div>
+            <div className="p-4">
+              <div className="flex gap-2 mb-3">
+                <input
+                  type="text"
+                  className="flex-1 px-3 py-2.5 border rounded-lg text-sm"
+                  placeholder="이름 또는 이메일로 검색..."
+                  value={approverSearchKeyword}
+                  onChange={(e) => setApproverSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()}
+                />
+                <button onClick={handleSearchApprover} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg"><Search size={16} /></button>
+              </div>
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {approverSearchResults.length === 0 && approverSearchKeyword && (
+                  <p className="text-sm text-gray-500 text-center py-6">검색 결과가 없습니다.</p>
+                )}
+                {approverSearchResults.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => handleSelectApprover(u)}
+                    className="w-full text-left p-3 rounded-xl border hover:bg-blue-50 hover:border-blue-300"
+                  >
+                    <div className="font-medium text-gray-900">
+                      {u.name}
+                      <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${u.user_type === 'system_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {u.user_type === 'system_admin' ? '관리자' : '금형개발'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500">{u.email}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

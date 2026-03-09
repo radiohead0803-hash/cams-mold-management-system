@@ -281,4 +281,39 @@ router.get('/mold/:moldId/status', async (req, res) => {
   }
 });
 
+/**
+ * 점검 인스턴스 상세 조회
+ * GET /api/v1/checklist-instances/:id
+ * 주의: /mold/:moldId/status 뒤에 위치해야 라우트 충돌 방지
+ */
+router.get('/:id', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await sequelize.query(`
+      SELECT ci.*, u1.name as inspector_display_name, u2.name as approver_display_name
+      FROM checklist_instances ci
+      LEFT JOIN users u1 ON ci.inspector_id = u1.id
+      LEFT JOIN users u2 ON ci.approver_id = u2.id
+      WHERE ci.id = :id
+    `, { replacements: { id } });
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: '점검 기록을 찾을 수 없습니다.' });
+    }
+
+    const instance = rows[0];
+    if (typeof instance.results === 'string') {
+      try { instance.results = JSON.parse(instance.results); } catch (e) { /* keep string */ }
+    }
+    if (typeof instance.summary === 'string') {
+      try { instance.summary = JSON.parse(instance.summary); } catch (e) { /* keep string */ }
+    }
+
+    return res.json({ success: true, data: instance });
+  } catch (error) {
+    console.error('[ChecklistInstance Detail] Error:', error);
+    return res.status(500).json({ success: false, message: '점검 기록 조회 중 오류가 발생했습니다.' });
+  }
+});
+
 module.exports = router;

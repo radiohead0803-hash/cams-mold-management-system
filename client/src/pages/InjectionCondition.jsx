@@ -4,9 +4,9 @@ import {
   ArrowLeft, Save, Edit3, CheckCircle, AlertCircle, Clock,
   ChevronDown, ChevronUp, Zap, Target, Timer, Gauge, Thermometer,
   Droplets, Settings, ToggleLeft, ToggleRight, Plus, Minus, Package,
-  Send, History
+  Send, History, Search, User, X
 } from 'lucide-react';
-import { moldSpecificationAPI, injectionConditionAPI, weightAPI, materialAPI, masterDataAPI } from '../lib/api';
+import api, { moldSpecificationAPI, injectionConditionAPI, weightAPI, materialAPI, masterDataAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -40,6 +40,13 @@ export default function InjectionConditionNew() {
   const isDeveloper = ['mold_developer', 'system_admin'].includes(user?.user_type);
   
   const [rawMaterials, setRawMaterials] = useState([]);
+  
+  // 승인자 검색 관련 state
+  const [showApproverModal, setShowApproverModal] = useState(false);
+  const [approverSearchKeyword, setApproverSearchKeyword] = useState('');
+  const [approverSearchResults, setApproverSearchResults] = useState([]);
+  const [selectedApprover, setSelectedApprover] = useState(null);
+  const [draftId, setDraftId] = useState(null);
   
   const [conditionData, setConditionData] = useState({
     // 속도 설정
@@ -131,46 +138,118 @@ export default function InjectionConditionNew() {
     setConditionData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = async (submitType = 'draft') => {
+  // 임시저장
+  const handleDraftSave = async () => {
     try {
       setSaving(true);
+      const dataToSave = { ...conditionData, mold_spec_id: moldId };
       
       // 중량 데이터 별도 저장
       if (conditionData.design_weight && isDeveloper) {
-        await weightAPI.update(moldId, { weight_type: 'design', weight_value: conditionData.design_weight, weight_unit: conditionData.design_weight_unit || 'g', change_reason: changeReason });
+        await weightAPI.update(moldId, { weight_type: 'design', weight_value: conditionData.design_weight, weight_unit: conditionData.design_weight_unit || 'g', change_reason: changeReason }).catch(() => {});
       }
       if (conditionData.actual_weight && !isDeveloper) {
-        await weightAPI.update(moldId, { weight_type: 'actual', weight_value: conditionData.actual_weight, weight_unit: conditionData.actual_weight_unit || 'g', change_reason: changeReason });
+        await weightAPI.update(moldId, { weight_type: 'actual', weight_value: conditionData.actual_weight, weight_unit: conditionData.actual_weight_unit || 'g', change_reason: changeReason }).catch(() => {});
       }
       
       // 원재료 정보 별도 저장
-      if (isDeveloper && (conditionData.material_spec || conditionData.material_grade || conditionData.material_supplier || conditionData.material_shrinkage || conditionData.mold_shrinkage)) {
+      if (isDeveloper && (conditionData.material_spec || conditionData.material_grade || conditionData.material_supplier)) {
         await materialAPI.update(moldId, {
           material_spec: conditionData.material_spec, material_grade: conditionData.material_grade,
           material_supplier: conditionData.material_supplier, material_shrinkage: conditionData.material_shrinkage,
           mold_shrinkage: conditionData.mold_shrinkage, change_reason: changeReason
-        });
-      }
-      
-      const dataToSave = { ...conditionData, mold_spec_id: moldId, change_reason: changeReason, submit_type: submitType };
-
-      if (condition?.id) {
-        await injectionConditionAPI.update(condition.id, dataToSave);
-        alert('사출조건이 수정되었습니다.');
-      } else {
-        await injectionConditionAPI.create(dataToSave);
-        alert('사출조건이 등록되었습니다.');
+        }).catch(() => {});
       }
 
-      setIsEditing(false);
-      setChangeReason('');
-      loadData();
+      const res = await injectionConditionAPI.saveDraft(dataToSave);
+      if (res.data?.success) {
+        setDraftId(res.data.data.id);
+        alert('임시저장이 완료되었습니다.');
+      }
     } catch (error) {
-      console.error('Save failed:', error);
-      alert('저장에 실패했습니다.');
+      console.error('Draft save failed:', error);
+      alert('임시저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
+  };
+
+  // 승인요청
+  const handleRequestApproval = async () => {
+    if (!selectedApprover) {
+      setShowApproverModal(true);
+      return;
+    }
+
+    // 먼저 임시저장
+    try {
+      setSaving(true);
+      const dataToSave = { ...conditionData, mold_spec_id: moldId };
+      const draftRes = await injectionConditionAPI.saveDraft(dataToSave);
+      const savedId = draftRes.data?.data?.id || draftId || condition?.id;
+
+      if (!savedId) {
+        alert('먼저 임시저장을 해주세요.');
+        setSaving(false);
+        return;
+      }
+
+      const res = await injectionConditionAPI.requestApproval({
+        id: savedId,
+        approver_id: selectedApprover.id,
+        mold_spec_id: moldId
+      });
+
+      if (res.data?.success) {
+        alert(res.data.message);
+        setIsEditing(false);
+        setChangeReason('');
+        setSelectedApprover(null);
+        setDraftId(null);
+        loadData();
+      }
+    } catch (error) {
+      console.error('Request approval failed:', error);
+      alert('승인요청에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 기존 제출 (수정 시)
+  const handleSave = async (submitType = 'draft') => {
+    if (submitType === 'draft') {
+      return handleDraftSave();
+    }
+    // submit → 승인요청 플로
+    if (!selectedApprover) {
+      setShowApproverModal(true);
+      return;
+    }
+    return handleRequestApproval();
+  };
+
+  // 승인자 검색
+  const handleSearchApprover = async () => {
+    if (!approverSearchKeyword.trim()) return;
+    try {
+      const res = await api.get('/workflow/approvers/search', {
+        params: { name: approverSearchKeyword }
+      });
+      if (res.data.success) {
+        setApproverSearchResults(res.data.data);
+      }
+    } catch (err) {
+      console.error('승인자 검색 실패:', err);
+    }
+  };
+
+  // 승인자 선택
+  const handleSelectApprover = (approver) => {
+    setSelectedApprover(approver);
+    setShowApproverModal(false);
+    setApproverSearchKeyword('');
+    setApproverSearchResults([]);
   };
 
   const handleApprove = async (action) => {
@@ -281,7 +360,7 @@ export default function InjectionConditionNew() {
                     취소
                   </button>
                   <button
-                    onClick={() => handleSave('draft')}
+                    onClick={handleDraftSave}
                     disabled={saving}
                     className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition text-sm font-medium flex items-center gap-2 disabled:opacity-50"
                   >
@@ -289,12 +368,12 @@ export default function InjectionConditionNew() {
                     임시저장
                   </button>
                   <button
-                    onClick={() => handleSave('submit')}
-                    disabled={saving}
+                    onClick={handleRequestApproval}
+                    disabled={saving || !selectedApprover}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm font-medium flex items-center gap-2 disabled:opacity-50"
                   >
                     <Send size={16} />
-                    {saving ? '저장 중...' : '제출'}
+                    {saving ? '처리 중...' : '승인요청'}
                   </button>
                 </>
               ) : (
@@ -1030,6 +1109,40 @@ export default function InjectionConditionNew() {
           </div>
         )}
 
+        {/* 승인자 선택 영역 */}
+        {isEditing && (
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="font-medium text-slate-700 block mb-1">승인자 선택</label>
+                <p className="text-xs text-slate-400">승인요청 시 승인자를 선택해주세요</p>
+              </div>
+              {selectedApprover ? (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                    <User size={16} className="text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">{selectedApprover.name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${selectedApprover.user_type === 'system_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {selectedApprover.user_type === 'system_admin' ? '관리자' : '금형개발'}
+                    </span>
+                  </div>
+                  <button onClick={() => setSelectedApprover(null)} className="text-slate-400 hover:text-slate-600">
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowApproverModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition text-sm font-medium"
+                >
+                  <Search size={16} />
+                  승인자 검색
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 하단 버튼 */}
         <div className="flex justify-end gap-3 pt-4">
           <button
@@ -1041,23 +1154,74 @@ export default function InjectionConditionNew() {
           {isEditing && (
             <>
               <button
-                onClick={() => handleSave('draft')}
+                onClick={handleDraftSave}
                 disabled={saving}
-                className="px-6 py-2.5 text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium disabled:opacity-50"
+                className="px-6 py-2.5 text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium disabled:opacity-50 flex items-center gap-2"
               >
+                <Save size={16} />
                 임시저장
               </button>
               <button
-                onClick={() => handleSave('submit')}
-                disabled={saving}
-                className="px-6 py-2.5 text-white bg-red-600 rounded-lg hover:bg-red-700 transition font-medium disabled:opacity-50"
+                onClick={handleRequestApproval}
+                disabled={saving || !selectedApprover}
+                className="px-6 py-2.5 text-white bg-red-600 rounded-lg hover:bg-red-700 transition font-medium disabled:opacity-50 flex items-center gap-2"
               >
-                {saving ? '저장 중...' : '제출'}
+                <Send size={16} />
+                {saving ? '처리 중...' : '승인요청'}
               </button>
             </>
           )}
         </div>
       </main>
+
+      {/* 승인자 검색 모달 */}
+      {showApproverModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+              <h3 className="font-semibold text-slate-900">승인자 선택</h3>
+              <button onClick={() => { setShowApproverModal(false); setApproverSearchKeyword(''); setApproverSearchResults([]); }} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  className="flex-1 px-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="이름 또는 이메일로 검색..."
+                  value={approverSearchKeyword}
+                  onChange={(e) => setApproverSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()}
+                />
+                <button onClick={handleSearchApprover} className="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                  <Search size={16} />
+                </button>
+              </div>
+              <div className="max-h-64 overflow-y-auto space-y-2">
+                {approverSearchResults.length === 0 && approverSearchKeyword && (
+                  <p className="text-sm text-slate-500 text-center py-6">검색 결과가 없습니다.</p>
+                )}
+                {approverSearchResults.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => handleSelectApprover(user)}
+                    className="w-full text-left p-3 rounded-xl border border-slate-200 hover:bg-red-50 hover:border-red-300 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">
+                      {user.name}
+                      <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${user.user_type === 'system_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {user.user_type === 'system_admin' ? '관리자' : '금형개발'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500">{user.email} {user.company_name && `| ${user.company_name}`}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

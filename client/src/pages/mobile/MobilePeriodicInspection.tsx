@@ -1,6 +1,6 @@
 // client/src/pages/mobile/MobilePeriodicInspection.tsx
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, AlertTriangle, Wrench, ChevronRight, ChevronLeft, Loader2, BookOpen, X, MapPin, Save, Send, Search, User } from 'lucide-react';
 import api from '../../lib/api';
 import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../../lib/draftStorage';
@@ -301,8 +301,9 @@ interface Item {
 
 export default function MobilePeriodicInspection() {
   const navigate = useNavigate();
+  const params = useParams();
   const [searchParams] = useSearchParams();
-  const moldId = searchParams.get('moldId') || searchParams.get('mold');
+  const moldId = params.moldId || searchParams.get('moldId') || searchParams.get('mold');
 
   const [selectedType, setSelectedType] = useState<InspectionType | null>(null);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
@@ -371,9 +372,39 @@ export default function MobilePeriodicInspection() {
     }
   }, [moldId]);
 
-  // Draft 복원
+  // Draft 복원 (서버 → 로컬 순서)
   useEffect(() => {
     (async () => {
+      // 1. 서버에서 draft 조회 (PC에서 임시저장한 것)
+      if (moldId) {
+        try {
+          const res = await api.get(`/checklist-instances/mold/${moldId}/status`);
+          if (res.data?.success) {
+            const periodicLatest = res.data.data?.periodic?.latest;
+            if (periodicLatest && periodicLatest.status === 'draft') {
+              try {
+                const detailRes = await api.get(`/checklist-instances/${periodicLatest.id}`);
+                if (detailRes.data?.success && detailRes.data.data) {
+                  const serverDraft = detailRes.data.data;
+                  const results = typeof serverDraft.results === 'string' ? JSON.parse(serverDraft.results) : serverDraft.results;
+                  if (results && Object.keys(results).length > 0) {
+                    setCheckResults(results);
+                    setSaveMessage({ type: 'success', text: `서버 임시저장 복원됨 (${new Date(serverDraft.created_at).toLocaleString()})` });
+                    setTimeout(() => setSaveMessage(null), 4000);
+                    return;
+                  }
+                }
+              } catch (detailErr) {
+                console.log('서버 draft 상세 로드 실패, 로컬 확인:', detailErr);
+              }
+            }
+          }
+        } catch (serverErr) {
+          console.log('서버 draft 조회 실패, 로컬 확인:', serverErr);
+        }
+      }
+
+      // 2. 로컬 스토리지에서 draft 복원
       const draft = await loadDraft('m_periodic_inspection', moldId || 'new');
       if (draft && draft.data) {
         const d = draft.data;
@@ -384,7 +415,7 @@ export default function MobilePeriodicInspection() {
         if (d.currentCategoryIndex != null) setCurrentCategoryIndex(d.currentCategoryIndex);
         if (d.checkResults) setCheckResults(d.checkResults);
         if (d.selectedApprover) setSelectedApprover(d.selectedApprover);
-        setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` });
+        setSaveMessage({ type: 'success', text: `로컬 임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` });
         setTimeout(() => setSaveMessage(null), 4000);
       }
     })();
@@ -509,7 +540,7 @@ export default function MobilePeriodicInspection() {
     try {
       await api.post('/checklist-instances/daily/request-approval', buildPayload('pending_approval', selectedApprover.id));
       setSaveMessage({ type: 'success', text: `${selectedApprover.name}님께 승인요청 완료` });
-      setTimeout(() => navigate(-1), 2000);
+      setTimeout(() => { moldId ? navigate(`/mobile/mold/${moldId}`) : navigate(-1); }, 2000);
     } catch (err) {
       setSaveMessage({ type: 'error', text: '승인요청 실패' });
     } finally {
@@ -540,7 +571,7 @@ export default function MobilePeriodicInspection() {
       await clearDraft('m_periodic_inspection', moldId || 'new');
       setSuccess('정기점검이 완료되었습니다!');
       setTimeout(() => {
-        navigate(-1);
+        moldId ? navigate(`/mobile/mold/${moldId}`) : navigate(-1);
       }, 1500);
     } catch (err: any) {
       setError(err?.response?.data?.message || '점검 저장 중 오류가 발생했습니다.');
