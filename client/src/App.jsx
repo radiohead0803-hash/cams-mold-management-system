@@ -58,6 +58,7 @@ import {
   CompanyManagement,
   CompanyDetail,
   CompanyProfile,
+  PlantMoldSelect,
   UserRequests,
   InternalUsers,
   PartnerUsers,
@@ -323,6 +324,7 @@ function App() {
         <Route path="companies" element={<CompanyManagement />} />
         <Route path="companies/:id" element={<CompanyDetail />} />
         <Route path="company-profile" element={<ProtectedRoute allowedRoles={['maker', 'plant']}><CompanyProfile /></ProtectedRoute>} />
+        <Route path="plant/select-mold/:task" element={<ProtectedRoute allowedRoles={['plant']}><PlantMoldSelect /></ProtectedRoute>} />
         <Route path="user-requests" element={<UserRequests />} />
         <Route path="master-data" element={<ProtectedRoute allowedRoles={['system_admin']}><MasterData /></ProtectedRoute>} />
         <Route path="hq/repair-requests" element={<HqRepairListPage />} />

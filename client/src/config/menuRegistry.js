@@ -325,18 +325,18 @@ export const PLANT_MENU = [
   {
     key: 'inspections',
     label: '점검 관리',
-    path: '/checklist/daily',
+    path: '/plant/select-mold/daily-inspection',
     icon: ClipboardList,
     allowedRoles: [USER_ROLES.PLANT],
     subMenus: [
-      { key: 'inspection-daily', label: '일상점검', path: '/checklist/daily' },
-      { key: 'inspection-periodic', label: '정기점검', path: '/inspection/periodic' }
+      { key: 'inspection-daily', label: '일상점검', path: '/plant/select-mold/daily-inspection' },
+      { key: 'inspection-periodic', label: '정기점검', path: '/plant/select-mold/periodic-inspection' }
     ]
   },
   {
     key: 'repairs',
     label: '수리 요청',
-    path: '/repair-request-form',
+    path: '/plant/select-mold/repair-request',
     icon: Wrench,
     allowedRoles: [USER_ROLES.PLANT],
     subMenus: []
@@ -344,7 +344,7 @@ export const PLANT_MENU = [
   {
     key: 'transfers',
     label: '이관 관리',
-    path: '/transfers',
+    path: '/plant/select-mold/transfer',
     icon: Truck,
     allowedRoles: [USER_ROLES.PLANT],
     subMenus: []
@@ -427,6 +427,7 @@ export const REGISTERED_ROUTES = [
   '/maker/repair-requests',
   '/maker/mold',
   '/company-profile',
+  '/plant/select-mold',
   '/repair-request-form',
   '/transfers',
   '/transfers/new',

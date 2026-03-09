@@ -127,7 +127,7 @@ export default function PlantDashboard() {
 
             {/* 오늘 점검 */}
             <button
-              onClick={() => navigate('/checklist/daily')}
+              onClick={() => navigate('/plant/select-mold/daily-inspection')}
               className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-blue-300 transition-all"
             >
               <div>
@@ -140,7 +140,7 @@ export default function PlantDashboard() {
 
             {/* 수리 대기 */}
             <button
-              onClick={() => navigate('/repairs')}
+              onClick={() => navigate('/plant/select-mold/repair-request')}
               className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-orange-300 transition-all"
             >
               <div>
