@@ -93,31 +93,6 @@ router.post('/', async (req, res) => {
 });
 
 /**
- * 내 승인 대기 목록
- * GET /api/v1/repair-step-workflow/my/pending-approvals
- * ⚠️ /:id 보다 먼저 정의해야 함
- */
-router.get('/my/pending-approvals', async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const [approvals] = await sequelize.query(`
-      SELECT rsa.*, rr.mold_id, rr.mold_spec_id, rr.status as repair_status,
-        rr.requester_name, rr.created_at as repair_created_at
-      FROM repair_step_approvals rsa
-      JOIN repair_requests rr ON rr.id = rsa.repair_request_id
-      WHERE rsa.approval_status = 'requested'
-        AND (rsa.approver_id = :userId OR rsa.approver_id IS NULL)
-      ORDER BY rsa.requested_at DESC
-    `, { replacements: { userId } });
-
-    res.json({ success: true, data: approvals });
-  } catch (error) {
-    console.error('[RepairStepWorkflow] Pending approvals error:', error);
-    res.status(500).json({ success: false, error: { message: '승인 대기 목록 조회 실패' } });
-  }
-});
-
-/**
  * 수리요청 상세 조회 (전체 단계 + 임시저장 + 승인 상태)
  * GET /api/v1/repair-step-workflow/:id
  */
@@ -534,6 +509,30 @@ router.get('/:id/history', async (req, res) => {
   } catch (error) {
     console.error('[RepairStepWorkflow] History error:', error);
     res.status(500).json({ success: false, error: { message: '이력 조회 실패' } });
+  }
+});
+
+/**
+ * 내 승인 대기 목록
+ * GET /api/v1/repair-step-workflow/my/pending-approvals
+ */
+router.get('/my/pending-approvals', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const [approvals] = await sequelize.query(`
+      SELECT rsa.*, rr.mold_id, rr.mold_spec_id, rr.status as repair_status,
+        rr.requester_name, rr.created_at as repair_created_at
+      FROM repair_step_approvals rsa
+      JOIN repair_requests rr ON rr.id = rsa.repair_request_id
+      WHERE rsa.approval_status = 'requested'
+        AND (rsa.approver_id = :userId OR rsa.approver_id IS NULL)
+      ORDER BY rsa.requested_at DESC
+    `, { replacements: { userId } });
+
+    res.json({ success: true, data: approvals });
+  } catch (error) {
+    console.error('[RepairStepWorkflow] Pending approvals error:', error);
+    res.status(500).json({ success: false, error: { message: '승인 대기 목록 조회 실패' } });
   }
 });
 

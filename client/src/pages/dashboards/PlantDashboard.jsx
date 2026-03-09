@@ -29,11 +29,15 @@ export default function PlantDashboard() {
         setStats(summaryResponse.data.data);
       }
 
-      // 최근 활동
-      const activitiesResponse = await api.get('/plant/dashboard/recent-activities?limit=10');
-      
-      if (activitiesResponse.data.success) {
-        setActivities(activitiesResponse.data.data.activities || []);
+      // 최근 활동 (실패해도 대시보드는 표시)
+      try {
+        const activitiesResponse = await api.get('/plant/dashboard/recent-activities?limit=10');
+        if (activitiesResponse.data.success) {
+          setActivities(activitiesResponse.data.data.activities || []);
+        }
+      } catch (actErr) {
+        console.warn('최근 활동 로딩 실패 (무시):', actErr.message);
+        setActivities([]);
       }
     } catch (err) {
       console.error('대시보드 데이터 로딩 에러:', err);
