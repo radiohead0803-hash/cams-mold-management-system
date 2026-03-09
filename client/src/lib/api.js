@@ -224,6 +224,19 @@ export const repairRequestAPI = {
   sendNotification: (data) => api.post('/workflow/notifications/send', data),
 }
 
+// Repair Step Workflow API (단계별 임시저장/승인요청/순차승인)
+export const repairStepWorkflowAPI = {
+  create: (data) => api.post('/repair-step-workflow', data),
+  getById: (id) => api.get(`/repair-step-workflow/${id}`),
+  saveDraft: (id, step, data) => api.put(`/repair-step-workflow/${id}/steps/${step}/draft`, data),
+  submit: (id, step, data) => api.post(`/repair-step-workflow/${id}/steps/${step}/submit`, data),
+  requestApproval: (id, step, data) => api.post(`/repair-step-workflow/${id}/steps/${step}/request-approval`, data),
+  approve: (id, step, data) => api.post(`/repair-step-workflow/${id}/steps/${step}/approve`, data),
+  reject: (id, step, data) => api.post(`/repair-step-workflow/${id}/steps/${step}/reject`, data),
+  getHistory: (id) => api.get(`/repair-step-workflow/${id}/history`),
+  getPendingApprovals: () => api.get('/repair-step-workflow/my/pending-approvals'),
+}
+
 // Report API
 export const reportAPI = {
   generate: (data) => api.post('/reports/generate', data),

@@ -4,9 +4,9 @@ import {
   ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle,
   Clock, User, Calendar, FileText, Phone, MapPin, Package, Wrench,
   Building, Truck, DollarSign, ClipboardList, Link2, ChevronDown, ChevronUp,
-  Image, Plus, Trash2
+  Image, Plus, Trash2, Loader2
 } from 'lucide-react';
-import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, userAPI, workflowAPI } from '../lib/api';
+import api, { repairRequestAPI, repairStepWorkflowAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, userAPI, workflowAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -42,6 +42,18 @@ export default function RepairRequestForm() {
   const [injectionCondition, setInjectionCondition] = useState(null);
   const [moldSpec, setMoldSpec] = useState(null);
   const [repairProgress, setRepairProgress] = useState(null);
+  // === 워크플로우 상태 ===
+  const [workflowId, setWorkflowId] = useState(null); // repair_requests.id (워크플로우용)
+  const [workflowData, setWorkflowData] = useState(null); // 전체 워크플로우 데이터
+  const [stepStatuses, setStepStatuses] = useState({}); // { 1: { draft, approval }, 2: ... }
+  const [currentStep, setCurrentStep] = useState(1);
+  const [stepSaving, setStepSaving] = useState(false);
+  const [showApproverModal, setShowApproverModal] = useState(false);
+  const [approverModalStep, setApproverModalStep] = useState(null);
+  const [allApprovers, setAllApprovers] = useState([]);
+  const [approverLoading, setApproverLoading] = useState(false);
+  const [approverKeyword, setApproverKeyword] = useState('');
+  const [filteredApprovers, setFilteredApprovers] = useState([]);
   const [camsManagerList, setCamsManagerList] = useState([]); // 캠스 담당자 목록
   const [developerSearch, setDeveloperSearch] = useState(''); // 개발담당자 검색어
   const [showDeveloperDropdown, setShowDeveloperDropdown] = useState(false); // 검색 드롭다운 표시
@@ -259,6 +271,9 @@ export default function RepairRequestForm() {
       const response = await repairRequestAPI.getById(requestId);
       if (response.data?.data) {
         setFormData(prev => ({ ...prev, ...response.data.data }));
+        // 워크플로우 데이터도 로드
+        setWorkflowId(parseInt(requestId));
+        await loadWorkflowData(parseInt(requestId));
       }
     } catch (error) {
       console.error('Load repair request error:', error);
@@ -331,7 +346,265 @@ export default function RepairRequestForm() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // ...
+  // === 워크플로우 단계 정의 ===
+  const STEP_MAP = {
+    request: 1, repairShop: 2, repair: 3, checklist: 4,
+    plantInspection: 5, liability: 6, complete: 7
+  };
+  const STEP_NAMES = { 1: '요청접수', 2: '수리처선정', 3: '수리진행', 4: '체크리스트', 5: '생산처검수', 6: '귀책처리', 7: '완료' };
+  const STEP_FIELDS = {
+    1: ['problem','cause_and_reason','priority','occurred_date','problem_type','occurrence_type','repair_category',
+        'plant_manager_name','plant_manager_contact','cams_manager_id','cams_manager_name','cams_manager_contact',
+        'stock_quantity','shortage_expected_date','mold_arrival_request_datetime','car_model','part_number','part_name','maker','production_site','production_shot'],
+    2: ['repair_shop_type','repair_company','repair_shop_selected_by','repair_shop_selected_date'],
+    3: ['manager_name','temporary_action','root_cause_action','repair_cost','repair_duration','completion_date','mold_arrival_date','repair_start_date','repair_end_date'],
+    4: ['checklist_result','checklist_comment','checklist_inspector','checklist_date','checklist_status'],
+    5: ['plant_inspection_result','plant_inspection_comment','plant_inspection_by','plant_inspection_date'],
+    6: ['liability_type','liability_ratio_maker','liability_ratio_plant','liability_reason','liability_decided_by','liability_decided_date'],
+    7: ['operation_type','management_type','sign_off_status','order_company']
+  };
+
+  // 단계별 formData 추출
+  const getStepDraftData = (stepNumber) => {
+    const fields = STEP_FIELDS[stepNumber] || [];
+    const data = {};
+    fields.forEach(f => { data[f] = formData[f]; });
+    return data;
+  };
+
+  // 워크플로우 데이터 로드
+  const loadWorkflowData = async (wfId) => {
+    try {
+      const res = await repairStepWorkflowAPI.getById(wfId);
+      if (res.data?.success) {
+        const { repair, steps } = res.data.data;
+        setWorkflowData(res.data.data);
+        setCurrentStep(repair.current_step || 1);
+        const statuses = {};
+        steps.forEach(s => { statuses[s.number] = { draft: s.draft, approval: s.approval }; });
+        setStepStatuses(statuses);
+        // draft 데이터를 formData에 반영
+        steps.forEach(s => {
+          if (s.draft?.draft_data) {
+            const dd = typeof s.draft.draft_data === 'string' ? JSON.parse(s.draft.draft_data) : s.draft.draft_data;
+            setFormData(prev => ({ ...prev, ...dd }));
+          }
+        });
+      }
+    } catch (err) {
+      console.error('워크플로우 데이터 로드 실패:', err);
+    }
+  };
+
+  // 워크플로우 생성 또는 가져오기
+  const ensureWorkflow = async () => {
+    if (workflowId) return workflowId;
+    try {
+      const res = await repairStepWorkflowAPI.create({
+        mold_spec_id: moldId || formData.mold_spec_id,
+        mold_id: moldInfo?.mold?.id || null,
+        draft_data: getStepDraftData(1)
+      });
+      if (res.data?.success) {
+        const id = res.data.data.id;
+        setWorkflowId(id);
+        return id;
+      }
+    } catch (err) {
+      console.error('워크플로우 생성 실패:', err);
+      throw err;
+    }
+  };
+
+  // 단계별 임시저장
+  const handleStepDraft = async (sectionId) => {
+    const stepNumber = STEP_MAP[sectionId];
+    if (!stepNumber) return;
+    setStepSaving(true);
+    try {
+      const wfId = await ensureWorkflow();
+      const draftData = getStepDraftData(stepNumber);
+      await repairStepWorkflowAPI.saveDraft(wfId, stepNumber, { draft_data: draftData });
+      await loadWorkflowData(wfId);
+      alert(`${STEP_NAMES[stepNumber]} 단계 임시저장 완료`);
+    } catch (err) {
+      alert('임시저장 실패: ' + (err.response?.data?.error?.message || err.message));
+    } finally {
+      setStepSaving(false);
+    }
+  };
+
+  // 단계별 제출
+  const handleStepSubmit = async (sectionId) => {
+    const stepNumber = STEP_MAP[sectionId];
+    if (!stepNumber) return;
+    setStepSaving(true);
+    try {
+      const wfId = await ensureWorkflow();
+      const draftData = getStepDraftData(stepNumber);
+      await repairStepWorkflowAPI.submit(wfId, stepNumber, { draft_data: draftData });
+      await loadWorkflowData(wfId);
+      alert(`${STEP_NAMES[stepNumber]} 단계 제출 완료`);
+    } catch (err) {
+      alert('제출 실패: ' + (err.response?.data?.error?.message || err.message));
+    } finally {
+      setStepSaving(false);
+    }
+  };
+
+  // 승인자 목록 로드
+  const loadApproversForStep = async (sectionId) => {
+    const stepNumber = STEP_MAP[sectionId];
+    setApproverModalStep(stepNumber);
+    setShowApproverModal(true);
+    if (allApprovers.length > 0) { setFilteredApprovers(allApprovers); return; }
+    setApproverLoading(true);
+    try {
+      const res = await api.get('/workflow/approvers/search', { params: { limit: 100 } });
+      if (res.data.success) {
+        setAllApprovers(res.data.data);
+        setFilteredApprovers(res.data.data);
+      }
+    } catch (err) { console.error('승인자 목록 로드 실패:', err); }
+    finally { setApproverLoading(false); }
+  };
+
+  const filterApproverList = (keyword) => {
+    const term = (keyword || '').trim().toLowerCase();
+    if (!term) { setFilteredApprovers(allApprovers); return; }
+    setFilteredApprovers(allApprovers.filter(u =>
+      (u.name || '').toLowerCase().includes(term) || (u.email || '').toLowerCase().includes(term)
+    ));
+  };
+
+  // 승인요청
+  const handleRequestApproval = async (approverId, approverName) => {
+    if (!approverModalStep || !workflowId) return;
+    setStepSaving(true);
+    try {
+      await repairStepWorkflowAPI.requestApproval(workflowId, approverModalStep, {
+        approver_id: approverId, approver_name: approverName
+      });
+      setShowApproverModal(false);
+      await loadWorkflowData(workflowId);
+      alert(`${STEP_NAMES[approverModalStep]} 단계 승인요청 완료 (${approverName})`);
+    } catch (err) {
+      alert('승인요청 실패: ' + (err.response?.data?.error?.message || err.message));
+    } finally { setStepSaving(false); }
+  };
+
+  // 승인 처리
+  const handleApproveStep = async (sectionId, notes) => {
+    const stepNumber = STEP_MAP[sectionId];
+    if (!workflowId) return;
+    setStepSaving(true);
+    try {
+      await repairStepWorkflowAPI.approve(workflowId, stepNumber, { approval_notes: notes || '' });
+      await loadWorkflowData(workflowId);
+      alert(`${STEP_NAMES[stepNumber]} 단계 승인 완료`);
+    } catch (err) {
+      alert('승인 실패: ' + (err.response?.data?.error?.message || err.message));
+    } finally { setStepSaving(false); }
+  };
+
+  // 반려 처리
+  const handleRejectStep = async (sectionId) => {
+    const stepNumber = STEP_MAP[sectionId];
+    if (!workflowId) return;
+    const reason = prompt('반려 사유를 입력하세요:');
+    if (!reason) return;
+    setStepSaving(true);
+    try {
+      await repairStepWorkflowAPI.reject(workflowId, stepNumber, { rejection_reason: reason });
+      await loadWorkflowData(workflowId);
+      alert(`${STEP_NAMES[stepNumber]} 단계 반려됨`);
+    } catch (err) {
+      alert('반려 실패: ' + (err.response?.data?.error?.message || err.message));
+    } finally { setStepSaving(false); }
+  };
+
+  // 단계별 상태 뱃지 렌더
+  const getStepStatusBadge = (stepNumber) => {
+    const ss = stepStatuses[stepNumber];
+    if (!ss) return null;
+    const approval = ss.approval;
+    if (approval?.approval_status === 'approved') return <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle size={10} /> 승인됨</span>;
+    if (approval?.approval_status === 'rejected') return <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full flex items-center gap-1"><AlertCircle size={10} /> 반려</span>;
+    if (approval?.approval_status === 'requested') return <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full flex items-center gap-1"><Clock size={10} /> 승인대기</span>;
+    const draft = ss.draft;
+    if (draft?.is_submitted) return <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">제출됨</span>;
+    if (draft) return <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">임시저장</span>;
+    return null;
+  };
+
+  // 단계별 액션 버튼 렌더
+  const renderStepActions = (sectionId) => {
+    const stepNumber = STEP_MAP[sectionId];
+    const ss = stepStatuses[stepNumber] || {};
+    const approval = ss.approval;
+    const draft = ss.draft;
+    const isApproved = approval?.approval_status === 'approved';
+    const isRequested = approval?.approval_status === 'requested';
+    const isRejected = approval?.approval_status === 'rejected';
+
+    return (
+      <div className="flex items-center gap-2 pt-4 border-t border-slate-200 mt-4">
+        {/* 임시저장 */}
+        {!isApproved && (
+          <button onClick={() => handleStepDraft(sectionId)} disabled={stepSaving}
+            className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition text-sm font-medium flex items-center gap-1 disabled:opacity-50">
+            {stepSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} 임시저장
+          </button>
+        )}
+        {/* 제출 */}
+        {!isApproved && !isRequested && (
+          <button onClick={() => handleStepSubmit(sectionId)} disabled={stepSaving}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm font-medium flex items-center gap-1 disabled:opacity-50">
+            {stepSaving ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} 제출
+          </button>
+        )}
+        {/* 승인요청 (제출 후) */}
+        {draft?.is_submitted && !isApproved && !isRequested && stepNumber < 7 && (
+          <button onClick={() => loadApproversForStep(sectionId)} disabled={stepSaving}
+            className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition text-sm font-medium flex items-center gap-1 disabled:opacity-50">
+            <Send size={14} /> 승인요청
+          </button>
+        )}
+        {/* 승인대기 표시 */}
+        {isRequested && (
+          <span className="text-sm text-yellow-600 flex items-center gap-1">
+            <Clock size={14} /> {approval.approver_name || '승인자'}님 승인 대기 중...
+          </span>
+        )}
+        {/* 승인/반려 (개발담당자) */}
+        {isRequested && isDeveloper && (
+          <>
+            <button onClick={() => handleApproveStep(sectionId)} disabled={stepSaving}
+              className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition text-sm font-medium disabled:opacity-50">
+              승인
+            </button>
+            <button onClick={() => handleRejectStep(sectionId)} disabled={stepSaving}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm font-medium disabled:opacity-50">
+              반려
+            </button>
+          </>
+        )}
+        {/* 반려 사유 표시 */}
+        {isRejected && approval.rejection_reason && (
+          <div className="flex-1 p-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">
+            반려사유: {approval.rejection_reason}
+          </div>
+        )}
+        {/* 승인 완료 */}
+        {isApproved && (
+          <span className="text-sm text-green-600 flex items-center gap-1">
+            <CheckCircle size={14} /> 승인 완료 ({approval.approver_name})
+          </span>
+        )}
+      </div>
+    );
+  };
+
   const handleSave = async (submitType = 'draft') => {
     // 필수 필드 검증
     if (!formData.problem.trim()) {
@@ -581,9 +854,11 @@ export default function RepairRequestForm() {
               { id: 'liability', label: '귀책처리', icon: DollarSign, step: 6 },
               { id: 'complete', label: '완료', icon: CheckCircle, step: 7 }
             ].map((stage, index) => {
-              const currentStepIndex = statusOptions.indexOf(formData.status);
-              const isCompleted = index < Math.floor(currentStepIndex / 1.5);
-              const isCurrent = index === Math.floor(currentStepIndex / 1.5);
+              const ss = stepStatuses[stage.step];
+              const isCompleted = ss?.approval?.approval_status === 'approved';
+              const isCurrent = stage.step === currentStep;
+              const isRejected = ss?.approval?.approval_status === 'rejected';
+              const isPending = ss?.approval?.approval_status === 'requested';
               const StageIcon = stage.icon;
               
               return (
@@ -607,18 +882,26 @@ export default function RepairRequestForm() {
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
                     isCompleted 
                       ? 'bg-green-500 text-white' 
-                      : isCurrent 
-                        ? 'bg-amber-500 text-white animate-pulse ring-4 ring-amber-200' 
-                        : 'bg-white border-2 border-slate-300 text-slate-400 group-hover:border-amber-400 group-hover:text-amber-500'
+                      : isRejected
+                        ? 'bg-red-500 text-white ring-4 ring-red-200'
+                        : isPending
+                          ? 'bg-yellow-500 text-white ring-4 ring-yellow-200'
+                          : isCurrent 
+                            ? 'bg-amber-500 text-white animate-pulse ring-4 ring-amber-200' 
+                            : 'bg-white border-2 border-slate-300 text-slate-400 group-hover:border-amber-400 group-hover:text-amber-500'
                   }`}>
                     <StageIcon size={20} />
                   </div>
                   <span className={`text-xs mt-2 font-medium ${
                     isCompleted 
                       ? 'text-green-600' 
-                      : isCurrent 
-                        ? 'text-amber-600' 
-                        : 'text-slate-500 group-hover:text-amber-600'
+                      : isRejected
+                        ? 'text-red-600'
+                        : isPending
+                          ? 'text-yellow-600'
+                          : isCurrent 
+                            ? 'text-amber-600' 
+                            : 'text-slate-500 group-hover:text-amber-600'
                   }`}>
                     {stage.label}
                   </span>
@@ -641,6 +924,7 @@ export default function RepairRequestForm() {
               <span className="font-semibold text-slate-800">1. 요청 단계</span>
               <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Plant 작성</span>
               <span className="text-xs text-red-500">* 필수</span>
+              {getStepStatusBadge(1)}
             </div>
             {expandedSections.request ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
@@ -1017,6 +1301,9 @@ export default function RepairRequestForm() {
                   금형 상세정보 보기
                 </button>
               </div>
+
+              {/* 1단계 액션 버튼 */}
+              {renderStepActions('request')}
             </div>
           )}
         </div>
@@ -1031,6 +1318,7 @@ export default function RepairRequestForm() {
               <Building className="w-5 h-5 text-cyan-600" />
               <span className="font-semibold text-slate-800">2. 수리처 선정</span>
               <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">Plant/개발담당자</span>
+              {getStepStatusBadge(2)}
               {formData.repair_shop_approval_status === '승인' && (
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                   <CheckCircle size={12} /> 승인됨
@@ -1159,6 +1447,8 @@ export default function RepairRequestForm() {
                   </div>
                 )}
               </div>
+              {/* 2단계 액션 버튼 */}
+              {renderStepActions('repairShop')}
             </div>
           )}
         </div>
@@ -1173,6 +1463,7 @@ export default function RepairRequestForm() {
               <Wrench className="w-5 h-5 text-green-600" />
               <span className="font-semibold text-slate-800">3. 수리 단계</span>
               <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Maker 작성</span>
+              {getStepStatusBadge(3)}
               {!isRepairShopApproved && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
               )}
@@ -1312,6 +1603,9 @@ export default function RepairRequestForm() {
                   />
                 </div>
               </div>
+
+              {/* 3단계 액션 버튼 */}
+              {renderStepActions('repair')}
             </div>
           )}
         </div>
@@ -1326,6 +1620,7 @@ export default function RepairRequestForm() {
               <ClipboardList className="w-5 h-5 text-cyan-600" />
               <span className="font-semibold text-slate-800">4. 체크리스트 점검</span>
               <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full">수리 후 출하점검</span>
+              {getStepStatusBadge(4)}
               {!isChecklistEnabled && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">수리처 승인 후 진행</span>
               )}
@@ -1574,6 +1869,9 @@ export default function RepairRequestForm() {
                   </button>
                 </div>
               </div>
+
+              {/* 4단계 액션 버튼 */}
+              {renderStepActions('checklist')}
             </div>
           )}
         </div>
@@ -1588,6 +1886,7 @@ export default function RepairRequestForm() {
               <Package className="w-5 h-5 text-indigo-600" />
               <span className="font-semibold text-slate-800">5. 생산처 검수</span>
               <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Plant 작성</span>
+              {getStepStatusBadge(5)}
               {formData.plant_inspection_status === '승인' && (
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1">
                   <CheckCircle size={12} /> 승인완료
@@ -1814,6 +2113,9 @@ export default function RepairRequestForm() {
                   </div>
                 )}
               </div>
+
+              {/* 5단계 액션 버튼 */}
+              {renderStepActions('plantInspection')}
             </div>
           )}
         </div>
@@ -1828,6 +2130,7 @@ export default function RepairRequestForm() {
               <ClipboardList className="w-5 h-5 text-violet-600" />
               <span className="font-semibold text-slate-800">6. 귀책처리</span>
               <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">개발담당자</span>
+              {getStepStatusBadge(6)}
               {formData.plant_inspection_status !== '승인' && (
                 <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">생산처 검수 승인 후 진행</span>
               )}
@@ -1939,6 +2242,8 @@ export default function RepairRequestForm() {
                   />
                 </div>
               </div>
+              {/* 6단계 액션 버튼 */}
+              {renderStepActions('liability')}
             </div>
           )}
         </div>
@@ -1953,6 +2258,7 @@ export default function RepairRequestForm() {
               <ClipboardList className="w-5 h-5 text-purple-600" />
               <span className="font-semibold text-slate-800">7. 완료/관리 단계</span>
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">HQ 작성</span>
+              {getStepStatusBadge(7)}
             </div>
             {expandedSections.complete ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
@@ -2005,9 +2311,73 @@ export default function RepairRequestForm() {
                   />
                 </div>
               </div>
+              {/* 7단계 액션 버튼 */}
+              {renderStepActions('complete')}
             </div>
           )}
         </div>
+
+        {/* 승인자 선택 모달 */}
+        {showApproverModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl w-full max-w-md mx-4 shadow-2xl flex flex-col max-h-[80vh]">
+              <div className="px-6 py-4 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-slate-900">
+                    {STEP_NAMES[approverModalStep]} - 승인자 선택
+                  </h3>
+                  <button onClick={() => setShowApproverModal(false)} className="p-1 hover:bg-slate-100 rounded-lg">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-amber-500"
+                    placeholder="이름 또는 이메일로 검색"
+                    value={approverKeyword}
+                    onChange={(e) => { setApproverKeyword(e.target.value); filterApproverList(e.target.value); }}
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {approverLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 size={24} className="animate-spin text-amber-500" />
+                    <span className="ml-2 text-sm text-slate-500">승인자 목록 로딩 중...</span>
+                  </div>
+                ) : filteredApprovers.length === 0 ? (
+                  <p className="text-sm text-slate-500 text-center py-4">검색 결과가 없습니다.</p>
+                ) : (
+                  filteredApprovers.map((approver) => (
+                    <button
+                      key={approver.id}
+                      onClick={() => handleRequestApproval(approver.id, approver.name)}
+                      disabled={stepSaving}
+                      className="w-full text-left p-3 rounded-lg border border-slate-200 hover:bg-amber-50 hover:border-amber-300 transition disabled:opacity-50"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-medium text-slate-800">{approver.name}</span>
+                          {approver.company_name && <span className="ml-2 text-xs text-slate-500">{approver.company_name}</span>}
+                        </div>
+                        <span className="text-xs text-slate-400">{approver.email}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {approver.user_type === 'system_admin' ? '시스템 관리자' : '금형개발 담당자'}
+                        {approver.phone && ` · ${approver.phone}`}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+              <div className="px-6 py-3 border-t border-slate-200 text-center">
+                <p className="text-xs text-slate-400">{filteredApprovers.length}명 표시</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 하단 버튼 */}
         <div className="flex justify-end gap-3 pt-4">

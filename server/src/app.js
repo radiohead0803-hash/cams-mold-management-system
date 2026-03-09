@@ -139,6 +139,7 @@ const checklistsRouter = require('./routes/checklists');
 const productionTransferRoutesRouter = require('./routes/productionTransferRoutes');
 const draftsRouter = require('./routes/drafts');
 const standardDocumentTemplatesRouter = require('./routes/standardDocumentTemplates');
+const repairStepWorkflowRouter = require('./routes/repairStepWorkflow');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -256,6 +257,8 @@ app.use('/api/v1/production-transfer', productionTransferRoutesRouter);
 app.use('/api/v1/drafts', draftsRouter);
 // 표준문서 마스터 관리
 app.use('/api/v1/standard-document-templates', standardDocumentTemplatesRouter);
+// 수리요청 단계별 워크플로우 API (임시저장/승인요청/순차승인)
+app.use('/api/v1/repair-step-workflow', repairStepWorkflowRouter);
 
 // Health check
 app.get('/health', (req, res) => {
