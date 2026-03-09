@@ -724,6 +724,108 @@ const bulkUploadCompanies = async (req, res) => {
   }
 };
 
+/**
+ * 내 업체 프로필 조회 (maker/plant 전용)
+ */
+const getMyCompanyProfile = async (req, res) => {
+  try {
+    const companyId = req.user?.company_id;
+    if (!companyId) {
+      return res.status(400).json({ success: false, error: { message: '소속 업체가 없습니다. 관리자에게 문의하세요.' } });
+    }
+
+    const company = await Company.findByPk(companyId, {
+      include: [{
+        model: User,
+        as: 'users',
+        attributes: ['id', 'name', 'username', 'email', 'role', 'phone']
+      }]
+    });
+
+    if (!company) {
+      return res.status(404).json({ success: false, error: { message: '업체 정보를 찾을 수 없습니다' } });
+    }
+
+    res.json({ success: true, data: company });
+  } catch (error) {
+    logger.error('Get my company profile error:', error);
+    res.status(500).json({ success: false, error: { message: '업체 프로필 조회 실패' } });
+  }
+};
+
+/**
+ * 내 업체 프로필 수정 (maker/plant 전용)
+ * - 업체가 직접 자사 정보를 수정할 수 있음
+ * - 수정 시 금형개발 담당에게 알림 발송
+ */
+const updateMyCompanyProfile = async (req, res) => {
+  try {
+    const companyId = req.user?.company_id;
+    if (!companyId) {
+      return res.status(400).json({ success: false, error: { message: '소속 업체가 없습니다' } });
+    }
+
+    const company = await Company.findByPk(companyId);
+    if (!company) {
+      return res.status(404).json({ success: false, error: { message: '업체 정보를 찾을 수 없습니다' } });
+    }
+
+    const allowedFields = [
+      'phone', 'fax', 'email', 'address', 'address_detail', 'postal_code',
+      'latitude', 'longitude',
+      'manager_name', 'manager_phone', 'manager_email',
+      'representative', 'business_number',
+      'production_capacity', 'equipment_list', 'certifications', 'specialties',
+      'production_lines', 'injection_machines', 'daily_capacity',
+      'notes'
+    ];
+
+    const updates = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) updates[field] = req.body[field];
+    }
+
+    await company.update(updates);
+
+    // 금형개발 담당자에게 알림 발송
+    try {
+      const { Notification } = require('../models/newIndex');
+      const developers = await User.findAll({
+        where: { role: 'mold_developer', is_active: true },
+        attributes: ['id']
+      });
+
+      const changedFields = Object.keys(updates).join(', ');
+      for (const dev of developers) {
+        await Notification.create({
+          user_id: dev.id,
+          title: '업체 프로필 업데이트',
+          message: `${company.company_name}(${company.company_type === 'maker' ? '제작처' : '생산처'})에서 프로필을 수정했습니다. 변경항목: ${changedFields}`,
+          type: 'company_profile_update',
+          priority: 'normal',
+          is_read: false,
+          data: JSON.stringify({
+            company_id: company.id,
+            company_name: company.company_name,
+            company_type: company.company_type,
+            updated_by: req.user.id,
+            updated_by_name: req.user.name,
+            changed_fields: Object.keys(updates)
+          })
+        });
+      }
+      logger.info(`Company profile updated: ${company.company_name} by user ${req.user.id}, notified ${developers.length} developers`);
+    } catch (notifyErr) {
+      logger.warn('Failed to send profile update notification:', notifyErr.message);
+    }
+
+    res.json({ success: true, data: company, message: '프로필이 수정되었습니다' });
+  } catch (error) {
+    logger.error('Update my company profile error:', error);
+    res.status(500).json({ success: false, error: { message: '업체 프로필 수정 실패' } });
+  }
+};
+
 module.exports = {
   getCompanies,
   getCompanyById,
@@ -733,5 +835,7 @@ module.exports = {
   getCompanyStats,
   getAllCompaniesStats,
   downloadSampleExcel,
-  bulkUploadCompanies
+  bulkUploadCompanies,
+  getMyCompanyProfile,
+  updateMyCompanyProfile
 };

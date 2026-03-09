@@ -253,6 +253,14 @@ export const MAKER_MENU = [
     subMenus: []
   },
   {
+    key: 'company-profile',
+    label: '업체 프로필',
+    path: '/company-profile',
+    icon: Building2,
+    allowedRoles: [USER_ROLES.MAKER],
+    subMenus: []
+  },
+  {
     key: 'molds',
     label: '금형 현황',
     path: '/molds',
@@ -295,6 +303,14 @@ export const PLANT_MENU = [
     label: '대시보드',
     path: '/dashboard/plant',
     icon: Home,
+    allowedRoles: [USER_ROLES.PLANT],
+    subMenus: []
+  },
+  {
+    key: 'company-profile',
+    label: '업체 프로필',
+    path: '/company-profile',
+    icon: Building2,
     allowedRoles: [USER_ROLES.PLANT],
     subMenus: []
   },
@@ -410,6 +426,7 @@ export const REGISTERED_ROUTES = [
   '/hq/repair-requests',
   '/maker/repair-requests',
   '/maker/mold',
+  '/company-profile',
   '/repair-request-form',
   '/transfers',
   '/transfers/new',

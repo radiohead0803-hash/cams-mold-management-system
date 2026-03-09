@@ -348,6 +348,9 @@ export const masterDataAPI = {
   
   // 회사 (제작처/생산처)
   getCompanies: (params) => api.get('/companies', { params }),
+  // 내 업체 프로필
+  getMyProfile: () => api.get('/companies/my-profile'),
+  updateMyProfile: (data) => api.patch('/companies/my-profile', data),
 }
 
 // User API (사용자 조회)

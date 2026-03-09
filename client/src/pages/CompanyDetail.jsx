@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { ArrowLeft, Edit, Save, X, Building2, Phone, Mail, MapPin, User, Calendar, Star } from 'lucide-react';
+import { ArrowLeft, Edit, Save, X, Building2, Phone, Mail, MapPin, User, Calendar, Star, Factory, Wrench, Award } from 'lucide-react';
 
 export default function CompanyDetail() {
   const { id } = useParams();
@@ -403,6 +403,132 @@ export default function CompanyDetail() {
             </div>
           </div>
         </div>
+
+        {/* 사출기 보유현황 (생산처) / 제작능력 (제작처) */}
+        {(company.company_type === 'plant' && (company.injection_machines?.length > 0 || company.production_lines || company.daily_capacity)) && (
+          <div className="mt-6 bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <Factory className="mr-2 text-green-600" size={20} />
+              사출기 보유현황
+            </h2>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              {company.production_lines && (
+                <div>
+                  <span className="text-sm text-gray-600">생산라인 수</span>
+                  <p className="text-lg font-bold text-gray-900">{company.production_lines}개</p>
+                </div>
+              )}
+              {company.daily_capacity && (
+                <div>
+                  <span className="text-sm text-gray-600">일일 생산능력</span>
+                  <p className="text-lg font-bold text-gray-900">{company.daily_capacity?.toLocaleString()}개</p>
+                </div>
+              )}
+            </div>
+            {company.injection_machines?.length > 0 && (
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">#</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">제조사</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">모델명</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">톤수</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">도입년도</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {company.injection_machines.map((m, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 text-gray-400">{i + 1}</td>
+                        <td className="px-3 py-2 font-medium">{m.manufacturer}</td>
+                        <td className="px-3 py-2">{m.model || '-'}</td>
+                        <td className="px-3 py-2 font-bold text-blue-600">{m.tonnage}T</td>
+                        <td className="px-3 py-2">{m.year || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {(company.company_type === 'maker' && (company.production_capacity || company.specialties?.length > 0)) && (
+          <div className="mt-6 bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <Wrench className="mr-2 text-orange-600" size={20} />
+              제작 능력
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              {company.production_capacity && (
+                <div>
+                  <span className="text-sm text-gray-600">월간 금형 제작 능력</span>
+                  <p className="text-lg font-bold text-gray-900">{company.production_capacity}개</p>
+                </div>
+              )}
+              {company.specialties?.length > 0 && (
+                <div>
+                  <span className="text-sm text-gray-600">전문분야</span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {company.specialties.map((s, i) => (
+                      <span key={i} className="px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 보유 장비 */}
+        {company.equipment_list?.length > 0 && (
+          <div className="mt-6 bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <Wrench className="mr-2 text-blue-600" size={20} />
+              보유 장비
+            </h2>
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">#</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">장비명</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">사양/수량</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {company.equipment_list.map((eq, i) => (
+                    <tr key={i}>
+                      <td className="px-3 py-2 text-gray-400">{i + 1}</td>
+                      <td className="px-3 py-2 font-medium">{eq.name}</td>
+                      <td className="px-3 py-2">{eq.spec || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 인증 현황 */}
+        {company.certifications?.length > 0 && (
+          <div className="mt-6 bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <Award className="mr-2 text-yellow-600" size={20} />
+              인증 현황
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {company.certifications.map((cert, i) => (
+                <div key={i} className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
+                  <Award size={14} className="text-yellow-600" />
+                  <span className="font-medium">{cert.name}</span>
+                  {cert.expiry && <span className="text-xs text-gray-500">({cert.expiry}까지)</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 비고 */}
         {(company.notes || isEditing) && (

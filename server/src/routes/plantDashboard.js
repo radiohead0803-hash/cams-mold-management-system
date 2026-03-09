@@ -98,25 +98,7 @@ router.get('/dashboard/summary', async (req, res) => {
 
     console.log('[Plant Dashboard] userId:', userId, 'companyId:', companyId);
     
-    // 🔥 임시: Mock 데이터 반환 (DB 에러 우회)
-    const USE_MOCK_DATA = true;
-    
-    if (USE_MOCK_DATA) {
-      console.log('[Plant Dashboard] Using MOCK data');
-      return res.json({
-        success: true,
-        data: {
-          totalMolds: 150,
-          activeMolds: 120,
-          todayChecks: 45,
-          pendingRepairs: 12,
-          todayProduction: 5000,
-          monthlyProduction: 150000,
-          todayScans: 89,
-          ngMolds: 3
-        }
-      });
-    }
+    // 실제 DB 데이터 사용
 
     const now = new Date();
     const startOfToday = new Date(
@@ -276,14 +258,6 @@ router.get('/dashboard/recent-activities', async (req, res) => {
     // 개발 환경: 인증 없이 테스트용 기본값 사용
     const userId = req.user?.id || 1;
     const limit = parseInt(req.query.limit) || 10;
-
-    // TODO: 임시로 빈 배열 반환 (DB 에러 방지)
-    return res.json({
-      success: true,
-      data: {
-        activities: []
-      }
-    });
 
     // 최근 일상점검
     const recentChecks = await DailyCheck.findAll({

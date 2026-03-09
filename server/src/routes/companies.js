@@ -24,6 +24,10 @@ router.get('/sample-excel', authenticate, companyController.downloadSampleExcel)
 // 전체 업체 통계 조회 (모든 인증된 사용자)
 router.get('/stats/all', authenticate, companyController.getAllCompaniesStats);
 
+// 내 업체 프로필 조회/수정 (maker/plant 전용) - /:id 보다 먼저 선언
+router.get('/my-profile', authenticate, authorize(['maker', 'plant']), companyController.getMyCompanyProfile);
+router.patch('/my-profile', authenticate, authorize(['maker', 'plant']), companyController.updateMyCompanyProfile);
+
 // 회사 목록 조회 (모든 인증된 사용자)
 router.get('/', authenticate, companyController.getCompanies);
 

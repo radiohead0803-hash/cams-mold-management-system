@@ -127,7 +127,7 @@ export default function PlantDashboard() {
 
             {/* 오늘 점검 */}
             <button
-              onClick={() => navigate('/daily-checks')}
+              onClick={() => navigate('/checklist/daily')}
               className="rounded-xl bg-white border border-gray-200 shadow-sm p-5 text-left flex items-center justify-between hover:shadow-md hover:border-blue-300 transition-all"
             >
               <div>

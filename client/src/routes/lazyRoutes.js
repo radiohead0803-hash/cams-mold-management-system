@@ -71,6 +71,7 @@ export const InjectionCondition = lazy(() => import('../pages/InjectionCondition
 // 회사/사용자 관리
 export const CompanyManagement = lazy(() => import('../pages/CompanyManagement'));
 export const CompanyDetail = lazy(() => import('../pages/CompanyDetail'));
+export const CompanyProfile = lazy(() => import('../pages/CompanyProfile'));
 export const UserRequests = lazy(() => import('../pages/UserRequests'));
 export const InternalUsers = lazy(() => import('../pages/InternalUsers'));
 export const PartnerUsers = lazy(() => import('../pages/PartnerUsers'));
