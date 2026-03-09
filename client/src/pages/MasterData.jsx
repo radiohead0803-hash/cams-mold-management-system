@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { masterDataAPI } from '../lib/api';
-import { Plus, Edit2, Trash2, Save, X, ArrowLeft, Search, Filter, Zap } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, ArrowLeft, Search, Filter, Zap, RefreshCw } from 'lucide-react';
 
 export default function MasterData() {
   const navigate = useNavigate();
@@ -22,6 +22,11 @@ export default function MasterData() {
   const [recommendParams, setRecommendParams] = useState({ mold_width: '', mold_height: '', clamping_force: '', manufacturer: '' });
   const [recommendResults, setRecommendResults] = useState([]);
   const [recommendLoading, setRecommendLoading] = useState(false);
+
+  // 사출기 자동 수집 상태
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
+  const [newIds, setNewIds] = useState(new Set());
 
   const tabs = [
     { id: 'car-models', label: '차종' },
@@ -169,6 +174,36 @@ export default function MasterData() {
     setIsAdding(false);
     setEditingId(null);
     setFormData({});
+  };
+
+  // 제작처 사출기 데이터 자동 수집
+  const handleSyncFromMakers = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const response = await masterDataAPI.syncTonnagesFromMakers();
+      if (response.data.success) {
+        const result = response.data.syncResult;
+        setSyncResult(result);
+        // 신규 추가된 항목의 tonnage_value를 추적
+        if (result.newly_added?.length > 0) {
+          const newTonnageValues = new Set(result.newly_added.map(n => n.tonnage_value));
+          setNewIds(newTonnageValues);
+        }
+        // 데이터 갱신
+        setData(response.data.data || []);
+        if (result.newly_added_count > 0) {
+          alert(`자동 수집 완료: ${result.newly_added_count}개 신규 사출기 사양이 추가되었습니다.`);
+        } else {
+          alert(`자동 수집 완료: 분석 ${result.analyzed_count}건, 신규 추가 없음 (모두 등록 완료)`);
+        }
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      alert('자동 수집 실패: ' + (error.response?.data?.error?.message || error.message));
+    } finally {
+      setSyncing(false);
+    }
   };
 
   // 사출기 추천 검색
@@ -854,7 +889,12 @@ export default function MasterData() {
               {filteredData.map((item, index) => (
                 <tr key={item.id}>
                   <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-xs">{index + 1}</td>
-                  <td className="px-2 py-2 whitespace-nowrap font-bold text-blue-600">{item.tonnage_value}T</td>
+                  <td className="px-2 py-2 whitespace-nowrap font-bold text-blue-600">
+                    {item.tonnage_value}T
+                    {(item.is_new || newIds.has(item.tonnage_value)) && (
+                      <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded bg-red-500 text-white animate-pulse">NEW</span>
+                    )}
+                  </td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs text-orange-600 font-medium">{item.clamping_force || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.manufacturer || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.model_name || '-'}</td>
@@ -1002,15 +1042,25 @@ export default function MasterData() {
             새로 추가
           </button>
           
-          {/* 사출기 사양 탭에서 추천 버튼 표시 */}
+          {/* 사출기 사양 탭에서 새로고침/추천 버튼 표시 */}
           {activeTab === 'tonnages' && (
-            <button 
-              onClick={() => setShowRecommend(!showRecommend)} 
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showRecommend ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
-            >
-              <Zap size={16} />
-              금형사이즈로 추천
-            </button>
+            <>
+              <button
+                onClick={handleSyncFromMakers}
+                disabled={syncing}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${syncing ? 'bg-green-300 text-white cursor-wait' : 'bg-green-600 text-white hover:bg-green-700'}`}
+              >
+                <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+                {syncing ? '수집 중...' : '제작처 사출기 수집'}
+              </button>
+              <button 
+                onClick={() => setShowRecommend(!showRecommend)} 
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showRecommend ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
+              >
+                <Zap size={16} />
+                금형사이즈로 추천
+              </button>
+            </>
           )}
           
           {/* 검색 입력 */}
@@ -1064,6 +1114,48 @@ export default function MasterData() {
                 </button>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* 사출기 자동 수집 결과 패널 */}
+      {syncResult && activeTab === 'tonnages' && (
+        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-green-800 flex items-center gap-2">
+              <RefreshCw size={16} />
+              자동 수집 결과
+            </h3>
+            <button onClick={() => setSyncResult(null)} className="text-green-600 hover:text-green-800">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-4 text-sm mb-2">
+            <div className="bg-white rounded p-2 text-center">
+              <p className="text-lg font-bold text-gray-700">{syncResult.analyzed_count}</p>
+              <p className="text-xs text-gray-500">분석 건수</p>
+            </div>
+            <div className="bg-white rounded p-2 text-center">
+              <p className="text-lg font-bold text-blue-600">{syncResult.existing_count}</p>
+              <p className="text-xs text-gray-500">기존 등록</p>
+            </div>
+            <div className="bg-white rounded p-2 text-center">
+              <p className="text-lg font-bold text-red-600">{syncResult.newly_added_count}</p>
+              <p className="text-xs text-gray-500">신규 추가</p>
+            </div>
+          </div>
+          {syncResult.newly_added?.length > 0 && (
+            <div className="mt-2">
+              <p className="text-xs font-medium text-green-700 mb-1">신규 추가된 사출기:</p>
+              <div className="flex flex-wrap gap-2">
+                {syncResult.newly_added.map((item, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                    <span className="px-1 bg-red-500 text-white rounded text-[10px] font-bold">NEW</span>
+                    {item.tonnage_value}T ({item.manufacturer}) - {item.usage_count}건
+                  </span>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}

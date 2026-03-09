@@ -698,6 +698,15 @@ const runMasterDataMigration = async () => {
     `);
     console.log('✅ tonnages table created/verified.');
 
+    // tonnages 테이블에 is_new, source 칼럼 추가 (자동 수집 지원)
+    const tonnageNewCols = [
+      "ALTER TABLE tonnages ADD COLUMN IF NOT EXISTS is_new BOOLEAN DEFAULT FALSE",
+      "ALTER TABLE tonnages ADD COLUMN IF NOT EXISTS source VARCHAR(50)"
+    ];
+    for (const sql of tonnageNewCols) {
+      try { await sequelize.query(sql); } catch (e) { }
+    }
+
     // raw_materials 테이블 생성 (원재료)
     await sequelize.query(`
       CREATE TABLE IF NOT EXISTS raw_materials (

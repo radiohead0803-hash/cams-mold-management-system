@@ -337,6 +337,8 @@ export const masterDataAPI = {
   deleteTonnage: (id) => api.delete(`/master-data/tonnages/${id}`),
   // 금형사이즈/형체력 기반 사출기 추천
   recommendTonnages: (params) => api.get('/master-data/tonnages/recommend', { params }),
+  // 제작처 사출기 자동 수집
+  syncTonnagesFromMakers: () => api.post('/master-data/tonnages/sync-from-makers'),
   
   // 원재료
   getRawMaterials: (params) => api.get('/master-data/raw-materials', { params }),

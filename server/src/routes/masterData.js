@@ -19,6 +19,7 @@ const {
   updateTonnage,
   deleteTonnage,
   recommendTonnages,
+  syncTonnagesFromMakers,
   getRawMaterials,
   createRawMaterial,
   updateRawMaterial,
@@ -52,6 +53,7 @@ router.get('/tonnages/recommend', recommendTonnages);
 router.post('/tonnages', authorize(['mold_developer', 'system_admin']), createTonnage);
 router.patch('/tonnages/:id', authorize(['mold_developer', 'system_admin']), updateTonnage);
 router.delete('/tonnages/:id', authorize(['mold_developer', 'system_admin']), deleteTonnage);
+router.post('/tonnages/sync-from-makers', authorize(['mold_developer', 'system_admin']), syncTonnagesFromMakers);
 
 // ===== 원재료 관리 =====
 router.get('/raw-materials', getRawMaterials);

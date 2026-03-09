@@ -625,6 +625,170 @@ const recommendTonnages = async (req, res) => {
   }
 };
 
+// 제작처 사출기 데이터 자동 수집/분석/추가
+const syncTonnagesFromMakers = async (req, res) => {
+  try {
+    // 1) 기존 tonnages에서 이미 등록된 (tonnage_value + manufacturer) 조합 조회
+    const [existingTonnages] = await sequelize.query(`
+      SELECT tonnage_value, COALESCE(manufacturer, '') as manufacturer FROM tonnages WHERE is_active = true
+    `);
+    const existingSet = new Set(existingTonnages.map(t => `${t.tonnage_value}_${t.manufacturer}`));
+
+    // 2) maker_specifications에서 사출기 톤수 데이터 수집
+    const [makerData] = await sequelize.query(`
+      SELECT DISTINCT 
+        ms.tonnage as tonnage_value,
+        ms.maker_id,
+        u.name as maker_name,
+        c.company_name as company_name,
+        COUNT(*) as usage_count
+      FROM maker_specifications ms
+      LEFT JOIN users u ON ms.maker_id = u.id
+      LEFT JOIN companies c ON u.company_id = c.id
+      WHERE ms.tonnage IS NOT NULL AND ms.tonnage > 0
+      GROUP BY ms.tonnage, ms.maker_id, u.name, c.company_name
+      ORDER BY ms.tonnage ASC
+    `);
+
+    // 3) mold_specifications에서도 사출기 톤수 데이터 수집
+    const [moldSpecData] = await sequelize.query(`
+      SELECT DISTINCT 
+        tonnage as tonnage_value,
+        COUNT(*) as usage_count
+      FROM mold_specifications
+      WHERE tonnage IS NOT NULL AND tonnage > 0
+      GROUP BY tonnage
+      ORDER BY tonnage ASC
+    `);
+
+    // 4) 신규 톤수 식별 및 자동 추가
+    const newlyAdded = [];
+    const analyzed = [];
+
+    // 제작처 데이터에서 신규 발견
+    for (const item of makerData) {
+      const key = `${item.tonnage_value}_`;
+      const keyWithMaker = `${item.tonnage_value}_${item.company_name || ''}`;
+      
+      analyzed.push({
+        tonnage_value: item.tonnage_value,
+        source_maker: item.maker_name || item.company_name || '제작처',
+        usage_count: parseInt(item.usage_count)
+      });
+
+      // 같은 톤수가 이미 존재하는지 확인 (manufacturer 무관)
+      const alreadyExists = existingTonnages.some(t => t.tonnage_value === item.tonnage_value);
+      if (!alreadyExists) {
+        try {
+          // 중복 방지: tonnage_value로 한 번 더 확인
+          const [check] = await sequelize.query(
+            'SELECT id FROM tonnages WHERE tonnage_value = :tv LIMIT 1',
+            { replacements: { tv: item.tonnage_value } }
+          );
+          if (check.length === 0) {
+            const maxOrder = await sequelize.query(
+              'SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM tonnages',
+              { type: sequelize.QueryTypes.SELECT }
+            );
+            const nextOrder = maxOrder[0]?.next_order || 1;
+
+            await sequelize.query(`
+              INSERT INTO tonnages (tonnage_value, manufacturer, clamping_force, description, sort_order, is_active, is_new, source, created_at, updated_at)
+              VALUES (:tv, :mfr, :cf, :desc, :so, true, true, 'auto_sync', NOW(), NOW())
+            `, {
+              replacements: {
+                tv: item.tonnage_value,
+                mfr: item.company_name || '자동수집',
+                cf: item.tonnage_value,
+                desc: `제작처(${item.maker_name || item.company_name || '미상'}) 금형 ${item.usage_count}건에서 자동 수집`,
+                so: nextOrder
+              }
+            });
+
+            newlyAdded.push({
+              tonnage_value: item.tonnage_value,
+              manufacturer: item.company_name || '자동수집',
+              source_maker: item.maker_name || item.company_name,
+              usage_count: parseInt(item.usage_count)
+            });
+
+            // existingSet 업데이트
+            existingSet.add(`${item.tonnage_value}_${item.company_name || ''}`);
+          }
+        } catch (insertErr) {
+          logger.warn(`Tonnage sync insert skip (${item.tonnage_value}T):`, insertErr.message);
+        }
+      }
+    }
+
+    // 금형사양 데이터에서 신규 발견
+    for (const item of moldSpecData) {
+      const alreadyExists = existingTonnages.some(t => t.tonnage_value === item.tonnage_value) 
+        || newlyAdded.some(n => n.tonnage_value === item.tonnage_value);
+      
+      if (!alreadyExists) {
+        try {
+          const [check] = await sequelize.query(
+            'SELECT id FROM tonnages WHERE tonnage_value = :tv LIMIT 1',
+            { replacements: { tv: item.tonnage_value } }
+          );
+          if (check.length === 0) {
+            const maxOrder = await sequelize.query(
+              'SELECT COALESCE(MAX(sort_order), 0) + 1 as next_order FROM tonnages',
+              { type: sequelize.QueryTypes.SELECT }
+            );
+            const nextOrder = maxOrder[0]?.next_order || 1;
+
+            await sequelize.query(`
+              INSERT INTO tonnages (tonnage_value, clamping_force, description, sort_order, is_active, is_new, source, created_at, updated_at)
+              VALUES (:tv, :cf, :desc, :so, true, true, 'auto_sync', NOW(), NOW())
+            `, {
+              replacements: {
+                tv: item.tonnage_value,
+                cf: item.tonnage_value,
+                desc: `금형사양 ${item.usage_count}건에서 자동 수집`,
+                so: nextOrder
+              }
+            });
+
+            newlyAdded.push({
+              tonnage_value: item.tonnage_value,
+              manufacturer: '자동수집',
+              source_maker: '금형사양',
+              usage_count: parseInt(item.usage_count)
+            });
+          }
+        } catch (insertErr) {
+          logger.warn(`Tonnage sync insert skip (${item.tonnage_value}T):`, insertErr.message);
+        }
+      }
+    }
+
+    // 5) 결과 반환
+    const [updatedList] = await sequelize.query(`
+      SELECT * FROM tonnages WHERE is_active = true ORDER BY tonnage_value ASC
+    `);
+
+    res.json({
+      success: true,
+      data: updatedList,
+      syncResult: {
+        analyzed_count: analyzed.length + moldSpecData.length,
+        existing_count: existingTonnages.length,
+        newly_added_count: newlyAdded.length,
+        newly_added: newlyAdded,
+        analyzed: analyzed.slice(0, 20)
+      }
+    });
+  } catch (error) {
+    logger.error('Sync tonnages from makers error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: '사출기 데이터 자동 수집 실패: ' + error.message }
+    });
+  }
+};
+
 // ===== 원재료 관리 =====
 const getRawMaterials = async (req, res) => {
   try {
@@ -820,6 +984,7 @@ module.exports = {
   updateTonnage,
   deleteTonnage,
   recommendTonnages,
+  syncTonnagesFromMakers,
   // 원재료
   getRawMaterials,
   createRawMaterial,
