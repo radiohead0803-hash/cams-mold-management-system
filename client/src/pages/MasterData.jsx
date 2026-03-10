@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { masterDataAPI } from '../lib/api';
+import { masterDataAPI, equipmentAPI } from '../lib/api';
 import { Plus, Edit2, Trash2, Save, X, ArrowLeft, Search, Filter, Zap, RefreshCw } from 'lucide-react';
 
 export default function MasterData() {
@@ -33,7 +33,8 @@ export default function MasterData() {
     { id: 'materials', label: '금형재질' },
     { id: 'mold-types', label: '금형타입' },
     { id: 'tonnages', label: '사출기 사양' },
-    { id: 'raw-materials', label: '원재료' }
+    { id: 'raw-materials', label: '원재료' },
+    { id: 'equipment-masters', label: '장비 마스터' }
   ];
 
   useEffect(() => {
@@ -61,9 +62,12 @@ export default function MasterData() {
         case 'raw-materials':
           response = await masterDataAPI.getRawMaterials({ is_active: true });
           break;
+        case 'equipment-masters':
+          response = await equipmentAPI.getMasters({ limit: 200 });
+          break;
       }
       
-      setData(response.data.data);
+      setData(response?.data?.data || []);
     } catch (error) {
       console.error('Failed to load data:', error);
       alert('데이터 로드 실패');
@@ -108,6 +112,9 @@ export default function MasterData() {
           case 'raw-materials':
             await masterDataAPI.createRawMaterial(formData);
             break;
+          case 'equipment-masters':
+            await equipmentAPI.createMaster(formData);
+            break;
         }
       } else {
         switch (activeTab) {
@@ -125,6 +132,9 @@ export default function MasterData() {
             break;
           case 'raw-materials':
             await masterDataAPI.updateRawMaterial(editingId, formData);
+            break;
+          case 'equipment-masters':
+            await equipmentAPI.updateMaster(editingId, formData);
             break;
         }
       }
@@ -159,6 +169,9 @@ export default function MasterData() {
           break;
         case 'raw-materials':
           await masterDataAPI.deleteRawMaterial(id);
+          break;
+        case 'equipment-masters':
+          await equipmentAPI.deleteMaster(id);
           break;
       }
       
@@ -663,6 +676,51 @@ export default function MasterData() {
             />
           </div>
         );
+
+      case 'equipment-masters':
+        return (
+          <div className="grid grid-cols-5 gap-3">
+            <select
+              value={formData.equipment_type || 'injection_machine'}
+              onChange={(e) => setFormData({ ...formData, equipment_type: e.target.value })}
+              className="input"
+            >
+              <option value="injection_machine">사출기</option>
+              <option value="press">프레스</option>
+              <option value="cnc">CNC</option>
+              <option value="other">기타</option>
+            </select>
+            <input
+              type="text"
+              placeholder="제조사 (예: LS엠트론)"
+              value={formData.manufacturer || ''}
+              onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+              className="input"
+              required
+            />
+            <input
+              type="text"
+              placeholder="모델명 (예: LGE-III)"
+              value={formData.model_name || ''}
+              onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
+              className="input"
+            />
+            <input
+              type="number"
+              placeholder="톤수 (예: 350)"
+              value={formData.tonnage || ''}
+              onChange={(e) => setFormData({ ...formData, tonnage: parseInt(e.target.value) || null })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="설명"
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="input"
+            />
+          </div>
+        );
     }
   };
 
@@ -698,6 +756,11 @@ export default function MasterData() {
                     item.advantages?.toLowerCase().includes(term) ||
                     item.disadvantages?.toLowerCase().includes(term) ||
                     item.characteristics?.toLowerCase().includes(term));
+          case 'equipment-masters':
+            return (item.manufacturer?.toLowerCase().includes(term) ||
+                    item.model_name?.toLowerCase().includes(term) ||
+                    item.description?.toLowerCase().includes(term) ||
+                    item.tonnage?.toString().includes(term));
           default:
             return true;
         }
@@ -955,6 +1018,47 @@ export default function MasterData() {
                   <td className="px-2 py-2 text-xs max-w-[100px] truncate text-green-600" title={item.advantages || ''}>{item.advantages || '-'}</td>
                   <td className="px-2 py-2 text-xs max-w-[100px] truncate text-red-600" title={item.disadvantages || ''}>{item.disadvantages || '-'}</td>
                   <td className="px-2 py-2 text-xs max-w-[100px] truncate text-purple-600" title={item.characteristics || ''}>{item.characteristics || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap">
+                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
+                      <Edit2 size={14} />
+                    </button>
+                    <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900">
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+
+      case 'equipment-masters':
+        return (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50 sticky top-0">
+              <tr>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">#</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">장비타입</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">제조사</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">모델명</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">톤수</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">설명</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredData.map((item, index) => (
+                <tr key={item.id}>
+                  <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-xs">{index + 1}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">
+                    <span className={`px-2 py-1 rounded text-xs ${item.equipment_type === 'injection_machine' ? 'bg-green-100 text-green-700' : item.equipment_type === 'press' ? 'bg-blue-100 text-blue-700' : item.equipment_type === 'cnc' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
+                      {item.equipment_type === 'injection_machine' ? '사출기' : item.equipment_type === 'press' ? '프레스' : item.equipment_type === 'cnc' ? 'CNC' : item.equipment_type}
+                    </span>
+                  </td>
+                  <td className="px-2 py-2 whitespace-nowrap font-medium text-blue-600">{item.manufacturer}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.model_name || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs font-bold text-orange-600">{item.tonnage ? `${item.tonnage}T` : '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[200px] truncate" title={item.description || ''}>{item.description || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
                       <Edit2 size={14} />
