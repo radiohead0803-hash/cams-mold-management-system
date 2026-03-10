@@ -364,6 +364,8 @@ export const masterDataAPI = {
   // 내 업체 프로필
   getMyProfile: () => api.get('/companies/my-profile'),
   updateMyProfile: (data) => api.patch('/companies/my-profile', data),
+  // 전체 등록 사출기 목록 (기초정보에서 불러오기용)
+  getAllInjectionMachines: () => api.get('/companies/injection-machines/all'),
 }
 
 // User API (사용자 조회)

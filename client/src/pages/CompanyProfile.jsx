@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 import { 
   Building2, Save, ArrowLeft, Phone, Mail, MapPin, User, 
   Factory, Wrench, Award, RefreshCw, Plus, Trash2, Edit3,
-  CheckCircle, AlertCircle
+  CheckCircle, AlertCircle, X, Search, Download
 } from 'lucide-react';
 
 export default function CompanyProfile() {
@@ -20,6 +20,14 @@ export default function CompanyProfile() {
 
   // 사출기 입력 상태
   const [newMachine, setNewMachine] = useState({ manufacturer: '', model: '', tonnage: '', year: '' });
+
+  // 기초정보 불러오기 모달 상태
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [allMachines, setAllMachines] = useState([]);
+  const [filteredMachines, setFilteredMachines] = useState([]);
+  const [importKeyword, setImportKeyword] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [selectedImports, setSelectedImports] = useState([]);
 
   useEffect(() => {
     loadProfile();
@@ -122,6 +130,65 @@ export default function CompanyProfile() {
     const list = [...(formData.certifications || [])];
     list.splice(idx, 1);
     setFormData({ ...formData, certifications: list });
+  };
+
+  const loadMachinesFromMaster = async () => {
+    setImportLoading(true);
+    try {
+      const response = await masterDataAPI.getAllInjectionMachines();
+      if (response.data.success) {
+        setAllMachines(response.data.data);
+        setFilteredMachines(response.data.data);
+      }
+    } catch (error) {
+      console.error('Load machines error:', error);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleOpenImportModal = () => {
+    setShowImportModal(true);
+    setImportKeyword('');
+    setSelectedImports([]);
+    loadMachinesFromMaster();
+  };
+
+  const filterImportMachines = (keyword) => {
+    setImportKeyword(keyword);
+    if (!keyword.trim()) {
+      setFilteredMachines(allMachines);
+      return;
+    }
+    const kw = keyword.toLowerCase();
+    setFilteredMachines(allMachines.filter(m =>
+      (m.manufacturer || '').toLowerCase().includes(kw) ||
+      (m.model || '').toLowerCase().includes(kw) ||
+      (m.company_name || '').toLowerCase().includes(kw) ||
+      String(m.tonnage).includes(kw)
+    ));
+  };
+
+  const toggleImportSelect = (machine) => {
+    setSelectedImports(prev => {
+      const exists = prev.find(s => s.id === machine.id);
+      if (exists) return prev.filter(s => s.id !== machine.id);
+      return [...prev, machine];
+    });
+  };
+
+  const handleImportMachines = () => {
+    const existing = Array.isArray(formData.injection_machines) ? [...formData.injection_machines] : [];
+    const newEntries = selectedImports.map(m => ({
+      manufacturer: m.manufacturer,
+      model: m.model,
+      tonnage: m.tonnage,
+      year: m.year,
+      id: Date.now() + Math.random()
+    }));
+    setFormData({ ...formData, injection_machines: [...existing, ...newEntries] });
+    setShowImportModal(false);
+    setSelectedImports([]);
   };
 
   const isPlant = user?.role === 'plant' || company?.company_type === 'plant';
@@ -304,6 +371,14 @@ export default function CompanyProfile() {
                 )}
 
                 {editMode && (
+                  <div className="mt-3 mb-3">
+                    <button onClick={handleOpenImportModal} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+                      <Download size={14} /> 기초정보에서 불러오기
+                    </button>
+                  </div>
+                )}
+
+                {editMode && (
                   <div className="mt-3 flex items-end gap-2">
                     <div className="flex-1">
                       <label className="text-xs text-gray-500">제조사 *</label>
@@ -465,6 +540,107 @@ export default function CompanyProfile() {
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{formData.notes || '없음'}</p>
             )}
           </section>
+        </div>
+      )}
+      {/* 기초정보에서 불러오기 모달 */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-2xl mx-4 shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Download size={20} className="text-indigo-600" />
+                  기초정보에서 사출기 불러오기
+                </h3>
+                <button onClick={() => setShowImportModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="mt-3 relative">
+                <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
+                  placeholder="제조사, 모델명, 업체명, 톤수로 검색..."
+                  value={importKeyword}
+                  onChange={(e) => filterImportMachines(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {importLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw size={24} className="animate-spin text-indigo-500" />
+                  <span className="ml-2 text-sm text-gray-500">사출기 목록 로딩 중...</span>
+                </div>
+              ) : filteredMachines.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">등록된 사출기가 없습니다.</p>
+              ) : (
+                <div className="overflow-hidden rounded-lg border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 w-10">선택</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">업체</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">제조사</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">모델명</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">톤수</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">도입년도</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredMachines.map((m) => {
+                        const isSelected = selectedImports.some(s => s.id === m.id);
+                        return (
+                          <tr
+                            key={m.id}
+                            onClick={() => toggleImportSelect(m)}
+                            className={`cursor-pointer transition ${isSelected ? 'bg-indigo-50 border-l-4 border-l-indigo-500' : 'hover:bg-gray-50'}`}
+                          >
+                            <td className="px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleImportSelect(m)}
+                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-gray-500 text-xs">{m.company_name}</td>
+                            <td className="px-3 py-2 font-medium">{m.manufacturer}</td>
+                            <td className="px-3 py-2">{m.model || '-'}</td>
+                            <td className="px-3 py-2 font-bold text-blue-600">{m.tonnage}T</td>
+                            <td className="px-3 py-2">{m.year || '-'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                {filteredMachines.length}개 중 {selectedImports.length}개 선택
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleImportMachines}
+                  disabled={selectedImports.length === 0}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:bg-gray-300 disabled:text-gray-500 flex items-center gap-1"
+                >
+                  <Plus size={14} />
+                  {selectedImports.length}개 추가
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

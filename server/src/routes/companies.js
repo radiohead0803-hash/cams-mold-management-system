@@ -28,6 +28,9 @@ router.get('/stats/all', authenticate, companyController.getAllCompaniesStats);
 router.get('/my-profile', authenticate, authorize(['maker', 'plant']), companyController.getMyCompanyProfile);
 router.patch('/my-profile', authenticate, authorize(['maker', 'plant']), companyController.updateMyCompanyProfile);
 
+// 전체 등록 사출기 목록 조회 (기초정보에서 불러오기용)
+router.get('/injection-machines/all', authenticate, companyController.getAllInjectionMachines);
+
 // 회사 목록 조회 (모든 인증된 사용자)
 router.get('/', authenticate, companyController.getCompanies);
 

@@ -826,6 +826,45 @@ const updateMyCompanyProfile = async (req, res) => {
   }
 };
 
+/**
+ * 전체 등록 사출기 목록 조회 (기초정보에서 불러오기용)
+ * - 모든 생산처(plant)의 사출기 목록을 집계하여 반환
+ */
+const getAllInjectionMachines = async (req, res) => {
+  try {
+    const companies = await Company.findAll({
+      where: {
+        company_type: 'plant',
+        is_active: true
+      },
+      attributes: ['id', 'company_name', 'injection_machines']
+    });
+
+    const machines = [];
+    companies.forEach(c => {
+      const list = c.injection_machines;
+      if (Array.isArray(list)) {
+        list.forEach((m, idx) => {
+          machines.push({
+            id: `${c.id}-${idx}`,
+            company_id: c.id,
+            company_name: c.company_name,
+            manufacturer: m.manufacturer || '',
+            model: m.model || m.machine_name || '',
+            tonnage: m.tonnage || 0,
+            year: m.year || ''
+          });
+        });
+      }
+    });
+
+    res.json({ success: true, data: machines });
+  } catch (error) {
+    logger.error('Get all injection machines error:', error);
+    res.status(500).json({ success: false, error: { message: '사출기 목록 조회 실패' } });
+  }
+};
+
 module.exports = {
   getCompanies,
   getCompanyById,
@@ -837,5 +876,6 @@ module.exports = {
   downloadSampleExcel,
   bulkUploadCompanies,
   getMyCompanyProfile,
-  updateMyCompanyProfile
+  updateMyCompanyProfile,
+  getAllInjectionMachines
 };
