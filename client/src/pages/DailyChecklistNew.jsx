@@ -378,7 +378,7 @@ export default function DailyChecklistNew() {
     }
   }
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const requiredItems = CHECK_CATEGORIES.flatMap(cat => 
       cat.items.filter(item => item.required)
     )
@@ -391,11 +391,19 @@ export default function DailyChecklistNew() {
       return
     }
 
-    const summary = buildPayload('completed')
-
-    console.log('일상점검 완료:', summary)
-    alert('일상점검이 완료되었습니다!')
-    navigate('/molds')
+    setSaving(true)
+    try {
+      const payload = buildPayload('completed')
+      await api.post('/checklist-instances/daily/complete', payload)
+      await clearDraft('daily_checklist', moldId || 'new')
+      alert('일상점검이 완료되었습니다!')
+      navigate('/molds')
+    } catch (err) {
+      console.error('일상점검 완료 실패:', err)
+      alert(err?.response?.data?.message || '점검 저장 중 오류가 발생했습니다.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const getCategoryProgress = (category) => {

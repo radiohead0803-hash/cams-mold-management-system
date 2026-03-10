@@ -572,7 +572,7 @@ export default function MobilePeriodicInspection() {
 
     try {
       const payload = buildPayload('completed');
-      console.log('정기점검 완료:', payload);
+      await api.post('/checklist-instances/periodic/complete', payload);
       await clearDraft('periodic_inspection', moldId || 'new');
       setSuccess('정기점검이 완료되었습니다!');
       setTimeout(() => {

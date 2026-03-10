@@ -117,6 +117,84 @@ router.post('/daily/request-approval', authenticate, async (req, res) => {
 });
 
 /**
+ * 일상점검 완료 (승인 없이 바로 완료)
+ * POST /api/v1/checklist-instances/daily/complete
+ */
+router.post('/daily/complete', authenticate, async (req, res) => {
+  try {
+    const { mold_id, check_date, results, production_quantity, summary } = req.body;
+    const user = req.user;
+
+    const instance = await ChecklistInstance.create({
+      mold_id,
+      category: 'daily',
+      check_date: check_date || new Date(),
+      status: 'completed',
+      results: JSON.stringify(results),
+      production_quantity: production_quantity || 0,
+      summary: JSON.stringify(summary),
+      inspector_id: user.id,
+      inspector_name: user.name,
+      created_by: user.id,
+      approved_at: new Date()
+    });
+
+    console.log('[Daily Complete] Saved:', { id: instance.id, moldId: mold_id, userId: user.id });
+
+    return res.json({
+      success: true,
+      message: '일상점검이 완료되었습니다.',
+      data: { id: instance.id }
+    });
+  } catch (error) {
+    console.error('[Daily Complete] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '점검 완료 처리 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+/**
+ * 정기점검 완료 (승인 없이 바로 완료)
+ * POST /api/v1/checklist-instances/periodic/complete
+ */
+router.post('/periodic/complete', authenticate, async (req, res) => {
+  try {
+    const { mold_id, check_date, results, production_quantity, summary, inspection_type } = req.body;
+    const user = req.user;
+
+    const instance = await ChecklistInstance.create({
+      mold_id,
+      category: 'periodic',
+      check_date: check_date || new Date(),
+      status: 'completed',
+      results: JSON.stringify(results),
+      production_quantity: production_quantity || 0,
+      summary: JSON.stringify({ ...summary, inspection_type }),
+      inspector_id: user.id,
+      inspector_name: user.name,
+      created_by: user.id,
+      approved_at: new Date()
+    });
+
+    console.log('[Periodic Complete] Saved:', { id: instance.id, moldId: mold_id, userId: user.id });
+
+    return res.json({
+      success: true,
+      message: '정기점검이 완료되었습니다.',
+      data: { id: instance.id }
+    });
+  } catch (error) {
+    console.error('[Periodic Complete] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: '정기점검 완료 처리 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+/**
  * 점검 승인 처리
  * POST /api/v1/checklist-instances/:id/approve
  */

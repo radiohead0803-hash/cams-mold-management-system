@@ -423,7 +423,8 @@ export default function MobileDailyChecklist() {
 
     try {
       const payload = buildPayload('completed');
-      console.log('일상점검 완료:', payload);
+      await api.post('/checklist-instances/daily/complete', payload);
+      await clearDraft('daily_checklist', moldId || 'new');
       setSuccess('일상점검이 완료되었습니다!');
       setTimeout(() => {
         moldId ? navigate(`/mobile/mold/${moldId}`) : navigate(-1);

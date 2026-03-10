@@ -478,11 +478,19 @@ export default function PeriodicInspectionNew() {
       return
     }
 
-    const payload = buildPayload('completed')
-    console.log('정기점검 완료:', payload)
-    await clearDraft('periodic_inspection', moldId || 'new')
-    alert('정기점검이 완료되었습니다!')
-    navigate('/molds')
+    setSaving(true)
+    try {
+      const payload = buildPayload('completed')
+      await api.post('/checklist-instances/periodic/complete', payload)
+      await clearDraft('periodic_inspection', moldId || 'new')
+      alert('정기점검이 완료되었습니다!')
+      navigate('/molds')
+    } catch (err) {
+      console.error('정기점검 완료 실패:', err)
+      alert(err?.response?.data?.message || '점검 저장 중 오류가 발생했습니다.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const getCategoryProgress = (category) => {
