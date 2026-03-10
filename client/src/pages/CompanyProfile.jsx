@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { masterDataAPI, equipmentAPI } from '../lib/api';
+import { masterDataAPI, equipmentAPI, generalEquipmentAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { 
   Building2, Save, ArrowLeft, Phone, Mail, MapPin, User, 
@@ -21,9 +21,18 @@ export default function CompanyProfile() {
   // 사출기 입력 상태
   const [newMachine, setNewMachine] = useState({ manufacturer: '', model_name: '', tonnage: '', year_installed: '', daily_capacity: '' });
 
-  // 내 업체 보유장비 (equipment API 기반)
+  // 내 업체 보유장비 - 사출기 (equipment API 기반)
   const [myEquipments, setMyEquipments] = useState([]);
   const [equipLoading, setEquipLoading] = useState(false);
+
+  // 내 업체 일반장비 (general equipment API 기반)
+  const [myGeneralEquips, setMyGeneralEquips] = useState([]);
+  const [geCategories, setGeCategories] = useState([]);
+  const [geMasters, setGeMasters] = useState([]);
+  const [geLoading, setGeLoading] = useState(false);
+  const [newGenEquip, setNewGenEquip] = useState({ category_id: '', equipment_name: '', manufacturer: '', model_name: '', spec_summary: '', quantity: 1 });
+  const [showGeMasterModal, setShowGeMasterModal] = useState(false);
+  const [geFilterCat, setGeFilterCat] = useState('');
 
   // 기초정보 불러오기 모달 상태
   const [showImportModal, setShowImportModal] = useState(false);
@@ -36,6 +45,7 @@ export default function CompanyProfile() {
   useEffect(() => {
     loadProfile();
     loadMyEquipments();
+    loadMyGeneralEquips();
   }, []);
 
   const loadMyEquipments = async () => {
@@ -47,6 +57,76 @@ export default function CompanyProfile() {
       console.warn('Load equipments failed:', e.message);
     } finally {
       setEquipLoading(false);
+    }
+  };
+
+  const loadMyGeneralEquips = async () => {
+    try {
+      setGeLoading(true);
+      const [eqRes, catRes, masterRes] = await Promise.all([
+        generalEquipmentAPI.getMyEquipments(),
+        generalEquipmentAPI.getCategories(),
+        generalEquipmentAPI.getMasters({ limit: 300 })
+      ]);
+      if (eqRes.data.success) setMyGeneralEquips(eqRes.data.data);
+      if (catRes.data.success) setGeCategories(catRes.data.data);
+      if (masterRes.data.success) setGeMasters(masterRes.data.data);
+    } catch (e) {
+      console.warn('Load general equips failed:', e.message);
+    } finally {
+      setGeLoading(false);
+    }
+  };
+
+  const handleAddGeneralEquip = async () => {
+    if (!newGenEquip.category_id || !newGenEquip.equipment_name) {
+      alert('카테고리와 장비명은 필수입니다');
+      return;
+    }
+    try {
+      const res = await generalEquipmentAPI.addMyEquipment({
+        category_id: parseInt(newGenEquip.category_id),
+        equipment_name: newGenEquip.equipment_name,
+        manufacturer: newGenEquip.manufacturer || null,
+        model_name: newGenEquip.model_name || null,
+        spec_summary: newGenEquip.spec_summary || null,
+        quantity: parseInt(newGenEquip.quantity) || 1
+      });
+      if (res.data.success) {
+        await loadMyGeneralEquips();
+        setNewGenEquip({ category_id: '', equipment_name: '', manufacturer: '', model_name: '', spec_summary: '', quantity: 1 });
+      }
+    } catch (e) {
+      alert('장비 등록 실패: ' + (e.response?.data?.error?.message || e.message));
+    }
+  };
+
+  const handleRemoveGeneralEquip = async (id) => {
+    if (!confirm('이 장비를 삭제하시겠습니까?')) return;
+    try {
+      await generalEquipmentAPI.deleteEquipment(id);
+      await loadMyGeneralEquips();
+    } catch (e) {
+      alert('삭제 실패: ' + (e.response?.data?.error?.message || e.message));
+    }
+  };
+
+  const handleSelectFromGeMaster = async (master) => {
+    try {
+      const res = await generalEquipmentAPI.addMyEquipment({
+        category_id: master.category_id,
+        equipment_master_id: master.id,
+        equipment_name: master.equipment_name,
+        manufacturer: master.manufacturer,
+        model_name: master.model_name,
+        spec_summary: master.spec_summary,
+        quantity: 1
+      });
+      if (res.data.success) {
+        await loadMyGeneralEquips();
+      }
+    } catch (e) {
+      alert('등록 실패: ' + (e.response?.data?.error?.message || e.message));
     }
   };
 
@@ -501,32 +581,55 @@ export default function CompanyProfile() {
             </section>
           )}
 
-          {/* 공통: 보유장비 목록 */}
+          {/* 공통: 보유장비 현황 (카테고리별) */}
           <section className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Wrench size={20} className="text-blue-600" />
-              보유 장비
+              보유 장비 현황
+              <span className="text-xs font-normal text-gray-400 ml-2">카테고리별 장비 등록</span>
             </h2>
-            {(formData.equipment_list || []).length > 0 ? (
+
+            {geLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <RefreshCw size={20} className="animate-spin text-blue-500" />
+                <span className="ml-2 text-sm text-gray-500">장비 로딩 중...</span>
+              </div>
+            ) : myGeneralEquips.length > 0 ? (
               <div className="overflow-hidden rounded-lg border border-gray-200">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">#</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">분류</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">장비명</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">사양/수량</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">제조사</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">사양</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">수량</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">상태</th>
                       {editMode && <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">삭제</th>}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {(formData.equipment_list || []).map((eq, i) => (
-                      <tr key={eq.id || i}>
+                    {myGeneralEquips.map((eq, i) => (
+                      <tr key={eq.id}>
                         <td className="px-3 py-2 text-gray-400">{i + 1}</td>
-                        <td className="px-3 py-2 font-medium">{eq.name}</td>
-                        <td className="px-3 py-2">{eq.spec || '-'}</td>
+                        <td className="px-3 py-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${eq.applicable_to === 'maker' ? 'bg-blue-100 text-blue-700' : eq.applicable_to === 'plant' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {eq.category_name}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-medium">{eq.equipment_name}</td>
+                        <td className="px-3 py-2 text-xs">{eq.manufacturer || '-'}</td>
+                        <td className="px-3 py-2 text-xs text-orange-600">{eq.spec_summary || '-'}</td>
+                        <td className="px-3 py-2 text-center font-bold">{eq.quantity || 1}</td>
+                        <td className="px-3 py-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${eq.status === 'active' ? 'bg-green-100 text-green-700' : eq.status === 'maintenance' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {eq.status === 'active' ? '가동' : eq.status === 'maintenance' ? '정비' : eq.status === 'retired' ? '폐기' : eq.status}
+                          </span>
+                        </td>
                         {editMode && (
                           <td className="px-3 py-2">
-                            <button onClick={() => handleRemoveEquipment(i)} className="text-red-500 hover:text-red-700">
+                            <button onClick={() => handleRemoveGeneralEquip(eq.id)} className="text-red-500 hover:text-red-700">
                               <Trash2 size={14} />
                             </button>
                           </td>
@@ -542,12 +645,90 @@ export default function CompanyProfile() {
                 <p className="text-sm text-gray-400">등록된 장비가 없습니다</p>
               </div>
             )}
+
             {editMode && (
-              <button onClick={handleAddEquipment} className="mt-3 flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                <Plus size={14} /> 장비 추가
-              </button>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setShowGeMasterModal(true)} className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+                    <Download size={14} /> 기초정보에서 선택
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">수동 입력 (기초정보에 없는 장비)</p>
+                <div className="flex items-end gap-2 flex-wrap">
+                  <div className="min-w-[140px]">
+                    <label className="text-xs text-gray-500">분류 *</label>
+                    <select value={newGenEquip.category_id} onChange={e => setNewGenEquip({...newGenEquip, category_id: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm">
+                      <option value="">선택</option>
+                      {geCategories.map(c => (
+                        <option key={c.id} value={c.id}>[{c.applicable_to === 'maker' ? '제작처' : c.applicable_to === 'plant' ? '생산처' : '공통'}] {c.category_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-[120px]">
+                    <label className="text-xs text-gray-500">장비명 *</label>
+                    <input type="text" value={newGenEquip.equipment_name} onChange={e => setNewGenEquip({...newGenEquip, equipment_name: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="VMC 850" />
+                  </div>
+                  <div className="w-24">
+                    <label className="text-xs text-gray-500">제조사</label>
+                    <input type="text" value={newGenEquip.manufacturer} onChange={e => setNewGenEquip({...newGenEquip, manufacturer: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="두산" />
+                  </div>
+                  <div className="w-20">
+                    <label className="text-xs text-gray-500">수량</label>
+                    <input type="number" value={newGenEquip.quantity} onChange={e => setNewGenEquip({...newGenEquip, quantity: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" min="1" />
+                  </div>
+                  <button onClick={handleAddGeneralEquip} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                    <Plus size={14} /> 추가
+                  </button>
+                </div>
+              </div>
             )}
           </section>
+
+          {/* 기초정보 선택 모달 (일반장비) */}
+          {showGeMasterModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">기초정보에서 장비 선택</h3>
+                    <button onClick={() => setShowGeMasterModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <select value={geFilterCat} onChange={e => setGeFilterCat(e.target.value)} className="border rounded px-2 py-1.5 text-sm min-w-[160px]">
+                      <option value="">전체 분류</option>
+                      {geCategories.map(c => (
+                        <option key={c.id} value={c.id}>[{c.applicable_to === 'maker' ? '제작처' : c.applicable_to === 'plant' ? '생산처' : '공통'}] {c.category_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  <div className="space-y-1">
+                    {geMasters
+                      .filter(m => !geFilterCat || m.category_id === parseInt(geFilterCat))
+                      .map(m => (
+                        <div key={m.id} className="flex items-center justify-between p-2 border rounded hover:bg-gray-50">
+                          <div className="flex-1">
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 mr-2">{m.category_name}</span>
+                            <span className="font-medium text-sm">{m.equipment_name}</span>
+                            {m.manufacturer && <span className="text-xs text-gray-500 ml-2">{m.manufacturer}</span>}
+                            {m.spec_summary && <span className="text-xs text-orange-500 ml-2">{m.spec_summary}</span>}
+                          </div>
+                          <button onClick={() => handleSelectFromGeMaster(m)} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700">
+                            추가
+                          </button>
+                        </div>
+                    ))}
+                    {geMasters.filter(m => !geFilterCat || m.category_id === parseInt(geFilterCat)).length === 0 && (
+                      <p className="text-sm text-gray-400 text-center py-4">해당 분류의 기초정보가 없습니다</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 공통: 인증현황 */}
           <section className="bg-white rounded-lg shadow p-6">

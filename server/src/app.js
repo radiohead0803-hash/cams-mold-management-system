@@ -141,6 +141,7 @@ const draftsRouter = require('./routes/drafts');
 const standardDocumentTemplatesRouter = require('./routes/standardDocumentTemplates');
 const repairStepWorkflowRouter = require('./routes/repairStepWorkflow');
 const equipmentRouter = require('./routes/equipment');
+const generalEquipmentRouter = require('./routes/generalEquipment');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -262,6 +263,8 @@ app.use('/api/v1/standard-document-templates', standardDocumentTemplatesRouter);
 app.use('/api/v1/repair-step-workflow', repairStepWorkflowRouter);
 // 장비 마스터 + 업체별 보유장비 + 캐파 분석
 app.use('/api/v1/equipment', equipmentRouter);
+// 협력사 보유 장비현황 (카테고리별 장비 관리 + 분석)
+app.use('/api/v1/general-equipment', generalEquipmentRouter);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { masterDataAPI, equipmentAPI } from '../lib/api';
+import { masterDataAPI, equipmentAPI, generalEquipmentAPI } from '../lib/api';
 import { Plus, Edit2, Trash2, Save, X, ArrowLeft, Search, Filter, Zap, RefreshCw } from 'lucide-react';
 
 export default function MasterData() {
@@ -34,8 +34,15 @@ export default function MasterData() {
     { id: 'mold-types', label: '금형타입' },
     { id: 'tonnages', label: '사출기 사양' },
     { id: 'raw-materials', label: '원재료' },
-    { id: 'equipment-masters', label: '장비 마스터' }
+    { id: 'equipment-masters', label: '장비 마스터' },
+    { id: 'partner-equipment', label: '협력사 보유장비' }
   ];
+
+  // 협력사 보유장비 탭 상태
+  const [categories, setCategories] = useState([]);
+  const [geMasters, setGeMasters] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [filterCategoryId, setFilterCategoryId] = useState('');
 
   useEffect(() => {
     loadData();
@@ -65,6 +72,16 @@ export default function MasterData() {
         case 'equipment-masters':
           response = await equipmentAPI.getMasters({ limit: 200 });
           break;
+        case 'partner-equipment': {
+          const [catRes, masterRes] = await Promise.all([
+            generalEquipmentAPI.getCategories(),
+            generalEquipmentAPI.getMasters({ limit: 300 })
+          ]);
+          setCategories(catRes.data.data || []);
+          setGeMasters(masterRes.data.data || []);
+          response = masterRes;
+          break;
+        }
       }
       
       setData(response?.data?.data || []);
@@ -115,6 +132,9 @@ export default function MasterData() {
           case 'equipment-masters':
             await equipmentAPI.createMaster(formData);
             break;
+          case 'partner-equipment':
+            await generalEquipmentAPI.createMaster(formData);
+            break;
         }
       } else {
         switch (activeTab) {
@@ -135,6 +155,9 @@ export default function MasterData() {
             break;
           case 'equipment-masters':
             await equipmentAPI.updateMaster(editingId, formData);
+            break;
+          case 'partner-equipment':
+            await generalEquipmentAPI.updateMaster(editingId, formData);
             break;
         }
       }
@@ -172,6 +195,9 @@ export default function MasterData() {
           break;
         case 'equipment-masters':
           await equipmentAPI.deleteMaster(id);
+          break;
+        case 'partner-equipment':
+          await generalEquipmentAPI.deleteMaster(id);
           break;
       }
       
@@ -721,6 +747,61 @@ export default function MasterData() {
             />
           </div>
         );
+
+      case 'partner-equipment':
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <select
+              value={formData.category_id || ''}
+              onChange={(e) => setFormData({ ...formData, category_id: parseInt(e.target.value) || '' })}
+              className="input"
+              required
+            >
+              <option value="">분류 선택 *</option>
+              {categories.filter(c => c.is_active).map(c => (
+                <option key={c.id} value={c.id}>
+                  [{c.applicable_to === 'maker' ? '제조사' : c.applicable_to === 'plant' ? '공장' : '기타'}] {c.category_name}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="설비명 (예: VMC 850) *"
+              value={formData.equipment_name || ''}
+              onChange={(e) => setFormData({ ...formData, equipment_name: e.target.value })}
+              className="input"
+              required
+            />
+            <input
+              type="text"
+              placeholder="제조사 (예: 대우)"
+              value={formData.manufacturer || ''}
+              onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="모델명"
+              value={formData.model_name || ''}
+              onChange={(e) => setFormData({ ...formData, model_name: e.target.value })}
+              className="input"
+            />
+            <input
+              type="text"
+              placeholder="사양 요약 (예: 850x510x510mm)"
+              value={formData.spec_summary || ''}
+              onChange={(e) => setFormData({ ...formData, spec_summary: e.target.value })}
+              className="input col-span-2"
+            />
+            <input
+              type="text"
+              placeholder="설명"
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="input col-span-2"
+            />
+          </div>
+        );
     }
   };
 
@@ -761,6 +842,13 @@ export default function MasterData() {
                     item.model_name?.toLowerCase().includes(term) ||
                     item.description?.toLowerCase().includes(term) ||
                     item.tonnage?.toString().includes(term));
+          case 'partner-equipment':
+            return (item.equipment_name?.toLowerCase().includes(term) ||
+                    item.manufacturer?.toLowerCase().includes(term) ||
+                    item.model_name?.toLowerCase().includes(term) ||
+                    item.category_name?.toLowerCase().includes(term) ||
+                    item.spec_summary?.toLowerCase().includes(term) ||
+                    item.description?.toLowerCase().includes(term));
           default:
             return true;
         }
@@ -1059,6 +1147,53 @@ export default function MasterData() {
                   <td className="px-2 py-2 whitespace-nowrap text-xs">{item.model_name || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap text-xs font-bold text-orange-600">{item.tonnage ? `${item.tonnage}T` : '-'}</td>
                   <td className="px-2 py-2 text-xs max-w-[200px] truncate" title={item.description || ''}>{item.description || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap">
+                    <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
+                      <Edit2 size={14} />
+                    </button>
+                    <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900">
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+
+      case 'partner-equipment':
+        return (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50 sticky top-0">
+              <tr>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">#</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">분류</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">적용</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">장비명</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">제조사</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">모델명</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">사양</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">설명</th>
+                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredData.map((item, index) => (
+                <tr key={item.id}>
+                  <td className="px-2 py-2 whitespace-nowrap text-gray-400 text-xs">{index + 1}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">
+                    <span className="px-2 py-1 rounded bg-gray-100 text-gray-700">{item.category_name || '-'}</span>
+                  </td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${item.applicable_to === 'maker' ? 'bg-blue-100 text-blue-700' : item.applicable_to === 'plant' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {item.applicable_to === 'maker' ? '제작처' : item.applicable_to === 'plant' ? '생산처' : '공통'}
+                    </span>
+                  </td>
+                  <td className="px-2 py-2 whitespace-nowrap font-medium text-blue-600 text-sm">{item.equipment_name}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.manufacturer || '-'}</td>
+                  <td className="px-2 py-2 whitespace-nowrap text-xs">{item.model_name || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[150px] truncate text-orange-600" title={item.spec_summary || ''}>{item.spec_summary || '-'}</td>
+                  <td className="px-2 py-2 text-xs max-w-[120px] truncate" title={item.description || ''}>{item.description || '-'}</td>
                   <td className="px-2 py-2 whitespace-nowrap">
                     <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-900 mr-2">
                       <Edit2 size={14} />

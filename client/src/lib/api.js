@@ -392,6 +392,31 @@ export const equipmentAPI = {
   getAnalytics: (params) => api.get('/equipment/analytics', { params }),
 }
 
+// General Equipment API (협력사 보유 장비현황 - 카테고리별)
+export const generalEquipmentAPI = {
+  // 카테고리
+  getCategories: (params) => api.get('/general-equipment/categories', { params }),
+  createCategory: (data) => api.post('/general-equipment/categories', data),
+  updateCategory: (id, data) => api.patch(`/general-equipment/categories/${id}`, data),
+  deleteCategory: (id) => api.delete(`/general-equipment/categories/${id}`),
+  // 장비 마스터
+  getMasters: (params) => api.get('/general-equipment/masters', { params }),
+  createMaster: (data) => api.post('/general-equipment/masters', data),
+  updateMaster: (id, data) => api.patch(`/general-equipment/masters/${id}`, data),
+  deleteMaster: (id) => api.delete(`/general-equipment/masters/${id}`),
+  // 내 업체 보유장비
+  getMyEquipments: (params) => api.get('/general-equipment/my', { params }),
+  addMyEquipment: (data) => api.post('/general-equipment/my', data),
+  // 특정 업체 보유장비
+  getCompanyEquipments: (companyId, params) => api.get(`/general-equipment/company/${companyId}`, { params }),
+  addCompanyEquipment: (companyId, data) => api.post(`/general-equipment/company/${companyId}`, data),
+  // 보유장비 수정/삭제
+  updateEquipment: (id, data) => api.patch(`/general-equipment/${id}`, data),
+  deleteEquipment: (id) => api.delete(`/general-equipment/${id}`),
+  // 분석
+  getAnalytics: (params) => api.get('/general-equipment/analytics', { params }),
+}
+
 // User API (사용자 조회)
 export const userAPI = {
   getAll: (params) => api.get('/users', { params }),
