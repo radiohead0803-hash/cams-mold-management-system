@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  ArrowLeft, Send, Camera, CheckCircle, Clock, AlertCircle, FileText, 
+  ArrowLeft, Send, Camera, CheckCircle, XCircle, Clock, AlertCircle, FileText, 
   Building2, Building, User, Calendar, Package, Wrench, Truck, ClipboardList,
   ChevronDown, ChevronUp, Check, Image as ImageIcon, Shield, Save
 } from 'lucide-react';
@@ -37,6 +37,8 @@ export default function TransferRequest() {
   const [checklistResults, setChecklistResults] = useState({});
   const [developerList, setDeveloperList] = useState([]);
   
+  const [stepSaving, setStepSaving] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [expandedSections, setExpandedSections] = useState({
     request: true,
     checklist: false,
@@ -219,24 +221,25 @@ export default function TransferRequest() {
     checklist_results: checklistResults
   });
 
-  const handleSaveDraft = async () => {
-    setSaving(true);
+  // 단계별 임시저장
+  const handleStepSave = async (stepName) => {
+    setStepSaving(stepName);
     setSaveMessage(null);
     try {
-      await transferAPI.create({ ...buildTransferData(), status: 'draft' });
-      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
+      await transferAPI.create({ ...buildTransferData(), status: 'draft', current_step: stepName });
+      setSaveMessage({ type: 'success', text: `${stepName} 단계 임시저장 완료` });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
-      console.error('Draft save failed:', error);
+      console.error('Step save failed:', error);
       setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
       setTimeout(() => setSaveMessage(null), 3000);
     } finally {
-      setSaving(false);
+      setStepSaving(null);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // 제출 (요청 단계 완료)
+  const handleSubmit = async () => {
     if (!formData.from_company_id || !formData.to_company_id) {
       alert('인계 업체와 인수 업체를 선택해주세요.');
       return;
@@ -252,6 +255,55 @@ export default function TransferRequest() {
     } catch (error) {
       console.error('Failed to create transfer:', error);
       alert('이관 요청 등록에 실패했습니다: ' + (error.response?.data?.error?.message || error.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 승인 처리
+  const handleApprove = async (stepType) => {
+    const stepLabels = { handover: '인계준비 승인', inspection: '검수승인', transfer: '이관 승인' };
+    if (!confirm(`${stepLabels[stepType]}을(를) 승인하시겠습니까?`)) return;
+    try {
+      setSaving(true);
+      if (transferId) {
+        await transferAPI.approve(transferId, { step: stepType, approver_id: user?.id, approver_name: user?.name });
+      } else {
+        await transferAPI.create({ ...buildTransferData(), [`${stepType}_approval_status`]: '승인완료' });
+      }
+      setFormData(prev => ({ ...prev, [`${stepType}_approval_status`]: '승인완료' }));
+      setSaveMessage({ type: 'success', text: `${stepLabels[stepType]} 승인 완료` });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Approve failed:', error);
+      alert('승인 처리에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 반려 처리
+  const handleReject = async (stepType) => {
+    const stepLabels = { handover: '인계준비', inspection: '검수', transfer: '이관' };
+    if (!rejectionReason.trim()) {
+      alert('반려 사유를 입력해주세요.');
+      return;
+    }
+    if (!confirm(`${stepLabels[stepType]} 단계를 반려하시겠습니까?`)) return;
+    try {
+      setSaving(true);
+      if (transferId) {
+        await transferAPI.reject(transferId, { step: stepType, rejector_id: user?.id, rejector_name: user?.name, reason: rejectionReason });
+      } else {
+        await transferAPI.create({ ...buildTransferData(), [`${stepType}_approval_status`]: '반려', [`${stepType}_rejection_reason`]: rejectionReason });
+      }
+      setFormData(prev => ({ ...prev, [`${stepType}_approval_status`]: '반려' }));
+      setSaveMessage({ type: 'success', text: `${stepLabels[stepType]} 단계 반려 완료` });
+      setRejectionReason('');
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Reject failed:', error);
+      alert('반려 처리에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -305,16 +357,7 @@ export default function TransferRequest() {
               <p className="text-sm text-gray-500">{moldInfo?.part_number || 'P-XXXX-XXXX'} - {moldInfo?.part_name || '금형명'}</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={handleSaveDraft} disabled={saving} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50">
-              <Save size={16} />
-              {saving ? '저장중...' : '임시저장'}
-            </button>
-            <button type="button" onClick={handleSubmit} disabled={saving} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2">
-              <Send size={16} />
-              제출
-            </button>
-          </div>
+          {saveMessage && <div className={`px-4 py-2 rounded-lg text-sm font-medium ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{saveMessage.text}</div>}
         </div>
       </div>
 
@@ -344,7 +387,7 @@ export default function TransferRequest() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <div>
         {/* 1. 요청 단계 (인계업체 작성) */}
         <div className="bg-white rounded-xl shadow-sm mb-4 overflow-hidden">
           <button type="button" onClick={() => toggleSection('request')} className="w-full px-6 py-4 flex items-center justify-between bg-gradient-to-r from-purple-50 to-violet-50 hover:from-purple-100 hover:to-violet-100 transition-colors">
@@ -498,6 +541,16 @@ export default function TransferRequest() {
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">이관 사유</h4>
                 <textarea value={formData.reason} onChange={(e) => handleChange('reason', e.target.value)} rows={3} className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500" placeholder="이관 사유를 입력하세요..." />
               </div>
+
+              {/* 단계 버튼 */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button type="button" onClick={() => handleStepSave('요청')} disabled={stepSaving === '요청'} className="px-5 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <Save size={16} />{stepSaving === '요청' ? '저장중...' : '요청단계 임시저장'}
+                </button>
+                <button type="button" onClick={handleSubmit} disabled={saving} className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <Send size={16} />{saving ? '제출중...' : '요청 제출'}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -564,6 +617,13 @@ export default function TransferRequest() {
                   </tbody>
                 </table>
               </div>
+
+              {/* 단계 버튼 */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-4">
+                <button type="button" onClick={() => handleStepSave('점검')} disabled={stepSaving === '점검'} className="px-5 py-2 border border-cyan-300 text-cyan-700 rounded-lg hover:bg-cyan-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <Save size={16} />{stepSaving === '점검' ? '저장중...' : '체크리스트 임시저장'}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -594,9 +654,26 @@ export default function TransferRequest() {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">승인상태</label>
-                    <span className="inline-block px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg text-sm">{formData.handover_approval_status}</span>
+                    <span className={`inline-block px-3 py-2 rounded-lg text-sm ${formData.handover_approval_status === '승인완료' ? 'bg-green-100 text-green-700' : formData.handover_approval_status === '반려' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{formData.handover_approval_status}</span>
                   </div>
                 </div>
+                {/* 반려 사유 입력 */}
+                <div className="mt-4">
+                  <label className="block text-xs text-gray-600 mb-1">반려 사유 (반려 시 필수)</label>
+                  <input type="text" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="반려 사유를 입력하세요..." />
+                </div>
+              </div>
+              {/* 승인/반려 버튼 */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => handleStepSave('인계승인')} disabled={stepSaving === '인계승인'} className="px-5 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <Save size={16} />{stepSaving === '인계승인' ? '저장중...' : '임시저장'}
+                </button>
+                <button type="button" onClick={() => handleReject('handover')} disabled={saving} className="px-5 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <XCircle size={16} />반려
+                </button>
+                <button type="button" onClick={() => handleApprove('handover')} disabled={saving} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <CheckCircle size={16} />승인
+                </button>
               </div>
             </div>
           )}
@@ -628,9 +705,26 @@ export default function TransferRequest() {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">검수상태</label>
-                    <span className="inline-block px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg text-sm">{formData.inspection_approval_status}</span>
+                    <span className={`inline-block px-3 py-2 rounded-lg text-sm ${formData.inspection_approval_status === '승인완료' ? 'bg-green-100 text-green-700' : formData.inspection_approval_status === '반려' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{formData.inspection_approval_status}</span>
                   </div>
                 </div>
+                {/* 검수 의견 */}
+                <div className="mt-4">
+                  <label className="block text-xs text-gray-600 mb-1">검수 의견 / 반려 사유</label>
+                  <input type="text" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="검수 의견 또는 반려 사유를 입력하세요..." />
+                </div>
+              </div>
+              {/* 승인/반려 버튼 */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => handleStepSave('검수승인')} disabled={stepSaving === '검수승인'} className="px-5 py-2 border border-green-300 text-green-700 rounded-lg hover:bg-green-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <Save size={16} />{stepSaving === '검수승인' ? '저장중...' : '임시저장'}
+                </button>
+                <button type="button" onClick={() => handleReject('inspection')} disabled={saving} className="px-5 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <XCircle size={16} />반려
+                </button>
+                <button type="button" onClick={() => handleApprove('inspection')} disabled={saving} className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <CheckCircle size={16} />승인
+                </button>
               </div>
             </div>
           )}
@@ -662,9 +756,26 @@ export default function TransferRequest() {
                   </div>
                   <div>
                     <label className="block text-xs text-gray-600 mb-1">승인상태</label>
-                    <span className="inline-block px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg text-sm">{formData.transfer_approval_status}</span>
+                    <span className={`inline-block px-3 py-2 rounded-lg text-sm ${formData.transfer_approval_status === '승인완료' ? 'bg-green-100 text-green-700' : formData.transfer_approval_status === '반려' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{formData.transfer_approval_status}</span>
                   </div>
                 </div>
+                {/* 반려 사유 입력 */}
+                <div className="mt-4">
+                  <label className="block text-xs text-gray-600 mb-1">반려 사유 (반려 시 필수)</label>
+                  <input type="text" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="반려 사유를 입력하세요..." />
+                </div>
+              </div>
+              {/* 승인/반려 버튼 */}
+              <div className="flex justify-end gap-3 pt-4">
+                <button type="button" onClick={() => handleStepSave('이관승인')} disabled={stepSaving === '이관승인'} className="px-5 py-2 border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <Save size={16} />{stepSaving === '이관승인' ? '저장중...' : '임시저장'}
+                </button>
+                <button type="button" onClick={() => handleReject('transfer')} disabled={saving} className="px-5 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <XCircle size={16} />반려
+                </button>
+                <button type="button" onClick={() => handleApprove('transfer')} disabled={saving} className="px-5 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
+                  <CheckCircle size={16} />승인
+                </button>
               </div>
             </div>
           )}
@@ -692,16 +803,7 @@ export default function TransferRequest() {
           )}
         </div>
 
-        {/* 하단 버튼 */}
-        <div className="flex justify-end gap-4 mt-6">
-          <button type="button" onClick={() => navigate(-1)} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">취소</button>
-          {saveMessage && <div className={`px-4 py-2 rounded-lg text-sm font-medium ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{saveMessage.text}</div>}
-          <button type="button" onClick={handleSaveDraft} disabled={saving} className="px-6 py-2 border border-purple-300 rounded-lg text-purple-700 hover:bg-purple-50 disabled:opacity-50 flex items-center gap-2"><Save size={16} />{saving ? '저장중...' : '임시저장'}</button>
-          <button type="submit" disabled={saving} className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center">
-            {saving ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>저장 중...</>) : (<><Send size={18} className="mr-2" />제출</>)}
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 }

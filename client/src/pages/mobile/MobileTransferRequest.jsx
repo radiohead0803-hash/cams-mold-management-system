@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
-  ArrowLeft, Send, Camera, CheckCircle, AlertCircle, FileText,
+  ArrowLeft, Send, Camera, CheckCircle, XCircle, AlertCircle, FileText,
   Package, Building2, Building, User, Wrench, Truck, ClipboardList,
   ChevronDown, ChevronUp, Check, Wifi, WifiOff, Shield, Save
 } from 'lucide-react';
@@ -36,6 +36,8 @@ export default function MobileTransferRequest() {
   const [developerList, setDeveloperList] = useState([]);
   
   const { online } = useOfflineSync();
+  const [stepSaving, setStepSaving] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   
   const [expandedSections, setExpandedSections] = useState({
     request: true,
@@ -213,19 +215,19 @@ export default function MobileTransferRequest() {
     checklist_results: checklistResults
   });
 
-  const handleSaveDraft = async () => {
-    setSaving(true);
+  const handleStepSave = async (stepName) => {
+    setStepSaving(stepName);
     setSaveMessage(null);
     try {
-      await transferAPI.create({ ...buildTransferData(), status: 'draft' });
-      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
+      await transferAPI.create({ ...buildTransferData(), status: 'draft', current_step: stepName });
+      setSaveMessage({ type: 'success', text: `${stepName} 단계 임시저장 완료` });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
-      console.error('Draft save failed:', error);
+      console.error('Step save failed:', error);
       setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
       setTimeout(() => setSaveMessage(null), 3000);
     } finally {
-      setSaving(false);
+      setStepSaving(null);
     }
   };
 
@@ -245,6 +247,42 @@ export default function MobileTransferRequest() {
     } catch (error) {
       console.error('Failed to create transfer:', error);
       alert('이관 요청 등록에 실패했습니다: ' + (error.response?.data?.error?.message || error.message));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleApprove = async (stepType) => {
+    const stepLabels = { handover: '인계준비 승인', inspection: '검수승인', transfer: '이관 승인' };
+    if (!confirm(`${stepLabels[stepType]}을(를) 승인하시겠습니까?`)) return;
+    try {
+      setSaving(true);
+      await transferAPI.create({ ...buildTransferData(), [`${stepType}_approval_status`]: '승인완료' });
+      setFormData(prev => ({ ...prev, [`${stepType}_approval_status`]: '승인완료' }));
+      setSaveMessage({ type: 'success', text: `${stepLabels[stepType]} 승인 완료` });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Approve failed:', error);
+      alert('승인 처리에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReject = async (stepType) => {
+    const stepLabels = { handover: '인계준비', inspection: '검수', transfer: '이관' };
+    if (!rejectionReason.trim()) { alert('반려 사유를 입력해주세요.'); return; }
+    if (!confirm(`${stepLabels[stepType]} 단계를 반려하시겠습니까?`)) return;
+    try {
+      setSaving(true);
+      await transferAPI.create({ ...buildTransferData(), [`${stepType}_approval_status`]: '반려', [`${stepType}_rejection_reason`]: rejectionReason });
+      setFormData(prev => ({ ...prev, [`${stepType}_approval_status`]: '반려' }));
+      setSaveMessage({ type: 'success', text: `${stepLabels[stepType]} 단계 반려 완료` });
+      setRejectionReason('');
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (error) {
+      console.error('Reject failed:', error);
+      alert('반려 처리에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -280,7 +318,7 @@ export default function MobileTransferRequest() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-6">
       {/* 헤더 */}
       <div className="bg-gradient-to-r from-purple-600 to-violet-600 text-white px-4 py-4 sticky top-0 z-50">
         <div className="flex items-center justify-between">
@@ -416,6 +454,16 @@ export default function MobileTransferRequest() {
                 <label className="block text-xs text-gray-600 mb-1">이관 사유</label>
                 <textarea value={formData.reason} onChange={(e) => handleChange('reason', e.target.value)} rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" placeholder="이관 사유를 입력하세요..." />
               </div>
+
+              {/* 단계 버튼 */}
+              <div className="flex gap-2 pt-3 border-t border-gray-200">
+                <button type="button" onClick={() => handleStepSave('요청')} disabled={stepSaving === '요청'} className="flex-1 py-2.5 border border-purple-300 text-purple-700 rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm">
+                  <Save size={14} />{stepSaving === '요청' ? '저장중...' : '임시저장'}
+                </button>
+                <button type="button" onClick={handleSubmit} disabled={saving} className="flex-1 py-2.5 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm">
+                  <Send size={14} />{saving ? '제출중...' : '요청 제출'}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -486,6 +534,13 @@ export default function MobileTransferRequest() {
                   </div>
                 </div>
               ))}
+
+              {/* 단계 버튼 */}
+              <div className="flex gap-2 pt-3 border-t border-gray-200 mt-3">
+                <button type="button" onClick={() => handleStepSave('점검')} disabled={stepSaving === '점검'} className="flex-1 py-2.5 border border-cyan-300 text-cyan-700 rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-sm">
+                  <Save size={14} />{stepSaving === '점검' ? '저장중...' : '체크리스트 임시저장'}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -506,8 +561,28 @@ export default function MobileTransferRequest() {
             </div>
           </button>
           {expandedSections.handoverApproval && (
-            <div className="p-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3"><p className="text-xs text-blue-800"><AlertCircle className="inline mr-1" size={14} />개발담당자가 체크리스트 작성 내용을 검토하고 인계준비를 승인합니다.</p></div>
+            <div className="p-4 space-y-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-800"><AlertCircle className="inline mr-1" size={14} />개발담당자가 체크리스트 작성 내용을 검토하고 인계준비를 승인합니다.</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div><p className="text-[10px] text-gray-500">승인자</p><p className="text-xs font-medium">{formData.developer_name || '-'}</p></div>
+                  <div><p className="text-[10px] text-gray-500">상태</p><span className={`text-xs px-2 py-0.5 rounded ${formData.handover_approval_status === '승인완료' ? 'bg-green-100 text-green-700' : formData.handover_approval_status === '반려' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{formData.handover_approval_status || '대기'}</span></div>
+                </div>
+                <div className="mt-3">
+                  <input type="text" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs" placeholder="반려 사유 입력..." />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => handleStepSave('인계승인')} disabled={stepSaving === '인계승인'} className="flex-1 py-2.5 border border-blue-300 text-blue-700 rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs">
+                  <Save size={14} />임시저장
+                </button>
+                <button type="button" onClick={() => handleReject('handover')} disabled={saving} className="flex-1 py-2.5 border border-red-300 text-red-700 rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs">
+                  <XCircle size={14} />반려
+                </button>
+                <button type="button" onClick={() => handleApprove('handover')} disabled={saving} className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs">
+                  <CheckCircle size={14} />승인
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -528,8 +603,28 @@ export default function MobileTransferRequest() {
             </div>
           </button>
           {expandedSections.inspectionApproval && (
-            <div className="p-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3"><p className="text-xs text-green-800"><AlertCircle className="inline mr-1" size={14} />인수업체 담당자가 체크리스트 내용을 확인하고 금형 상태를 검수합니다.</p></div>
+            <div className="p-4 space-y-3">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <p className="text-xs text-green-800"><AlertCircle className="inline mr-1" size={14} />인수업체 담당자가 체크리스트 내용을 확인하고 금형 상태를 검수합니다.</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div><p className="text-[10px] text-gray-500">검수자</p><p className="text-xs font-medium">{formData.to_manager_name || '-'}</p></div>
+                  <div><p className="text-[10px] text-gray-500">상태</p><span className={`text-xs px-2 py-0.5 rounded ${formData.inspection_approval_status === '승인완료' ? 'bg-green-100 text-green-700' : formData.inspection_approval_status === '반려' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{formData.inspection_approval_status || '대기'}</span></div>
+                </div>
+                <div className="mt-3">
+                  <input type="text" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs" placeholder="검수 의견 / 반려 사유 입력..." />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => handleStepSave('검수승인')} disabled={stepSaving === '검수승인'} className="flex-1 py-2.5 border border-green-300 text-green-700 rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs">
+                  <Save size={14} />임시저장
+                </button>
+                <button type="button" onClick={() => handleReject('inspection')} disabled={saving} className="flex-1 py-2.5 border border-red-300 text-red-700 rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs">
+                  <XCircle size={14} />반려
+                </button>
+                <button type="button" onClick={() => handleApprove('inspection')} disabled={saving} className="flex-1 py-2.5 bg-green-600 text-white rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs">
+                  <CheckCircle size={14} />승인
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -550,8 +645,28 @@ export default function MobileTransferRequest() {
             </div>
           </button>
           {expandedSections.transferApproval && (
-            <div className="p-4">
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3"><p className="text-xs text-orange-800"><AlertCircle className="inline mr-1" size={14} />개발담당자가 검수 완료 후 최종 이관을 승인합니다.</p></div>
+            <div className="p-4 space-y-3">
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                <p className="text-xs text-orange-800"><AlertCircle className="inline mr-1" size={14} />개발담당자가 검수 완료 후 최종 이관을 승인합니다.</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div><p className="text-[10px] text-gray-500">승인자</p><p className="text-xs font-medium">{formData.developer_name || '-'}</p></div>
+                  <div><p className="text-[10px] text-gray-500">상태</p><span className={`text-xs px-2 py-0.5 rounded ${formData.transfer_approval_status === '승인완료' ? 'bg-green-100 text-green-700' : formData.transfer_approval_status === '반려' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{formData.transfer_approval_status || '대기'}</span></div>
+                </div>
+                <div className="mt-3">
+                  <input type="text" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs" placeholder="반려 사유 입력..." />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => handleStepSave('이관승인')} disabled={stepSaving === '이관승인'} className="flex-1 py-2.5 border border-orange-300 text-orange-700 rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs">
+                  <Save size={14} />임시저장
+                </button>
+                <button type="button" onClick={() => handleReject('transfer')} disabled={saving} className="flex-1 py-2.5 border border-red-300 text-red-700 rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs">
+                  <XCircle size={14} />반려
+                </button>
+                <button type="button" onClick={() => handleApprove('transfer')} disabled={saving} className="flex-1 py-2.5 bg-orange-600 text-white rounded-xl font-medium flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs">
+                  <CheckCircle size={14} />승인
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -583,17 +698,6 @@ export default function MobileTransferRequest() {
       {saveMessage && (
         <div className={`mx-4 mb-2 p-2.5 rounded-lg text-xs font-medium ${saveMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>{saveMessage.text}</div>
       )}
-
-      {/* 하단 버튼 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 flex gap-2">
-        <button type="button" onClick={() => navigate(-1)} className="py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium text-sm">취소</button>
-        <button type="button" onClick={handleSaveDraft} disabled={saving} className="flex-1 py-3 border border-slate-300 rounded-xl text-slate-700 font-medium flex items-center justify-center gap-2 disabled:opacity-50 text-sm">
-          <Save size={16} />임시저장
-        </button>
-        <button type="button" onClick={handleSubmit} disabled={saving} className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 text-sm">
-          {saving ? (<><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>저장 중...</>) : (<><Send size={16} />제출</>)}
-        </button>
-      </div>
     </div>
   );
 }
