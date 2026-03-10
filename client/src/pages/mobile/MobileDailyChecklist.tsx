@@ -348,11 +348,11 @@ export default function MobileDailyChecklist() {
     }
   };
 
-  const handleSearchApprover = async () => {
-    if (!approverSearchKeyword.trim()) return;
+  const handleSearchApprover = async (keyword?: string) => {
+    const searchWord = keyword !== undefined ? keyword : approverSearchKeyword;
     try {
       const res = await api.get('/workflow/approvers/search', {
-        params: { name: approverSearchKeyword }
+        params: { name: searchWord.trim() || undefined }
       });
       if (res.data.success) {
         setApproverSearchResults(res.data.data);
@@ -369,9 +369,14 @@ export default function MobileDailyChecklist() {
     setApproverSearchResults([]);
   };
 
+  const openApproverModal = () => {
+    setShowApproverModal(true);
+    handleSearchApprover('');
+  };
+
   const handleRequestApproval = async () => {
     if (!selectedApprover) {
-      setShowApproverModal(true);
+      openApproverModal();
       return;
     }
 
@@ -748,11 +753,11 @@ export default function MobileDailyChecklist() {
                 </button>
               </div>
 
-              <div className="space-y-2">
-                {approverSearchResults.length === 0 && approverSearchKeyword && (
-                  <p className="text-xs text-slate-500 text-center py-6">검색 결과가 없습니다.</p>
+              <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                {approverSearchResults.length === 0 && (
+                  <p className="text-xs text-slate-500 text-center py-6">{approverSearchKeyword ? '검색 결과가 없습니다.' : '담당자 목록을 불러오는 중...'}</p>
                 )}
-                {approverSearchResults.map((user) => (
+                {approverSearchResults.map((user: any) => (
                   <button
                     key={user.id}
                     onClick={() => handleSelectApprover(user)}
@@ -760,11 +765,12 @@ export default function MobileDailyChecklist() {
                   >
                     <div className="text-sm font-medium text-slate-900">
                       {user.name}
+                      <span className="ml-1 text-[10px] text-slate-400">({user.username})</span>
                       <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${user.user_type === 'system_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                         {user.user_type === 'system_admin' ? '관리자' : '금형개발'}
                       </span>
                     </div>
-                    <div className="text-[10px] text-slate-500">{user.email} {user.company_name && `| ${user.company_name}`}</div>
+                    <div className="text-[10px] text-slate-500">{user.email || '-'} {user.company_name && `| ${user.company_name}`}</div>
                   </button>
                 ))}
               </div>

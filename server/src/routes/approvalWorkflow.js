@@ -87,16 +87,17 @@ router.get('/admins/search', async (req, res) => {
  */
 router.get('/approvers/search', async (req, res) => {
   try {
-    const { name, limit = 20 } = req.query;
+    const { name, limit = 50 } = req.query;
 
     const where = {
       user_type: { [Op.in]: ['system_admin', 'mold_developer'] },
       is_active: true
     };
 
-    if (name) {
+    if (name && name.trim()) {
       where[Op.or] = [
         { name: { [Op.iLike]: `%${name}%` } },
+        { username: { [Op.iLike]: `%${name}%` } },
         { email: { [Op.iLike]: `%${name}%` } }
       ];
     }
