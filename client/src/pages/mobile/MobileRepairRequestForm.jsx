@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle, Clock, Calendar, FileText, Package, Wrench, Building, ClipboardList, Scale, Link2, User, WifiOff, Image } from 'lucide-react';
 import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, workflowAPI } from '../../lib/api';
+import useGeoLocation from '../../hooks/useGeoLocation';
 import { useAuthStore } from '../../stores/authStore';
 import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
 
@@ -13,6 +14,7 @@ export default function MobileRepairRequestForm() {
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const gps = useGeoLocation({ autoStart: true, highAccuracy: true });
   
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -157,6 +159,13 @@ export default function MobileRepairRequestForm() {
         fd.append('photo', f);
         fd.append('mold_id', moldId || '');
         fd.append('inspection_type', 'repair');
+        fd.append('source_page', 'MobileRepairRequestForm');
+        fd.append('capture_method', e.target === cameraInputRef.current ? 'camera' : 'gallery');
+        if (gps.latitude !== null) {
+          fd.append('gps_latitude', String(gps.latitude));
+          fd.append('gps_longitude', String(gps.longitude));
+          if (gps.accuracy !== null) fd.append('gps_accuracy', String(gps.accuracy));
+        }
         const res = await api.post('/inspection-photos/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
         if (res.data.success) {
           setImages(p => [...p, { id: res.data.data.id, file_url: res.data.data.file_url, preview: res.data.data.file_url, name: f.name }]);

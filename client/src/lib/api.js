@@ -475,6 +475,22 @@ export const inspectionPhotoAPI = {
   getStats: (params) => api.get('/inspection-photos/stats/summary', { params }),
 }
 
+// Mold Location API (금형 GPS 위치 추적/이력)
+export const moldLocationAPI = {
+  // 전체 금형 실시간 위치 조회
+  getRealtime: (params) => api.get('/mold-locations/realtime', { params }),
+  // 특정 금형 위치 이력
+  getHistory: (moldId, params) => api.get(`/mold-locations/history/${moldId}`, { params }),
+  // GPS 위치 수동 기록
+  record: (data) => api.post('/mold-locations/record', data),
+  // 기준 위치 설정 (관리자)
+  setBase: (moldId, data) => api.put(`/mold-locations/base/${moldId}`, data),
+  // 위치 이탈 금형 목록
+  getDriftAlerts: () => api.get('/mold-locations/drift-alerts'),
+  // GPS 위치 통계
+  getStats: () => api.get('/mold-locations/stats'),
+}
+
 // User API (사용자 조회)
 export const userAPI = {
   getAll: (params) => api.get('/users', { params }),

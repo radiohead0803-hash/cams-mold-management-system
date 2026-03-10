@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import api from '../../lib/api';
 import { useAuthStore } from '../../stores/authStore';
+import useGeoLocation from '../../hooks/useGeoLocation';
 
 // 카테고리 아이콘 매핑
 const categoryIcons: Record<string, any> = {
@@ -79,6 +80,7 @@ export default function MobileRepairShipmentChecklist() {
   const { user } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const gps = useGeoLocation({ autoStart: true, highAccuracy: true });
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -258,6 +260,12 @@ export default function MobileRepairShipmentChecklist() {
       formData.append('mold_id', moldId || '');
       formData.append('item_id', String(currentPhotoItemId));
       formData.append('inspection_type', 'repair_shipment');
+      formData.append('source_page', 'MobileRepairShipmentChecklist');
+      if (gps.latitude !== null) {
+        formData.append('gps_latitude', String(gps.latitude));
+        formData.append('gps_longitude', String(gps.longitude));
+        if (gps.accuracy !== null) formData.append('gps_accuracy', String(gps.accuracy));
+      }
 
       const res = await api.post('/inspection-photos/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }

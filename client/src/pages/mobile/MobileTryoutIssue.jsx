@@ -18,9 +18,11 @@ import {
   Trash2
 } from 'lucide-react';
 import api from '../../lib/api';
+import useGeoLocation from '../../hooks/useGeoLocation';
 
 const MobileTryoutIssue = () => {
   const { moldId } = useParams();
+  const gps = useGeoLocation({ autoStart: true, highAccuracy: true });
   const navigate = useNavigate();
   const [issues, setIssues] = useState([]);
   const [stats, setStats] = useState({});
@@ -114,6 +116,12 @@ const MobileTryoutIssue = () => {
       for (const file of files) {
         const formData = new FormData();
         formData.append('file', file);
+        if (gps.latitude !== null) {
+          formData.append('gps_latitude', String(gps.latitude));
+          formData.append('gps_longitude', String(gps.longitude));
+          if (gps.accuracy !== null) formData.append('gps_accuracy', String(gps.accuracy));
+        }
+        formData.append('source_page', 'MobileTryoutIssue');
 
         const response = await api.post('/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }

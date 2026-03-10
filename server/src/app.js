@@ -80,6 +80,7 @@ const dashRouter = require('./routes/dashRoutes');
 const makerRepairRouter = require('./routes/makerRepair');
 const plantRepairRouter = require('./routes/plantRepair');
 const hqLocationRouter = require('./routes/hqLocation');
+const moldLocationsRouter = require('./routes/moldLocations');
 const plantProductionRouter = require('./routes/plantProduction');
 const plantDashboardRouter = require('./routes/plantDashboard');
 const hqJobsRouter = require('./routes/hqJobs');
@@ -178,6 +179,8 @@ app.use('/api/v1/plant', plantDashboardRouter);
 // HQ routes combined
 app.use('/api/v1/hq', hqDashboardRouter);
 app.use('/api/v1/hq', hqLocationRouter);
+// 금형 GPS 위치 추적/이력 관리
+app.use('/api/v1/mold-locations', moldLocationsRouter);
 app.use('/api/v1/hq', hqJobsRouter);
 app.use('/api/v1/hq', hqCheckItemsRouter);
 app.use('/api/v1/hq', hqTemplatesRouter);

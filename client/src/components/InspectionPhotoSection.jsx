@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
-import { Camera, X, ChevronLeft, ChevronRight, ZoomIn, Trash2, Image, Plus } from 'lucide-react'
+import { Camera, X, ChevronLeft, ChevronRight, ZoomIn, Trash2, Image, Plus, MapPin, Loader2 } from 'lucide-react'
 import api from '../lib/api'
+import useGeoLocation from '../hooks/useGeoLocation'
 
 /**
  * 점검 사진 섹션 (다중 업로드 + 풀스크린 뷰어)
@@ -31,6 +32,9 @@ export default function InspectionPhotoSection({
   const [viewerIndex, setViewerIndex] = useState(0)
 
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+
+  // GPS 자동 수집 (모바일에서 사진 촬영 시 무조건 GPS 좌표 획득)
+  const gps = useGeoLocation({ autoStart: true, highAccuracy: true, maxAge: 60000 })
 
   const getPhotoUrl = (photo) => {
     return photo.url || photo.file_url || photo.thumbnail_url || ''
@@ -64,6 +68,14 @@ export default function InspectionPhotoSection({
         fd.append('mold_id', String(moldId || ''))
         fd.append('inspection_type', inspectionType)
         fd.append('item_id', String(itemId || ''))
+        fd.append('source_page', 'InspectionPhotoSection')
+        fd.append('capture_method', e.target === cameraInputRef.current ? 'camera' : 'gallery')
+        // GPS 좌표 강제 첨부
+        if (gps.latitude !== null) {
+          fd.append('gps_latitude', String(gps.latitude))
+          fd.append('gps_longitude', String(gps.longitude))
+          if (gps.accuracy !== null) fd.append('gps_accuracy', String(gps.accuracy))
+        }
         const res = await api.post('/inspection-photos/upload', fd, {
           headers: { 'Content-Type': 'multipart/form-data' }
         })

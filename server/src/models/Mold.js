@@ -173,6 +173,23 @@ module.exports = (sequelize) => {
       type: DataTypes.DECIMAL(10, 7),
       comment: '기준 GPS 경도 (등록된 위치)'
     },
+    last_gps_accuracy: {
+      type: DataTypes.DOUBLE,
+      comment: '마지막 GPS 정확도 (미터)'
+    },
+    last_gps_address: {
+      type: DataTypes.TEXT,
+      comment: '마지막 GPS 주소'
+    },
+    last_gps_source: {
+      type: DataTypes.STRING(50),
+      comment: '마지막 GPS 출처 (photo/qr_scan/manual)'
+    },
+    drift_threshold_m: {
+      type: DataTypes.INTEGER,
+      defaultValue: 500,
+      comment: '위치 이탈 판단 기준 거리 (미터)'
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW

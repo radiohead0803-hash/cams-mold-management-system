@@ -7,6 +7,18 @@ const { uploadImage, deleteImage: deleteCloudinaryImage, getPublicIdFromUrl } = 
 // Cloudinary 환경변수 체크
 const CLOUDINARY_ENABLED = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 
+// Haversine 공식으로 두 GPS 좌표 사이 거리(미터) 계산
+function calculateDistanceM(lat1, lng1, lat2, lng2) {
+  const R = 6371000; // 지구 반지름 (미터)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 // 항상 메모리 스토리지 사용 (Railway는 ephemeral filesystem)
 const storage = multer.memoryStorage();
 
@@ -68,10 +80,15 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
     const fileName = `photo_${Date.now()}_${req.file.originalname}`;
     const uploadedBy = req.user?.id || 1;
 
+    const parsedLat = gps_latitude ? parseFloat(gps_latitude) : null;
+    const parsedLng = gps_longitude ? parseFloat(gps_longitude) : null;
+    const parsedAccuracy = req.body.gps_accuracy ? parseFloat(req.body.gps_accuracy) : null;
+    const parsedMoldId = mold_id ? parseInt(mold_id) : null;
+
     // Sequelize 모델로 INSERT
     const photo = await InspectionPhoto.create({
       id: photoId,
-      mold_id: mold_id ? parseInt(mold_id) : null,
+      mold_id: parsedMoldId,
       checklist_id: checklist_id ? parseInt(checklist_id) : null,
       checklist_type: checklist_type || null,
       item_id: item_id ? parseInt(item_id) : null,
@@ -90,12 +107,22 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
       is_active: true,
       source_page: source_page || null,
       capture_method: capture_method || null,
-      gps_latitude: gps_latitude ? parseFloat(gps_latitude) : null,
-      gps_longitude: gps_longitude ? parseFloat(gps_longitude) : null,
+      gps_latitude: parsedLat,
+      gps_longitude: parsedLng,
       repair_request_id: repair_request_id ? parseInt(repair_request_id) : null,
       entity_type: entity_type || null,
       entity_id: entity_id ? parseInt(entity_id) : null
     });
+
+    // GPS 정확도 저장 (별도 업데이트 - 모델에 없을 수 있음)
+    if (parsedAccuracy !== null) {
+      try {
+        await sequelize.query(
+          'UPDATE inspection_photos SET gps_accuracy = $1 WHERE id = $2',
+          { bind: [parsedAccuracy, photoId] }
+        );
+      } catch (e) { /* gps_accuracy 컬럼 미존재 시 무시 */ }
+    }
 
     // DB BYTEA에 이미지 데이터 저장 (Cloudinary 미사용 시)
     if (storeInDb) {
@@ -106,6 +133,88 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
         );
       } catch (dbErr) {
         console.error('DB BYTEA 저장 실패:', dbErr.message);
+      }
+    }
+
+    // ★ GPS 좌표 + mold_id가 있으면 → 금형 위치 자동 업데이트 + 이력 기록
+    let locationUpdated = false;
+    let driftDetected = false;
+    if (parsedLat && parsedLng && parsedMoldId) {
+      try {
+        // 1. molds 테이블의 last_gps 업데이트
+        const [moldRows] = await sequelize.query(
+          'SELECT base_gps_lat, base_gps_lng, drift_threshold_m FROM molds WHERE id = $1',
+          { bind: [parsedMoldId] }
+        );
+        const mold = moldRows[0];
+
+        // 위치 이탈 감지: base 좌표가 있으면 거리 계산
+        let distanceM = null;
+        if (mold && mold.base_gps_lat && mold.base_gps_lng) {
+          distanceM = calculateDistanceM(
+            parseFloat(mold.base_gps_lat), parseFloat(mold.base_gps_lng),
+            parsedLat, parsedLng
+          );
+          const threshold = mold.drift_threshold_m || 500;
+          driftDetected = distanceM > threshold;
+        }
+
+        const locationStatus = driftDetected ? 'moved' : 'normal';
+
+        await sequelize.query(
+          `UPDATE molds SET 
+            last_gps_lat = $1, last_gps_lng = $2, last_gps_time = NOW(),
+            last_gps_accuracy = $3, last_gps_source = 'photo',
+            location_status = $4
+          WHERE id = $5`,
+          { bind: [parsedLat, parsedLng, parsedAccuracy, locationStatus, parsedMoldId] }
+        );
+
+        // 2. mold_location_logs에 이력 기록
+        await sequelize.query(
+          `INSERT INTO mold_location_logs 
+            (mold_id, scanned_by_id, scanned_at, gps_lat, gps_lng, distance_m, 
+             status, source, notes, photo_id, accuracy, source_page, inspection_type, created_at)
+          VALUES ($1, $2, NOW(), $3, $4, $5, $6, 'photo', $7, $8, $9, $10, $11, NOW())`,
+          { bind: [
+            parsedMoldId, uploadedBy, parsedLat, parsedLng,
+            distanceM ? Math.round(distanceM) : null,
+            driftDetected ? 'moved' : 'normal',
+            driftDetected ? `위치이탈 감지: ${Math.round(distanceM)}m` : null,
+            photoId, parsedAccuracy,
+            source_page || null, inspection_type || 'daily'
+          ]}
+        );
+
+        locationUpdated = true;
+
+        // 3. 위치 이탈 시 알림 생성
+        if (driftDetected) {
+          try {
+            await sequelize.query(
+              `INSERT INTO alerts (mold_id, alert_type, severity, title, message, metadata, is_resolved, created_at)
+              VALUES ($1, 'location_drift', 'high', $2, $3, $4, false, NOW())`,
+              { bind: [
+                parsedMoldId,
+                '금형 위치 이탈 감지',
+                `금형이 기준 위치에서 ${Math.round(distanceM)}m 이탈하였습니다.`,
+                JSON.stringify({
+                  photo_id: photoId,
+                  distance_m: Math.round(distanceM),
+                  gps_lat: parsedLat,
+                  gps_lng: parsedLng,
+                  base_lat: parseFloat(mold.base_gps_lat),
+                  base_lng: parseFloat(mold.base_gps_lng),
+                  source_page: source_page
+                })
+              ]}
+            );
+          } catch (alertErr) {
+            console.error('위치이탈 알림 생성 실패:', alertErr.message);
+          }
+        }
+      } catch (locErr) {
+        console.error('금형 위치 업데이트 오류:', locErr.message);
       }
     }
 
@@ -122,7 +231,12 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
         file_size: req.file.size,
         inspection_type: photo.inspection_type,
         source_page: photo.source_page,
-        capture_method: photo.capture_method
+        capture_method: photo.capture_method,
+        gps_latitude: parsedLat,
+        gps_longitude: parsedLng,
+        gps_accuracy: parsedAccuracy,
+        location_updated: locationUpdated,
+        drift_detected: driftDetected
       }
     });
   } catch (error) {

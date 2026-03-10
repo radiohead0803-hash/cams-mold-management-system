@@ -55,6 +55,27 @@ module.exports = (sequelize, DataTypes) => {
     notes: {
       type: DataTypes.TEXT
     },
+    photo_id: {
+      type: DataTypes.UUID,
+      field: 'photo_id'
+    },
+    accuracy: {
+      type: DataTypes.DOUBLE,
+      field: 'accuracy',
+      comment: 'GPS 정확도 (미터)'
+    },
+    address: {
+      type: DataTypes.TEXT,
+      field: 'address'
+    },
+    source_page: {
+      type: DataTypes.STRING(100),
+      field: 'source_page'
+    },
+    inspection_type: {
+      type: DataTypes.STRING(50),
+      field: 'inspection_type'
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
