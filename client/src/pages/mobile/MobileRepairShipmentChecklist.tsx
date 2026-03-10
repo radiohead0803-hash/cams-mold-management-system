@@ -78,6 +78,7 @@ export default function MobileRepairShipmentChecklist() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -228,11 +229,19 @@ export default function MobileRepairShipmentChecklist() {
     }
   };
 
-  // 카메라/갤러리 열기
+  // 카메라 촬영
   const handleCameraClick = (itemId: number) => {
     setCurrentPhotoItemId(itemId);
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  // 갤러리 선택
+  const handleGalleryClick = (itemId: number) => {
+    setCurrentPhotoItemId(itemId);
+    if (galleryInputRef.current) {
+      galleryInputRef.current.click();
     }
   };
 
@@ -423,12 +432,21 @@ export default function MobileRepairShipmentChecklist() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
-      {/* 숨겨진 파일 입력 (카메라/갤러리) */}
+      {/* 숨겨진 파일 입력 - 카메라 */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         capture="environment"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+      {/* 숨겨진 파일 입력 - 갤러리 */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        multiple
         onChange={handleFileChange}
         className="hidden"
       />
@@ -545,25 +563,42 @@ export default function MobileRepairShipmentChecklist() {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleCameraClick(item.id)}
-                  disabled={isReadOnly || uploadingItemId === item.id}
-                  className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    uploadingItemId === item.id 
-                      ? 'bg-blue-100' 
-                      : isReadOnly 
-                      ? 'bg-slate-100 text-slate-400' 
-                      : needsPhoto
-                      ? 'bg-red-100 hover:bg-red-200 text-red-600 animate-pulse'
-                      : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
-                  } transition-all`}
-                >
-                  {uploadingItemId === item.id ? (
-                    <Loader2 size={24} className="animate-spin" />
-                  ) : (
-                    <Camera size={24} />
-                  )}
-                </button>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleCameraClick(item.id)}
+                    disabled={isReadOnly || uploadingItemId === item.id}
+                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-full ${
+                      uploadingItemId === item.id 
+                        ? 'bg-blue-100' 
+                        : isReadOnly 
+                        ? 'bg-slate-100 text-slate-400' 
+                        : needsPhoto
+                        ? 'bg-red-100 hover:bg-red-200 text-red-600 animate-pulse'
+                        : 'bg-blue-50 hover:bg-blue-100 text-blue-600'
+                    } transition-all`}
+                  >
+                    {uploadingItemId === item.id ? (
+                      <Loader2 size={20} className="animate-spin" />
+                    ) : (
+                      <>
+                        <Camera size={18} />
+                        <span className="text-[8px] mt-0.5">촬영</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleGalleryClick(item.id)}
+                    disabled={isReadOnly || uploadingItemId === item.id}
+                    className={`flex flex-col items-center justify-center w-12 h-12 rounded-full ${
+                      isReadOnly 
+                        ? 'bg-slate-100 text-slate-400' 
+                        : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
+                    } transition-all`}
+                  >
+                    <Image size={18} />
+                    <span className="text-[8px] mt-0.5">갤러리</span>
+                  </button>
+                </div>
               </div>
             </div>
 

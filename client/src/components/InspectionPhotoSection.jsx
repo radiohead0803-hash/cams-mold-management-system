@@ -25,9 +25,12 @@ export default function InspectionPhotoSection({
   disabled = false
 }) {
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewerIndex, setViewerIndex] = useState(0)
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
   const getPhotoUrl = (photo) => {
     return photo.url || photo.file_url || photo.thumbnail_url || ''
@@ -36,6 +39,11 @@ export default function InspectionPhotoSection({
   const handleAddClick = () => {
     if (disabled || uploading) return
     fileInputRef.current?.click()
+  }
+
+  const handleCameraClick = () => {
+    if (disabled || uploading) return
+    cameraInputRef.current?.click()
   }
 
   const handleFileChange = async (e) => {
@@ -157,40 +165,76 @@ export default function InspectionPhotoSection({
 
           {/* 추가 버튼 (그리드 안) */}
           {!disabled && photos.length < maxPhotos && (
-            <button
-              onClick={handleAddClick}
-              disabled={uploading}
-              className="aspect-square border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:text-blue-500 transition-colors"
-            >
-              {uploading ? (
-                <div className="animate-spin w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full" />
-              ) : (
-                <>
-                  <Plus size={20} />
-                  <span className="text-[10px] mt-0.5">추가</span>
-                </>
+            <>
+              {isMobile && (
+                <button
+                  onClick={handleCameraClick}
+                  disabled={uploading}
+                  className="aspect-square border-2 border-dashed border-blue-300 hover:border-blue-400 bg-blue-50/50 rounded-lg flex flex-col items-center justify-center text-blue-500 hover:text-blue-600 transition-colors"
+                >
+                  {uploading ? (
+                    <div className="animate-spin w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full" />
+                  ) : (
+                    <>
+                      <Camera size={20} />
+                      <span className="text-[10px] mt-0.5">촬영</span>
+                    </>
+                  )}
+                </button>
               )}
-            </button>
+              <button
+                onClick={handleAddClick}
+                disabled={uploading}
+                className="aspect-square border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-lg flex flex-col items-center justify-center text-slate-400 hover:text-blue-500 transition-colors"
+              >
+                {uploading ? (
+                  <div className="animate-spin w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full" />
+                ) : (
+                  <>
+                    <Image size={20} />
+                    <span className="text-[10px] mt-0.5">{isMobile ? '갤러리' : '추가'}</span>
+                  </>
+                )}
+              </button>
+            </>
           )}
         </div>
       )}
 
       {/* 사진 없을 때 추가 버튼 */}
       {photos.length === 0 && !disabled && (
-        <button
-          onClick={handleAddClick}
-          disabled={uploading}
-          className="w-full py-2.5 border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-lg flex items-center justify-center gap-2 text-slate-500 hover:text-blue-500 text-sm transition-colors"
-        >
-          {uploading ? (
-            <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full" />
-          ) : (
-            <>
-              <Camera size={16} />
-              점검 사진 추가
-            </>
+        <div className={isMobile ? 'flex gap-2' : ''}>
+          {isMobile && (
+            <button
+              onClick={handleCameraClick}
+              disabled={uploading}
+              className="flex-1 py-2.5 border-2 border-dashed border-blue-300 hover:border-blue-400 bg-blue-50/50 rounded-lg flex items-center justify-center gap-2 text-blue-600 hover:text-blue-700 text-sm transition-colors"
+            >
+              {uploading ? (
+                <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full" />
+              ) : (
+                <>
+                  <Camera size={16} />
+                  카메라 촬영
+                </>
+              )}
+            </button>
           )}
-        </button>
+          <button
+            onClick={handleAddClick}
+            disabled={uploading}
+            className={`${isMobile ? 'flex-1' : 'w-full'} py-2.5 border-2 border-dashed border-slate-300 hover:border-blue-400 rounded-lg flex items-center justify-center gap-2 text-slate-500 hover:text-blue-500 text-sm transition-colors`}
+          >
+            {uploading ? (
+              <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full" />
+            ) : (
+              <>
+                <Image size={16} />
+                {isMobile ? '갤러리 선택' : '점검 사진 추가'}
+              </>
+            )}
+          </button>
+        </div>
       )}
 
       {/* 사진 수 표시 */}
@@ -201,12 +245,21 @@ export default function InspectionPhotoSection({
         </div>
       )}
 
-      {/* Hidden file input (multiple) */}
+      {/* Hidden file input - 갤러리 (multiple) */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         multiple
+        className="hidden"
+        onChange={handleFileChange}
+      />
+      {/* Hidden file input - 카메라 촬영 */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         className="hidden"
         onChange={handleFileChange}
       />

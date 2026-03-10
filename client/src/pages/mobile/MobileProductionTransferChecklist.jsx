@@ -382,6 +382,8 @@ export default function MobileProductionTransferChecklist() {
       <input
         ref={fileInputRef}
         type="file"
+        accept="image/*"
+        multiple
         className="hidden"
         onChange={handleFileChange}
       />

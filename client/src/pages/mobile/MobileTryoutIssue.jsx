@@ -458,8 +458,20 @@ const MobileTryoutIssue = () => {
                 </label>
                 
                 {/* 업로드 버튼 */}
-                <div className="flex space-x-2 mb-3">
-                  <label className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                <div className="flex space-x-2 mb-3 flex-wrap gap-y-2">
+                  <label className="flex-1 min-w-[120px] flex items-center justify-center px-4 py-3 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      disabled={uploading}
+                    />
+                    <Camera size={20} className="text-blue-500 mr-2" />
+                    <span className="text-sm text-blue-600">카메라 촬영</span>
+                  </label>
+                  <label className="flex-1 min-w-[120px] flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
                     <input
                       type="file"
                       accept="image/*"
@@ -468,10 +480,10 @@ const MobileTryoutIssue = () => {
                       className="hidden"
                       disabled={uploading}
                     />
-                    <Camera size={20} className="text-gray-400 mr-2" />
-                    <span className="text-sm text-gray-600">사진 추가</span>
+                    <Image size={20} className="text-gray-400 mr-2" />
+                    <span className="text-sm text-gray-600">갤러리 선택</span>
                   </label>
-                  <label className="flex-1 flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                  <label className="flex-1 min-w-[120px] flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
                     <input
                       type="file"
                       accept=".pdf,.doc,.docx,.xls,.xlsx,.hwp"
