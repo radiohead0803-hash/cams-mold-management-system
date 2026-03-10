@@ -277,7 +277,7 @@ const firstApprove = async (req, res) => {
           first_approved_at = NOW(),
           first_approval_notes = :notes,
           updated_at = NOW()
-      WHERE id = :id AND status = 'requested'
+      WHERE id = :id AND status IN ('requested', 'reviewed')
       RETURNING id, status
     `, {
       replacements: { id, approved_by: userId, notes: notes || null }
@@ -286,7 +286,7 @@ const firstApprove = async (req, res) => {
     if (result.length === 0) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Cannot approve this request' }
+        error: { message: 'Cannot approve this request. Status must be reviewed or requested.' }
       });
     }
     
@@ -363,7 +363,7 @@ const rejectRequest = async (req, res) => {
       SET status = 'rejected',
           rejection_reason = :reason,
           updated_at = NOW()
-      WHERE id = :id AND status IN ('requested', 'first_approved')
+      WHERE id = :id AND status IN ('requested', 'assessed', 'reviewed', 'first_approved')
       RETURNING id, status
     `, {
       replacements: { id, reason: reason || '반려됨' }
@@ -557,10 +557,123 @@ const getStatistics = async (req, res) => {
   }
 };
 
+/**
+ * 폐기 요청 업데이트 (단계별 임시저장 및 상태 전환)
+ * PATCH /api/v1/scrapping/:id
+ */
+const updateScrappingRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+    const {
+      status, current_step,
+      // 요청 단계
+      reason, reason_detail, condition_assessment, estimated_scrap_value,
+      // 상태 평가 단계
+      appearance_condition, functional_condition, dimensional_condition, assessment_notes,
+      // 경제성 검토 단계
+      repair_cost_estimate, new_mold_cost, remaining_value, review_result, review_notes,
+      // 폐기 처리 단계
+      disposal_method, disposal_company, disposal_cost, disposal_certificate,
+      // 사후 관리 단계
+      asset_disposal_completed, documentation_archived, replacement_plan, postcare_notes
+    } = req.body;
+
+    // 상태 전환 시 추가 필드 설정
+    let extraSets = '';
+    const replacements = {
+      id,
+      status: status || null,
+      current_step: current_step || null,
+      reason: reason || null,
+      reason_detail: reason_detail || null,
+      condition_assessment: condition_assessment || null,
+      estimated_scrap_value: estimated_scrap_value || null,
+      appearance_condition: appearance_condition || null,
+      functional_condition: functional_condition || null,
+      dimensional_condition: dimensional_condition || null,
+      assessment_notes: assessment_notes || null,
+      repair_cost_estimate: repair_cost_estimate || null,
+      new_mold_cost: new_mold_cost || null,
+      remaining_value: remaining_value || null,
+      review_result: review_result || null,
+      review_notes: review_notes || null,
+      disposal_method: disposal_method || null,
+      disposal_company: disposal_company || null,
+      disposal_cost: disposal_cost || null,
+      disposal_certificate: disposal_certificate || null,
+      asset_disposal_completed: asset_disposal_completed || false,
+      documentation_archived: documentation_archived || false,
+      replacement_plan: replacement_plan || null,
+      postcare_notes: postcare_notes || null,
+      user_id: userId
+    };
+
+    if (status === 'assessed') {
+      extraSets = ', assessed_by = :user_id, assessed_at = NOW()';
+    } else if (status === 'reviewed') {
+      extraSets = ', reviewed_by = :user_id, reviewed_at = NOW()';
+    } else if (status === 'closed') {
+      extraSets = ', closed_by = :user_id, closed_at = NOW()';
+    }
+
+    const [result] = await sequelize.query(`
+      UPDATE scrapping_requests
+      SET status = COALESCE(:status, status),
+          current_step = COALESCE(:current_step, current_step),
+          reason = COALESCE(:reason, reason),
+          reason_detail = COALESCE(:reason_detail, reason_detail),
+          condition_assessment = COALESCE(:condition_assessment, condition_assessment),
+          estimated_scrap_value = COALESCE(:estimated_scrap_value, estimated_scrap_value),
+          appearance_condition = COALESCE(:appearance_condition, appearance_condition),
+          functional_condition = COALESCE(:functional_condition, functional_condition),
+          dimensional_condition = COALESCE(:dimensional_condition, dimensional_condition),
+          assessment_notes = COALESCE(:assessment_notes, assessment_notes),
+          repair_cost_estimate = COALESCE(:repair_cost_estimate, repair_cost_estimate),
+          new_mold_cost = COALESCE(:new_mold_cost, new_mold_cost),
+          remaining_value = COALESCE(:remaining_value, remaining_value),
+          review_result = COALESCE(:review_result, review_result),
+          review_notes = COALESCE(:review_notes, review_notes),
+          disposal_method = COALESCE(:disposal_method, disposal_method),
+          disposal_company = COALESCE(:disposal_company, disposal_company),
+          disposal_cost = COALESCE(:disposal_cost, disposal_cost),
+          disposal_certificate = COALESCE(:disposal_certificate, disposal_certificate),
+          asset_disposal_completed = :asset_disposal_completed,
+          documentation_archived = :documentation_archived,
+          replacement_plan = COALESCE(:replacement_plan, replacement_plan),
+          postcare_notes = COALESCE(:postcare_notes, postcare_notes),
+          updated_at = NOW()
+          ${extraSets}
+      WHERE id = :id
+      RETURNING id, status, current_step
+    `, { replacements });
+
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: 'Scrapping request not found' }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result[0]
+    });
+
+  } catch (error) {
+    logger.error('Update scrapping request error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to update scrapping request', details: error.message }
+    });
+  }
+};
+
 module.exports = {
   getScrappingRequests,
   getScrappingRequestById,
   createScrappingRequest,
+  updateScrappingRequest,
   firstApprove,
   secondApprove,
   rejectRequest,

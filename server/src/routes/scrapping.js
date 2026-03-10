@@ -19,6 +19,9 @@ router.get('/:id', authenticate, scrappingController.getScrappingRequestById);
 // 폐기 요청 생성
 router.post('/', authenticate, authorize(['plant', 'mold_developer', 'system_admin']), scrappingController.createScrappingRequest);
 
+// 폐기 요청 업데이트 (단계별 임시저장 및 상태 전환)
+router.patch('/:id', authenticate, authorize(['plant', 'mold_developer', 'system_admin']), scrappingController.updateScrappingRequest);
+
 // 1차 승인 (금형개발 담당)
 router.post('/:id/first-approve', authenticate, authorize(['mold_developer', 'system_admin']), scrappingController.firstApprove);
 
