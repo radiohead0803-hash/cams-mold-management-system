@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, AlertTriangle, X, ChevronRight, ChevronLeft, Loader2, BookOpen, Save, Send, Search, User } from 'lucide-react';
 import api from '../../lib/api';
-import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../../lib/draftStorage';
+// draftStorage 불필요 - 서버 checklist-instances API로 통합
 import InspectionPhotoSection from '../../components/InspectionPhotoSection';
 
 // 웹버전과 동일한 일상점검 카테고리/항목 구조 (checkPoints 포함)
@@ -239,16 +239,7 @@ export default function MobileDailyChecklist() {
         }
       }
 
-      // 2. 로컬 스토리지에서 draft 복원
-      const draft = await loadDraft('daily_checklist', moldId || 'new');
-      if (draft && draft.data) {
-        const d = draft.data;
-        if (d.checkResults) setCheckResults(d.checkResults);
-        if (d.currentCategoryIndex !== undefined) setCurrentCategoryIndex(d.currentCategoryIndex);
-        if (d.selectedApprover) setSelectedApprover(d.selectedApprover);
-        setSaveMessage({ type: 'success', text: `로컬 임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` });
-        setTimeout(() => setSaveMessage(null), 4000);
-      }
+      // 로컬 폴백 없음 - 서버 draft만 사용
     })();
   }, [moldId]);
 
@@ -327,21 +318,11 @@ export default function MobileDailyChecklist() {
     setSaveMessage(null);
     try {
       await api.post('/checklist-instances/daily/draft', buildPayload('draft'));
-      await saveDraftLocal('daily_checklist', moldId || 'new', {
-        checkResults,
-        currentCategoryIndex,
-        selectedApprover
-      });
       setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
       console.error('임시저장 실패:', err);
-      await saveDraftLocal('daily_checklist', moldId || 'new', {
-        checkResults,
-        currentCategoryIndex,
-        selectedApprover
-      });
-      setSaveMessage({ type: 'success', text: '로컬 임시저장이 완료되었습니다.' });
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
       setTimeout(() => setSaveMessage(null), 3000);
     } finally {
       setSaving(false);
@@ -424,7 +405,6 @@ export default function MobileDailyChecklist() {
     try {
       const payload = buildPayload('completed');
       await api.post('/checklist-instances/daily/complete', payload);
-      await clearDraft('daily_checklist', moldId || 'new');
       setSuccess('일상점검이 완료되었습니다!');
       setTimeout(() => {
         moldId ? navigate(`/mobile/mold/${moldId}`) : navigate(-1);

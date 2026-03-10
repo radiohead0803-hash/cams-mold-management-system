@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin, ArrowLeft, Loader2, Info, Hash, Save, Send, Search, X, User } from 'lucide-react'
 import api from '../lib/api'
-import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../lib/draftStorage'
+// draftStorage 불필요 - 서버 checklist-instances API로 통합
 import InspectionPhotoSection from '../components/InspectionPhotoSection'
 
 // 정기점검 대항목/소항목 구조 (템플릿 마스터 + 기존 항목 통합)
@@ -313,23 +313,29 @@ export default function PeriodicInspectionNew() {
     }
   }, [moldId])
 
-  // Draft 복원
+  // Draft 복원 (서버 checklist-instances에서)
   useEffect(() => {
-    (async () => {
-      const draft = await loadDraft('periodic_inspection', moldId || 'new')
-      if (draft && draft.data) {
-        const d = draft.data
-        if (d.selectedTypeId) {
-          const foundType = INSPECTION_TYPES.find(t => t.id === d.selectedTypeId)
-          if (foundType) setSelectedType(foundType)
+    if (!moldId) return
+    ;(async () => {
+      try {
+        const res = await api.get(`/checklist-instances/mold/${moldId}/status`)
+        if (res.data?.success) {
+          const periodicLatest = res.data.data?.periodic?.latest
+          if (periodicLatest && periodicLatest.status === 'draft') {
+            const detailRes = await api.get(`/checklist-instances/${periodicLatest.id}`)
+            if (detailRes.data?.success && detailRes.data.data) {
+              const serverDraft = detailRes.data.data
+              const results = typeof serverDraft.results === 'string' ? JSON.parse(serverDraft.results) : serverDraft.results
+              if (results && Object.keys(results).length > 0) {
+                setCheckResults(results)
+                setSaveMessage({ type: 'success', text: `서버 임시저장 복원됨 (${new Date(serverDraft.created_at).toLocaleString()})` })
+                setTimeout(() => setSaveMessage(null), 4000)
+              }
+            }
+          }
         }
-        if (d.currentCategoryIndex != null) setCurrentCategoryIndex(d.currentCategoryIndex)
-        if (d.checkResults) setCheckResults(d.checkResults)
-        if (d.cleaningMethod) setCleaningMethod(d.cleaningMethod)
-        if (d.cleaningRatio) setCleaningRatio(d.cleaningRatio)
-        if (d.selectedApprover) setSelectedApprover(d.selectedApprover)
-        setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` })
-        setTimeout(() => setSaveMessage(null), 4000)
+      } catch (err) {
+        console.log('서버 draft 조회 실패:', err)
       }
     })()
   }, [moldId])
@@ -407,28 +413,13 @@ export default function PeriodicInspectionNew() {
     setSaveMessage(null)
     try {
       const payload = buildPayload('draft')
-      await api.post('/checklist-instances/daily/draft', payload)
-      await saveDraftLocal('periodic_inspection', moldId || 'new', {
-        selectedTypeId: selectedType?.id,
-        currentCategoryIndex,
-        checkResults,
-        cleaningMethod,
-        cleaningRatio,
-        selectedApprover
-      })
+      await api.post('/checklist-instances/periodic/draft', payload)
       setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' })
       setTimeout(() => setSaveMessage(null), 3000)
     } catch (err) {
       console.error('임시저장 실패:', err)
-      await saveDraftLocal('periodic_inspection', moldId || 'new', {
-        selectedTypeId: selectedType?.id,
-        currentCategoryIndex,
-        checkResults,
-        cleaningMethod,
-        cleaningRatio,
-        selectedApprover
-      })
-      setSaveMessage({ type: 'success', text: '로컬 임시저장 완료 (서버 저장 실패)' })
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' })
+      setTimeout(() => setSaveMessage(null), 3000)
     } finally {
       setSaving(false)
     }
@@ -482,7 +473,6 @@ export default function PeriodicInspectionNew() {
     try {
       const payload = buildPayload('completed')
       await api.post('/checklist-instances/periodic/complete', payload)
-      await clearDraft('periodic_inspection', moldId || 'new')
       alert('정기점검이 완료되었습니다!')
       navigate('/molds')
     } catch (err) {

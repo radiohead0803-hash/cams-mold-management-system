@@ -12,18 +12,36 @@ router.post('/daily/draft', authenticate, async (req, res) => {
     const { mold_id, check_date, results, production_quantity, summary } = req.body;
     const user = req.user;
 
-    const instance = await ChecklistInstance.create({
-      mold_id,
-      category: 'daily',
-      check_date: check_date || new Date(),
-      status: 'draft',
-      results: JSON.stringify(results),
-      production_quantity: production_quantity || 0,
-      summary: JSON.stringify(summary),
-      inspector_id: user.id,
-      inspector_name: user.name,
-      created_by: user.id
-    });
+    // 기존 draft가 있으면 업데이트, 없으면 생성 (UPSERT)
+    const [existing] = await sequelize.query(`
+      SELECT id FROM checklist_instances
+      WHERE mold_id = :mold_id AND category = 'daily' AND status = 'draft' AND inspector_id = :user_id
+      ORDER BY created_at DESC LIMIT 1
+    `, { replacements: { mold_id, user_id: user.id } });
+
+    let instance;
+    if (existing.length > 0) {
+      await ChecklistInstance.update({
+        results: JSON.stringify(results),
+        production_quantity: production_quantity || 0,
+        summary: JSON.stringify(summary),
+        check_date: check_date || new Date()
+      }, { where: { id: existing[0].id } });
+      instance = { id: existing[0].id };
+    } else {
+      instance = await ChecklistInstance.create({
+        mold_id,
+        category: 'daily',
+        check_date: check_date || new Date(),
+        status: 'draft',
+        results: JSON.stringify(results),
+        production_quantity: production_quantity || 0,
+        summary: JSON.stringify(summary),
+        inspector_id: user.id,
+        inspector_name: user.name,
+        created_by: user.id
+      });
+    }
 
     console.log('[Daily Draft] Saved:', { id: instance.id, moldId: mold_id, userId: user.id });
 
@@ -65,6 +83,12 @@ router.post('/daily/request-approval', authenticate, async (req, res) => {
         message: '승인자를 찾을 수 없습니다.'
       });
     }
+
+    // 기존 draft 삭제
+    await sequelize.query(`
+      DELETE FROM checklist_instances
+      WHERE mold_id = :mold_id AND category = 'daily' AND status = 'draft' AND inspector_id = :user_id
+    `, { replacements: { mold_id, user_id: user.id } });
 
     const instance = await ChecklistInstance.create({
       mold_id,
@@ -124,6 +148,12 @@ router.post('/daily/complete', authenticate, async (req, res) => {
   try {
     const { mold_id, check_date, results, production_quantity, summary } = req.body;
     const user = req.user;
+
+    // 기존 draft 삭제
+    await sequelize.query(`
+      DELETE FROM checklist_instances
+      WHERE mold_id = :mold_id AND category = 'daily' AND status = 'draft' AND inspector_id = :user_id
+    `, { replacements: { mold_id, user_id: user.id } });
 
     const instance = await ChecklistInstance.create({
       mold_id,
@@ -298,6 +328,52 @@ router.post('/mold-checklist/complete', authenticate, async (req, res) => {
 });
 
 /**
+ * 정기점검 임시저장 (UPSERT)
+ * POST /api/v1/checklist-instances/periodic/draft
+ */
+router.post('/periodic/draft', authenticate, async (req, res) => {
+  try {
+    const { mold_id, check_date, results, production_quantity, summary } = req.body;
+    const user = req.user;
+
+    const [existing] = await sequelize.query(`
+      SELECT id FROM checklist_instances
+      WHERE mold_id = :mold_id AND category = 'periodic' AND status = 'draft' AND inspector_id = :user_id
+      ORDER BY created_at DESC LIMIT 1
+    `, { replacements: { mold_id, user_id: user.id } });
+
+    let instance;
+    if (existing.length > 0) {
+      await ChecklistInstance.update({
+        results: JSON.stringify(results),
+        production_quantity: production_quantity || 0,
+        summary: JSON.stringify(summary),
+        check_date: check_date || new Date()
+      }, { where: { id: existing[0].id } });
+      instance = { id: existing[0].id };
+    } else {
+      instance = await ChecklistInstance.create({
+        mold_id,
+        category: 'periodic',
+        check_date: check_date || new Date(),
+        status: 'draft',
+        results: JSON.stringify(results),
+        production_quantity: production_quantity || 0,
+        summary: JSON.stringify(summary),
+        inspector_id: user.id,
+        inspector_name: user.name,
+        created_by: user.id
+      });
+    }
+
+    return res.json({ success: true, message: '임시저장이 완료되었습니다.', data: { id: instance.id } });
+  } catch (error) {
+    console.error('[Periodic Draft] Error:', error);
+    return res.status(500).json({ success: false, message: '임시저장 중 오류가 발생했습니다.' });
+  }
+});
+
+/**
  * 정기점검 완료 (승인 없이 바로 완료)
  * POST /api/v1/checklist-instances/periodic/complete
  */
@@ -305,6 +381,12 @@ router.post('/periodic/complete', authenticate, async (req, res) => {
   try {
     const { mold_id, check_date, results, production_quantity, summary, inspection_type } = req.body;
     const user = req.user;
+
+    // 기존 draft 삭제
+    await sequelize.query(`
+      DELETE FROM checklist_instances
+      WHERE mold_id = :mold_id AND category = 'periodic' AND status = 'draft' AND inspector_id = :user_id
+    `, { replacements: { mold_id, user_id: user.id } });
 
     const instance = await ChecklistInstance.create({
       mold_id,

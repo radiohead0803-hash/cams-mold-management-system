@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, AlertTriangle, Wrench, ChevronRight, ChevronLeft, Loader2, BookOpen, X, MapPin, Save, Send, Search, User } from 'lucide-react';
 import api from '../../lib/api';
-import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../../lib/draftStorage';
+// draftStorage 불필요 - 서버 checklist-instances API로 통합
 import InspectionPhotoSection from '../../components/InspectionPhotoSection';
 
 // 웹버전과 동일한 정기점검 유형/카테고리/항목 구조
@@ -404,20 +404,7 @@ export default function MobilePeriodicInspection() {
         }
       }
 
-      // 2. 로컬 스토리지에서 draft 복원
-      const draft = await loadDraft('periodic_inspection', moldId || 'new') as { data: any; savedAt: string } | null;
-      if (draft && draft.data) {
-        const d = draft.data;
-        if (d.selectedTypeId) {
-          const foundType = INSPECTION_TYPES.find(t => t.id === d.selectedTypeId);
-          if (foundType) setSelectedType(foundType);
-        }
-        if (d.currentCategoryIndex != null) setCurrentCategoryIndex(d.currentCategoryIndex);
-        if (d.checkResults) setCheckResults(d.checkResults);
-        if (d.selectedApprover) setSelectedApprover(d.selectedApprover);
-        setSaveMessage({ type: 'success', text: `로컬 임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` });
-        setTimeout(() => setSaveMessage(null), 4000);
-      }
+      // 로컬 폴백 없음 - 서버 draft만 사용
     })();
   }, [moldId]);
 
@@ -494,23 +481,13 @@ export default function MobilePeriodicInspection() {
     setSaving(true);
     setSaveMessage(null);
     try {
-      await api.post('/checklist-instances/daily/draft', buildPayload('draft'));
-      await saveDraftLocal('periodic_inspection', moldId || 'new', {
-        selectedTypeId: selectedType?.id,
-        currentCategoryIndex,
-        checkResults,
-        selectedApprover
-      });
-      setSaveMessage({ type: 'success', text: '임시저장 완료' });
+      await api.post('/checklist-instances/periodic/draft', buildPayload('draft'));
+      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
-      await saveDraftLocal('periodic_inspection', moldId || 'new', {
-        selectedTypeId: selectedType?.id,
-        currentCategoryIndex,
-        checkResults,
-        selectedApprover
-      });
-      setSaveMessage({ type: 'success', text: '로컬 임시저장 완료' });
+      console.error('임시저장 실패:', err);
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
+      setTimeout(() => setSaveMessage(null), 3000);
     } finally {
       setSaving(false);
     }
@@ -573,7 +550,6 @@ export default function MobilePeriodicInspection() {
     try {
       const payload = buildPayload('completed');
       await api.post('/checklist-instances/periodic/complete', payload);
-      await clearDraft('periodic_inspection', moldId || 'new');
       setSuccess('정기점검이 완료되었습니다!');
       setTimeout(() => {
         moldId ? navigate(`/mobile/mold/${moldId}`) : navigate(-1);

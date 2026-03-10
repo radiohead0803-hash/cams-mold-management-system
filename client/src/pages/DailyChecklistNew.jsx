@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, ArrowLeft, Loader2, Info, Hash, Save, Send, Search, X, User } from 'lucide-react'
 import api from '../lib/api'
-import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../lib/draftStorage'
+// draftStorage 불필요 - 서버 checklist-instances API로 통합
 import InspectionPhotoSection from '../components/InspectionPhotoSection'
 
 // 일상점검 대항목/소항목 구조 (템플릿 마스터 + 기존 항목 통합)
@@ -202,18 +202,29 @@ export default function DailyChecklistNew() {
     loadMoldData()
   }, [moldId])
 
-  // Draft 복원
+  // Draft 복원 (서버 checklist-instances에서)
   useEffect(() => {
-    (async () => {
-      const draft = await loadDraft('daily_checklist', moldId || 'new')
-      if (draft && draft.data) {
-        const d = draft.data
-        if (d.checkResults) setCheckResults(d.checkResults)
-        if (d.currentCategoryIndex !== undefined) setCurrentCategoryIndex(d.currentCategoryIndex)
-        if (d.productionQty) setProductionQty(d.productionQty)
-        if (d.selectedApprover) setSelectedApprover(d.selectedApprover)
-        setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` })
-        setTimeout(() => setSaveMessage(null), 4000)
+    if (!moldId) return
+    ;(async () => {
+      try {
+        const res = await api.get(`/checklist-instances/mold/${moldId}/status`)
+        if (res.data?.success) {
+          const dailyLatest = res.data.data?.daily?.latest
+          if (dailyLatest && dailyLatest.status === 'draft') {
+            const detailRes = await api.get(`/checklist-instances/${dailyLatest.id}`)
+            if (detailRes.data?.success && detailRes.data.data) {
+              const serverDraft = detailRes.data.data
+              const results = typeof serverDraft.results === 'string' ? JSON.parse(serverDraft.results) : serverDraft.results
+              if (results && Object.keys(results).length > 0) {
+                setCheckResults(results)
+                setSaveMessage({ type: 'success', text: `서버 임시저장 복원됨 (${new Date(serverDraft.created_at).toLocaleString()})` })
+                setTimeout(() => setSaveMessage(null), 4000)
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.log('서버 draft 조회 실패:', err)
       }
     })()
   }, [moldId])
@@ -283,23 +294,11 @@ export default function DailyChecklistNew() {
     try {
       const payload = buildPayload('draft')
       await api.post('/checklist-instances/daily/draft', payload)
-      await saveDraftLocal('daily_checklist', moldId || 'new', {
-        checkResults,
-        currentCategoryIndex,
-        productionQty,
-        selectedApprover
-      })
       setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' })
       setTimeout(() => setSaveMessage(null), 3000)
     } catch (err) {
       console.error('임시저장 실패:', err)
-      await saveDraftLocal('daily_checklist', moldId || 'new', {
-        checkResults,
-        currentCategoryIndex,
-        productionQty,
-        selectedApprover
-      })
-      setSaveMessage({ type: 'success', text: '로컬 임시저장이 완료되었습니다.' })
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' })
       setTimeout(() => setSaveMessage(null), 3000)
     } finally {
       setSaving(false)
@@ -367,7 +366,6 @@ export default function DailyChecklistNew() {
     setSaveMessage(null)
     try {
       await api.post('/checklist-instances/daily/request-approval', buildPayload('pending_approval', selectedApprover.id))
-      await clearDraft('daily_checklist', moldId || 'new')
       setSaveMessage({ type: 'success', text: `${selectedApprover.name}님께 승인요청이 완료되었습니다.` })
       setTimeout(() => navigate('/molds'), 2000)
     } catch (err) {
@@ -395,7 +393,6 @@ export default function DailyChecklistNew() {
     try {
       const payload = buildPayload('completed')
       await api.post('/checklist-instances/daily/complete', payload)
-      await clearDraft('daily_checklist', moldId || 'new')
       alert('일상점검이 완료되었습니다!')
       navigate('/molds')
     } catch (err) {
