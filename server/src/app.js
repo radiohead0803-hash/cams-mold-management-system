@@ -142,6 +142,7 @@ const standardDocumentTemplatesRouter = require('./routes/standardDocumentTempla
 const repairStepWorkflowRouter = require('./routes/repairStepWorkflow');
 const equipmentRouter = require('./routes/equipment');
 const generalEquipmentRouter = require('./routes/generalEquipment');
+const companyProfileRouter = require('./routes/companyProfile');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -265,6 +266,8 @@ app.use('/api/v1/repair-step-workflow', repairStepWorkflowRouter);
 app.use('/api/v1/equipment', equipmentRouter);
 // 협력사 보유 장비현황 (카테고리별 장비 관리 + 분석)
 app.use('/api/v1/general-equipment', generalEquipmentRouter);
+// 협력사 프로필 관리 (비밀번호, GPS, 담당자, 인증, 임시저장/승인)
+app.use('/api/v1/company-profile', companyProfileRouter);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -417,6 +417,38 @@ export const generalEquipmentAPI = {
   getAnalytics: (params) => api.get('/general-equipment/analytics', { params }),
 }
 
+// Company Profile API (협력사 프로필 관리)
+export const companyProfileAPI = {
+  // 비밀번호 변경
+  changePassword: (data) => api.post('/company-profile/change-password', data),
+  // GPS 좌표
+  updateGPS: (data) => api.post('/company-profile/gps', data),
+  // 담당자
+  getContacts: () => api.get('/company-profile/contacts'),
+  getCompanyContacts: (companyId) => api.get(`/company-profile/contacts/company/${companyId}`),
+  addContact: (data) => api.post('/company-profile/contacts', data),
+  updateContact: (id, data) => api.patch(`/company-profile/contacts/${id}`, data),
+  deleteContact: (id) => api.delete(`/company-profile/contacts/${id}`),
+  // 인증현황
+  getCertifications: () => api.get('/company-profile/certifications'),
+  getCompanyCertifications: (companyId) => api.get(`/company-profile/certifications/company/${companyId}`),
+  addCertification: (data) => api.post('/company-profile/certifications', data),
+  updateCertification: (id, data) => api.patch(`/company-profile/certifications/${id}`, data),
+  deleteCertification: (id) => api.delete(`/company-profile/certifications/${id}`),
+  // 임시저장 / 승인요청
+  saveDraft: (data) => api.post('/company-profile/draft', data),
+  submitForApproval: (data) => api.post('/company-profile/submit', data),
+  // 관리자 승인/반려
+  approveProfile: (companyId) => api.post(`/company-profile/approve/${companyId}`),
+  rejectProfile: (companyId, data) => api.post(`/company-profile/reject/${companyId}`, data),
+  // 사출기 톤수별 집계
+  getTonnageSummary: () => api.get('/company-profile/tonnage-summary'),
+  getCompanyTonnageSummary: (companyId) => api.get(`/company-profile/tonnage-summary/${companyId}`),
+  // 장비 승인 (관리자)
+  getPendingEquipments: () => api.get('/company-profile/pending-equipments'),
+  approveEquipment: (id, data) => api.post(`/company-profile/approve-equipment/${id}`, data),
+}
+
 // User API (사용자 조회)
 export const userAPI = {
   getAll: (params) => api.get('/users', { params }),

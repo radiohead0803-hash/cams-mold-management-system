@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { masterDataAPI, equipmentAPI, generalEquipmentAPI } from '../lib/api';
+import { masterDataAPI, equipmentAPI, generalEquipmentAPI, companyProfileAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { 
   Building2, Save, ArrowLeft, Phone, Mail, MapPin, User, 
   Factory, Wrench, Award, RefreshCw, Plus, Trash2, Edit3,
-  CheckCircle, AlertCircle, X, Search, Download
+  CheckCircle, AlertCircle, X, Search, Download, Lock, Users, FileText, Clock, Send, BarChart3, Upload
 } from 'lucide-react';
 
 export default function CompanyProfile() {
@@ -20,6 +20,23 @@ export default function CompanyProfile() {
 
   // 사출기 입력 상태
   const [newMachine, setNewMachine] = useState({ manufacturer: '', model_name: '', tonnage: '', year_installed: '', daily_capacity: '' });
+
+  // 비밀번호 변경
+  const [showPwModal, setShowPwModal] = useState(false);
+  const [pwData, setPwData] = useState({ current_password: '', new_password: '', confirm_password: '' });
+
+  // 담당자 정보
+  const [contacts, setContacts] = useState([]);
+  const [newContact, setNewContact] = useState({ contact_name: '', contact_role: '', department: '', plant_name: '', car_model: '', phone: '', email: '' });
+  const [showContactForm, setShowContactForm] = useState(false);
+
+  // 인증현황
+  const [certifications, setCertifications] = useState([]);
+  const [newCert, setNewCert] = useState({ cert_name: '', cert_number: '', issuing_authority: '', issue_date: '', expiry_date: '' });
+  const [showCertForm, setShowCertForm] = useState(false);
+
+  // 톤수별 집계
+  const [tonnageSummary, setTonnageSummary] = useState([]);
 
   // 내 업체 보유장비 - 사출기 (equipment API 기반)
   const [myEquipments, setMyEquipments] = useState([]);
@@ -46,6 +63,9 @@ export default function CompanyProfile() {
     loadProfile();
     loadMyEquipments();
     loadMyGeneralEquips();
+    loadContacts();
+    loadCertifications();
+    loadTonnageSummary();
   }, []);
 
   const loadMyEquipments = async () => {
@@ -76,6 +96,77 @@ export default function CompanyProfile() {
     } finally {
       setGeLoading(false);
     }
+  };
+
+  const loadContacts = async () => {
+    try {
+      const res = await companyProfileAPI.getContacts();
+      if (res.data.success) setContacts(res.data.data);
+    } catch (e) { console.warn('Load contacts failed:', e.message); }
+  };
+
+  const loadCertifications = async () => {
+    try {
+      const res = await companyProfileAPI.getCertifications();
+      if (res.data.success) setCertifications(res.data.data);
+    } catch (e) { console.warn('Load certifications failed:', e.message); }
+  };
+
+  const loadTonnageSummary = async () => {
+    try {
+      const res = await companyProfileAPI.getTonnageSummary();
+      if (res.data.success) setTonnageSummary(res.data.data);
+    } catch (e) { console.warn('Load tonnage summary failed:', e.message); }
+  };
+
+  const handleChangePassword = async () => {
+    if (!pwData.current_password || !pwData.new_password) { alert('현재/새 비밀번호를 모두 입력하세요'); return; }
+    if (pwData.new_password !== pwData.confirm_password) { alert('새 비밀번호가 일치하지 않습니다'); return; }
+    try {
+      const res = await companyProfileAPI.changePassword({ current_password: pwData.current_password, new_password: pwData.new_password });
+      if (res.data.success) { alert('비밀번호가 변경되었습니다'); setShowPwModal(false); setPwData({ current_password: '', new_password: '', confirm_password: '' }); }
+    } catch (e) { alert(e.response?.data?.error?.message || '비밀번호 변경 실패'); }
+  };
+
+  const handleAddContact = async () => {
+    if (!newContact.contact_name) { alert('담당자명은 필수입니다'); return; }
+    try {
+      const res = await companyProfileAPI.addContact(newContact);
+      if (res.data.success) { await loadContacts(); setNewContact({ contact_name: '', contact_role: '', department: '', plant_name: '', car_model: '', phone: '', email: '' }); setShowContactForm(false); }
+    } catch (e) { alert('담당자 등록 실패: ' + (e.response?.data?.error?.message || e.message)); }
+  };
+
+  const handleDeleteContact = async (id) => {
+    if (!confirm('이 담당자를 삭제하시겠습니까?')) return;
+    try { await companyProfileAPI.deleteContact(id); await loadContacts(); } catch (e) { alert('삭제 실패'); }
+  };
+
+  const handleAddCert = async () => {
+    if (!newCert.cert_name) { alert('인증명은 필수입니다'); return; }
+    try {
+      const res = await companyProfileAPI.addCertification(newCert);
+      if (res.data.success) { await loadCertifications(); setNewCert({ cert_name: '', cert_number: '', issuing_authority: '', issue_date: '', expiry_date: '' }); setShowCertForm(false); }
+    } catch (e) { alert('인증 등록 실패: ' + (e.response?.data?.error?.message || e.message)); }
+  };
+
+  const handleDeleteCert = async (id) => {
+    if (!confirm('이 인증을 삭제하시겠습니까?')) return;
+    try { await companyProfileAPI.deleteCertification(id); await loadCertifications(); } catch (e) { alert('삭제 실패'); }
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      const res = await companyProfileAPI.saveDraft({ draft_data: formData });
+      if (res.data.success) setMessage({ type: 'success', text: '임시저장 완료' });
+    } catch (e) { setMessage({ type: 'error', text: '임시저장 실패' }); }
+  };
+
+  const handleSubmitForApproval = async () => {
+    if (!confirm('프로필 변경사항을 승인 요청하시겠습니까?')) return;
+    try {
+      const res = await companyProfileAPI.submitForApproval({ draft_data: formData });
+      if (res.data.success) { setMessage({ type: 'success', text: '승인 요청이 제출되었습니다. 담당자 확인 후 반영됩니다.' }); setEditMode(false); }
+    } catch (e) { setMessage({ type: 'error', text: '승인 요청 실패' }); }
   };
 
   const handleAddGeneralEquip = async () => {
@@ -339,20 +430,32 @@ export default function CompanyProfile() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setShowPwModal(true)} className="flex items-center gap-1 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm">
+            <Lock size={14} />
+            비밀번호 변경
+          </button>
           {editMode ? (
             <>
-              <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300">
-                <Save size={16} />
-                {saving ? '저장 중...' : '저장'}
+              <button onClick={handleSaveDraft} className="flex items-center gap-1 px-3 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm">
+                <Clock size={14} />
+                임시저장
               </button>
-              <button onClick={() => { setEditMode(false); setFormData(company); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+              <button onClick={handleSubmitForApproval} className="flex items-center gap-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">
+                <Send size={14} />
+                승인요청
+              </button>
+              <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 text-sm">
+                <Save size={14} />
+                {saving ? '저장 중...' : '즉시저장'}
+              </button>
+              <button onClick={() => { setEditMode(false); setFormData(company); }} className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">
                 취소
               </button>
             </>
           ) : (
-            <button onClick={() => setEditMode(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              <Edit3 size={16} />
+            <button onClick={() => setEditMode(true)} className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">
+              <Edit3 size={14} />
               수정
             </button>
           )}
@@ -415,17 +518,79 @@ export default function CompanyProfile() {
             </div>
           </section>
 
-          {/* 담당자 정보 */}
+          {/* 담당자 정보 (공장/차종별 여러 명) */}
           <section className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <User size={20} className="text-purple-600" />
+              <Users size={20} className="text-purple-600" />
               담당자 정보
+              <span className="text-xs font-normal text-gray-400 ml-2">공장/차종별 여러 명 등록 가능</span>
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <InputField label="담당자명" field="manager_name" formData={formData} setFormData={setFormData} editMode={editMode} />
-              <InputField label="담당자 전화번호" field="manager_phone" formData={formData} setFormData={setFormData} editMode={editMode} />
-              <InputField label="담당자 이메일" field="manager_email" formData={formData} setFormData={setFormData} editMode={editMode} type="email" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <InputField label="대표 담당자명" field="manager_name" formData={formData} setFormData={setFormData} editMode={editMode} />
+              <InputField label="대표 전화번호" field="manager_phone" formData={formData} setFormData={setFormData} editMode={editMode} />
+              <InputField label="대표 이메일" field="manager_email" formData={formData} setFormData={setFormData} editMode={editMode} type="email" />
             </div>
+
+            {contacts.length > 0 && (
+              <div className="overflow-hidden rounded-lg border border-gray-200 mt-3">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">담당자명</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">직책</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">부서</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">공장</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">차종</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">연락처</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">이메일</th>
+                      {editMode && <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">삭제</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {contacts.map(c => (
+                      <tr key={c.id}>
+                        <td className="px-3 py-2 font-medium">{c.contact_name} {c.is_primary && <span className="text-[10px] bg-purple-100 text-purple-700 rounded px-1">대표</span>}</td>
+                        <td className="px-3 py-2 text-xs">{c.contact_role || '-'}</td>
+                        <td className="px-3 py-2 text-xs">{c.department || '-'}</td>
+                        <td className="px-3 py-2 text-xs">{c.plant_name || '-'}</td>
+                        <td className="px-3 py-2 text-xs">{c.car_model || '-'}</td>
+                        <td className="px-3 py-2 text-xs">{c.phone || '-'}</td>
+                        <td className="px-3 py-2 text-xs">{c.email || '-'}</td>
+                        {editMode && (
+                          <td className="px-3 py-2">
+                            <button onClick={() => handleDeleteContact(c.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {editMode && !showContactForm && (
+              <button onClick={() => setShowContactForm(true)} className="mt-3 flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded text-sm hover:bg-purple-700">
+                <Plus size={14} /> 담당자 추가
+              </button>
+            )}
+            {editMode && showContactForm && (
+              <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <p className="text-xs font-medium text-purple-700 mb-2">새 담당자 등록</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <input type="text" placeholder="담당자명 *" value={newContact.contact_name} onChange={e => setNewContact({...newContact, contact_name: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <input type="text" placeholder="직책" value={newContact.contact_role} onChange={e => setNewContact({...newContact, contact_role: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <input type="text" placeholder="부서" value={newContact.department} onChange={e => setNewContact({...newContact, department: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <input type="text" placeholder="공장명" value={newContact.plant_name} onChange={e => setNewContact({...newContact, plant_name: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <input type="text" placeholder="담당차종" value={newContact.car_model} onChange={e => setNewContact({...newContact, car_model: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <input type="text" placeholder="연락처" value={newContact.phone} onChange={e => setNewContact({...newContact, phone: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <input type="email" placeholder="이메일" value={newContact.email} onChange={e => setNewContact({...newContact, email: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <div className="flex gap-1">
+                    <button onClick={handleAddContact} className="px-3 py-1.5 bg-purple-600 text-white rounded text-sm hover:bg-purple-700">등록</button>
+                    <button onClick={() => setShowContactForm(false)} className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-sm">취소</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* 생산처 전용: 사출기 보유현황 */}
@@ -546,6 +711,28 @@ export default function CompanyProfile() {
                   </div>
                 )}
               </div>
+
+              {/* 톤수별 보유수량 집계 */}
+              {tonnageSummary.length > 0 && (
+                <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <h3 className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-1">
+                    <BarChart3 size={16} /> 톤수별 보유수량 집계
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {tonnageSummary.map(t => (
+                      <div key={t.tonnage} className="bg-white border border-green-200 rounded-lg px-3 py-2 text-center min-w-[80px]">
+                        <p className="text-lg font-bold text-green-700">{t.tonnage || '?'}T</p>
+                        <p className="text-xs text-gray-600">{t.count}대 (가동 {t.active_count}대)</p>
+                        {t.total_daily_capacity && <p className="text-[10px] text-gray-400">일 {parseInt(t.total_daily_capacity).toLocaleString()}개</p>}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    총 {tonnageSummary.reduce((s, t) => s + parseInt(t.count), 0)}대 보유 • 
+                    가동 {tonnageSummary.reduce((s, t) => s + parseInt(t.active_count), 0)}대
+                  </p>
+                </div>
+              )}
             </section>
           )}
 
@@ -730,34 +917,93 @@ export default function CompanyProfile() {
             </div>
           )}
 
-          {/* 공통: 인증현황 */}
+          {/* 공통: 인증현황 (DB 기반) */}
           <section className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Award size={20} className="text-yellow-600" />
               인증 현황
+              <span className="text-xs font-normal text-gray-400 ml-2">인증서 사진 및 주관처 입력</span>
             </h2>
-            {(formData.certifications || []).length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {(formData.certifications || []).map((cert, i) => (
-                  <div key={cert.id || i} className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm">
-                    <Award size={14} className="text-yellow-600" />
-                    <span className="font-medium">{cert.name}</span>
-                    {cert.expiry && <span className="text-xs text-gray-500">({cert.expiry}까지)</span>}
-                    {editMode && (
-                      <button onClick={() => handleRemoveCertification(i)} className="text-red-400 hover:text-red-600 ml-1">
-                        <Trash2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+            {certifications.length > 0 ? (
+              <div className="overflow-hidden rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">인증명</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">인증번호</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">주관처</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">발급일</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">만료일</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">상태</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">인증서</th>
+                      {editMode && <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">삭제</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {certifications.map(cert => (
+                      <tr key={cert.id}>
+                        <td className="px-3 py-2 font-medium">
+                          <Award size={12} className="inline text-yellow-500 mr-1" />
+                          {cert.cert_name}
+                        </td>
+                        <td className="px-3 py-2 text-xs">{cert.cert_number || '-'}</td>
+                        <td className="px-3 py-2 text-xs">{cert.issuing_authority || '-'}</td>
+                        <td className="px-3 py-2 text-xs">{cert.issue_date || '-'}</td>
+                        <td className="px-3 py-2 text-xs">{cert.expiry_date || '-'}</td>
+                        <td className="px-3 py-2">
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${cert.status === 'valid' ? 'bg-green-100 text-green-700' : cert.status === 'expired' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                            {cert.status === 'valid' ? '유효' : cert.status === 'expired' ? '만료' : '갱신중'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {cert.cert_file_url ? (
+                            <a href={cert.cert_file_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center gap-0.5">
+                              <FileText size={12} /> 보기
+                            </a>
+                          ) : <span className="text-gray-300">-</span>}
+                        </td>
+                        {editMode && (
+                          <td className="px-3 py-2">
+                            <button onClick={() => handleDeleteCert(cert.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
-              <p className="text-sm text-gray-400">등록된 인증이 없습니다</p>
+              <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                <Award className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">등록된 인증이 없습니다</p>
+              </div>
             )}
-            {editMode && (
-              <button onClick={handleAddCertification} className="mt-3 flex items-center gap-1 px-3 py-1.5 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700">
+            {editMode && !showCertForm && (
+              <button onClick={() => setShowCertForm(true)} className="mt-3 flex items-center gap-1 px-3 py-1.5 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700">
                 <Plus size={14} /> 인증 추가
               </button>
+            )}
+            {editMode && showCertForm && (
+              <div className="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <p className="text-xs font-medium text-yellow-700 mb-2">새 인증 등록</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <input type="text" placeholder="인증명 * (예: ISO 9001)" value={newCert.cert_name} onChange={e => setNewCert({...newCert, cert_name: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <input type="text" placeholder="인증번호" value={newCert.cert_number} onChange={e => setNewCert({...newCert, cert_number: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <input type="text" placeholder="주관처 (예: KAB)" value={newCert.issuing_authority} onChange={e => setNewCert({...newCert, issuing_authority: e.target.value})} className="border rounded px-2 py-1.5 text-sm" />
+                  <div>
+                    <label className="text-[10px] text-gray-500">발급일</label>
+                    <input type="date" value={newCert.issue_date} onChange={e => setNewCert({...newCert, issue_date: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-500">만료일</label>
+                    <input type="date" value={newCert.expiry_date} onChange={e => setNewCert({...newCert, expiry_date: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" />
+                  </div>
+                  <div className="flex gap-1 items-end">
+                    <button onClick={handleAddCert} className="px-3 py-1.5 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700">등록</button>
+                    <button onClick={() => setShowCertForm(false)} className="px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-sm">취소</button>
+                  </div>
+                </div>
+              </div>
             )}
           </section>
 
@@ -873,6 +1119,41 @@ export default function CompanyProfile() {
                   {selectedImports.length}개 추가
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 비밀번호 변경 모달 */}
+      {showPwModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Lock size={20} className="text-gray-600" />
+                비밀번호 변경
+              </h3>
+              <button onClick={() => setShowPwModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-gray-500">비밀번호 변경은 승인 없이 즉시 반영됩니다.</p>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">현재 비밀번호</label>
+                <input type="password" value={pwData.current_password} onChange={e => setPwData({...pwData, current_password: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="현재 비밀번호 입력" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">새 비밀번호</label>
+                <input type="password" value={pwData.new_password} onChange={e => setPwData({...pwData, new_password: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="새 비밀번호 (4자 이상)" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">새 비밀번호 확인</label>
+                <input type="password" value={pwData.confirm_password} onChange={e => setPwData({...pwData, confirm_password: e.target.value})} className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="새 비밀번호 다시 입력" />
+              </div>
+            </div>
+            <div className="px-6 py-3 border-t border-gray-200 flex justify-end gap-2">
+              <button onClick={() => setShowPwModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">취소</button>
+              <button onClick={handleChangePassword} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">변경</button>
             </div>
           </div>
         </div>
