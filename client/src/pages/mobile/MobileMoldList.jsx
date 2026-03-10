@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Search, Filter, Package, ChevronRight, RefreshCw } from 'lucide-react';
 import api from '../../lib/api';
+import useAuthRestore from '../../hooks/useAuthRestore';
 
 export default function MobileMoldList() {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ export default function MobileMoldList() {
   useEffect(() => {
     fetchMolds();
   }, [statusFilter]);
+
+  useAuthRestore(() => fetchMolds());
 
   const fetchMolds = async () => {
     try {

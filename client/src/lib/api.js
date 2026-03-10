@@ -63,44 +63,34 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // 특정 API는 401이어도 리다이렉트하지 않음 (선택적 데이터 로드)
       const requestUrl = error.config?.url || ''
-      const skipRedirectPaths = [
-        '/daily-checks',
-        '/repair-requests',
-        '/mold-images',
-        '/notifications',
-        '/alerts',
-        '/dashboard',
-        '/statistics',
-        '/mold-specifications',
-        '/inspections',
-        '/injection-conditions'
-      ]
-      
-      const shouldSkipRedirect = skipRedirectPaths.some(path => requestUrl.includes(path))
-      
-      // 이미 리다이렉트 중이면 중복 실행 방지
-      if (!shouldSkipRedirect && !isRedirecting) {
-        isRedirecting = true
-        
-        // Token expired or invalid
-        localStorage.removeItem('cams-auth')
-        
-        // 현재 경로에 따라 적절한 로그인 페이지로 이동
-        const currentPath = window.location.pathname
-        
-        // 짧은 딜레이 후 리다이렉트 (중복 요청 방지)
-        setTimeout(() => {
-          if (currentPath.startsWith('/mobile') || currentPath.startsWith('/m/')) {
-            // 모바일 페이지에서는 모바일 QR 로그인으로
-            window.location.replace('/mobile/qr-login')
-          } else {
-            // PC 페이지에서는 일반 로그인으로
+      // 인증 관련 API(로그인 시도 등)는 리다이렉트 제외
+      const isAuthRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register')
+      if (isAuthRequest) return Promise.reject(error)
+
+      const currentPath = window.location.pathname
+      const isMobile = currentPath.startsWith('/mobile') || currentPath.startsWith('/m/')
+
+      if (isMobile) {
+        // ★ 모바일: 페이지 이동 없이 인라인 재로그인 모달 표시
+        // 중복 이벤트 방지
+        if (!isRedirecting) {
+          isRedirecting = true
+          window.dispatchEvent(new CustomEvent('cams:auth-expired', {
+            detail: { path: currentPath, url: requestUrl }
+          }))
+          setTimeout(() => { isRedirecting = false }, 500)
+        }
+      } else {
+        // PC: 기존 방식 유지 (로그인 페이지로 이동)
+        if (!isRedirecting) {
+          isRedirecting = true
+          localStorage.removeItem('cams-auth')
+          setTimeout(() => {
             window.location.replace('/login')
-          }
-          isRedirecting = false
-        }, 100)
+            isRedirecting = false
+          }, 100)
+        }
       }
     }
     return Promise.reject(error)

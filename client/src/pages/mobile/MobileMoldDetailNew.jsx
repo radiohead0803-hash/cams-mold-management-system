@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 import { moldSpecificationAPI, moldImageAPI, getImageUrl } from '../../lib/api'
 import api from '../../lib/api'
+import useAuthRestore from '../../hooks/useAuthRestore'
 import {
   ArrowLeft, Settings, ChevronDown, ChevronRight, Upload, Eye,
   CheckCircle, MapPin, TrendingUp, User, AlertTriangle,
@@ -82,6 +83,11 @@ export default function MobileMoldDetailNew() {
       loadActivities()
     }
   }, [mold])
+
+  // 재로그인 후 데이터 자동 재로드
+  useAuthRestore(() => {
+    if (moldId) loadMoldData()
+  })
 
   const loadMoldData = async () => {
     try {

@@ -11,6 +11,7 @@ import api from '../../lib/api';
 import { BottomNav } from '../../components/mobile/MobileLayout';
 import { recentActions } from '../../utils/mobileStorage';
 import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
+import useAuthRestore from '../../hooks/useAuthRestore';
 
 // 빠른 액션 버튼
 const QuickAction = ({ icon: Icon, label, color, onClick, badge }) => {
@@ -86,6 +87,12 @@ export default function MobileHomePage() {
     loadStats();
     loadRecentActions();
   }, []);
+
+  // 재로그인 후 데이터 자동 재로드
+  useAuthRestore(() => {
+    loadStats();
+    loadRecentActions();
+  });
 
   const loadRecentActions = async () => {
     try {

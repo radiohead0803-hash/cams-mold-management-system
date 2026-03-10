@@ -9,6 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import PageLoader from './components/PageLoader'
 import ScanInfoPage from './pages/ScanInfoPage'
 import RepairRequestPage from './pages/RepairRequestPage'
+import MobileReLoginModal from './components/mobile/MobileReLoginModal'
 
 // Lazy loaded components
 import {
@@ -145,6 +146,8 @@ function App() {
 
   return (
     <Suspense fallback={<PageLoader />}>
+    {/* 모바일 401 세션만료 시 인라인 재로그인 모달 (페이지 이동 없음) */}
+    <MobileReLoginModal />
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/qr-login" element={<QRLogin />} />
