@@ -183,7 +183,7 @@ export default function MobileRepairRequestForm() {
     if (!formData.repair_category) { alert('수리 카테고리를 선택해주세요.'); return; }
     try {
       setSaving(true);
-      const data = { ...formData, mold_spec_id: moldInfo?.id || moldId, submit_type: type };
+      const data = { ...formData, mold_id: moldSpec?.mold_id || moldSpec?.mold?.id, mold_spec_id: moldInfo?.id || moldId, submit_type: type };
       if (id) { await repairRequestAPI.update(id, data); alert('수정되었습니다.'); } else { await repairRequestAPI.create(data); alert('등록되었습니다.'); }
       navigate(-1);
     } catch (e) { alert('저장 실패'); } finally { setSaving(false); }

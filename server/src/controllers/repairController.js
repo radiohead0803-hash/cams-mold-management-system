@@ -94,17 +94,26 @@ const createRepairRequest = async (req, res) => {
     const finalNgType = ng_type || issue_type;
     const finalUrgency = urgency || severity || 'normal';
 
-    // 1. 필수 필드 검증
-    if (!mold_id) {
+    // 1. mold_id가 없으면 mold_spec_id에서 조회
+    let resolvedMoldId = mold_id;
+    if (!resolvedMoldId && mold_spec_id) {
+      const MoldSpecification = require('../models/newIndex').MoldSpecification;
+      const spec = await MoldSpecification.findByPk(mold_spec_id, { attributes: ['mold_id'], transaction });
+      if (spec && spec.mold_id) {
+        resolvedMoldId = spec.mold_id;
+      }
+    }
+
+    if (!resolvedMoldId) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
-        error: { message: 'Mold ID is required' }
+        error: { message: 'Mold ID is required (mold_id 또는 mold_spec_id 필요)' }
       });
     }
 
     // 2. 금형 조회 (연관 정보 포함)
-    const mold = await Mold.findByPk(mold_id, { 
+    const mold = await Mold.findByPk(resolvedMoldId, { 
       transaction,
       include: [
         { model: User, as: 'maker', attributes: ['id', 'name', 'company_name'] },
@@ -123,8 +132,7 @@ const createRepairRequest = async (req, res) => {
     // 2-1. 금형사양 조회 (mold_spec_id가 있는 경우)
     let moldSpec = null;
     if (mold_spec_id) {
-      const MoldSpecification = require('../models/newIndex').MoldSpecification;
-      moldSpec = await MoldSpecification.findByPk(mold_spec_id, { transaction });
+      moldSpec = await require('../models/newIndex').MoldSpecification.findByPk(mold_spec_id, { transaction });
     }
 
     // 3. 요청자 정보 조회
@@ -156,7 +164,7 @@ const createRepairRequest = async (req, res) => {
     // 5. 수리요청 생성
     const repairRequest = await RepairRequest.create({
       request_number: requestNumber,
-      mold_id,
+      mold_id: resolvedMoldId,
       mold_spec_id: mold_spec_id || null,
       requester_id: userId,
       requester_company_id: requester?.company_id,

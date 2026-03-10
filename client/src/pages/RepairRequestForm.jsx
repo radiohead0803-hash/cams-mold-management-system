@@ -623,6 +623,7 @@ export default function RepairRequestForm() {
       
       const dataToSave = {
         ...formData,
+        mold_id: moldSpec?.mold_id || moldSpec?.mold?.id,
         mold_spec_id: moldId || formData.mold_spec_id,
         submit_type: submitType
       };
