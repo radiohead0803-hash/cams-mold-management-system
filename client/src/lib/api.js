@@ -449,6 +449,32 @@ export const companyProfileAPI = {
   approveEquipment: (id, data) => api.post(`/company-profile/approve-equipment/${id}`, data),
 }
 
+// Inspection Photo API (점검 사진 업로드/관리)
+export const inspectionPhotoAPI = {
+  // 사진 업로드 (카메라/갤러리)
+  upload: (formData) => api.post('/inspection-photos/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  // 금형별 사진 조회
+  getByMold: (moldId, params) => api.get(`/inspection-photos/mold/${moldId}`, { params }),
+  // 점검 항목별 사진 조회
+  getByItem: (itemId, params) => api.get(`/inspection-photos/item/${itemId}`, { params }),
+  // 점검 유형별 사진 조회
+  getByType: (inspectionType, params) => api.get(`/inspection-photos/by-type/${inspectionType}`, { params }),
+  // 수리요청 관련 사진 조회
+  getByRepair: (repairRequestId) => api.get(`/inspection-photos/repair/${repairRequestId}`),
+  // 엔티티별 사진 조회 (범용)
+  getByEntity: (entityType, entityId) => api.get(`/inspection-photos/entity/${entityType}/${entityId}`),
+  // 사진 상세 조회
+  getById: (photoId) => api.get(`/inspection-photos/${photoId}`),
+  // BYTEA 이미지 파일 URL
+  getFileUrl: (photoId) => `/api/v1/inspection-photos/file/${photoId}`,
+  // 사진 삭제 (soft delete)
+  delete: (photoId) => api.delete(`/inspection-photos/${photoId}`),
+  // 통계
+  getStats: (params) => api.get('/inspection-photos/stats/summary', { params }),
+}
+
 // User API (사용자 조회)
 export const userAPI = {
   getAll: (params) => api.get('/users', { params }),

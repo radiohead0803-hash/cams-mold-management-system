@@ -17,6 +17,9 @@ module.exports = (sequelize, DataTypes) => {
     item_id: {
       type: DataTypes.INTEGER
     },
+    item_status_id: {
+      type: DataTypes.INTEGER
+    },
     category: {
       type: DataTypes.STRING(100)
     },
@@ -43,8 +46,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(100)
     },
     uploaded_by: {
-      type: DataTypes.INTEGER,
-      allowNull: false
+      type: DataTypes.INTEGER
     },
     shot_count: {
       type: DataTypes.INTEGER
@@ -72,20 +74,46 @@ module.exports = (sequelize, DataTypes) => {
     },
     inspection_id: {
       type: DataTypes.INTEGER
+    },
+    // 마이그레이션 20260310 추가 컬럼
+    source_page: {
+      type: DataTypes.STRING(100)
+    },
+    capture_method: {
+      type: DataTypes.STRING(20)
+    },
+    gps_latitude: {
+      type: DataTypes.DOUBLE
+    },
+    gps_longitude: {
+      type: DataTypes.DOUBLE
+    },
+    repair_request_id: {
+      type: DataTypes.INTEGER
+    },
+    entity_type: {
+      type: DataTypes.STRING(50)
+    },
+    entity_id: {
+      type: DataTypes.INTEGER
     }
+    // image_data (BYTEA)는 모델에서 제외 — raw query로만 처리
   }, {
     tableName: 'inspection_photos',
     timestamps: false,
     indexes: [
       { fields: ['mold_id'] },
       { fields: ['checklist_id'] },
-      { fields: ['uploaded_at'] }
+      { fields: ['uploaded_at'] },
+      { fields: ['inspection_type'] },
+      { fields: ['item_id'] },
+      { fields: ['source_page'] },
+      { fields: ['entity_type', 'entity_id'] },
+      { fields: ['repair_request_id'] }
     ]
   });
 
   InspectionPhoto.associate = (models) => {
-    // 실제로 존재하는 모델과의 관계만 정의
-    
     if (models.Mold) {
       InspectionPhoto.belongsTo(models.Mold, {
         foreignKey: 'mold_id',

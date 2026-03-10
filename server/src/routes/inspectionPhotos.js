@@ -1,8 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const { uploadImage, deleteImage: deleteCloudinaryImage, getPublicIdFromUrl } = require('../config/cloudinary');
 
@@ -29,11 +27,15 @@ const upload = multer({
   }
 });
 
-// 사진 업로드 (직접 SQL INSERT - 모델 불일치 우회)
+// 사진 업로드 (Sequelize 모델 사용)
 router.post('/upload', upload.single('photo'), async (req, res) => {
   try {
-    const { sequelize } = require('../models/newIndex');
-    const { mold_id, checklist_id, item_id, inspection_type, shot_count, category } = req.body;
+    const { InspectionPhoto, sequelize } = require('../models/newIndex');
+    const { 
+      mold_id, checklist_id, item_id, inspection_type, shot_count, category,
+      source_page, capture_method, gps_latitude, gps_longitude,
+      repair_request_id, entity_type, entity_id, checklist_type
+    } = req.body;
     
     if (!req.file) {
       return res.status(400).json({ success: false, message: '파일이 없습니다.' });
@@ -63,46 +65,41 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
       fileUrl = `/api/v1/inspection-photos/file/${photoId}`;
     }
 
-    const metadata = JSON.stringify({ uploadedFrom: req.headers['user-agent'] || 'unknown' });
     const fileName = `photo_${Date.now()}_${req.file.originalname}`;
     const uploadedBy = req.user?.id || 1;
 
-    // 직접 SQL INSERT (Sequelize 모델 우회)
-    await sequelize.query(
-      `INSERT INTO inspection_photos 
-        (id, mold_id, checklist_id, item_id, category, inspection_type, 
-         file_name, original_name, file_url, thumbnail_url, file_type, mime_type, 
-         file_size, uploaded_by, shot_count, metadata, is_active, uploaded_at, created_at)
-       VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, true, NOW(), NOW())`,
-      {
-        bind: [
-          photoId,
-          mold_id ? parseInt(mold_id) : null,
-          checklist_id ? parseInt(checklist_id) : null,
-          item_id ? parseInt(item_id) : null,
-          category || null,
-          inspection_type || 'daily',
-          fileName,
-          req.file.originalname,
-          fileUrl,
-          fileUrl,
-          req.file.mimetype,
-          req.file.mimetype,
-          req.file.size,
-          uploadedBy,
-          shot_count ? parseInt(shot_count) : null,
-          metadata
-        ]
-      }
-    );
+    // Sequelize 모델로 INSERT
+    const photo = await InspectionPhoto.create({
+      id: photoId,
+      mold_id: mold_id ? parseInt(mold_id) : null,
+      checklist_id: checklist_id ? parseInt(checklist_id) : null,
+      checklist_type: checklist_type || null,
+      item_id: item_id ? parseInt(item_id) : null,
+      category: category || null,
+      inspection_type: inspection_type || 'daily',
+      file_name: fileName,
+      original_name: req.file.originalname,
+      file_url: fileUrl,
+      thumbnail_url: fileUrl,
+      file_type: req.file.mimetype,
+      mime_type: req.file.mimetype,
+      file_size: req.file.size,
+      uploaded_by: uploadedBy,
+      shot_count: shot_count ? parseInt(shot_count) : null,
+      metadata: { uploadedFrom: req.headers['user-agent'] || 'unknown' },
+      is_active: true,
+      source_page: source_page || null,
+      capture_method: capture_method || null,
+      gps_latitude: gps_latitude ? parseFloat(gps_latitude) : null,
+      gps_longitude: gps_longitude ? parseFloat(gps_longitude) : null,
+      repair_request_id: repair_request_id ? parseInt(repair_request_id) : null,
+      entity_type: entity_type || null,
+      entity_id: entity_id ? parseInt(entity_id) : null
+    });
 
     // DB BYTEA에 이미지 데이터 저장 (Cloudinary 미사용 시)
     if (storeInDb) {
       try {
-        try {
-          await sequelize.query('ALTER TABLE inspection_photos ADD COLUMN IF NOT EXISTS image_data BYTEA');
-        } catch (e) { /* 이미 존재하면 무시 */ }
         await sequelize.query(
           'UPDATE inspection_photos SET image_data = $1 WHERE id = $2',
           { bind: [req.file.buffer, photoId] }
@@ -122,7 +119,10 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
         file_name: fileName,
         original_name: req.file.originalname,
         file_type: req.file.mimetype,
-        file_size: req.file.size
+        file_size: req.file.size,
+        inspection_type: photo.inspection_type,
+        source_page: photo.source_page,
+        capture_method: photo.capture_method
       }
     });
   } catch (error) {
@@ -173,33 +173,32 @@ router.get('/file/:id', async (req, res) => {
   }
 });
 
-// 특정 금형의 점검 사진 조회
+// 특정 금형의 점검 사진 조회 (DB 레벨 필터링)
 router.get('/mold/:moldId', async (req, res) => {
   try {
     const { InspectionPhoto } = require('../models/newIndex');
     const { moldId } = req.params;
-    const { inspection_type, item_id, limit = 50 } = req.query;
+    const { inspection_type, item_id, source_page, limit = 50, offset = 0 } = req.query;
 
-    const where = { mold_id: parseInt(moldId) };
-    
-    const photos = await InspectionPhoto.findAll({
+    const where = { mold_id: parseInt(moldId), is_active: true };
+    if (inspection_type) where.inspection_type = inspection_type;
+    if (item_id) where.item_id = parseInt(item_id);
+    if (source_page) where.source_page = source_page;
+
+    const { count, rows: photos } = await InspectionPhoto.findAndCountAll({
       where,
       order: [['uploaded_at', 'DESC']],
-      limit: parseInt(limit)
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      attributes: { exclude: [] }
     });
-
-    // inspection_type 또는 item_id로 필터링 (metadata에서)
-    let filteredPhotos = photos;
-    if (inspection_type) {
-      filteredPhotos = filteredPhotos.filter(p => p.metadata?.inspection_type === inspection_type);
-    }
-    if (item_id) {
-      filteredPhotos = filteredPhotos.filter(p => p.metadata?.item_id === parseInt(item_id));
-    }
 
     res.json({
       success: true,
-      data: filteredPhotos
+      data: photos,
+      total: count,
+      limit: parseInt(limit),
+      offset: parseInt(offset)
     });
   } catch (error) {
     console.error('사진 조회 오류:', error);
@@ -207,32 +206,107 @@ router.get('/mold/:moldId', async (req, res) => {
   }
 });
 
-// 특정 점검 항목의 사진 조회
+// 특정 점검 항목의 사진 조회 (DB 레벨 필터링)
 router.get('/item/:itemId', async (req, res) => {
   try {
     const { InspectionPhoto } = require('../models/newIndex');
     const { itemId } = req.params;
-    const { mold_id } = req.query;
+    const { mold_id, inspection_type } = req.query;
+
+    const where = { item_id: parseInt(itemId), is_active: true };
+    if (mold_id) where.mold_id = parseInt(mold_id);
+    if (inspection_type) where.inspection_type = inspection_type;
 
     const photos = await InspectionPhoto.findAll({
+      where,
       order: [['uploaded_at', 'DESC']],
-      limit: 20
+      limit: 50
     });
-
-    // item_id로 필터링 (metadata에서)
-    let filteredPhotos = photos.filter(p => p.metadata?.item_id === parseInt(itemId));
-    
-    if (mold_id) {
-      filteredPhotos = filteredPhotos.filter(p => p.mold_id === parseInt(mold_id));
-    }
 
     res.json({
       success: true,
-      data: filteredPhotos
+      data: photos
     });
   } catch (error) {
     console.error('사진 조회 오류:', error);
     res.status(500).json({ success: false, message: '사진 조회 중 오류가 발생했습니다.', error: error.message });
+  }
+});
+
+// 점검 유형별 사진 조회
+router.get('/by-type/:inspectionType', async (req, res) => {
+  try {
+    const { InspectionPhoto } = require('../models/newIndex');
+    const { inspectionType } = req.params;
+    const { mold_id, limit = 50, offset = 0 } = req.query;
+
+    const where = { inspection_type: inspectionType, is_active: true };
+    if (mold_id) where.mold_id = parseInt(mold_id);
+
+    const { count, rows: photos } = await InspectionPhoto.findAndCountAll({
+      where,
+      order: [['uploaded_at', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+
+    res.json({
+      success: true,
+      data: photos,
+      total: count
+    });
+  } catch (error) {
+    console.error('사진 조회 오류:', error);
+    res.status(500).json({ success: false, message: '사진 조회 중 오류가 발생했습니다.', error: error.message });
+  }
+});
+
+// 수리요청 관련 사진 조회
+router.get('/repair/:repairRequestId', async (req, res) => {
+  try {
+    const { InspectionPhoto } = require('../models/newIndex');
+    const { repairRequestId } = req.params;
+
+    const photos = await InspectionPhoto.findAll({
+      where: { 
+        repair_request_id: parseInt(repairRequestId),
+        is_active: true
+      },
+      order: [['uploaded_at', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: photos
+    });
+  } catch (error) {
+    console.error('수리 사진 조회 오류:', error);
+    res.status(500).json({ success: false, message: '수리 사진 조회 실패', error: error.message });
+  }
+});
+
+// 엔티티별 사진 조회 (범용)
+router.get('/entity/:entityType/:entityId', async (req, res) => {
+  try {
+    const { InspectionPhoto } = require('../models/newIndex');
+    const { entityType, entityId } = req.params;
+
+    const photos = await InspectionPhoto.findAll({
+      where: { 
+        entity_type: entityType,
+        entity_id: parseInt(entityId),
+        is_active: true
+      },
+      order: [['uploaded_at', 'DESC']]
+    });
+
+    res.json({
+      success: true,
+      data: photos
+    });
+  } catch (error) {
+    console.error('엔티티 사진 조회 오류:', error);
+    res.status(500).json({ success: false, message: '사진 조회 실패', error: error.message });
   }
 });
 
@@ -259,8 +333,8 @@ router.delete('/:photoId', async (req, res) => {
       }
     }
 
-    // DB에서 삭제 (BYTEA 데이터 포함)
-    await photo.destroy();
+    // soft delete (is_active = false)
+    await photo.update({ is_active: false });
 
     res.json({
       success: true,
@@ -290,6 +364,49 @@ router.get('/:photoId', async (req, res) => {
   } catch (error) {
     console.error('사진 조회 오류:', error);
     res.status(500).json({ success: false, message: '사진 조회 중 오류가 발생했습니다.', error: error.message });
+  }
+});
+
+// 통계 API
+router.get('/stats/summary', async (req, res) => {
+  try {
+    const { sequelize } = require('../models/newIndex');
+    const { mold_id } = req.query;
+
+    let whereClause = 'WHERE is_active = true';
+    const binds = [];
+    if (mold_id) {
+      binds.push(parseInt(mold_id));
+      whereClause += ` AND mold_id = $${binds.length}`;
+    }
+
+    const [rows] = await sequelize.query(
+      `SELECT 
+        inspection_type, 
+        COUNT(*) as count,
+        MAX(uploaded_at) as last_upload
+      FROM inspection_photos 
+      ${whereClause}
+      GROUP BY inspection_type 
+      ORDER BY count DESC`,
+      { bind: binds }
+    );
+
+    const [totalRow] = await sequelize.query(
+      `SELECT COUNT(*) as total FROM inspection_photos ${whereClause}`,
+      { bind: binds }
+    );
+
+    res.json({
+      success: true,
+      data: {
+        by_type: rows,
+        total: parseInt(totalRow[0]?.total || 0)
+      }
+    });
+  } catch (error) {
+    console.error('사진 통계 오류:', error);
+    res.status(500).json({ success: false, message: '통계 조회 실패', error: error.message });
   }
 });
 
