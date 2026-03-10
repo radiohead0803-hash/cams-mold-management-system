@@ -328,7 +328,7 @@ export default function PeriodicInspectionNew() {
               const results = typeof serverDraft.results === 'string' ? JSON.parse(serverDraft.results) : serverDraft.results
               if (results && Object.keys(results).length > 0) {
                 setCheckResults(results)
-                setSaveMessage({ type: 'success', text: `서버 임시저장 복원됨 (${new Date(serverDraft.created_at).toLocaleString()})` })
+                setSaveMessage({ type: 'success', text: `서버 임시저장 복원됨 (${new Date(serverDraft.check_date).toLocaleString()})` })
                 setTimeout(() => setSaveMessage(null), 4000)
               }
             }
