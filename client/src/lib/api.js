@@ -368,6 +368,30 @@ export const masterDataAPI = {
   getAllInjectionMachines: () => api.get('/companies/injection-machines/all'),
 }
 
+// Equipment API (장비 마스터 + 업체별 보유장비 + 캐파 분석)
+export const equipmentAPI = {
+  // 장비 마스터 (기초정보)
+  getMasters: (params) => api.get('/equipment/masters', { params }),
+  getMasterById: (id) => api.get(`/equipment/masters/${id}`),
+  createMaster: (data) => api.post('/equipment/masters', data),
+  updateMaster: (id, data) => api.patch(`/equipment/masters/${id}`, data),
+  deleteMaster: (id) => api.delete(`/equipment/masters/${id}`),
+  getManufacturers: (params) => api.get('/equipment/masters/manufacturers', { params }),
+  // 내 업체 보유장비
+  getMyEquipments: (params) => api.get('/equipment/my', { params }),
+  addMyEquipment: (data) => api.post('/equipment/my', data),
+  bulkAddMyEquipments: (data) => api.post('/equipment/my/bulk', data),
+  // 특정 업체 보유장비
+  getCompanyEquipments: (companyId, params) => api.get(`/equipment/company/${companyId}`, { params }),
+  addCompanyEquipment: (companyId, data) => api.post(`/equipment/company/${companyId}`, data),
+  bulkAddCompanyEquipments: (companyId, data) => api.post(`/equipment/company/${companyId}/bulk`, data),
+  // 보유장비 수정/삭제
+  updateEquipment: (id, data) => api.patch(`/equipment/${id}`, data),
+  deleteEquipment: (id) => api.delete(`/equipment/${id}`),
+  // 분석
+  getAnalytics: (params) => api.get('/equipment/analytics', { params }),
+}
+
 // User API (사용자 조회)
 export const userAPI = {
   getAll: (params) => api.get('/users', { params }),

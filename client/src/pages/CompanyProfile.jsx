@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { masterDataAPI } from '../lib/api';
+import { masterDataAPI, equipmentAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { 
   Building2, Save, ArrowLeft, Phone, Mail, MapPin, User, 
@@ -19,7 +19,11 @@ export default function CompanyProfile() {
   const [message, setMessage] = useState(null);
 
   // 사출기 입력 상태
-  const [newMachine, setNewMachine] = useState({ manufacturer: '', model: '', tonnage: '', year: '' });
+  const [newMachine, setNewMachine] = useState({ manufacturer: '', model_name: '', tonnage: '', year_installed: '', daily_capacity: '' });
+
+  // 내 업체 보유장비 (equipment API 기반)
+  const [myEquipments, setMyEquipments] = useState([]);
+  const [equipLoading, setEquipLoading] = useState(false);
 
   // 기초정보 불러오기 모달 상태
   const [showImportModal, setShowImportModal] = useState(false);
@@ -31,7 +35,20 @@ export default function CompanyProfile() {
 
   useEffect(() => {
     loadProfile();
+    loadMyEquipments();
   }, []);
+
+  const loadMyEquipments = async () => {
+    try {
+      setEquipLoading(true);
+      const res = await equipmentAPI.getMyEquipments();
+      if (res.data.success) setMyEquipments(res.data.data);
+    } catch (e) {
+      console.warn('Load equipments failed:', e.message);
+    } finally {
+      setEquipLoading(false);
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -88,18 +105,34 @@ export default function CompanyProfile() {
     }
   };
 
-  const handleAddMachine = () => {
+  const handleAddMachine = async () => {
     if (!newMachine.manufacturer || !newMachine.tonnage) return;
-    const machines = Array.isArray(formData.injection_machines) ? [...formData.injection_machines] : [];
-    machines.push({ ...newMachine, id: Date.now() });
-    setFormData({ ...formData, injection_machines: machines });
-    setNewMachine({ manufacturer: '', model: '', tonnage: '', year: '' });
+    try {
+      const res = await equipmentAPI.addMyEquipment({
+        equipment_type: 'injection_machine',
+        manufacturer: newMachine.manufacturer,
+        model_name: newMachine.model_name,
+        tonnage: parseInt(newMachine.tonnage),
+        year_installed: newMachine.year_installed ? parseInt(newMachine.year_installed) : null,
+        daily_capacity: newMachine.daily_capacity ? parseInt(newMachine.daily_capacity) : null
+      });
+      if (res.data.success) {
+        await loadMyEquipments();
+        setNewMachine({ manufacturer: '', model_name: '', tonnage: '', year_installed: '', daily_capacity: '' });
+      }
+    } catch (e) {
+      alert('장비 등록 실패: ' + (e.response?.data?.error?.message || e.message));
+    }
   };
 
-  const handleRemoveMachine = (idx) => {
-    const machines = [...(formData.injection_machines || [])];
-    machines.splice(idx, 1);
-    setFormData({ ...formData, injection_machines: machines });
+  const handleRemoveMachine = async (equipId) => {
+    if (!confirm('이 장비를 삭제하시겠습니까?')) return;
+    try {
+      await equipmentAPI.deleteEquipment(equipId);
+      await loadMyEquipments();
+    } catch (e) {
+      alert('삭제 실패: ' + (e.response?.data?.error?.message || e.message));
+    }
   };
 
   const handleAddEquipment = () => {
@@ -135,7 +168,7 @@ export default function CompanyProfile() {
   const loadMachinesFromMaster = async () => {
     setImportLoading(true);
     try {
-      const response = await masterDataAPI.getAllInjectionMachines();
+      const response = await equipmentAPI.getMasters({ equipment_type: 'injection_machine', limit: 200 });
       if (response.data.success) {
         setAllMachines(response.data.data);
         setFilteredMachines(response.data.data);
@@ -163,8 +196,8 @@ export default function CompanyProfile() {
     const kw = keyword.toLowerCase();
     setFilteredMachines(allMachines.filter(m =>
       (m.manufacturer || '').toLowerCase().includes(kw) ||
-      (m.model || '').toLowerCase().includes(kw) ||
-      (m.company_name || '').toLowerCase().includes(kw) ||
+      (m.model_name || '').toLowerCase().includes(kw) ||
+      (m.description || '').toLowerCase().includes(kw) ||
       String(m.tonnage).includes(kw)
     ));
   };
@@ -177,18 +210,24 @@ export default function CompanyProfile() {
     });
   };
 
-  const handleImportMachines = () => {
-    const existing = Array.isArray(formData.injection_machines) ? [...formData.injection_machines] : [];
-    const newEntries = selectedImports.map(m => ({
-      manufacturer: m.manufacturer,
-      model: m.model,
-      tonnage: m.tonnage,
-      year: m.year,
-      id: Date.now() + Math.random()
-    }));
-    setFormData({ ...formData, injection_machines: [...existing, ...newEntries] });
-    setShowImportModal(false);
-    setSelectedImports([]);
+  const handleImportMachines = async () => {
+    try {
+      const equipments = selectedImports.map(m => ({
+        equipment_master_id: m.id,
+        equipment_type: m.equipment_type || 'injection_machine',
+        manufacturer: m.manufacturer,
+        model_name: m.model_name,
+        tonnage: m.tonnage
+      }));
+      const res = await equipmentAPI.bulkAddMyEquipments({ equipments });
+      if (res.data.success) {
+        await loadMyEquipments();
+        setShowImportModal(false);
+        setSelectedImports([]);
+      }
+    } catch (e) {
+      alert('불러오기 실패: ' + (e.response?.data?.error?.message || e.message));
+    }
   };
 
   const isPlant = user?.role === 'plant' || company?.company_type === 'plant';
@@ -330,7 +369,12 @@ export default function CompanyProfile() {
                   )}
                 </div>
                 
-                {(formData.injection_machines || []).length > 0 ? (
+                {equipLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <RefreshCw size={20} className="animate-spin text-green-500" />
+                    <span className="ml-2 text-sm text-gray-500">장비 로딩 중...</span>
+                  </div>
+                ) : myEquipments.length > 0 ? (
                   <div className="overflow-hidden rounded-lg border border-gray-200">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                       <thead className="bg-gray-50">
@@ -340,20 +384,33 @@ export default function CompanyProfile() {
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">모델명</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">톤수</th>
                           <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">도입년도</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">일일생산</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">상태</th>
                           {editMode && <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">삭제</th>}
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {(formData.injection_machines || []).map((m, i) => (
-                          <tr key={m.id || i}>
+                        {myEquipments.map((m, i) => (
+                          <tr key={m.id}>
                             <td className="px-3 py-2 text-gray-400">{i + 1}</td>
                             <td className="px-3 py-2 font-medium">{m.manufacturer}</td>
-                            <td className="px-3 py-2">{m.model || '-'}</td>
-                            <td className="px-3 py-2 font-bold text-blue-600">{m.tonnage}T</td>
-                            <td className="px-3 py-2">{m.year || '-'}</td>
+                            <td className="px-3 py-2">{m.model_name || '-'}</td>
+                            <td className="px-3 py-2 font-bold text-blue-600">{m.tonnage ? `${m.tonnage}T` : '-'}</td>
+                            <td className="px-3 py-2">{m.year_installed || '-'}</td>
+                            <td className="px-3 py-2">{m.daily_capacity ? `${m.daily_capacity.toLocaleString()}개` : '-'}</td>
+                            <td className="px-3 py-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                m.status === 'active' ? 'bg-green-100 text-green-700' :
+                                m.status === 'maintenance' ? 'bg-yellow-100 text-yellow-700' :
+                                m.status === 'retired' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {m.status === 'active' ? '가동' : m.status === 'maintenance' ? '정비' : m.status === 'retired' ? '폐기' : m.status === 'standby' ? '대기' : m.status}
+                              </span>
+                            </td>
                             {editMode && (
                               <td className="px-3 py-2">
-                                <button onClick={() => handleRemoveMachine(i)} className="text-red-500 hover:text-red-700">
+                                <button onClick={() => handleRemoveMachine(m.id)} className="text-red-500 hover:text-red-700">
                                   <Trash2 size={14} />
                                 </button>
                               </td>
@@ -379,35 +436,33 @@ export default function CompanyProfile() {
                 )}
 
                 {editMode && (
-                  <div className="mt-3 flex items-end gap-2">
-                    <div className="flex-1">
-                      <label className="text-xs text-gray-500">제조사 *</label>
-                      <select value={newMachine.manufacturer} onChange={e => setNewMachine({...newMachine, manufacturer: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm">
-                        <option value="">선택</option>
-                        <option>LS엠트론</option>
-                        <option>우진플라임</option>
-                        <option>엥겔</option>
-                        <option>크라우스마파이</option>
-                        <option>아버그</option>
-                        <option>동성화인</option>
-                        <option>기타</option>
-                      </select>
+                  <div className="mt-3">
+                    <p className="text-xs text-gray-500 mb-2">수동 입력 (기초정보에 없는 장비)</p>
+                    <div className="flex items-end gap-2 flex-wrap">
+                      <div className="flex-1 min-w-[120px]">
+                        <label className="text-xs text-gray-500">제조사 *</label>
+                        <input type="text" value={newMachine.manufacturer} onChange={e => setNewMachine({...newMachine, manufacturer: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="LS엠트론" />
+                      </div>
+                      <div className="flex-1 min-w-[100px]">
+                        <label className="text-xs text-gray-500">모델명</label>
+                        <input type="text" value={newMachine.model_name} onChange={e => setNewMachine({...newMachine, model_name: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="LGE-III" />
+                      </div>
+                      <div className="w-20">
+                        <label className="text-xs text-gray-500">톤수 *</label>
+                        <input type="number" value={newMachine.tonnage} onChange={e => setNewMachine({...newMachine, tonnage: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="350" />
+                      </div>
+                      <div className="w-20">
+                        <label className="text-xs text-gray-500">도입년도</label>
+                        <input type="text" value={newMachine.year_installed} onChange={e => setNewMachine({...newMachine, year_installed: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="2024" />
+                      </div>
+                      <div className="w-24">
+                        <label className="text-xs text-gray-500">일일생산(개)</label>
+                        <input type="number" value={newMachine.daily_capacity} onChange={e => setNewMachine({...newMachine, daily_capacity: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="5000" />
+                      </div>
+                      <button onClick={handleAddMachine} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+                        <Plus size={14} /> 추가
+                      </button>
                     </div>
-                    <div className="flex-1">
-                      <label className="text-xs text-gray-500">모델명</label>
-                      <input type="text" value={newMachine.model} onChange={e => setNewMachine({...newMachine, model: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="LGE350" />
-                    </div>
-                    <div className="w-24">
-                      <label className="text-xs text-gray-500">톤수 *</label>
-                      <input type="number" value={newMachine.tonnage} onChange={e => setNewMachine({...newMachine, tonnage: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="350" />
-                    </div>
-                    <div className="w-24">
-                      <label className="text-xs text-gray-500">도입년도</label>
-                      <input type="text" value={newMachine.year} onChange={e => setNewMachine({...newMachine, year: e.target.value})} className="w-full border rounded px-2 py-1.5 text-sm" placeholder="2024" />
-                    </div>
-                    <button onClick={handleAddMachine} className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">
-                      <Plus size={14} /> 추가
-                    </button>
                   </div>
                 )}
               </div>
@@ -582,11 +637,10 @@ export default function CompanyProfile() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 w-10">선택</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">업체</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">제조사</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">모델명</th>
                         <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">톤수</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">도입년도</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">설명</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -606,11 +660,10 @@ export default function CompanyProfile() {
                                 className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                               />
                             </td>
-                            <td className="px-3 py-2 text-gray-500 text-xs">{m.company_name}</td>
                             <td className="px-3 py-2 font-medium">{m.manufacturer}</td>
-                            <td className="px-3 py-2">{m.model || '-'}</td>
-                            <td className="px-3 py-2 font-bold text-blue-600">{m.tonnage}T</td>
-                            <td className="px-3 py-2">{m.year || '-'}</td>
+                            <td className="px-3 py-2">{m.model_name || '-'}</td>
+                            <td className="px-3 py-2 font-bold text-blue-600">{m.tonnage ? `${m.tonnage}T` : '-'}</td>
+                            <td className="px-3 py-2 text-gray-500 text-xs">{m.description || '-'}</td>
                           </tr>
                         );
                       })}

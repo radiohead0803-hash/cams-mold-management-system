@@ -70,6 +70,8 @@ const RepairShipmentChecklist = require('./RepairShipmentChecklist');
 const RepairShipmentChecklistItem = require('./RepairShipmentChecklistItem');
 const SystemRule = require('./SystemRule');
 const StandardDocumentTemplate = require('./StandardDocumentTemplate');
+const EquipmentMaster = require('./EquipmentMaster');
+const CompanyEquipment = require('./CompanyEquipment');
 
 // Helper function to initialize models
 const initModel = (ModelClass, sequelize) => {
@@ -145,7 +147,9 @@ const models = {
   RepairShipmentChecklist: initModel(RepairShipmentChecklist, sequelize),
   RepairShipmentChecklistItem: initModel(RepairShipmentChecklistItem, sequelize),
   SystemRule: initModel(SystemRule, sequelize),
-  StandardDocumentTemplate: initModel(StandardDocumentTemplate, sequelize)
+  StandardDocumentTemplate: initModel(StandardDocumentTemplate, sequelize),
+  EquipmentMaster: initModel(EquipmentMaster, sequelize),
+  CompanyEquipment: initModel(CompanyEquipment, sequelize)
 };
 
 // Setup associations

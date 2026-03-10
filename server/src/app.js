@@ -140,6 +140,7 @@ const productionTransferRoutesRouter = require('./routes/productionTransferRoute
 const draftsRouter = require('./routes/drafts');
 const standardDocumentTemplatesRouter = require('./routes/standardDocumentTemplates');
 const repairStepWorkflowRouter = require('./routes/repairStepWorkflow');
+const equipmentRouter = require('./routes/equipment');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -259,6 +260,8 @@ app.use('/api/v1/drafts', draftsRouter);
 app.use('/api/v1/standard-document-templates', standardDocumentTemplatesRouter);
 // 수리요청 단계별 워크플로우 API (임시저장/승인요청/순차승인)
 app.use('/api/v1/repair-step-workflow', repairStepWorkflowRouter);
+// 장비 마스터 + 업체별 보유장비 + 캐파 분석
+app.use('/api/v1/equipment', equipmentRouter);
 
 // Health check
 app.get('/health', (req, res) => {
