@@ -42,7 +42,7 @@ export default function RepairRequestForm() {
   const [injectionCondition, setInjectionCondition] = useState(null);
   const [moldSpec, setMoldSpec] = useState(null);
   const [repairProgress, setRepairProgress] = useState(null);
-  // === 워크플로우 상태 ===
+  // === 워크플로우 상태 (v2 - stepwise draft/approval) ===
   const [workflowId, setWorkflowId] = useState(null); // repair_requests.id (워크플로우용)
   const [workflowData, setWorkflowData] = useState(null); // 전체 워크플로우 데이터
   const [stepStatuses, setStepStatuses] = useState({}); // { 1: { draft, approval }, 2: ... }
