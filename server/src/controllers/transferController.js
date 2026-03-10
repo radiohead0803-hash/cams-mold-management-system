@@ -127,7 +127,7 @@ const getTransferById = async (req, res) => {
   }
 };
 
-// 이관 요청 생성
+// 이관 요청 생성 (단계별 임시저장 지원)
 const createTransfer = async (req, res) => {
   if (!pool) {
     return res.status(500).json({
@@ -149,12 +149,28 @@ const createTransfer = async (req, res) => {
       request_date,
       planned_transfer_date,
       reason,
+      priority,
       current_shots,
       mold_info_snapshot,
-      checklist_results
+      checklist_results,
+      status: reqStatus,
+      current_step,
+      from_manager_name,
+      from_manager_contact,
+      to_manager_name,
+      to_manager_contact,
+      // 승인 관련 (프론트 fallback용)
+      handover_approval_status,
+      handover_rejection_reason,
+      inspection_approval_status,
+      inspection_rejection_reason,
+      transfer_approval_status,
+      transfer_rejection_reason
     } = req.body;
     
     const requested_by = req.user.id;
+    const isDraft = reqStatus === 'draft';
+    const finalStatus = isDraft ? 'draft' : 'requested';
     
     // 이관번호 생성
     const transferNumber = `TRF-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Date.now().toString().slice(-4)}`;
@@ -165,62 +181,94 @@ const createTransfer = async (req, res) => {
         mold_id, transfer_number, transfer_type, 
         from_company_id, to_company_id, developer_id,
         requested_by, request_date, planned_transfer_date,
-        reason, current_shots, mold_info_snapshot,
-        status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'requested', NOW(), NOW())
+        reason, priority, current_shots, mold_info_snapshot,
+        status, current_step,
+        from_manager_name, from_manager_contact,
+        to_manager_name, to_manager_contact,
+        handover_approval_status, handover_rejection_reason,
+        inspection_approval_status, inspection_rejection_reason,
+        transfer_approval_status, transfer_rejection_reason,
+        created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+        $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25,
+        NOW(), NOW()
+      )
       RETURNING *
     `;
     
     const insertResult = await client.query(insertQuery, [
       mold_id, transferNumber, transfer_type || 'plant_to_plant',
-      from_company_id, to_company_id, developer_id,
-      requested_by, request_date, planned_transfer_date,
-      reason, current_shots, JSON.stringify(mold_info_snapshot)
+      from_company_id || null, to_company_id || null, developer_id || null,
+      requested_by, request_date || new Date().toISOString().split('T')[0], planned_transfer_date || null,
+      reason || null, priority || '보통', current_shots || null, JSON.stringify(mold_info_snapshot || {}),
+      finalStatus, current_step || '요청',
+      from_manager_name || null, from_manager_contact || null,
+      to_manager_name || null, to_manager_contact || null,
+      handover_approval_status || '대기', handover_rejection_reason || null,
+      inspection_approval_status || '대기', inspection_rejection_reason || null,
+      transfer_approval_status || '대기', transfer_rejection_reason || null
     ]);
     
     const transfer = insertResult.rows[0];
     
-    // 3단계 승인 레코드 생성
-    const approvalStages = [
-      { stage: 'plant_approval', order: 1, name: '생산처 승인' },
-      { stage: 'developer_approval', order: 2, name: '개발담당 승인' },
-      { stage: 'receiver_approval', order: 3, name: '인수처 승인' }
-    ];
-    
-    for (const stage of approvalStages) {
-      await client.query(`
-        INSERT INTO transfer_approvals (
-          transfer_id, approval_stage, approval_order, approval_status, created_at, updated_at
-        ) VALUES ($1, $2, $3, 'pending', NOW(), NOW())
-      `, [transfer.id, stage.stage, stage.order]);
+    // 3단계 승인 레코드 생성 (제출 시에만)
+    if (!isDraft) {
+      const approvalStages = [
+        { stage: 'handover', order: 1, name: '인계준비 승인' },
+        { stage: 'inspection', order: 2, name: '검수 승인' },
+        { stage: 'transfer', order: 3, name: '이관 승인' }
+      ];
+      
+      for (const stage of approvalStages) {
+        try {
+          await client.query(`
+            INSERT INTO transfer_approvals (
+              transfer_id, approval_stage, approval_order, approval_status, created_at, updated_at
+            ) VALUES ($1, $2, $3, 'pending', NOW(), NOW())
+          `, [transfer.id, stage.stage, stage.order]);
+        } catch (e) {
+          logger.warn('Transfer approval insert skipped:', e.message);
+        }
+      }
     }
     
     // 체크리스트 결과 저장
     if (checklist_results && Object.keys(checklist_results).length > 0) {
       for (const [itemId, result] of Object.entries(checklist_results)) {
-        await client.query(`
-          INSERT INTO transfer_inspection_results (
-            transfer_id, checklist_item_id, result, result_value, 
-            inspection_notes, inspected_by, inspected_at, created_at, updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
-        `, [
-          transfer.id, 
-          parseInt(itemId), 
-          result.result || null,
-          result.value || null,
-          result.notes || null,
-          requested_by
-        ]);
+        try {
+          await client.query(`
+            INSERT INTO transfer_inspection_results (
+              transfer_id, checklist_item_id, result, result_value, 
+              inspection_notes, inspected_by, inspected_at, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+          `, [
+            transfer.id, 
+            parseInt(itemId), 
+            result.result || null,
+            result.value || null,
+            result.notes || null,
+            requested_by
+          ]);
+        } catch (e) {
+          logger.warn('Checklist result insert skipped:', e.message);
+        }
       }
     }
     
     // 이력 기록
-    await client.query(`
-      INSERT INTO transfer_history (
-        transfer_id, mold_id, action_type, action_description,
-        old_status, new_status, performed_by, performed_at
-      ) VALUES ($1, $2, 'created', '이관 요청 생성', NULL, 'requested', $3, NOW())
-    `, [transfer.id, mold_id, requested_by]);
+    try {
+      await client.query(`
+        INSERT INTO transfer_history (
+          transfer_id, mold_id, action_type, action_description,
+          old_status, new_status, performed_by, performed_at
+        ) VALUES ($1, $2, $3, $4, NULL, $5, $6, NOW())
+      `, [transfer.id, mold_id, isDraft ? 'draft_saved' : 'created', 
+          isDraft ? `${current_step || '요청'} 단계 임시저장` : '이관 요청 생성', 
+          finalStatus, requested_by]);
+    } catch (e) {
+      logger.warn('Transfer history insert skipped:', e.message);
+    }
     
     await client.query('COMMIT');
     
@@ -240,7 +288,145 @@ const createTransfer = async (req, res) => {
   }
 };
 
-// 이관 승인
+// 이관 요청 업데이트 (단계별 임시저장 업데이트)
+const updateTransfer = async (req, res) => {
+  if (!pool) {
+    return res.status(500).json({
+      success: false,
+      error: { message: 'Database connection not available' }
+    });
+  }
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { id } = req.params;
+    const {
+      transfer_type, from_company_id, to_company_id, developer_id,
+      request_date, planned_transfer_date, reason, priority,
+      current_shots, mold_info_snapshot, checklist_results,
+      status: reqStatus, current_step,
+      from_manager_name, from_manager_contact,
+      to_manager_name, to_manager_contact,
+      handover_approval_status, handover_rejection_reason,
+      inspection_approval_status, inspection_rejection_reason,
+      transfer_approval_status, transfer_rejection_reason
+    } = req.body;
+    
+    const isDraft = reqStatus === 'draft';
+    const finalStatus = isDraft ? 'draft' : (reqStatus || 'requested');
+    
+    const updateQuery = `
+      UPDATE transfers SET
+        transfer_type = COALESCE($1, transfer_type),
+        from_company_id = COALESCE($2, from_company_id),
+        to_company_id = COALESCE($3, to_company_id),
+        developer_id = COALESCE($4, developer_id),
+        request_date = COALESCE($5, request_date),
+        planned_transfer_date = COALESCE($6, planned_transfer_date),
+        reason = COALESCE($7, reason),
+        priority = COALESCE($8, priority),
+        current_shots = COALESCE($9, current_shots),
+        mold_info_snapshot = COALESCE($10, mold_info_snapshot),
+        status = $11,
+        current_step = COALESCE($12, current_step),
+        from_manager_name = COALESCE($13, from_manager_name),
+        from_manager_contact = COALESCE($14, from_manager_contact),
+        to_manager_name = COALESCE($15, to_manager_name),
+        to_manager_contact = COALESCE($16, to_manager_contact),
+        handover_approval_status = COALESCE($17, handover_approval_status),
+        handover_rejection_reason = COALESCE($18, handover_rejection_reason),
+        inspection_approval_status = COALESCE($19, inspection_approval_status),
+        inspection_rejection_reason = COALESCE($20, inspection_rejection_reason),
+        transfer_approval_status = COALESCE($21, transfer_approval_status),
+        transfer_rejection_reason = COALESCE($22, transfer_rejection_reason),
+        updated_at = NOW()
+      WHERE id = $23
+      RETURNING *
+    `;
+    
+    const result = await client.query(updateQuery, [
+      transfer_type || null, from_company_id || null, to_company_id || null, developer_id || null,
+      request_date || null, planned_transfer_date || null, reason || null, priority || null,
+      current_shots || null, mold_info_snapshot ? JSON.stringify(mold_info_snapshot) : null,
+      finalStatus, current_step || null,
+      from_manager_name || null, from_manager_contact || null,
+      to_manager_name || null, to_manager_contact || null,
+      handover_approval_status || null, handover_rejection_reason || null,
+      inspection_approval_status || null, inspection_rejection_reason || null,
+      transfer_approval_status || null, transfer_rejection_reason || null,
+      id
+    ]);
+    
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ success: false, error: { message: 'Transfer not found' } });
+    }
+    
+    // 체크리스트 결과 업데이트 (있으면)
+    if (checklist_results && Object.keys(checklist_results).length > 0) {
+      for (const [itemId, resultData] of Object.entries(checklist_results)) {
+        try {
+          // UPSERT: 있으면 업데이트, 없으면 삽입
+          await client.query(`
+            INSERT INTO transfer_inspection_results (
+              transfer_id, checklist_item_id, result, result_value, 
+              inspection_notes, inspected_by, inspected_at, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+            ON CONFLICT (transfer_id, checklist_item_id) 
+            DO UPDATE SET result = $3, result_value = $4, inspection_notes = $5, 
+                         inspected_by = $6, inspected_at = NOW(), updated_at = NOW()
+          `, [id, parseInt(itemId), resultData.result || null, resultData.value || null,
+              resultData.notes || null, req.user.id]);
+        } catch (e) {
+          // unique constraint 없으면 기존 삭제 후 재삽입
+          try {
+            await client.query('DELETE FROM transfer_inspection_results WHERE transfer_id = $1 AND checklist_item_id = $2', [id, parseInt(itemId)]);
+            await client.query(`
+              INSERT INTO transfer_inspection_results (
+                transfer_id, checklist_item_id, result, result_value, 
+                inspection_notes, inspected_by, inspected_at, created_at, updated_at
+              ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
+            `, [id, parseInt(itemId), resultData.result || null, resultData.value || null,
+                resultData.notes || null, req.user.id]);
+          } catch (e2) {
+            logger.warn('Checklist result upsert skipped:', e2.message);
+          }
+        }
+      }
+    }
+    
+    // 이력 기록
+    try {
+      await client.query(`
+        INSERT INTO transfer_history (
+          transfer_id, mold_id, action_type, action_description,
+          old_status, new_status, performed_by, performed_at
+        ) VALUES ($1, $2, 'updated', $3, NULL, $4, $5, NOW())
+      `, [id, result.rows[0].mold_id, 
+          isDraft ? `${current_step || ''} 단계 임시저장 업데이트` : '이관 요청 업데이트',
+          finalStatus, req.user.id]);
+    } catch (e) {
+      logger.warn('Transfer history insert skipped:', e.message);
+    }
+    
+    await client.query('COMMIT');
+    
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    logger.error('Update transfer error:', error);
+    res.status(500).json({
+      success: false,
+      error: { message: 'Failed to update transfer', details: error.message }
+    });
+  } finally {
+    client.release();
+  }
+};
+
+// 이관 승인 (단계: handover / inspection / transfer)
 const approveTransfer = async (req, res) => {
   if (!pool) {
     return res.status(500).json({
@@ -254,114 +440,104 @@ const approveTransfer = async (req, res) => {
     await client.query('BEGIN');
     
     const { id } = req.params;
-    const { approval_stage, comments } = req.body;
+    const { step, approval_stage, comments, approver_id: bodyApproverId, approver_name } = req.body;
     const approver_id = req.user.id;
+    const stage = step || approval_stage; // 프론트에서 step 또는 approval_stage로 전송
     
-    // 현재 승인 단계 확인
-    const approvalQuery = `
-      SELECT * FROM transfer_approvals 
-      WHERE transfer_id = $1 AND approval_stage = $2
-    `;
-    const approvalResult = await client.query(approvalQuery, [id, approval_stage]);
+    const stageLabels = { handover: '인계준비 승인', inspection: '검수 승인', transfer: '이관 승인' };
+    const stageColumn = `${stage}_approval_status`;
+    const stageDateCol = `${stage}_approval_date`;
+    const stageApproverCol = `${stage}_approver_id`;
     
-    if (approvalResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        success: false,
-        error: { message: 'Approval stage not found' }
-      });
-    }
-    
-    // 이전 단계 승인 확인
-    const prevApprovalQuery = `
-      SELECT * FROM transfer_approvals 
-      WHERE transfer_id = $1 AND approval_order < $2 AND approval_status != 'approved'
-    `;
-    const prevResult = await client.query(prevApprovalQuery, [id, approvalResult.rows[0].approval_order]);
-    
-    if (prevResult.rows.length > 0) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({
-        success: false,
-        error: { message: '이전 단계 승인이 완료되지 않았습니다.' }
-      });
-    }
-    
-    // 승인 처리
+    // transfers 테이블 직접 업데이트
     await client.query(`
-      UPDATE transfer_approvals 
-      SET approval_status = 'approved', 
-          approver_id = $1, 
-          approval_date = NOW(),
-          approval_comments = $2,
+      UPDATE transfers 
+      SET ${stageColumn} = '승인완료', 
+          ${stageDateCol} = NOW(),
+          ${stageApproverCol} = $1,
           updated_at = NOW()
-      WHERE transfer_id = $3 AND approval_stage = $4
-    `, [approver_id, comments, id, approval_stage]);
+      WHERE id = $2
+    `, [approver_id, id]);
+    
+    // transfer_approvals 테이블도 업데이트 (존재하면)
+    try {
+      await client.query(`
+        UPDATE transfer_approvals 
+        SET approval_status = 'approved', 
+            approver_id = $1, 
+            approval_date = NOW(),
+            approval_comments = $2,
+            updated_at = NOW()
+        WHERE transfer_id = $3 AND approval_stage = $4
+      `, [approver_id, comments || null, id, stage]);
+    } catch (e) {
+      logger.warn('transfer_approvals update skipped:', e.message);
+    }
     
     // 모든 승인 완료 확인
-    const allApprovalsQuery = `
-      SELECT COUNT(*) as pending FROM transfer_approvals 
-      WHERE transfer_id = $1 AND approval_status != 'approved'
-    `;
-    const allApprovalsResult = await client.query(allApprovalsQuery, [id]);
+    const transferResult = await client.query('SELECT * FROM transfers WHERE id = $1', [id]);
+    const transfer = transferResult.rows[0];
+    
+    let allCompleted = false;
+    if (transfer) {
+      allCompleted = (
+        (transfer.handover_approval_status === '승인완료' || (stage === 'handover')) &&
+        (transfer.inspection_approval_status === '승인완료' || (stage === 'inspection' && transfer.handover_approval_status === '승인완료')) &&
+        (transfer.transfer_approval_status === '승인완료' || (stage === 'transfer' && transfer.inspection_approval_status === '승인완료'))
+      );
+      
+      // 재확인: 업데이트 후 최신 값 가져오기
+      const updatedResult = await client.query(
+        `SELECT handover_approval_status, inspection_approval_status, transfer_approval_status FROM transfers WHERE id = $1`, [id]
+      );
+      const updated = updatedResult.rows[0];
+      allCompleted = updated.handover_approval_status === '승인완료' 
+        && updated.inspection_approval_status === '승인완료' 
+        && updated.transfer_approval_status === '승인완료';
+    }
     
     let newStatus = 'in_progress';
-    if (parseInt(allApprovalsResult.rows[0].pending) === 0) {
+    if (allCompleted) {
       newStatus = 'completed';
       
       // 이관 완료 시 금형 정보 업데이트
-      const transferQuery = 'SELECT * FROM transfers WHERE id = $1';
-      const transferResult = await client.query(transferQuery, [id]);
-      const transfer = transferResult.rows[0];
-      
-      if (transfer) {
-        // plant_molds 업데이트 (생산처 변경)
-        await client.query(`
-          UPDATE plant_molds 
-          SET plant_id = $1, updated_at = NOW()
-          WHERE mold_id = $2
-        `, [transfer.to_company_id, transfer.mold_id]);
-        
-        // mold_specifications 업데이트
-        await client.query(`
-          UPDATE mold_specifications 
-          SET plant_company_id = $1, updated_at = NOW()
-          WHERE mold_id = $2
-        `, [transfer.to_company_id, transfer.mold_id]);
+      if (transfer && transfer.to_company_id) {
+        try {
+          await client.query(`
+            UPDATE plant_molds SET plant_id = $1, updated_at = NOW() WHERE mold_id = $2
+          `, [transfer.to_company_id, transfer.mold_id]);
+          
+          await client.query(`
+            UPDATE mold_specifications SET plant_company_id = $1, updated_at = NOW() WHERE mold_id = $2
+          `, [transfer.to_company_id, transfer.mold_id]);
+        } catch (e) {
+          logger.warn('Mold info update skipped:', e.message);
+        }
       }
       
-      // 이관 완료 플래그 설정
       await client.query(`
         UPDATE transfers 
-        SET all_approvals_completed = true, 
-            actual_transfer_date = NOW(),
-            updated_at = NOW()
+        SET all_approvals_completed = true, actual_transfer_date = NOW(), status = 'completed', updated_at = NOW()
         WHERE id = $1
       `, [id]);
+    } else {
+      await client.query(`
+        UPDATE transfers SET status = $1, updated_at = NOW() WHERE id = $2
+      `, [newStatus, id]);
     }
     
-    // 이관 상태 업데이트
-    await client.query(`
-      UPDATE transfers SET status = $1, updated_at = NOW() WHERE id = $2
-    `, [newStatus, id]);
-    
     // 이력 기록
-    await client.query(`
-      INSERT INTO transfer_history (
-        transfer_id, mold_id, action_type, action_description,
-        old_status, new_status, performed_by, performed_at, metadata
-      ) VALUES (
-        $1, 
-        (SELECT mold_id FROM transfers WHERE id = $1), 
-        'approval', 
-        $2,
-        NULL, 
-        'approved', 
-        $3, 
-        NOW(),
-        $4
-      )
-    `, [id, `${approval_stage} 승인`, approver_id, JSON.stringify({ stage: approval_stage, comments })]);
+    try {
+      await client.query(`
+        INSERT INTO transfer_history (
+          transfer_id, mold_id, action_type, action_description,
+          old_status, new_status, performed_by, performed_at, metadata
+        ) VALUES ($1, $2, 'approval', $3, NULL, 'approved', $4, NOW(), $5)
+      `, [id, transfer?.mold_id, `${stageLabels[stage] || stage} 승인`, approver_id, 
+          JSON.stringify({ stage, comments, approver_name })]);
+    } catch (e) {
+      logger.warn('Transfer history insert skipped:', e.message);
+    }
     
     await client.query('COMMIT');
     
@@ -369,7 +545,8 @@ const approveTransfer = async (req, res) => {
       success: true,
       data: { 
         message: '승인이 완료되었습니다.',
-        all_completed: newStatus === 'completed'
+        stage,
+        all_completed: allCompleted
       }
     });
   } catch (error) {
@@ -384,7 +561,7 @@ const approveTransfer = async (req, res) => {
   }
 };
 
-// 이관 반려
+// 이관 반려 (단계: handover / inspection / transfer)
 const rejectTransfer = async (req, res) => {
   if (!pool) {
     return res.status(500).json({
@@ -398,48 +575,63 @@ const rejectTransfer = async (req, res) => {
     await client.query('BEGIN');
     
     const { id } = req.params;
-    const { approval_stage, rejection_reason } = req.body;
+    const { step, approval_stage, reason, rejection_reason, rejector_id, rejector_name } = req.body;
     const approver_id = req.user.id;
+    const stage = step || approval_stage;
+    const rejectReason = reason || rejection_reason || '';
     
-    // 승인 반려 처리
+    const stageLabels = { handover: '인계준비', inspection: '검수', transfer: '이관' };
+    const stageColumn = `${stage}_approval_status`;
+    const stageReasonCol = `${stage}_rejection_reason`;
+    const stageApproverCol = `${stage}_approver_id`;
+    const stageDateCol = `${stage}_approval_date`;
+    
+    // transfers 테이블 직접 업데이트
     await client.query(`
-      UPDATE transfer_approvals 
-      SET approval_status = 'rejected', 
-          approver_id = $1, 
-          approval_date = NOW(),
-          rejection_reason = $2,
+      UPDATE transfers 
+      SET ${stageColumn} = '반려',
+          ${stageReasonCol} = $1,
+          ${stageApproverCol} = $2,
+          ${stageDateCol} = NOW(),
+          status = 'rejected',
           updated_at = NOW()
-      WHERE transfer_id = $3 AND approval_stage = $4
-    `, [approver_id, rejection_reason, id, approval_stage]);
+      WHERE id = $3
+    `, [rejectReason, approver_id, id]);
     
-    // 이관 상태 업데이트
-    await client.query(`
-      UPDATE transfers SET status = 'rejected', updated_at = NOW() WHERE id = $1
-    `, [id]);
+    // transfer_approvals 테이블도 업데이트 (존재하면)
+    try {
+      await client.query(`
+        UPDATE transfer_approvals 
+        SET approval_status = 'rejected', 
+            approver_id = $1, 
+            approval_date = NOW(),
+            rejection_reason = $2,
+            updated_at = NOW()
+        WHERE transfer_id = $3 AND approval_stage = $4
+      `, [approver_id, rejectReason, id, stage]);
+    } catch (e) {
+      logger.warn('transfer_approvals reject update skipped:', e.message);
+    }
     
     // 이력 기록
-    await client.query(`
-      INSERT INTO transfer_history (
-        transfer_id, mold_id, action_type, action_description,
-        old_status, new_status, performed_by, performed_at, metadata
-      ) VALUES (
-        $1, 
-        (SELECT mold_id FROM transfers WHERE id = $1), 
-        'rejection', 
-        $2,
-        NULL, 
-        'rejected', 
-        $3, 
-        NOW(),
-        $4
-      )
-    `, [id, `${approval_stage} 반려: ${rejection_reason}`, approver_id, JSON.stringify({ stage: approval_stage, reason: rejection_reason })]);
+    try {
+      const transfer = (await client.query('SELECT mold_id FROM transfers WHERE id = $1', [id])).rows[0];
+      await client.query(`
+        INSERT INTO transfer_history (
+          transfer_id, mold_id, action_type, action_description,
+          old_status, new_status, performed_by, performed_at, metadata
+        ) VALUES ($1, $2, 'rejection', $3, NULL, 'rejected', $4, NOW(), $5)
+      `, [id, transfer?.mold_id, `${stageLabels[stage] || stage} 반려: ${rejectReason}`, approver_id, 
+          JSON.stringify({ stage, reason: rejectReason, rejector_name })]);
+    } catch (e) {
+      logger.warn('Transfer history insert skipped:', e.message);
+    }
     
     await client.query('COMMIT');
     
     res.json({
       success: true,
-      data: { message: '반려 처리되었습니다.' }
+      data: { message: '반려 처리되었습니다.', stage }
     });
   } catch (error) {
     await client.query('ROLLBACK');
@@ -1029,6 +1221,7 @@ module.exports = {
   getTransfers,
   getTransferById,
   createTransfer,
+  updateTransfer,
   approveTransfer,
   rejectTransfer,
   getChecklistItems,

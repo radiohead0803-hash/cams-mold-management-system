@@ -191,6 +191,7 @@ export const transferAPI = {
   getAll: (params) => api.get('/transfers', { params }),
   getById: (id) => api.get(`/transfers/${id}`),
   create: (data) => api.post('/transfers', data),
+  update: (id, data) => api.patch(`/transfers/${id}`, data),
   approve: (id, data) => api.patch(`/transfers/${id}/approve`, data),
   reject: (id, data) => api.patch(`/transfers/${id}/reject`, data),
   getChecklistItems: () => api.get('/transfers/checklist/items'),

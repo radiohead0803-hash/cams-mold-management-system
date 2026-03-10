@@ -132,7 +132,7 @@ const getScrappingRequestById = async (req, res) => {
 };
 
 /**
- * 금형 폐기 요청 생성
+ * 금형 폐기 요청 생성 (draft 임시저장 + 정식 제출 통합)
  * POST /api/v1/scrapping
  */
 const createScrappingRequest = async (req, res) => {
@@ -144,37 +144,63 @@ const createScrappingRequest = async (req, res) => {
       reason,
       reason_detail,
       condition_assessment,
-      estimated_scrap_value
+      estimated_scrap_value,
+      status: reqStatus,
+      current_step
     } = req.body;
     
     const userId = req.user?.id;
+    const isDraft = reqStatus === 'draft';
+    const finalStatus = isDraft ? 'draft' : 'requested';
     
-    // 금형 정보 조회
-    const [molds] = await sequelize.query(`
-      SELECT m.*, ms.target_shots
-      FROM molds m
-      LEFT JOIN mold_specifications ms ON m.id = ms.mold_id
-      WHERE m.id = :mold_id
-    `, { replacements: { mold_id }, transaction });
-    
-    if (molds.length === 0) {
+    // mold_id가 없으면 draft만 가능
+    if (!mold_id && !isDraft) {
       await transaction.rollback();
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
-        error: { message: 'Mold not found' }
+        error: { message: '금형을 선택해주세요.' }
       });
     }
     
-    const mold = molds[0];
+    let mold = null;
+    let repairHistorySummary = null;
     
-    // 수리 이력 요약
-    const [repairHistory] = await sequelize.query(`
-      SELECT 
-        COUNT(*) as total_repairs,
-        STRING_AGG(DISTINCT issue_type, ', ') as issue_types
-      FROM repair_requests
-      WHERE mold_id = :mold_id
-    `, { replacements: { mold_id }, transaction });
+    if (mold_id) {
+      // 금형 정보 조회
+      const [molds] = await sequelize.query(`
+        SELECT m.*, ms.target_shots
+        FROM molds m
+        LEFT JOIN mold_specifications ms ON m.id = ms.mold_id
+        WHERE m.id = :mold_id
+      `, { replacements: { mold_id }, transaction });
+      
+      if (molds.length === 0 && !isDraft) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          error: { message: 'Mold not found' }
+        });
+      }
+      
+      mold = molds[0] || null;
+      
+      // 수리 이력 요약
+      try {
+        const [repairHistory] = await sequelize.query(`
+          SELECT 
+            COUNT(*) as total_repairs,
+            STRING_AGG(DISTINCT issue_type, ', ') as issue_types
+          FROM repair_requests
+          WHERE mold_id = :mold_id
+        `, { replacements: { mold_id }, transaction });
+        
+        if (repairHistory[0]) {
+          repairHistorySummary = `총 ${repairHistory[0].total_repairs}회 수리, 주요 이슈: ${repairHistory[0].issue_types || '없음'}`;
+        }
+      } catch (e) {
+        logger.warn('Repair history query skipped:', e.message);
+      }
+    }
     
     // 요청 번호 생성
     const requestNumber = `SCR-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}${String(new Date().getDate()).padStart(2, '0')}-${Date.now().toString().slice(-4)}`;
@@ -185,28 +211,29 @@ const createScrappingRequest = async (req, res) => {
         request_number, mold_id, reason, reason_detail,
         current_shots, target_shots, condition_assessment,
         repair_history_summary, estimated_scrap_value,
-        status, requested_by, requested_at,
+        status, current_step, requested_by, requested_at,
         created_at, updated_at
       ) VALUES (
         :request_number, :mold_id, :reason, :reason_detail,
         :current_shots, :target_shots, :condition_assessment,
         :repair_history_summary, :estimated_scrap_value,
-        'requested', :requested_by, NOW(),
+        :status, :current_step, :requested_by, NOW(),
         NOW(), NOW()
       )
       RETURNING id
     `, {
       replacements: {
         request_number: requestNumber,
-        mold_id,
-        reason,
+        mold_id: mold_id || null,
+        reason: reason || null,
         reason_detail: reason_detail || null,
-        current_shots: mold.current_shots || 0,
-        target_shots: mold.target_shots || null,
+        current_shots: mold?.current_shots || 0,
+        target_shots: mold?.target_shots || null,
         condition_assessment: condition_assessment || null,
-        repair_history_summary: repairHistory[0] ? 
-          `총 ${repairHistory[0].total_repairs}회 수리, 주요 이슈: ${repairHistory[0].issue_types || '없음'}` : null,
+        repair_history_summary: repairHistorySummary,
         estimated_scrap_value: estimated_scrap_value || null,
+        status: finalStatus,
+        current_step: current_step || null,
         requested_by: userId
       },
       transaction
@@ -219,7 +246,7 @@ const createScrappingRequest = async (req, res) => {
       data: {
         id: result[0].id,
         request_number: requestNumber,
-        status: 'requested'
+        status: finalStatus
       }
     });
     
@@ -228,7 +255,7 @@ const createScrappingRequest = async (req, res) => {
     logger.error('Create scrapping request error:', error);
     res.status(500).json({
       success: false,
-      error: { message: 'Failed to create scrapping request' }
+      error: { message: 'Failed to create scrapping request', details: error.message }
     });
   }
 };
@@ -331,15 +358,23 @@ const rejectRequest = async (req, res) => {
     const { reason } = req.body;
     const userId = req.user?.id;
     
-    await sequelize.query(`
+    const [result] = await sequelize.query(`
       UPDATE scrapping_requests
       SET status = 'rejected',
-          first_approval_notes = COALESCE(first_approval_notes, '') || ' [반려] ' || :reason,
+          rejection_reason = :reason,
           updated_at = NOW()
       WHERE id = :id AND status IN ('requested', 'first_approved')
+      RETURNING id, status
     `, {
       replacements: { id, reason: reason || '반려됨' }
     });
+    
+    if (result.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Cannot reject this request' }
+      });
+    }
     
     res.json({
       success: true,
