@@ -283,7 +283,7 @@ function ScrappingForm() {
   useEffect(() => {
     loadMolds();
     (async () => {
-      const draft = await loadDraft('m_scrapping', 'new');
+      const draft = await loadDraft('scrapping', 'new');
       if (draft && draft.data) {
         setFormData(prev => ({ ...prev, ...draft.data }));
         setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` });
@@ -306,11 +306,11 @@ function ScrappingForm() {
     setSaveMessage(null);
     try {
       await api.post('/scrapping', { ...formData, status: 'draft', estimated_disposal_cost: formData.estimated_disposal_cost ? parseInt(formData.estimated_disposal_cost) : null });
-      await saveDraftLocal('m_scrapping', 'new', formData);
+      await saveDraftLocal('scrapping', 'new', formData);
       setSaveMessage({ type: 'success', text: '임시저장 완료' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
-      await saveDraftLocal('m_scrapping', 'new', formData);
+      await saveDraftLocal('scrapping', 'new', formData);
       setSaveMessage({ type: 'success', text: '로컬 임시저장 완료' });
     } finally {
       setSubmitting(false);
@@ -329,7 +329,7 @@ function ScrappingForm() {
         ...formData,
         estimated_disposal_cost: formData.estimated_disposal_cost ? parseInt(formData.estimated_disposal_cost) : null
       });
-      await clearDraft('m_scrapping', 'new');
+      await clearDraft('scrapping', 'new');
       alert('폐기 요청이 등록되었습니다.');
       navigate('/mobile/scrapping');
     } catch (error) {

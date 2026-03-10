@@ -240,7 +240,7 @@ export default function MobileDailyChecklist() {
       }
 
       // 2. 로컬 스토리지에서 draft 복원
-      const draft = await loadDraft('m_daily_checklist', moldId || 'new');
+      const draft = await loadDraft('daily_checklist', moldId || 'new');
       if (draft && draft.data) {
         const d = draft.data;
         if (d.checkResults) setCheckResults(d.checkResults);
@@ -327,7 +327,7 @@ export default function MobileDailyChecklist() {
     setSaveMessage(null);
     try {
       await api.post('/checklist-instances/daily/draft', buildPayload('draft'));
-      await saveDraftLocal('m_daily_checklist', moldId || 'new', {
+      await saveDraftLocal('daily_checklist', moldId || 'new', {
         checkResults,
         currentCategoryIndex,
         selectedApprover
@@ -336,7 +336,7 @@ export default function MobileDailyChecklist() {
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
       console.error('임시저장 실패:', err);
-      await saveDraftLocal('m_daily_checklist', moldId || 'new', {
+      await saveDraftLocal('daily_checklist', moldId || 'new', {
         checkResults,
         currentCategoryIndex,
         selectedApprover

@@ -405,7 +405,7 @@ export default function MobilePeriodicInspection() {
       }
 
       // 2. 로컬 스토리지에서 draft 복원
-      const draft = await loadDraft('m_periodic_inspection', moldId || 'new') as { data: any; savedAt: string } | null;
+      const draft = await loadDraft('periodic_inspection', moldId || 'new') as { data: any; savedAt: string } | null;
       if (draft && draft.data) {
         const d = draft.data;
         if (d.selectedTypeId) {
@@ -495,7 +495,7 @@ export default function MobilePeriodicInspection() {
     setSaveMessage(null);
     try {
       await api.post('/checklist-instances/daily/draft', buildPayload('draft'));
-      await saveDraftLocal('m_periodic_inspection', moldId || 'new', {
+      await saveDraftLocal('periodic_inspection', moldId || 'new', {
         selectedTypeId: selectedType?.id,
         currentCategoryIndex,
         checkResults,
@@ -504,7 +504,7 @@ export default function MobilePeriodicInspection() {
       setSaveMessage({ type: 'success', text: '임시저장 완료' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (err) {
-      await saveDraftLocal('m_periodic_inspection', moldId || 'new', {
+      await saveDraftLocal('periodic_inspection', moldId || 'new', {
         selectedTypeId: selectedType?.id,
         currentCategoryIndex,
         checkResults,
@@ -573,7 +573,7 @@ export default function MobilePeriodicInspection() {
     try {
       const payload = buildPayload('completed');
       console.log('정기점검 완료:', payload);
-      await clearDraft('m_periodic_inspection', moldId || 'new');
+      await clearDraft('periodic_inspection', moldId || 'new');
       setSuccess('정기점검이 완료되었습니다!');
       setTimeout(() => {
         moldId ? navigate(`/mobile/mold/${moldId}`) : navigate(-1);

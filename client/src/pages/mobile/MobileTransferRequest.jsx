@@ -95,7 +95,7 @@ export default function MobileTransferRequest() {
     loadInitialData();
     loadDevelopers();
     (async () => {
-      const draft = await loadDraft('m_transfer', moldId || 'new');
+      const draft = await loadDraft('transfer', moldId || 'new');
       if (draft && draft.data) {
         if (draft.data.formData) setFormData(prev => ({ ...prev, ...draft.data.formData }));
         if (draft.data.checklistResults) setChecklistResults(draft.data.checklistResults);
@@ -226,12 +226,12 @@ export default function MobileTransferRequest() {
     setSaveMessage(null);
     try {
       await transferAPI.create({ ...buildTransferData(), status: 'draft' });
-      await saveDraftLocal('m_transfer', moldId || 'new', { formData, checklistResults });
+      await saveDraftLocal('transfer', moldId || 'new', { formData, checklistResults });
       setSaveMessage({ type: 'success', text: '임시저장 완료' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
       console.error('Draft save failed:', error);
-      await saveDraftLocal('m_transfer', moldId || 'new', { formData, checklistResults });
+      await saveDraftLocal('transfer', moldId || 'new', { formData, checklistResults });
       setSaveMessage({ type: 'success', text: '로컬 임시저장 완료' });
     } finally {
       setSaving(false);
@@ -248,7 +248,7 @@ export default function MobileTransferRequest() {
       const transferData = buildTransferData();
       const response = await transferAPI.create(transferData);
       if (response.data.success) {
-        await clearDraft('m_transfer', moldId || 'new');
+        await clearDraft('transfer', moldId || 'new');
         alert('이관 요청이 등록되었습니다.');
         navigate(`/mobile/mold/${moldId}`);
       }
