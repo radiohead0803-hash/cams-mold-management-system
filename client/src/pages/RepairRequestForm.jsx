@@ -800,22 +800,7 @@ export default function RepairRequestForm() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => handleSave('draft')}
-                disabled={saving}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition text-sm font-medium flex items-center gap-2 disabled:opacity-50"
-              >
-                <Save size={16} />
-                임시저장
-              </button>
-              <button
-                onClick={() => handleSave('submit')}
-                disabled={saving}
-                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition text-sm font-medium flex items-center gap-2 disabled:opacity-50"
-              >
-                <Send size={16} />
-                {saving ? '저장 중...' : '제출'}
-              </button>
+              <span className="text-xs text-slate-400">각 단계별 임시저장/제출을 사용하세요</span>
             </div>
           </div>
         </div>
@@ -2386,20 +2371,6 @@ export default function RepairRequestForm() {
             className="px-6 py-2.5 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition font-medium"
           >
             취소
-          </button>
-          <button
-            onClick={() => handleSave('draft')}
-            disabled={saving}
-            className="px-6 py-2.5 text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition font-medium disabled:opacity-50"
-          >
-            임시저장
-          </button>
-          <button
-            onClick={() => handleSave('submit')}
-            disabled={saving}
-            className="px-6 py-2.5 text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition font-medium disabled:opacity-50"
-          >
-            {saving ? '저장 중...' : '제출'}
           </button>
         </div>
       </main>
