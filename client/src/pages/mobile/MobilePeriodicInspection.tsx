@@ -405,7 +405,7 @@ export default function MobilePeriodicInspection() {
       }
 
       // 2. 로컬 스토리지에서 draft 복원
-      const draft = await loadDraft('m_periodic_inspection', moldId || 'new');
+      const draft = await loadDraft('m_periodic_inspection', moldId || 'new') as { data: any; savedAt: string } | null;
       if (draft && draft.data) {
         const d = draft.data;
         if (d.selectedTypeId) {
@@ -483,9 +483,9 @@ export default function MobilePeriodicInspection() {
       summary: {
         total: allItems.length,
         completed: Object.keys(checkResults).length,
-        good: Object.values(checkResults).filter(r => r.status === '양호').length,
-        warning: Object.values(checkResults).filter(r => r.status === '정비 필요').length,
-        bad: Object.values(checkResults).filter(r => r.status === '수리 필요').length
+        good: (Object.values(checkResults) as CheckResult[]).filter(r => r.status === '양호').length,
+        warning: (Object.values(checkResults) as CheckResult[]).filter(r => r.status === '정비 필요').length,
+        bad: (Object.values(checkResults) as CheckResult[]).filter(r => r.status === '수리 필요').length
       }
     };
   };

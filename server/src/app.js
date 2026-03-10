@@ -188,7 +188,7 @@ app.use('/api/v1/hq/repairs', hqRepairsRouter);
 app.use('/api/v1/hq/molds', hqMoldsRouter);
 // Admin routes
 app.use('/api/v1/admin/car-models', carModelsRouter);
-// Checklist forms (all users)
+// Checklist forms: /forms, /submit, /results (템플릿 기반 체크리스트 폼)
 app.use('/api/v1/checklists', checklistFormsRouter);
 // Development plans
 app.use('/api/v1/dev', devPlansRouter);
@@ -256,7 +256,7 @@ app.use('/api/v1/repair-shipment-checklists', repairShipmentChecklistRouter);
 app.use('/api/v1/mold-nurturing', moldNurturingRouter);
 // 점검 인스턴스 (임시저장/승인요청)
 app.use('/api/v1/checklist-instances', checklistInstancesRouter);
-// 체크리스트 CRUD (일상점검 시작/업데이트/이력)
+// Checklist CRUD: /daily/start, /daily/:id, /history, /photos, /transfer (일상점검 시작/업데이트/이력)
 app.use('/api/v1/checklists', checklistsRouter);
 // 양산이관 첨부파일 업로드
 app.use('/api/v1/production-transfer', productionTransferRoutesRouter);

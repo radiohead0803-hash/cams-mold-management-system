@@ -184,14 +184,6 @@ export const periodicInspectionAPI = {
   deletePhoto: (inspectionId, photoId) => api.delete(`/periodic-inspections/${inspectionId}/photos/${photoId}`),
 }
 
-// Alert/Notification API - 서버의 /notifications 라우트에 맞춤
-export const alertAPI = {
-  getAll: (params) => api.get('/notifications', { params }),
-  getById: (id) => api.get(`/notifications/${id}`),
-  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
-  trigger: (data) => api.post('/notifications/trigger', data),
-}
-
 // Transfer API
 export const transferAPI = {
   getAll: (params) => api.get('/transfers', { params }),
@@ -621,13 +613,18 @@ export const workflowAPI = {
   getRequests: (params) => api.get('/workflow/repair-requests', { params }),
 }
 
-// Notification API (알림)
+// Notification API (알림) - alertAPI 통합
 export const notificationAPI = {
   getAll: (params) => api.get('/notifications', { params }),
+  getById: (id) => api.get(`/notifications/${id}`),
   getUnreadCount: () => api.get('/notifications/unread-count'),
   markAsRead: (id) => api.patch(`/notifications/${id}/read`),
   markAllAsRead: () => api.patch('/notifications/read-all'),
   send: (data) => api.post('/notifications', data),
+  trigger: (data) => api.post('/notifications/trigger', data),
 }
+
+// 하위호환: alertAPI → notificationAPI alias
+export const alertAPI = notificationAPI
 
 export default api
