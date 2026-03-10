@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import api, { transferAPI, moldSpecificationAPI, userAPI } from '../../lib/api';
-import { saveDraft as saveDraftLocal, loadDraft, clearDraft } from '../../lib/draftStorage';
+// draftStorage 불필요 - transferAPI로 서버 저장 통합
 import useOfflineSync from '../../hooks/useOfflineSync.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
@@ -94,15 +94,7 @@ export default function MobileTransferRequest() {
   useEffect(() => {
     loadInitialData();
     loadDevelopers();
-    (async () => {
-      const draft = await loadDraft('transfer', moldId || 'new');
-      if (draft && draft.data) {
-        if (draft.data.formData) setFormData(prev => ({ ...prev, ...draft.data.formData }));
-        if (draft.data.checklistResults) setChecklistResults(draft.data.checklistResults);
-        setSaveMessage({ type: 'success', text: `임시저장 복원됨 (${new Date(draft.savedAt).toLocaleString()})` });
-        setTimeout(() => setSaveMessage(null), 4000);
-      }
-    })();
+    // 서버 draft 복원은 transferAPI로 처리
   }, [moldId]);
 
   const loadInitialData = async () => {
@@ -226,13 +218,12 @@ export default function MobileTransferRequest() {
     setSaveMessage(null);
     try {
       await transferAPI.create({ ...buildTransferData(), status: 'draft' });
-      await saveDraftLocal('transfer', moldId || 'new', { formData, checklistResults });
-      setSaveMessage({ type: 'success', text: '임시저장 완료' });
+      setSaveMessage({ type: 'success', text: '임시저장이 완료되었습니다.' });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
       console.error('Draft save failed:', error);
-      await saveDraftLocal('transfer', moldId || 'new', { formData, checklistResults });
-      setSaveMessage({ type: 'success', text: '로컬 임시저장 완료' });
+      setSaveMessage({ type: 'error', text: '임시저장에 실패했습니다.' });
+      setTimeout(() => setSaveMessage(null), 3000);
     } finally {
       setSaving(false);
     }
@@ -248,7 +239,6 @@ export default function MobileTransferRequest() {
       const transferData = buildTransferData();
       const response = await transferAPI.create(transferData);
       if (response.data.success) {
-        await clearDraft('transfer', moldId || 'new');
         alert('이관 요청이 등록되었습니다.');
         navigate(`/mobile/mold/${moldId}`);
       }
