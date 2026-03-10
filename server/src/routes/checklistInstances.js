@@ -16,15 +16,15 @@ router.post('/daily/draft', authenticate, async (req, res) => {
     const [existing] = await sequelize.query(`
       SELECT id FROM checklist_instances
       WHERE mold_id = :mold_id AND category = 'daily' AND status = 'draft' AND inspector_id = :user_id
-      ORDER BY created_at DESC LIMIT 1
+      ORDER BY id DESC LIMIT 1
     `, { replacements: { mold_id, user_id: user.id } });
 
     let instance;
     if (existing.length > 0) {
       await ChecklistInstance.update({
-        results: JSON.stringify(results),
+        results,
         production_quantity: production_quantity || 0,
-        summary: JSON.stringify(summary),
+        summary,
         check_date: check_date || new Date()
       }, { where: { id: existing[0].id } });
       instance = { id: existing[0].id };
@@ -34,9 +34,9 @@ router.post('/daily/draft', authenticate, async (req, res) => {
         category: 'daily',
         check_date: check_date || new Date(),
         status: 'draft',
-        results: JSON.stringify(results),
+        results,
         production_quantity: production_quantity || 0,
-        summary: JSON.stringify(summary),
+        summary,
         inspector_id: user.id,
         inspector_name: user.name,
         created_by: user.id
@@ -96,9 +96,9 @@ router.post('/daily/request-approval', authenticate, async (req, res) => {
       check_date: check_date || new Date(),
       status: 'pending_approval',
       approver_id,
-      results: JSON.stringify(results),
+      results,
       production_quantity: production_quantity || 0,
-      summary: JSON.stringify(summary),
+      summary,
       inspector_id: user.id,
       inspector_name: user.name,
       created_by: user.id,
@@ -160,9 +160,9 @@ router.post('/daily/complete', authenticate, async (req, res) => {
       category: 'daily',
       check_date: check_date || new Date(),
       status: 'completed',
-      results: JSON.stringify(results),
+      results,
       production_quantity: production_quantity || 0,
-      summary: JSON.stringify(summary),
+      summary,
       inspector_id: user.id,
       inspector_name: user.name,
       created_by: user.id,
@@ -198,14 +198,14 @@ router.post('/mold-checklist/draft', authenticate, async (req, res) => {
     const [existing] = await sequelize.query(`
       SELECT id FROM checklist_instances
       WHERE mold_id = :mold_id AND category = 'mold_checklist' AND status = 'draft' AND inspector_id = :user_id
-      ORDER BY created_at DESC LIMIT 1
+      ORDER BY id DESC LIMIT 1
     `, { replacements: { mold_id, user_id: user.id } });
 
     let instance;
     if (existing.length > 0) {
       await ChecklistInstance.update({
-        results: JSON.stringify(results),
-        summary: JSON.stringify(summary),
+        results,
+        summary,
         check_date: new Date()
       }, { where: { id: existing[0].id } });
       instance = { id: existing[0].id };
@@ -215,8 +215,8 @@ router.post('/mold-checklist/draft', authenticate, async (req, res) => {
         category: 'mold_checklist',
         check_date: new Date(),
         status: 'draft',
-        results: JSON.stringify(results),
-        summary: JSON.stringify(summary),
+        results,
+        summary,
         inspector_id: user.id,
         inspector_name: user.name,
         created_by: user.id
@@ -260,8 +260,8 @@ router.post('/mold-checklist/request-approval', authenticate, async (req, res) =
       check_date: new Date(),
       status: 'pending_approval',
       approver_id,
-      results: JSON.stringify(results),
-      summary: JSON.stringify(summary),
+      results,
+      summary,
       inspector_id: user.id,
       inspector_name: user.name,
       created_by: user.id,
@@ -312,8 +312,8 @@ router.post('/mold-checklist/complete', authenticate, async (req, res) => {
       category: 'mold_checklist',
       check_date: new Date(),
       status: 'completed',
-      results: JSON.stringify(results),
-      summary: JSON.stringify(summary),
+      results,
+      summary,
       inspector_id: user.id,
       inspector_name: user.name,
       created_by: user.id,
@@ -339,15 +339,15 @@ router.post('/periodic/draft', authenticate, async (req, res) => {
     const [existing] = await sequelize.query(`
       SELECT id FROM checklist_instances
       WHERE mold_id = :mold_id AND category = 'periodic' AND status = 'draft' AND inspector_id = :user_id
-      ORDER BY created_at DESC LIMIT 1
+      ORDER BY id DESC LIMIT 1
     `, { replacements: { mold_id, user_id: user.id } });
 
     let instance;
     if (existing.length > 0) {
       await ChecklistInstance.update({
-        results: JSON.stringify(results),
+        results,
         production_quantity: production_quantity || 0,
-        summary: JSON.stringify(summary),
+        summary,
         check_date: check_date || new Date()
       }, { where: { id: existing[0].id } });
       instance = { id: existing[0].id };
@@ -357,9 +357,9 @@ router.post('/periodic/draft', authenticate, async (req, res) => {
         category: 'periodic',
         check_date: check_date || new Date(),
         status: 'draft',
-        results: JSON.stringify(results),
+        results,
         production_quantity: production_quantity || 0,
-        summary: JSON.stringify(summary),
+        summary,
         inspector_id: user.id,
         inspector_name: user.name,
         created_by: user.id
@@ -393,9 +393,9 @@ router.post('/periodic/complete', authenticate, async (req, res) => {
       category: 'periodic',
       check_date: check_date || new Date(),
       status: 'completed',
-      results: JSON.stringify(results),
+      results,
       production_quantity: production_quantity || 0,
-      summary: JSON.stringify({ ...summary, inspection_type }),
+      summary: { ...summary, inspection_type },
       inspector_id: user.id,
       inspector_name: user.name,
       created_by: user.id,
@@ -520,21 +520,21 @@ router.get('/mold/:moldId/status', async (req, res) => {
 
     // 일상점검 최근 기록
     const [dailyRows] = await sequelize.query(`
-      SELECT id, status, inspector_name, check_date, created_at, approver_id,
+      SELECT id, status, inspector_name, check_date, approver_id,
              summary, requested_at, approved_at, rejected_at, rejection_reason
       FROM checklist_instances
       WHERE mold_id = :moldId AND category = 'daily'
-      ORDER BY created_at DESC
+      ORDER BY id DESC
       LIMIT 5
     `, { replacements: { moldId } });
 
     // 정기점검 최근 기록
     const [periodicRows] = await sequelize.query(`
-      SELECT id, status, inspector_name, check_date, created_at, approver_id,
+      SELECT id, status, inspector_name, check_date, approver_id,
              summary, requested_at, approved_at, rejected_at, rejection_reason
       FROM checklist_instances
       WHERE mold_id = :moldId AND category = 'periodic'
-      ORDER BY created_at DESC
+      ORDER BY id DESC
       LIMIT 5
     `, { replacements: { moldId } });
 
@@ -552,7 +552,7 @@ router.get('/mold/:moldId/status', async (req, res) => {
       statusLabel: statusLabel(r.status),
       inspectorName: r.inspector_name,
       checkDate: r.check_date,
-      createdAt: r.created_at,
+      createdAt: r.check_date,
       requestedAt: r.requested_at,
       approvedAt: r.approved_at,
       rejectedAt: r.rejected_at,
