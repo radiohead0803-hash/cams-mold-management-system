@@ -22,7 +22,7 @@ export default function MobileQRScan() {
   const { qrCode: paramCode } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { login, user, isAuthenticated } = useAuthStore()
+  const { login, setAuth, user, isAuthenticated } = useAuthStore()
 
   // QR 코드 파싱 (URL 파라미터 또는 쿼리스트링)
   // URL이 인코딩되어 들어올 수 있으므로 디코딩 후 MOLD-{id} 추출
@@ -209,7 +209,7 @@ export default function MobileQRScan() {
         await updateMoldLocation(mold.id, location, userData, token)
       }
       
-      login(userData, token)
+      setAuth(userData, token)
       navigateToWorkspace(mold, userData)
     } catch (err) {
       console.error('Login error:', err)
@@ -240,7 +240,7 @@ export default function MobileQRScan() {
         await updateMoldLocation(mold.id, location, userData, token)
       }
       
-      login(userData, token)
+      setAuth(userData, token)
       navigateToWorkspace(mold, userData)
     } catch (err) {
       console.error('Quick login error:', err)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Lock, User, AlertCircle, Loader2, X, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -14,7 +14,9 @@ export default function MobileReLoginModal() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const { login, user } = useAuthStore()
+  const { login, user, isAuthenticated } = useAuthStore()
+  // 재로그인 성공 후 일정 시간 이벤트 무시
+  const suppressUntilRef = useRef(0)
 
   // 이전 사용자 정보 pre-fill
   useEffect(() => {
@@ -25,11 +27,15 @@ export default function MobileReLoginModal() {
 
   // 401 이벤트 수신
   const handleAuthExpired = useCallback((e) => {
+    // 유예 구간이면 무시
+    if (Date.now() < suppressUntilRef.current) return
+    // 이미 표시 중이면 무시
+    if (visible) return
     console.log('[MobileReLoginModal] Auth expired on:', e.detail?.path)
     setVisible(true)
     setError('')
     setPassword('')
-  }, [])
+  }, [visible])
 
   useEffect(() => {
     window.addEventListener('cams:auth-expired', handleAuthExpired)
@@ -49,6 +55,8 @@ export default function MobileReLoginModal() {
     try {
       const result = await login(username.trim(), password.trim())
       if (result.success) {
+        // 재로그인 성공 후 5초간 세션만료 이벤트 무시
+        suppressUntilRef.current = Date.now() + 5000
         setVisible(false)
         setPassword('')
         setError('')

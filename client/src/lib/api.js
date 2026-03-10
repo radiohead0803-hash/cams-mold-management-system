@@ -57,6 +57,13 @@ api.interceptors.request.use(
 
 // 401 리다이렉트 디바운스 (중복 리다이렉트 방지)
 let isRedirecting = false
+// 재로그인 직후 401 무시 구간 (ms)
+let authRestoredUntil = 0
+
+// 재로그인 성공 시 일정 시간 401 무시 (데이터 재로드 중 이전 요청의 401 방지)
+window.addEventListener('cams:auth-restored', () => {
+  authRestoredUntil = Date.now() + 3000
+})
 
 // Response interceptor for error handling
 api.interceptors.response.use(
@@ -68,18 +75,23 @@ api.interceptors.response.use(
       const isAuthRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register')
       if (isAuthRequest) return Promise.reject(error)
 
+      // 재로그인 직후 유예 구간이면 무시
+      if (Date.now() < authRestoredUntil) return Promise.reject(error)
+
       const currentPath = window.location.pathname
       const isMobile = currentPath.startsWith('/mobile') || currentPath.startsWith('/m/')
 
       if (isMobile) {
-        // ★ 모바일: 페이지 이동 없이 인라인 재로그인 모달 표시
-        // 중복 이벤트 방지
-        if (!isRedirecting) {
+        // ★ 모바일: 토큰이 있었을 때만 세션만료 모달 표시
+        // 토큰이 처음부터 없으면(미로그인) 세션만료가 아니므로 무시
+        const authData = localStorage.getItem('cams-auth')
+        const hadToken = !!authData
+        if (hadToken && !isRedirecting) {
           isRedirecting = true
           window.dispatchEvent(new CustomEvent('cams:auth-expired', {
             detail: { path: currentPath, url: requestUrl }
           }))
-          setTimeout(() => { isRedirecting = false }, 500)
+          setTimeout(() => { isRedirecting = false }, 2000)
         }
       } else {
         // PC: 기존 방식 유지 (로그인 페이지로 이동)

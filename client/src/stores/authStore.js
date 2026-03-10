@@ -57,6 +57,13 @@ export const useAuthStore = create((set) => ({
     }
   },
   
+  // 외부에서 이미 받은 user/token으로 인증 상태 직접 세팅 (QR 로그인 등)
+  setAuth: (user, token) => {
+    const mappedUser = { ...user, role: user.user_type || user.role }
+    localStorage.setItem('cams-auth', JSON.stringify({ user: mappedUser, token }))
+    set({ user: mappedUser, token, isAuthenticated: true, loading: false, error: null })
+  },
+  
   logout: () => {
     set({ user: null, token: null, isAuthenticated: false, error: null })
     localStorage.removeItem('cams-auth')

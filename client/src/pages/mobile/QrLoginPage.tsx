@@ -7,7 +7,7 @@ import { QrCode, User, Building2, Users } from 'lucide-react';
 export default function QrLoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login } = useAuthStore();
+  const { login, setAuth } = useAuthStore();
   
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -69,7 +69,7 @@ export default function QrLoginPage() {
 
       if (response.data.success) {
         const { token, user } = response.data.data;
-        login(user, token);
+        setAuth(user, token);
 
         // 역할별 대시보드로 리다이렉트
         if (user.role === 'production' || user.role === 'plant') {
@@ -106,7 +106,7 @@ export default function QrLoginPage() {
 
       if (response.data.success) {
         const { token, user: userData } = response.data.data;
-        login(userData, token);
+        setAuth(userData, token);
         navigate('/mobile/qr-scan');
       }
     } catch (err: any) {

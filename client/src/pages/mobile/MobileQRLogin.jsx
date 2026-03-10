@@ -12,7 +12,7 @@ import jsQR from 'jsqr'
  */
 export default function MobileQRLogin() {
   const navigate = useNavigate()
-  const { login, user, isAuthenticated } = useAuthStore()
+  const { login, setAuth, user, isAuthenticated } = useAuthStore()
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
 
@@ -219,7 +219,7 @@ export default function MobileQRLogin() {
       const response = await authAPI.login({ username, password })
       const { token, user: userData } = response.data.data
       
-      login(userData, token)
+      setAuth(userData, token)
       
       // 금형이 스캔된 경우 해당 페이지로 이동
       if (scannedMold) {
@@ -247,7 +247,7 @@ export default function MobileQRLogin() {
       const response = await authAPI.login({ username: testUsername, password: testPassword })
       const { token, user: userData } = response.data.data
       
-      login(userData, token)
+      setAuth(userData, token)
       
       if (scannedMold) {
         navigateToMoldPage(scannedMold, userData)
