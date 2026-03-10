@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, Upload, Save, Send, Image as ImageIcon } from 'lucide-react';
-import { moldSpecificationAPI } from '../lib/api';
+import api, { moldSpecificationAPI } from '../lib/api';
 
 // 9개 카테고리 체크리스트 정의
 const CHECKLIST_CATEGORIES = [
@@ -260,13 +260,23 @@ export default function MoldChecklist() {
     });
   };
 
+  const buildPayload = () => ({
+    mold_id: moldId ? parseInt(moldId) : null,
+    results: checklistData,
+    summary: {
+      ...stats,
+      categoryEnabled
+    }
+  });
+
   const handleSave = async () => {
     try {
       setSaving(true);
-      // API 호출
-      alert('저장되었습니다.');
+      await api.post('/checklist-instances/mold-checklist/draft', buildPayload());
+      alert('임시저장이 완료되었습니다.');
     } catch (error) {
       console.error('Save failed:', error);
+      alert('저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -275,10 +285,13 @@ export default function MoldChecklist() {
   const handleSubmitForApproval = async () => {
     try {
       setSaving(true);
-      setApprovalStatus('pending');
-      alert('점검완료 및 승인요청이 제출되었습니다.');
+      await api.post('/checklist-instances/mold-checklist/complete', buildPayload());
+      setApprovalStatus('completed');
+      alert('금형 체크리스트가 완료되었습니다.');
+      navigate(-1);
     } catch (error) {
       console.error('Submit failed:', error);
+      alert('제출에 실패했습니다.');
     } finally {
       setSaving(false);
     }

@@ -156,6 +156,148 @@ router.post('/daily/complete', authenticate, async (req, res) => {
 });
 
 /**
+ * 금형 체크리스트 임시저장
+ * POST /api/v1/checklist-instances/mold-checklist/draft
+ */
+router.post('/mold-checklist/draft', authenticate, async (req, res) => {
+  try {
+    const { mold_id, results, summary } = req.body;
+    const user = req.user;
+
+    // 기존 draft가 있으면 업데이트, 없으면 생성
+    const [existing] = await sequelize.query(`
+      SELECT id FROM checklist_instances
+      WHERE mold_id = :mold_id AND category = 'mold_checklist' AND status = 'draft' AND inspector_id = :user_id
+      ORDER BY created_at DESC LIMIT 1
+    `, { replacements: { mold_id, user_id: user.id } });
+
+    let instance;
+    if (existing.length > 0) {
+      await ChecklistInstance.update({
+        results: JSON.stringify(results),
+        summary: JSON.stringify(summary),
+        check_date: new Date()
+      }, { where: { id: existing[0].id } });
+      instance = { id: existing[0].id };
+    } else {
+      instance = await ChecklistInstance.create({
+        mold_id,
+        category: 'mold_checklist',
+        check_date: new Date(),
+        status: 'draft',
+        results: JSON.stringify(results),
+        summary: JSON.stringify(summary),
+        inspector_id: user.id,
+        inspector_name: user.name,
+        created_by: user.id
+      });
+    }
+
+    return res.json({ success: true, message: '임시저장이 완료되었습니다.', data: { id: instance.id } });
+  } catch (error) {
+    console.error('[MoldChecklist Draft] Error:', error);
+    return res.status(500).json({ success: false, message: '임시저장 중 오류가 발생했습니다.' });
+  }
+});
+
+/**
+ * 금형 체크리스트 승인요청
+ * POST /api/v1/checklist-instances/mold-checklist/request-approval
+ */
+router.post('/mold-checklist/request-approval', authenticate, async (req, res) => {
+  try {
+    const { mold_id, results, summary, approver_id } = req.body;
+    const user = req.user;
+
+    if (!approver_id) {
+      return res.status(400).json({ success: false, message: '승인자를 선택해주세요.' });
+    }
+
+    const approver = await User.findByPk(approver_id);
+    if (!approver) {
+      return res.status(404).json({ success: false, message: '승인자를 찾을 수 없습니다.' });
+    }
+
+    // 기존 draft 삭제
+    await sequelize.query(`
+      DELETE FROM checklist_instances
+      WHERE mold_id = :mold_id AND category = 'mold_checklist' AND status = 'draft' AND inspector_id = :user_id
+    `, { replacements: { mold_id, user_id: user.id } });
+
+    const instance = await ChecklistInstance.create({
+      mold_id,
+      category: 'mold_checklist',
+      check_date: new Date(),
+      status: 'pending_approval',
+      approver_id,
+      results: JSON.stringify(results),
+      summary: JSON.stringify(summary),
+      inspector_id: user.id,
+      inspector_name: user.name,
+      created_by: user.id,
+      requested_at: new Date()
+    });
+
+    try {
+      await Notification.create({
+        user_id: approver_id,
+        type: 'inspection_approval',
+        title: '금형 체크리스트 승인 요청',
+        message: `${user.name}님이 금형 체크리스트 승인을 요청했습니다. (금형 ID: ${mold_id})`,
+        priority: 'normal',
+        is_read: false
+      });
+    } catch (notifErr) {
+      console.error('[MoldChecklist Approval] Notification error:', notifErr);
+    }
+
+    return res.json({
+      success: true,
+      message: `${approver.name}님께 승인요청이 완료되었습니다.`,
+      data: { id: instance.id }
+    });
+  } catch (error) {
+    console.error('[MoldChecklist Approval] Error:', error);
+    return res.status(500).json({ success: false, message: '승인요청 중 오류가 발생했습니다.' });
+  }
+});
+
+/**
+ * 금형 체크리스트 완료 (승인 없이 바로 완료)
+ * POST /api/v1/checklist-instances/mold-checklist/complete
+ */
+router.post('/mold-checklist/complete', authenticate, async (req, res) => {
+  try {
+    const { mold_id, results, summary } = req.body;
+    const user = req.user;
+
+    // 기존 draft 삭제
+    await sequelize.query(`
+      DELETE FROM checklist_instances
+      WHERE mold_id = :mold_id AND category = 'mold_checklist' AND status = 'draft' AND inspector_id = :user_id
+    `, { replacements: { mold_id, user_id: user.id } });
+
+    const instance = await ChecklistInstance.create({
+      mold_id,
+      category: 'mold_checklist',
+      check_date: new Date(),
+      status: 'completed',
+      results: JSON.stringify(results),
+      summary: JSON.stringify(summary),
+      inspector_id: user.id,
+      inspector_name: user.name,
+      created_by: user.id,
+      approved_at: new Date()
+    });
+
+    return res.json({ success: true, message: '금형 체크리스트가 완료되었습니다.', data: { id: instance.id } });
+  } catch (error) {
+    console.error('[MoldChecklist Complete] Error:', error);
+    return res.status(500).json({ success: false, message: '완료 처리 중 오류가 발생했습니다.' });
+  }
+});
+
+/**
  * 정기점검 완료 (승인 없이 바로 완료)
  * POST /api/v1/checklist-instances/periodic/complete
  */
