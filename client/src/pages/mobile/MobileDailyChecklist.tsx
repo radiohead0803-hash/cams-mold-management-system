@@ -746,7 +746,7 @@ export default function MobileDailyChecklist() {
                   onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()}
                 />
                 <button
-                  onClick={handleSearchApprover}
+                  onClick={() => handleSearchApprover()}
                   className="px-4 py-2.5 bg-blue-500 text-white rounded-lg flex items-center gap-1 text-sm"
                 >
                   <Search size={16} />

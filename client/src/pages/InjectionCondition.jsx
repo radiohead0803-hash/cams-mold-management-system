@@ -1194,7 +1194,7 @@ export default function InjectionConditionNew() {
                   onChange={(e) => setApproverSearchKeyword(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()}
                 />
-                <button onClick={handleSearchApprover} className="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                <button onClick={() => handleSearchApprover()} className="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
                   <Search size={16} />
                 </button>
               </div>

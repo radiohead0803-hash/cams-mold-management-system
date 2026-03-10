@@ -1203,7 +1203,7 @@ export default function MobileInjectionCondition() {
                   onChange={(e) => setApproverSearchKeyword(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()}
                 />
-                <button onClick={handleSearchApprover} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg"><Search size={16} /></button>
+                <button onClick={() => handleSearchApprover()} className="px-4 py-2.5 bg-blue-500 text-white rounded-lg"><Search size={16} /></button>
               </div>
               <div className="max-h-60 overflow-y-auto space-y-2">
                 {approverSearchResults.length === 0 && approverSearchKeyword && (

@@ -880,7 +880,7 @@ export default function HardnessMeasurement() {
                   onChange={(e) => setApproverKeyword(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearchApprover()}
                 />
-                <button onClick={handleSearchApprover} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm">검색</button>
+                <button onClick={() => handleSearchApprover()} className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm">검색</button>
               </div>
               <div className="space-y-2">
                 {approverResults.length === 0 && approverKeyword && (
