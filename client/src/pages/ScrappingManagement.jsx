@@ -346,14 +346,21 @@ function ScrappingDetail() {
     }
     try {
       setSaving(true);
-      const response = await api.post('/scrapping', formData);
+      const response = await api.post('/scrapping', {
+        mold_id: parseInt(formData.mold_id),
+        reason: formData.reason,
+        reason_detail: formData.reason_detail || null,
+        condition_assessment: formData.condition_assessment || null,
+        estimated_scrap_value: formData.estimated_scrap_value ? parseFloat(formData.estimated_scrap_value) : null
+      });
       if (response.data.success) {
         alert('폐기 요청이 등록되었습니다.');
         navigate('/scrapping');
       }
     } catch (error) {
       console.error('Failed to submit:', error);
-      alert('등록에 실패했습니다: ' + (error.response?.data?.error?.message || error.message));
+      const errData = error.response?.data?.error;
+      alert('등록에 실패했습니다: ' + (errData?.details || errData?.message || error.message));
     } finally {
       setSaving(false);
     }

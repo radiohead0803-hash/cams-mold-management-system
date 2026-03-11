@@ -217,10 +217,19 @@ function ScrappingDetail() {
     if (!formData.mold_id || !formData.reason) { alert('금형과 폐기 사유를 선택해주세요.'); return; }
     try {
       setSaving(true);
-      await api.post('/scrapping', formData);
+      await api.post('/scrapping', {
+        mold_id: parseInt(formData.mold_id),
+        reason: formData.reason,
+        reason_detail: formData.reason_detail || null,
+        condition_assessment: formData.condition_assessment || null,
+        estimated_scrap_value: formData.estimated_scrap_value ? parseFloat(formData.estimated_scrap_value) : null
+      });
       alert('폐기 요청이 등록되었습니다.');
       navigate('/mobile/scrapping');
-    } catch (error) { alert('등록 실패: ' + (error.response?.data?.error?.message || error.message)); }
+    } catch (error) {
+      const errData = error.response?.data?.error;
+      alert('등록에 실패했습니다: ' + (errData?.details || errData?.message || error.message));
+    }
     finally { setSaving(false); }
   };
 

@@ -152,9 +152,10 @@ const createScrappingRequest = async (req, res) => {
     const userId = req.user?.id;
     const isDraft = reqStatus === 'draft';
     const finalStatus = isDraft ? 'draft' : 'requested';
+    const parsedMoldId = mold_id ? parseInt(mold_id) : null;
     
     // mold_id가 없으면 draft만 가능
-    if (!mold_id && !isDraft) {
+    if (!parsedMoldId && !isDraft) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
@@ -165,14 +166,14 @@ const createScrappingRequest = async (req, res) => {
     let mold = null;
     let repairHistorySummary = null;
     
-    if (mold_id) {
+    if (parsedMoldId) {
       // 금형 정보 조회
       const [molds] = await sequelize.query(`
         SELECT m.*, ms.target_shots
         FROM molds m
         LEFT JOIN mold_specifications ms ON m.id = ms.mold_id
         WHERE m.id = :mold_id
-      `, { replacements: { mold_id }, transaction });
+      `, { replacements: { mold_id: parsedMoldId }, transaction });
       
       if (molds.length === 0 && !isDraft) {
         await transaction.rollback();
@@ -192,7 +193,7 @@ const createScrappingRequest = async (req, res) => {
             STRING_AGG(DISTINCT issue_type, ', ') as issue_types
           FROM repair_requests
           WHERE mold_id = :mold_id
-        `, { replacements: { mold_id }, transaction });
+        `, { replacements: { mold_id: parsedMoldId }, transaction });
         
         if (repairHistory[0]) {
           repairHistorySummary = `총 ${repairHistory[0].total_repairs}회 수리, 주요 이슈: ${repairHistory[0].issue_types || '없음'}`;
@@ -224,14 +225,14 @@ const createScrappingRequest = async (req, res) => {
     `, {
       replacements: {
         request_number: requestNumber,
-        mold_id: mold_id || null,
+        mold_id: parsedMoldId,
         reason: reason || null,
         reason_detail: reason_detail || null,
         current_shots: mold?.current_shots || 0,
         target_shots: mold?.target_shots || null,
         condition_assessment: condition_assessment || null,
         repair_history_summary: repairHistorySummary,
-        estimated_scrap_value: estimated_scrap_value || null,
+        estimated_scrap_value: estimated_scrap_value ? parseFloat(estimated_scrap_value) : null,
         status: finalStatus,
         current_step: current_step || null,
         requested_by: userId
