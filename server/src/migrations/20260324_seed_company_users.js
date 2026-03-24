@@ -93,13 +93,17 @@ module.exports = {
       });
     }
 
-    // 목록에 없는 사내 사용자 삭제 (admin 보호)
+    // 51명 리스트 외 모든 사용자 삭제 (admin 보호)
     const eids = COMPANY_USERS.map(u => u.eid);
-    await queryInterface.sequelize.query(`
+    const [deleted] = await queryInterface.sequelize.query(`
       DELETE FROM users
-      WHERE company_type = 'hq' AND username != 'admin'
+      WHERE username != 'admin'
         AND username NOT IN (:eids)
+      RETURNING id, username, name
     `, { replacements: { eids } });
+    if (deleted && deleted.length > 0) {
+      console.log(`🗑️ ${deleted.length}명 삭제:`, deleted.map(u => `${u.username}(${u.name})`).join(', '));
+    }
 
     console.log(`✅ 사내 사용자 ${COMPANY_USERS.length}명 DB 반영 완료`);
   },
