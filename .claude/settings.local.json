@@ -116,7 +116,10 @@
       "Bash(ls \"C:/Users/admin/Documents/Wind surf work/10. 금형관리 전산시스템/P2\\(Ver02\\)/server/src/migrations/\")",
       "Bash(node -c src/routes/moldCosts.js)",
       "Bash(node -c src/routes/statisticsReport.js)",
-      "Bash(node -c src/models/Mold.js)"
+      "Bash(node -c src/models/Mold.js)",
+      "Bash(node -c src/scripts/sync-company-users-data.js)",
+      "Bash(node -c src/scripts/sync-company-users.js)",
+      "Bash(node -c src/migrations/20260324_seed_company_users.js)"
     ]
   }
 }
