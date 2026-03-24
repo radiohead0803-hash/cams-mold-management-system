@@ -1220,6 +1220,38 @@ const startServer = async () => {
     // Run all remaining SQL migration files (scrapping, GPS, transfer step, indexes, FK 등)
     await runRemainingMigrations();
 
+    // 사내 사용자 동기화 (사번 기반)
+    try {
+      const bcrypt = require('bcryptjs');
+      const COMPANY_USERS = require('./scripts/sync-company-users-data');
+      if (COMPANY_USERS && COMPANY_USERS.length > 0) {
+        console.log(`🔄 Syncing ${COMPANY_USERS.length} company users...`);
+        for (const user of COMPANY_USERS) {
+          const userType = user.department === '임원' ? 'system_admin' : 'mold_developer';
+          const hash = await bcrypt.hash(user.employee_id, 10);
+          await sequelize.query(`
+            INSERT INTO users (username, password_hash, name, phone, email, user_type, company_type, company_name, employee_id, position, department, is_active, created_at, updated_at)
+            VALUES (:username, :hash, :name, :phone, :email, :userType, 'hq', 'ICAMS', :eid, :pos, :dept, true, NOW(), NOW())
+            ON CONFLICT (username) DO UPDATE SET
+              name = EXCLUDED.name, phone = EXCLUDED.phone,
+              user_type = EXCLUDED.user_type, employee_id = EXCLUDED.employee_id,
+              position = EXCLUDED.position, department = EXCLUDED.department,
+              is_active = true, updated_at = NOW()
+          `, { replacements: { username: user.employee_id, hash, name: user.name, phone: user.phone, email: user.email, userType, eid: user.employee_id, pos: user.position, dept: user.department } });
+        }
+        // 목록에 없는 사내 사용자 비활성화 (admin 제외)
+        const employeeIds = COMPANY_USERS.map(u => u.employee_id);
+        await sequelize.query(`
+          UPDATE users SET is_active = false, updated_at = NOW()
+          WHERE company_type = 'hq' AND username != 'admin'
+            AND username NOT IN (:employeeIds)
+        `, { replacements: { employeeIds } });
+        console.log(`✅ Company users synced: ${COMPANY_USERS.length}`);
+      }
+    } catch (e) {
+      console.warn('⚠️ Company user sync skipped:', e.message);
+    }
+
     // Sync remaining models that may not have migration files
     try {
       await sequelize.sync({ alter: true });
