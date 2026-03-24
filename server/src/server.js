@@ -1237,6 +1237,32 @@ const startServer = async () => {
       console.log(`🔍 Periodic Inspections API: http://localhost:${PORT}/api/v1/periodic-inspections`);
       console.log(`🖼️ Mold Images API: http://localhost:${PORT}/api/v1/mold-images`);
       console.log(`\n⏰ Server started at: ${new Date().toLocaleString('ko-KR')}`);
+
+      // PM 알림 자동 체크 (6시간마다)
+      try {
+        const { runAllAlertChecks } = require('./services/maintenanceAlertService');
+        // 서버 시작 시 1회 실행
+        setTimeout(async () => {
+          try {
+            const result = await runAllAlertChecks();
+            console.log('🔔 Initial PM alert check completed:', result);
+          } catch (e) {
+            console.warn('⚠️ Initial PM alert check failed:', e.message);
+          }
+        }, 10000);
+        // 이후 6시간마다 반복
+        setInterval(async () => {
+          try {
+            const result = await runAllAlertChecks();
+            console.log('🔔 Scheduled PM alert check:', result);
+          } catch (e) {
+            console.warn('⚠️ PM alert check failed:', e.message);
+          }
+        }, 6 * 60 * 60 * 1000);
+        console.log('⏰ PM alert scheduler registered (every 6 hours)');
+      } catch (e) {
+        console.warn('⚠️ PM alert scheduler not available:', e.message);
+      }
     });
   } catch (error) {
     console.error('❌ Unable to start server:', error);

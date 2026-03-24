@@ -38,6 +38,7 @@ export default function MoldNew() {
     icms_cost: '',
     vendor_quote_cost: '',
     notes: '',
+    target_shots: '',
     part_images: [],
     // 원재료 사양
     raw_material_id: '',
@@ -410,6 +411,7 @@ export default function MoldNew() {
         cavity_count: parseInt(formData.cavity_count) || 1,
         tonnage: formData.tonnage ? parseInt(formData.tonnage) : null,
         estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
+        target_shots: formData.target_shots ? parseInt(formData.target_shots) : null,
         maker_company_id: formData.maker_company_id ? parseInt(formData.maker_company_id) : null,
         plant_company_id: formData.plant_company_id ? parseInt(formData.plant_company_id) : null,
         target_delivery_date: formData.target_delivery_date || null,
@@ -461,6 +463,7 @@ export default function MoldNew() {
         cavity_count: parseInt(formData.cavity_count) || 1,
         tonnage: formData.tonnage ? parseInt(formData.tonnage) : null,
         estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost) : null,
+        target_shots: formData.target_shots ? parseInt(formData.target_shots) : null,
         maker_company_id: formData.maker_company_id ? parseInt(formData.maker_company_id) : null,
         plant_company_id: formData.plant_company_id ? parseInt(formData.plant_company_id) : null,
         target_delivery_date: formData.target_delivery_date || null,
@@ -1177,6 +1180,22 @@ export default function MoldNew() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* 보증타수 */}
+        <div className="mb-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">보증타수 (Guaranteed Shots)</label>
+            <input
+              type="number"
+              name="target_shots"
+              value={formData.target_shots}
+              onChange={handleChange}
+              placeholder="예: 500000"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">SPI 기준: Class 101(100만+), 102(50~100만), 103(30~50만)</p>
           </div>
         </div>
 

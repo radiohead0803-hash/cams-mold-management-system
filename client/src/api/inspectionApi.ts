@@ -1,6 +1,19 @@
 // client/src/api/inspectionApi.ts
 import api from './httpClient';
 
+/**
+ * 체크리스트 코드를 question_id로 변환
+ * 코드 형식: "D01", "D02", "P01" 등 → 숫자 부분 추출
+ * 접두사별 오프셋: D(일상)=0, P(정기)=1000, 그 외=2000
+ */
+function codeToQuestionId(code: string): number {
+  if (!code) return 0;
+  const prefix = code.charAt(0).toUpperCase();
+  const num = parseInt(code.replace(/\D/g, ''), 10) || 0;
+  const offset = prefix === 'D' ? 0 : prefix === 'P' ? 1000 : 2000;
+  return offset + num;
+}
+
 export interface DailyInspectionPayload {
   status?: 'draft' | 'pending_approval' | 'completed';
   approver_id?: number;
@@ -73,7 +86,7 @@ export async function submitDailyInspection(
     production_quantity: (payload as DailyInspectionPayloadCamel).productionQuantity,
     ng_quantity: (payload as DailyInspectionPayloadCamel).ngQuantity,
     checklist_items: (payload as DailyInspectionPayloadCamel).checklistItems?.map(item => ({
-      question_id: 1, // TODO: map code to question_id
+      question_id: codeToQuestionId(item.code),
       answer: item.result,
       is_ng: item.result === 'NG',
       ng_reason: item.note
@@ -98,7 +111,7 @@ export async function submitPeriodicInspection(
     mold_id: (payload as PeriodicInspectionPayloadCamel).moldId,
     inspection_type: (payload as PeriodicInspectionPayloadCamel).cycleType,
     checklist_items: (payload as PeriodicInspectionPayloadCamel).items?.map(item => ({
-      question_id: 1, // TODO: map code to question_id
+      question_id: codeToQuestionId(item.code),
       answer: String(item.measuredValue),
       measured_value: item.measuredValue,
       spec_min: item.specMin,

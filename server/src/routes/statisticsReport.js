@@ -418,4 +418,77 @@ router.get('/summary', async (req, res) => {
   }
 });
 
+// GET /api/v1/statistics-report/kpi-dashboard - KPI 대시보드 데이터
+router.get('/kpi-dashboard', authenticate, async (req, res) => {
+  try {
+    // MTBF: 총 가동시간(일) / 고장(수리요청) 횟수
+    const [mtbfData] = await sequelize.query(`
+      SELECT
+        COUNT(CASE WHEN status != 'scrapped' THEN 1 END) as active_molds,
+        (SELECT COUNT(*) FROM repair_requests WHERE created_at >= NOW() - INTERVAL '90 days') as repair_count_90d,
+        90.0 / NULLIF((SELECT COUNT(*) FROM repair_requests WHERE created_at >= NOW() - INTERVAL '90 days'), 0) as mtbf_days
+    `);
+
+    // MTTR: 평균 수리 소요일
+    const [mttrData] = await sequelize.query(`
+      SELECT
+        COALESCE(AVG(EXTRACT(EPOCH FROM (updated_at - created_at)) / 86400), 0) as mttr_days,
+        COUNT(*) as completed_repairs
+      FROM repair_requests
+      WHERE status = 'completed' AND created_at >= NOW() - INTERVAL '90 days'
+    `);
+
+    // PM 준수율: 기한 내 완료 / 전체
+    const [pmData] = await sequelize.query(`
+      SELECT
+        COUNT(*) as total_pm,
+        COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_pm,
+        CASE WHEN COUNT(*) > 0
+          THEN ROUND(COUNT(CASE WHEN status = 'completed' THEN 1 END)::numeric / COUNT(*)::numeric * 100, 1)
+          ELSE 0 END as pm_compliance_rate
+      FROM maintenance_records
+      WHERE created_at >= NOW() - INTERVAL '90 days'
+    `);
+
+    // Shot Count 잔여율 분포
+    const [shotData] = await sequelize.query(`
+      SELECT
+        COUNT(*) as total,
+        COUNT(CASE WHEN target_shots > 0 AND current_shots >= target_shots THEN 1 END) as over_shot,
+        COUNT(CASE WHEN target_shots > 0 AND current_shots >= target_shots * 0.9 AND current_shots < target_shots THEN 1 END) as warning,
+        COUNT(CASE WHEN target_shots > 0 AND current_shots < target_shots * 0.9 THEN 1 END) as normal,
+        COUNT(CASE WHEN target_shots = 0 OR target_shots IS NULL THEN 1 END) as no_target
+      FROM molds WHERE status != 'scrapped'
+    `);
+
+    // 금형 가동률
+    const [availData] = await sequelize.query(`
+      SELECT
+        COUNT(*) as total_molds,
+        COUNT(CASE WHEN status = 'active' THEN 1 END) as active,
+        COUNT(CASE WHEN status = 'repair' THEN 1 END) as in_repair,
+        COUNT(CASE WHEN status = 'idle' THEN 1 END) as idle,
+        CASE WHEN COUNT(*) > 0
+          THEN ROUND(COUNT(CASE WHEN status = 'active' THEN 1 END)::numeric / COUNT(*)::numeric * 100, 1)
+          ELSE 0 END as availability_rate
+      FROM molds WHERE status != 'scrapped'
+    `);
+
+    res.json({
+      success: true,
+      data: {
+        mtbf: { days: parseFloat(mtbfData[0]?.mtbf_days) || 0, repair_count: parseInt(mtbfData[0]?.repair_count_90d) || 0 },
+        mttr: { days: parseFloat(mttrData[0]?.mttr_days) || 0, completed: parseInt(mttrData[0]?.completed_repairs) || 0 },
+        pm_compliance: { rate: parseFloat(pmData[0]?.pm_compliance_rate) || 0, total: parseInt(pmData[0]?.total_pm) || 0, completed: parseInt(pmData[0]?.completed_pm) || 0 },
+        shot_distribution: shotData[0],
+        availability: availData[0],
+        period: '90days'
+      }
+    });
+  } catch (error) {
+    console.error('KPI dashboard error:', error);
+    res.status(500).json({ success: false, error: { message: 'KPI 데이터 조회 중 오류' } });
+  }
+});
+
 module.exports = router;

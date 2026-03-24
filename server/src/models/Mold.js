@@ -136,6 +136,17 @@ module.exports = (sequelize) => {
     target_shots: {
       type: DataTypes.INTEGER
     },
+    spi_class: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      comment: 'SPI 등급: 101, 102, 103, 104, 105'
+    },
+    pm_level: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 1,
+      comment: 'PM 레벨: 1=일상, 2=정기, 3=주요, 4=대수리'
+    },
     current_shots: {
       type: DataTypes.INTEGER,
       defaultValue: 0
