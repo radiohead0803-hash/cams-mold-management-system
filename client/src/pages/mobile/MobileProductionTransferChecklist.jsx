@@ -7,10 +7,7 @@ import {
   Settings, List, Eye, Trash2
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { moldSpecificationAPI } from '../../lib/api';
-import api from '../../lib/api';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+import api, { moldSpecificationAPI } from '../../lib/api';
 
 /**
  * 모바일 양산이관 체크리스트 페이지

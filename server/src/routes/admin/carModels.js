@@ -2,7 +2,11 @@ const express = require('express');
 const router = express.Router();
 const db = require('../../models');
 const { CarModel } = db;
-// const { requireAdmin } = require('../../middlewares/auth');  // 관리자 권한 체크 미들웨어가 있다면 사용
+const { authenticate, authorize } = require('../../middleware/auth');
+
+// 모든 차종 관리 라우트에 인증 + 시스템관리자 권한 적용
+router.use(authenticate);
+router.use(authorize(['system_admin', 'mold_developer']));
 
 // [GET] /api/admin/car-models - 차종 목록 조회
 router.get('/', async (req, res) => {

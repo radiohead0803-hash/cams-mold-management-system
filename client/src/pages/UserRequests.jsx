@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
+import api from '../lib/api';
 import { UserPlus, Check, X, Trash2, Clock } from 'lucide-react';
 
 export default function UserRequests() {
@@ -22,23 +23,14 @@ export default function UserRequests() {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      
-      let url = `${import.meta.env.VITE_API_URL}/user-requests?limit=100`;
+
+      const params = { limit: 100 };
       if (filter !== 'all') {
-        url += `&status=${filter}`;
+        params.status = filter;
       }
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setRequests(data.data.items || []);
-      }
+      const response = await api.get('/user-requests', { params });
+      setRequests(response.data.data.items || []);
     } catch (error) {
       console.error('사용자 요청 조회 에러:', error);
     } finally {
@@ -60,24 +52,12 @@ export default function UserRequests() {
     if (!confirm('이 요청을 삭제하시겠습니까?')) return;
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-requests/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        alert('요청이 삭제되었습니다.');
-        fetchRequests();
-      } else {
-        const error = await response.json();
-        alert(`삭제 실패: ${error.error?.message}`);
-      }
+      await api.delete(`/user-requests/${id}`);
+      alert('요청이 삭제되었습니다.');
+      fetchRequests();
     } catch (error) {
       console.error('삭제 에러:', error);
-      alert('삭제에 실패했습니다.');
+      alert(`삭제 실패: ${error.response?.data?.error?.message || '삭제에 실패했습니다.'}`);
     }
   };
 
@@ -306,7 +286,6 @@ export default function UserRequests() {
 
 // 계정 요청 생성 모달
 function CreateRequestModal({ onClose, onSuccess }) {
-  const { token } = useAuthStore();
   const [companies, setCompanies] = useState([]);
   const [formData, setFormData] = useState({
     company_id: '',
@@ -327,17 +306,8 @@ function CreateRequestModal({ onClose, onSuccess }) {
 
   const fetchCompanies = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies?limit=100`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCompanies(data.data.items || []);
-      }
+      const response = await api.get('/companies', { params: { limit: 100 } });
+      setCompanies(response.data.data.items || []);
     } catch (error) {
       console.error('업체 목록 조회 에러:', error);
     }
@@ -363,25 +333,12 @@ function CreateRequestModal({ onClose, onSuccess }) {
     try {
       setSubmitting(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-requests`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        alert('계정 요청이 생성되었습니다.');
-        onSuccess();
-      } else {
-        const error = await response.json();
-        alert(`요청 실패: ${error.error?.message}`);
-      }
+      await api.post('/user-requests', formData);
+      alert('계정 요청이 생성되었습니다.');
+      onSuccess();
     } catch (error) {
       console.error('요청 생성 에러:', error);
-      alert('요청 생성에 실패했습니다.');
+      alert(`요청 실패: ${error.response?.data?.error?.message || '요청 생성에 실패했습니다.'}`);
     } finally {
       setSubmitting(false);
     }
@@ -538,7 +495,6 @@ function CreateRequestModal({ onClose, onSuccess }) {
 }
 
 function ApproveModal({ request, onClose, onSuccess }) {
-  const { token } = useAuthStore();
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -553,25 +509,12 @@ function ApproveModal({ request, onClose, onSuccess }) {
     try {
       setSubmitting(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-requests/${request.id}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ initial_password: password })
-      });
-
-      if (response.ok) {
-        alert('계정이 승인되고 생성되었습니다.');
-        onSuccess();
-      } else {
-        const error = await response.json();
-        alert(`승인 실패: ${error.error?.message}`);
-      }
+      await api.post(`/user-requests/${request.id}/approve`, { initial_password: password });
+      alert('계정이 승인되고 생성되었습니다.');
+      onSuccess();
     } catch (error) {
       console.error('승인 에러:', error);
-      alert('승인에 실패했습니다.');
+      alert(`승인 실패: ${error.response?.data?.error?.message || '승인에 실패했습니다.'}`);
     } finally {
       setSubmitting(false);
     }
@@ -631,7 +574,6 @@ function ApproveModal({ request, onClose, onSuccess }) {
 }
 
 function RejectModal({ request, onClose, onSuccess }) {
-  const { token } = useAuthStore();
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -646,25 +588,12 @@ function RejectModal({ request, onClose, onSuccess }) {
     try {
       setSubmitting(true);
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/user-requests/${request.id}/reject`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ rejection_reason: reason })
-      });
-
-      if (response.ok) {
-        alert('요청이 거부되었습니다.');
-        onSuccess();
-      } else {
-        const error = await response.json();
-        alert(`거부 실패: ${error.error?.message}`);
-      }
+      await api.post(`/user-requests/${request.id}/reject`, { rejection_reason: reason });
+      alert('요청이 거부되었습니다.');
+      onSuccess();
     } catch (error) {
       console.error('거부 에러:', error);
-      alert('거부에 실패했습니다.');
+      alert(`거부 실패: ${error.response?.data?.error?.message || '거부에 실패했습니다.'}`);
     } finally {
       setSubmitting(false);
     }

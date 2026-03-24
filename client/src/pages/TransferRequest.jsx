@@ -6,10 +6,8 @@ import {
   ChevronDown, ChevronUp, Check, Image as ImageIcon, Shield, Save
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import api, { transferAPI, moldSpecificationAPI, userAPI } from '../lib/api';
+import api, { transferAPI, moldSpecificationAPI, userAPI, masterDataAPI } from '../lib/api';
 // draftStorage 불필요 - transferAPI로 서버 저장 통합
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 /**
  * PC 이관요청 양식 페이지 - 업무플로 기반 레이아웃
@@ -121,21 +119,15 @@ export default function TransferRequest() {
         }
       }
       
-      const companiesRes = await fetch(`${API_URL}/companies?limit=100`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const companiesData = await companiesRes.json();
-      if (companiesData.success) {
-        setCompanies(companiesData.data.items || []);
+      const companiesRes = await api.get('/companies', { params: { limit: 100 } });
+      if (companiesRes.data.success) {
+        setCompanies(companiesRes.data.data.items || []);
       }
-      
+
       try {
-        const checklistRes = await fetch(`${API_URL}/transfers/checklist/items`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const checklistData = await checklistRes.json();
-        if (checklistData.success && checklistData.data?.length > 0) {
-          setChecklistItems(checklistData.data);
+        const checklistRes = await api.get('/transfers/checklist/items');
+        if (checklistRes.data.success && checklistRes.data.data?.length > 0) {
+          setChecklistItems(checklistRes.data.data);
         } else {
           setChecklistItems(getDefaultChecklistItems());
         }
@@ -263,20 +255,20 @@ export default function TransferRequest() {
   // 승인 처리
   const handleApprove = async (stepType) => {
     const stepLabels = { handover: '인계준비 승인', inspection: '검수승인', transfer: '이관 승인' };
+    if (!transferId) {
+      alert('이관 요청이 먼저 등록되어야 승인할 수 있습니다. 먼저 임시저장 또는 등록을 해주세요.');
+      return;
+    }
     if (!confirm(`${stepLabels[stepType]}을(를) 승인하시겠습니까?`)) return;
     try {
       setSaving(true);
-      if (transferId) {
-        await transferAPI.approve(transferId, { step: stepType, approver_id: user?.id, approver_name: user?.name });
-      } else {
-        await transferAPI.create({ ...buildTransferData(), [`${stepType}_approval_status`]: '승인완료' });
-      }
+      await transferAPI.approve(transferId, { step: stepType, approver_id: user?.id, approver_name: user?.name });
       setFormData(prev => ({ ...prev, [`${stepType}_approval_status`]: '승인완료' }));
       setSaveMessage({ type: 'success', text: `${stepLabels[stepType]} 승인 완료` });
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
       console.error('Approve failed:', error);
-      alert('승인 처리에 실패했습니다.');
+      alert(`승인 처리에 실패했습니다: ${error.response?.data?.error?.message || error.message}`);
     } finally {
       setSaving(false);
     }
@@ -285,6 +277,10 @@ export default function TransferRequest() {
   // 반려 처리
   const handleReject = async (stepType) => {
     const stepLabels = { handover: '인계준비', inspection: '검수', transfer: '이관' };
+    if (!transferId) {
+      alert('이관 요청이 먼저 등록되어야 반려할 수 있습니다.');
+      return;
+    }
     if (!rejectionReason.trim()) {
       alert('반려 사유를 입력해주세요.');
       return;
@@ -292,18 +288,14 @@ export default function TransferRequest() {
     if (!confirm(`${stepLabels[stepType]} 단계를 반려하시겠습니까?`)) return;
     try {
       setSaving(true);
-      if (transferId) {
-        await transferAPI.reject(transferId, { step: stepType, rejector_id: user?.id, rejector_name: user?.name, reason: rejectionReason });
-      } else {
-        await transferAPI.create({ ...buildTransferData(), [`${stepType}_approval_status`]: '반려', [`${stepType}_rejection_reason`]: rejectionReason });
-      }
+      await transferAPI.reject(transferId, { step: stepType, rejector_id: user?.id, rejector_name: user?.name, reason: rejectionReason });
       setFormData(prev => ({ ...prev, [`${stepType}_approval_status`]: '반려' }));
       setSaveMessage({ type: 'success', text: `${stepLabels[stepType]} 단계 반려 완료` });
       setRejectionReason('');
       setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
       console.error('Reject failed:', error);
-      alert('반려 처리에 실패했습니다.');
+      alert(`반려 처리에 실패했습니다: ${error.response?.data?.error?.message || error.message}`);
     } finally {
       setSaving(false);
     }

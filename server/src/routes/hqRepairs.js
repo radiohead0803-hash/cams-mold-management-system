@@ -1,8 +1,12 @@
 const express = require('express');
 const { Op } = require('sequelize');
 const { Repair, Mold, User } = require('../models/newIndex');
+const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
+
+// 모든 HQ 수리 라우트에 인증 적용
+router.use(authenticate);
 
 /**
  * GET /api/v1/hq/repairs

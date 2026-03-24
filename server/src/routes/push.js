@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const pushService = require('../services/pushNotificationService');
 const { sequelize } = require('../models/newIndex');
+const { authenticate, authorize } = require('../middleware/auth');
+
+// 모든 푸시 라우트에 인증 적용
+router.use(authenticate);
 
 /**
  * @route   POST /api/v1/push/register
@@ -102,7 +106,7 @@ router.post('/unregister', async (req, res) => {
  * @desc    푸시 알림 발송 (관리자용)
  * @access  Private (Admin only)
  */
-router.post('/send', async (req, res) => {
+router.post('/send', authorize(['system_admin']), async (req, res) => {
   try {
     const { userIds, topic, title, body, data } = req.body;
 

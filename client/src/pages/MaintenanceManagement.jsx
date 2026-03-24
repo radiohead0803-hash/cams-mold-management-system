@@ -20,8 +20,8 @@ const TYPE_ICONS = {
   other: Wrench
 };
 
-// 유지보전 유형 라벨
-const TYPE_LABELS = {
+// 유지보전 유형 라벨 (영문키 → 한글, 한글키는 그대로 반환)
+const TYPE_LABELS_MAP = {
   periodic: '정기점검',
   cleaning: '세척',
   lubrication: '윤활',
@@ -30,17 +30,13 @@ const TYPE_LABELS = {
   replacement: '부품교체',
   calibration: '교정',
   preventive: '예방정비',
-  other: '기타',
-  '정기점검': '정기점검',
-  '세척': '세척',
-  '윤활': '윤활',
-  '습합': '습합',
-  '수리': '수리',
-  '부품교체': '부품교체',
-  '교정': '교정',
-  '예방정비': '예방정비',
-  '기타': '기타'
+  other: '기타'
 };
+const getTypeLabel = (type) => TYPE_LABELS_MAP[type] || type || '기타';
+// 하위 호환용 프록시 (기존 TYPE_LABELS[key] 패턴 지원)
+const TYPE_LABELS = new Proxy(TYPE_LABELS_MAP, {
+  get: (target, prop) => target[prop] || prop
+});
 
 // 유지보전 목록
 function MaintenanceList() {

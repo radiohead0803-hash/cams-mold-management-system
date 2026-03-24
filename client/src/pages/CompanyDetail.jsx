@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import api from '../lib/api';
 import { ArrowLeft, Edit, Save, X, Building2, Phone, Mail, MapPin, User, Calendar, Star, Factory, Wrench, Award } from 'lucide-react';
 
 export default function CompanyDetail() {
@@ -28,30 +29,9 @@ export default function CompanyDetail() {
         return;
       }
 
-      console.log('업체 상세 조회 요청:', id);
-      console.log('API URL:', `${import.meta.env.VITE_API_URL}/companies/${id}`);
-      console.log('토큰:', token ? '있음' : '없음');
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('응답 상태:', response.status);
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('받은 데이터:', data);
-        setCompany(data.data);
-        setFormData(data.data);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API 에러:', errorData);
-        alert(`업체 정보를 불러오는데 실패했습니다. (${response.status})`);
-        navigate('/companies');
-      }
+      const response = await api.get(`/companies/${id}`);
+      setCompany(response.data.data);
+      setFormData(response.data.data);
     } catch (error) {
       console.error('업체 상세 조회 에러:', error);
       alert('업체 정보를 불러오는데 실패했습니다.');
@@ -74,27 +54,13 @@ export default function CompanyDetail() {
     try {
       setSaving(true);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCompany(data.data);
-        setIsEditing(false);
-        alert('업체 정보가 성공적으로 수정되었습니다.');
-      } else {
-        const error = await response.json();
-        alert(`수정 실패: ${error.error?.message || '알 수 없는 오류'}`);
-      }
+      const response = await api.patch(`/companies/${id}`, formData);
+      setCompany(response.data.data);
+      setIsEditing(false);
+      alert('업체 정보가 성공적으로 수정되었습니다.');
     } catch (error) {
       console.error('업체 수정 에러:', error);
-      alert('업체 정보 수정에 실패했습니다.');
+      alert(`수정 실패: ${error.response?.data?.error?.message || error.message || '알 수 없는 오류'}`);
     } finally {
       setSaving(false);
     }

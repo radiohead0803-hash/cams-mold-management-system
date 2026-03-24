@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardHeader from '../../components/DashboardHeader';
 import { useAuthStore } from '../../stores/authStore';
+import api from '../../lib/api';
 import { PreProductionChecklistWidget, MaintenanceWidget, ScrappingWidget, AlertSummaryWidget } from '../../components/DashboardWidgets';
 
 export default function MoldDeveloperDashboard() {
   const { token } = useAuthStore();
+  const [statsError, setStatsError] = useState(null);
+  const [makerError, setMakerError] = useState(null);
   const [stats, setStats] = useState({
     // 단계별 금형 현황
     development: 15,
@@ -39,26 +42,19 @@ export default function MoldDeveloperDashboard() {
 
   const fetchCompanyStats = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies/stats/all`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStats(prev => ({
-          ...prev,
-          totalCompanies: parseInt(data.data.total_companies) || 0,
-          totalMakers: parseInt(data.data.total_makers) || 0,
-          totalPlants: parseInt(data.data.total_plants) || 0,
-          activeMakers: parseInt(data.data.active_makers) || 0,
-          activePlants: parseInt(data.data.active_plants) || 0
-        }));
-      }
+      const response = await api.get('/companies/stats/all');
+      const data = response.data;
+      setStats(prev => ({
+        ...prev,
+        totalCompanies: parseInt(data.data.total_companies) || 0,
+        totalMakers: parseInt(data.data.total_makers) || 0,
+        totalPlants: parseInt(data.data.total_plants) || 0,
+        activeMakers: parseInt(data.data.active_makers) || 0,
+        activePlants: parseInt(data.data.active_plants) || 0
+      }));
     } catch (error) {
       console.error('업체 통계 조회 에러:', error);
+      setStatsError('업체 통계를 불러오는데 실패했습니다.');
     }
   };
 
@@ -66,53 +62,40 @@ export default function MoldDeveloperDashboard() {
   const fetchMakerPerformance = async () => {
     try {
       setMakerLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/statistics-report/maker-performance?period=monthly`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get('/statistics-report/maker-performance', { params: { period: 'monthly' } });
+      const data = response.data;
+      if (data.success && data.data?.makers) {
+        // API 데이터를 화면 표시 형식으로 변환
+        const transformedData = data.data.makers.map(maker => {
+          const totalRepairs = parseInt(maker.total_repairs) || 0;
+          const completedRepairs = parseInt(maker.completed_repairs) || 0;
+          const avgSatisfaction = parseFloat(maker.avg_satisfaction) || 0;
+          const managedMolds = parseInt(maker.managed_molds) || 0;
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data?.makers) {
-          // API 데이터를 화면 표시 형식으로 변환
-          const transformedData = data.data.makers.map(maker => {
-            const totalRepairs = parseInt(maker.total_repairs) || 0;
-            const completedRepairs = parseInt(maker.completed_repairs) || 0;
-            const avgSatisfaction = parseFloat(maker.avg_satisfaction) || 0;
-            const managedMolds = parseInt(maker.managed_molds) || 0;
-            
-            // 품질 점수 계산 (만족도 5점 만점 → 100점 환산)
-            const qualityScore = avgSatisfaction > 0 ? Math.round(avgSatisfaction * 20) : Math.round(Math.random() * 15 + 85);
-            
-            // 등급 계산
-            let rating = 'C';
-            if (qualityScore >= 90) rating = 'A';
-            else if (qualityScore >= 80) rating = 'B';
-            
-            return {
-              id: maker.maker_id,
-              name: maker.maker_name,
-              projects: managedMolds || totalRepairs,
-              onTime: completedRepairs,
-              total: totalRepairs,
-              quality: qualityScore,
-              rating
-            };
-          });
-          setMakerPerformance(transformedData);
-        }
+          // 품질 점수 계산 (만족도 5점 만점 → 100점 환산)
+          const qualityScore = avgSatisfaction > 0 ? Math.round(avgSatisfaction * 20) : Math.round(Math.random() * 15 + 85);
+
+          // 등급 계산
+          let rating = 'C';
+          if (qualityScore >= 90) rating = 'A';
+          else if (qualityScore >= 80) rating = 'B';
+
+          return {
+            id: maker.maker_id,
+            name: maker.maker_name,
+            projects: managedMolds || totalRepairs,
+            onTime: completedRepairs,
+            total: totalRepairs,
+            quality: qualityScore,
+            rating
+          };
+        });
+        setMakerPerformance(transformedData);
       }
     } catch (error) {
       console.error('제작처 성과 조회 에러:', error);
-      // 에러 시 기본 데이터 설정
-      setMakerPerformance([
-        { id: 1, name: 'A제작소', projects: 12, onTime: 11, total: 12, quality: 95, rating: 'A' },
-        { id: 2, name: 'B제작소', projects: 8, onTime: 7, total: 8, quality: 92, rating: 'A' },
-        { id: 3, name: 'C제작소', projects: 15, onTime: 13, total: 15, quality: 88, rating: 'B' },
-        { id: 4, name: 'D제작소', projects: 6, onTime: 5, total: 6, quality: 90, rating: 'B' }
-      ]);
+      setMakerError('제작처 성과 데이터를 불러오는데 실패했습니다.');
+      setMakerPerformance([]);
     } finally {
       setMakerLoading(false);
     }
@@ -252,6 +235,14 @@ export default function MoldDeveloperDashboard() {
       />
       
       <div className="p-6 space-y-6">
+        {/* 에러 알림 배너 */}
+        {(statsError || makerError) && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+            {statsError && <p>{statsError}</p>}
+            {makerError && <p>{makerError}</p>}
+          </div>
+        )}
+
         {/* 단계별 금형 현황 */}
         <section>
           <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 단계별 금형 현황</h2>

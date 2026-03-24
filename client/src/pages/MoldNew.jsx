@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, AlertCircle, CheckCircle, Factory, Building2, Upload, X, Image as ImageIcon, FileText } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import { masterDataAPI } from '../lib/api';
-
-// VITE_API_URL이 이미 /api/v1을 포함하므로 baseURL로 사용
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+import api, { masterDataAPI } from '../lib/api';
 
 export default function MoldNew() {
   const navigate = useNavigate();
@@ -313,37 +310,10 @@ export default function MoldNew() {
         return;
       }
       
-      const url = `${API_BASE_URL}/companies?limit=100`;
-      console.log('API 요청 URL:', url);
-      console.log('토큰:', token ? '있음' : '없음');
+      const response = await api.get('/companies', { params: { limit: 100 } });
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('응답 상태:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API 에러:', errorData);
-        
-        if (response.status === 401) {
-          setError('로그인이 만료되었습니다. 다시 로그인해주세요.');
-          setTimeout(() => navigate('/login'), 2000);
-        } else {
-          throw new Error(errorData.error?.message || '업체 목록 조회 실패');
-        }
-        return;
-      }
-
-      const data = await response.json();
-      console.log('받은 데이터:', data);
-      
-      if (data.success) {
-        setCompanies(data.data.items || []);
+      if (response.data.success) {
+        setCompanies(response.data.data.items || []);
       }
     } catch (err) {
       console.error('Failed to load companies:', err);
@@ -446,40 +416,26 @@ export default function MoldNew() {
         order_date: formData.order_date || null
       };
 
-      const response = await fetch(`${API_BASE_URL}/mold-specifications`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(submitData)
-      });
+      const response = await api.post('/mold-specifications', submitData);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || '임시저장 실패');
-      }
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.data.success) {
         if (partImage) {
-          await uploadPartImage(data.data.specification.id);
+          await uploadPartImage(response.data.data.specification.id);
         }
-        
+
         setSuccess({
           message: '임시저장되었습니다. 나중에 수정하여 등록할 수 있습니다.',
-          moldCode: data.data.mold?.mold_code,
-          qrToken: data.data.mold?.qr_token
+          moldCode: response.data.data.mold?.mold_code,
+          qrToken: response.data.data.mold?.qr_token
         });
-        
+
         setTimeout(() => {
           navigate('/molds');
         }, 2000);
       }
     } catch (err) {
       console.error('Failed to save draft:', err);
-      setError(err.message || '임시저장에 실패했습니다.');
+      setError(err.response?.data?.error?.message || err.message || '임시저장에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -511,40 +467,22 @@ export default function MoldNew() {
         order_date: formData.order_date || null
       };
 
-      const response = await fetch(`${API_BASE_URL}/mold-specifications`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(submitData)
-      });
+      const response = await api.post('/mold-specifications', submitData);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Server error:', errorData);
-        const errorMsg = errorData.error?.details 
-          ? `${errorData.error.message}: ${errorData.error.details}`
-          : errorData.error?.message || '금형 등록 실패';
-        throw new Error(errorMsg);
-      }
+      if (response.data.success) {
+        const specificationId = response.data.data.specification.id;
 
-      const data = await response.json();
-
-      if (data.success) {
-        const specificationId = data.data.specification.id;
-        
         // 부품 사진 업로드 (있는 경우)
         if (partImage) {
           await uploadPartImage(specificationId);
         }
-        
+
         setSuccess({
           message: '금형 정보가 성공적으로 등록되었습니다!',
-          moldCode: data.data.mold.mold_code,
-          qrToken: data.data.mold.qr_token
+          moldCode: response.data.data.mold.mold_code,
+          qrToken: response.data.data.mold.qr_token
         });
-        
+
         // 3초 후 목록으로 이동
         setTimeout(() => {
           navigate('/molds');
@@ -552,7 +490,10 @@ export default function MoldNew() {
       }
     } catch (err) {
       console.error('Failed to create mold:', err);
-      setError(err.message || '금형 등록에 실패했습니다. 다시 시도해주세요.');
+      const errorMsg = err.response?.data?.error?.details
+        ? `${err.response.data.error.message}: ${err.response.data.error.details}`
+        : err.response?.data?.error?.message || err.message || '금형 등록에 실패했습니다.';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -565,20 +506,10 @@ export default function MoldNew() {
       const formData = new FormData();
       formData.append('file', partImage.file);
 
-      const response = await fetch(`${API_BASE_URL}/mold-specifications/${specificationId}/part-image`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
+      const response = await api.post(`/mold-specifications/${specificationId}/part-image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
-
-      if (!response.ok) {
-        throw new Error('부품 사진 업로드 실패');
-      }
-
-      const data = await response.json();
-      console.log('부품 사진 업로드 성공:', data);
+      console.log('부품 사진 업로드 성공:', response.data);
     } catch (err) {
       console.error('Failed to upload part image:', err);
       // 에러가 발생해도 금형 등록은 성공했으므로 계속 진행

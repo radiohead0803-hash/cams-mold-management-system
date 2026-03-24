@@ -7,10 +7,7 @@ import {
   Camera, Upload, Save, Edit2, Plus, Settings, List, X
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import { moldSpecificationAPI } from '../lib/api';
-import api from '../lib/api';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+import api, { moldSpecificationAPI } from '../lib/api';
 
 /**
  * 양산이관 체크리스트 마스터 페이지

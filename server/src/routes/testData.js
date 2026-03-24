@@ -1,6 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const { sequelize } = require('../models/newIndex');
+const { authenticate, authorize } = require('../middleware/auth');
+
+// 프로덕션 환경에서는 테스트 데이터 API 비활성화
+if (process.env.NODE_ENV === 'production') {
+  router.all('*', (req, res) => {
+    res.status(403).json({ success: false, error: { message: '프로덕션 환경에서는 테스트 데이터 API를 사용할 수 없습니다.' } });
+  });
+  module.exports = router;
+  return;
+}
+
+// 개발 환경에서도 인증 + 관리자 권한 필요
+router.use(authenticate);
+router.use(authorize(['system_admin']));
 
 // 테스트 사출조건 데이터 삽입 API
 router.post('/injection-conditions', async (req, res) => {

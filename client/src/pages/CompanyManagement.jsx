@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardHeader from '../components/DashboardHeader';
 import { useAuthStore } from '../stores/authStore';
+import api from '../lib/api';
 
 export default function CompanyManagement() {
   const { token } = useAuthStore();
@@ -24,56 +25,30 @@ export default function CompanyManagement() {
   const fetchCompanies = async () => {
     try {
       setLoading(true);
-      
-      if (!token) {
-        console.error('토큰이 없습니다');
-        alert('로그인이 필요합니다.');
-        return;
-      }
-      
-      let url = `${import.meta.env.VITE_API_URL}/companies?limit=100`;
+
+      const params = { limit: 100 };
       if (filter !== 'all') {
-        url += `&company_type=${filter}`;
+        params.company_type = filter;
       }
 
-      console.log('API 요청 URL:', url);
-      console.log('토큰:', token ? '있음' : '없음');
+      const response = await api.get('/companies', { params });
+      setCompanies(response.data.data.items || []);
 
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('응답 상태:', response.status);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API 에러:', errorData);
-        throw new Error(errorData.error?.message || '회사 목록 조회 실패');
-      }
-
-      const data = await response.json();
-      console.log('받은 데이터:', data);
-      
-      setCompanies(data.data.items || []);
-      
       // 통계 계산
-      const items = data.data.items || [];
+      const items = response.data.data.items || [];
       const makers = items.filter(c => c.company_type === 'maker').length;
       const plants = items.filter(c => c.company_type === 'plant').length;
       const active = items.filter(c => c.is_active).length;
-      
+
       setStats({
-        totalCompanies: data.data.total || 0,
+        totalCompanies: response.data.data.total || 0,
         makers,
         plants,
         activeCompanies: active
       });
     } catch (error) {
       console.error('회사 목록 조회 에러:', error);
-      alert(`회사 목록을 불러오는데 실패했습니다: ${error.message}`);
+      alert(`회사 목록을 불러오는데 실패했습니다: ${error.response?.data?.error?.message || error.message}`);
     } finally {
       setLoading(false);
     }
@@ -301,7 +276,6 @@ function CompanyRow({ company, onRefresh }) {
 
 // 업체 등록 모달
 function AddCompanyModal({ onClose, onSuccess }) {
-  const { token } = useAuthStore();
   const [formData, setFormData] = useState({
     company_name: '',
     company_type: 'maker',
@@ -324,42 +298,15 @@ function AddCompanyModal({ onClose, onSuccess }) {
       return;
     }
 
-    if (!token) {
-      alert('로그인이 필요합니다.');
-      return;
-    }
-
     try {
       setSubmitting(true);
 
-      console.log('업체 등록 요청:', formData);
-      console.log('토큰:', token ? '있음' : '없음');
-
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/companies`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(formData)
-      });
-
-      console.log('응답 상태:', response.status);
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        console.error('API 에러 응답:', error);
-        throw new Error(error.error?.message || `업체 등록 실패 (${response.status})`);
-      }
-
-      const result = await response.json();
-      console.log('등록 성공:', result);
-      
+      await api.post('/companies', formData);
       alert('업체가 성공적으로 등록되었습니다.');
       onSuccess();
     } catch (error) {
       console.error('업체 등록 에러:', error);
-      alert(`등록 실패: ${error.message}`);
+      alert(`등록 실패: ${error.response?.data?.error?.message || error.message}`);
     } finally {
       setSubmitting(false);
     }

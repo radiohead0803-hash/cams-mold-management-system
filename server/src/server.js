@@ -6,20 +6,24 @@ const fs = require('fs');
 
 const PORT = process.env.PORT || 5000;
 
-// Run migrations
+// Run Sequelize CLI migrations (.js files - creates base schema)
 const runMigrations = () => {
-  return new Promise((resolve, reject) => {
-    console.log('🔄 Running database migrations...');
+  return new Promise((resolve) => {
+    console.log('🔄 Running Sequelize CLI migrations...');
     const migrationsPath = path.join(__dirname, '..');
-    exec('npx sequelize-cli db:migrate', { cwd: migrationsPath }, (error, stdout, stderr) => {
+    exec('npx sequelize-cli db:migrate', {
+      cwd: migrationsPath,
+      timeout: 60000,
+      env: { ...process.env }
+    }, (error, stdout, stderr) => {
       if (error) {
-        console.error('⚠️ Migration warning:', stderr || error.message);
-        // Don't reject - migrations might already be applied
-        resolve();
+        console.error('⚠️ Sequelize CLI migration warning:', stderr || error.message);
+        console.log('ℹ️ Will attempt to create tables via sync fallback...');
       } else {
-        console.log('✅ Migrations completed:', stdout);
-        resolve();
+        console.log('✅ Sequelize CLI migrations completed.');
+        if (stdout) console.log(stdout.trim());
       }
+      resolve();
     });
   });
 };
@@ -1112,6 +1116,65 @@ const runTransferRequestsMigration = async () => {
   }
 };
 
+// Run all remaining SQL migration files that are not individually registered
+const runRemainingMigrations = async () => {
+  console.log('🔄 Running remaining SQL migrations...');
+  const migrationsDir = path.join(__dirname, 'migrations');
+
+  // 이미 개별 함수로 실행되는 SQL 파일 (중복 실행 방지)
+  const alreadyHandled = new Set([
+    '20251210_injection_conditions.sql',
+    '20241211_production_transfer.sql',
+    '20241211_tryout_issues.sql'
+  ]);
+
+  try {
+    const files = fs.readdirSync(migrationsDir)
+      .filter(f => f.endsWith('.sql') && !alreadyHandled.has(f))
+      .sort();
+
+    let executed = 0;
+    for (const file of files) {
+      try {
+        const sqlPath = path.join(migrationsDir, file);
+        const sql = fs.readFileSync(sqlPath, 'utf8');
+
+        // 빈 파일이나 주석만 있는 파일 스킵
+        const trimmed = sql.replace(/--.*$/gm, '').trim();
+        if (!trimmed) continue;
+
+        // 각 SQL 문을 개별 실행 (세미콜론 기준 분리)
+        const statements = sql
+          .split(/;\s*$/m)
+          .map(s => s.trim())
+          .filter(s => s.length > 0 && !s.startsWith('--'));
+
+        for (const stmt of statements) {
+          try {
+            await sequelize.query(stmt);
+          } catch (e) {
+            // IF NOT EXISTS, already exists 등의 에러는 무시
+            if (!e.message.includes('already exists') &&
+                !e.message.includes('duplicate') &&
+                !e.message.includes('Cannot add') &&
+                !e.message.includes('relation') &&
+                !e.message.includes('does not exist')) {
+              // 심각한 에러만 로깅
+              console.warn(`  ⚠️ ${file}: ${e.message.substring(0, 100)}`);
+            }
+          }
+        }
+        executed++;
+      } catch (e) {
+        console.warn(`  ⚠️ Skipped ${file}: ${e.message.substring(0, 80)}`);
+      }
+    }
+    console.log(`✅ Remaining SQL migrations processed: ${executed}/${files.length} files`);
+  } catch (error) {
+    console.error('⚠️ Remaining migrations warning:', error.message);
+  }
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
@@ -1163,11 +1226,16 @@ const startServer = async () => {
     
     // Run checklist master new system migration (5 tables + seed)
     await runChecklistMasterNewMigration();
-    
-    // Sync models (development only)
-    if (process.env.NODE_ENV === 'development') {
-      // await sequelize.sync({ alter: true });
+
+    // Run all remaining SQL migration files (scrapping, GPS, transfer step, indexes, FK 등)
+    await runRemainingMigrations();
+
+    // Sync remaining models that may not have migration files
+    try {
+      await sequelize.sync({ alter: true });
       console.log('📊 Database models synced.');
+    } catch (syncError) {
+      console.warn('⚠️ Model sync warning:', syncError.message);
     }
     
     // Start server

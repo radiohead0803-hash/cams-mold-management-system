@@ -84,28 +84,39 @@ router.post('/daily/request-approval', authenticate, async (req, res) => {
       });
     }
 
-    // 기존 draft 삭제
-    await sequelize.query(`
-      DELETE FROM checklist_instances
-      WHERE mold_id = :mold_id AND category = 'daily' AND status = 'draft' AND inspector_id = :user_id
-    `, { replacements: { mold_id, user_id: user.id } });
+    // 기존 draft 삭제 + 새 인스턴스 생성을 트랜잭션으로 묶음
+    const transaction = await sequelize.transaction();
+    let instance;
+    try {
+      await sequelize.query(`
+        DELETE FROM checklist_instances
+        WHERE mold_id = :mold_id AND category = 'daily' AND status = 'draft' AND inspector_id = :user_id
+      `, { replacements: { mold_id, user_id: user.id }, transaction });
 
-    const instance = await ChecklistInstance.create({
-      mold_id,
-      category: 'daily',
-      check_date: check_date || new Date(),
-      status: 'pending_approval',
-      approver_id,
-      results,
-      production_quantity: production_quantity || 0,
-      summary,
-      inspector_id: user.id,
-      inspector_name: user.name,
-      created_by: user.id,
-      requested_at: new Date()
-    });
+      instance = await ChecklistInstance.create({
+        mold_id,
+        category: 'daily',
+        check_date: check_date || new Date(),
+        status: 'pending_approval',
+        approver_id,
+        results,
+        production_quantity: production_quantity || 0,
+        summary,
+        inspector_id: user.id,
+        inspector_name: user.name,
+        created_by: user.id,
+        requested_at: new Date()
+      }, { transaction });
 
-    // 승인자에게 알림 전송
+      await transaction.commit();
+    } catch (txError) {
+      if (!transaction.finished) {
+        await transaction.rollback();
+      }
+      throw txError;
+    }
+
+    // 승인자에게 알림 전송 (트랜잭션 커밋 후 비핵심 작업)
     try {
       await Notification.create({
         user_id: approver_id,
@@ -118,13 +129,6 @@ router.post('/daily/request-approval', authenticate, async (req, res) => {
     } catch (notifErr) {
       console.error('[Daily Approval] Notification error:', notifErr);
     }
-
-    console.log('[Daily Approval Request] Saved:', {
-      id: instance.id,
-      moldId: mold_id,
-      userId: user.id,
-      approverId: approver_id
-    });
 
     return res.json({
       success: true,
@@ -149,33 +153,41 @@ router.post('/daily/complete', authenticate, async (req, res) => {
     const { mold_id, check_date, results, production_quantity, summary } = req.body;
     const user = req.user;
 
-    // 기존 draft 삭제
-    await sequelize.query(`
-      DELETE FROM checklist_instances
-      WHERE mold_id = :mold_id AND category = 'daily' AND status = 'draft' AND inspector_id = :user_id
-    `, { replacements: { mold_id, user_id: user.id } });
+    // 기존 draft 삭제 + 새 인스턴스 생성을 트랜잭션으로 묶음
+    const transaction = await sequelize.transaction();
+    try {
+      await sequelize.query(`
+        DELETE FROM checklist_instances
+        WHERE mold_id = :mold_id AND category = 'daily' AND status = 'draft' AND inspector_id = :user_id
+      `, { replacements: { mold_id, user_id: user.id }, transaction });
 
-    const instance = await ChecklistInstance.create({
-      mold_id,
-      category: 'daily',
-      check_date: check_date || new Date(),
-      status: 'completed',
-      results,
-      production_quantity: production_quantity || 0,
-      summary,
-      inspector_id: user.id,
-      inspector_name: user.name,
-      created_by: user.id,
-      approved_at: new Date()
-    });
+      const instance = await ChecklistInstance.create({
+        mold_id,
+        category: 'daily',
+        check_date: check_date || new Date(),
+        status: 'completed',
+        results,
+        production_quantity: production_quantity || 0,
+        summary,
+        inspector_id: user.id,
+        inspector_name: user.name,
+        created_by: user.id,
+        approved_at: new Date()
+      }, { transaction });
 
-    console.log('[Daily Complete] Saved:', { id: instance.id, moldId: mold_id, userId: user.id });
+      await transaction.commit();
 
-    return res.json({
-      success: true,
-      message: '일상점검이 완료되었습니다.',
-      data: { id: instance.id }
-    });
+      return res.json({
+        success: true,
+        message: '일상점검이 완료되었습니다.',
+        data: { id: instance.id }
+      });
+    } catch (txError) {
+      if (transaction && !transaction.finished) {
+        await transaction.rollback();
+      }
+      throw txError;
+    }
   } catch (error) {
     console.error('[Daily Complete] Error:', error);
     return res.status(500).json({

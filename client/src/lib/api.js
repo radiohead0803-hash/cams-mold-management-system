@@ -43,17 +43,38 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const authData = localStorage.getItem('cams-auth')
-    if (authData) {
-      const { token } = JSON.parse(authData)
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
+    try {
+      const authData = localStorage.getItem('cams-auth')
+      if (authData) {
+        const parsed = JSON.parse(authData)
+        if (parsed?.state?.token) {
+          config.headers.Authorization = `Bearer ${parsed.state.token}`
+        } else if (parsed?.token) {
+          config.headers.Authorization = `Bearer ${parsed.token}`
+        }
       }
+    } catch (e) {
+      console.error('Auth data parsing error:', e)
     }
     return config
   },
   (error) => Promise.reject(error)
 )
+
+/**
+ * API 에러 메시지 추출 헬퍼
+ * @param {Error} error - axios error 객체
+ * @param {string} fallback - 기본 에러 메시지
+ * @returns {string}
+ */
+export const formatApiError = (error, fallback = '요청 처리에 실패했습니다.') => {
+  const errData = error?.response?.data?.error
+  if (errData?.details) return `${errData.message}: ${errData.details}`
+  if (errData?.message) return errData.message
+  if (error?.response?.data?.message) return error.response.data.message
+  if (error?.message) return error.message
+  return fallback
+}
 
 // 401 리다이렉트 디바운스 (중복 리다이렉트 방지)
 let isRedirecting = false
