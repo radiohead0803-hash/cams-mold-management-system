@@ -167,7 +167,7 @@ async function syncUsers() {
       }
     }
 
-    // 4. 목록에 없는 기존 사내 사용자 비활성화
+    // 4. 목록에 없는 기존 사내 사용자 삭제
     for (const existing of existingUsers) {
       const matchByUsername = newEmployeeIds.has(existing.username);
       const matchByEmployeeId = existing.employee_id && newEmployeeIds.has(existing.employee_id);
@@ -177,10 +177,10 @@ async function syncUsers() {
         if (existing.username === 'admin') continue;
 
         await sequelize.query(`
-          UPDATE users SET is_active = false, updated_at = NOW() WHERE id = :id
+          DELETE FROM users WHERE id = :id
         `, { replacements: { id: existing.id }, transaction });
         deactivated++;
-        console.log(`  ❌ 비활성화: ${existing.username} (${existing.name})`);
+        console.log(`  🗑️ 삭제: ${existing.username} (${existing.name})`);
       }
     }
 
@@ -189,7 +189,7 @@ async function syncUsers() {
     console.log('\n✅ 사내 사용자 동기화 완료!');
     console.log(`  📥 신규 등록: ${inserted}명`);
     console.log(`  🔄 업데이트: ${updated}명`);
-    console.log(`  ❌ 비활성화: ${deactivated}명`);
+    console.log(`  🗑️ 삭제: ${deactivated}명`);
     console.log(`  📊 총 활성 사용자: ${COMPANY_USERS.length}명`);
     console.log('\n📌 로그인 정보: 아이디 = 사번, 비밀번호 = 사번');
 

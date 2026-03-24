@@ -1239,13 +1239,17 @@ const startServer = async () => {
               is_active = true, updated_at = NOW()
           `, { replacements: { username: user.employee_id, hash, name: user.name, phone: user.phone, email: user.email, userType, eid: user.employee_id, pos: user.position, dept: user.department } });
         }
-        // 목록에 없는 사내 사용자 비활성화 (admin 제외)
+        // 목록에 없는 사내 사용자 삭제 (admin 제외)
         const employeeIds = COMPANY_USERS.map(u => u.employee_id);
-        await sequelize.query(`
-          UPDATE users SET is_active = false, updated_at = NOW()
+        const [deleted] = await sequelize.query(`
+          DELETE FROM users
           WHERE company_type = 'hq' AND username != 'admin'
             AND username NOT IN (:employeeIds)
+          RETURNING id, username, name
         `, { replacements: { employeeIds } });
+        if (deleted && deleted.length > 0) {
+          console.log(`🗑️ Deleted ${deleted.length} old HQ users:`, deleted.map(u => u.name).join(', '));
+        }
         console.log(`✅ Company users synced: ${COMPANY_USERS.length}`);
       }
     } catch (e) {
