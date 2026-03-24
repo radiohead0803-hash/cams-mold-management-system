@@ -1220,6 +1220,17 @@ const startServer = async () => {
     // Run all remaining SQL migration files (scrapping, GPS, transfer step, indexes, FK 등)
     await runRemainingMigrations();
 
+    // 사내 사용자 51명 DB 반영 (1회성 - 이미 반영되었으면 UPSERT로 무해)
+    try {
+      const bcrypt = require('bcryptjs');
+      const seedUsers = require('./migrations/20260324_seed_company_users');
+      const QueryInterface = sequelize.getQueryInterface();
+      await seedUsers.up(QueryInterface, require('sequelize'));
+      console.log('✅ Company users migration executed.');
+    } catch (e) {
+      console.warn('⚠️ Company users migration:', e.message);
+    }
+
     // Sync remaining models that may not have migration files
     try {
       await sequelize.sync({ alter: true });
