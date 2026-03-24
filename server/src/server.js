@@ -1143,25 +1143,15 @@ const runRemainingMigrations = async () => {
         const trimmed = sql.replace(/--.*$/gm, '').trim();
         if (!trimmed) continue;
 
-        // 각 SQL 문을 개별 실행 (세미콜론 기준 분리)
-        const statements = sql
-          .split(/;\s*$/m)
-          .map(s => s.trim())
-          .filter(s => s.length > 0 && !s.startsWith('--'));
-
-        for (const stmt of statements) {
-          try {
-            await sequelize.query(stmt);
-          } catch (e) {
-            // IF NOT EXISTS, already exists 등의 에러는 무시
-            if (!e.message.includes('already exists') &&
-                !e.message.includes('duplicate') &&
-                !e.message.includes('Cannot add') &&
-                !e.message.includes('relation') &&
-                !e.message.includes('does not exist')) {
-              // 심각한 에러만 로깅
-              console.warn(`  ⚠️ ${file}: ${e.message.substring(0, 100)}`);
-            }
+        // 전체 SQL을 한번에 실행 (DO $$ ... END $$; 블록 지원)
+        try {
+          await sequelize.query(sql);
+        } catch (e) {
+          // already exists, duplicate 등 무해한 에러는 무시
+          if (!e.message.includes('already exists') &&
+              !e.message.includes('duplicate') &&
+              !e.message.includes('does not exist')) {
+            console.warn(`  ⚠️ ${file}: ${e.message.substring(0, 120)}`);
           }
         }
         executed++;
