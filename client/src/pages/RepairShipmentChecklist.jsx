@@ -56,14 +56,12 @@ export default function RepairShipmentChecklist() {
     try {
       setLoading(true);
       
-      // 기존 체크리스트 조회
       const res = await api.get(`/repair-shipment-checklists/repair-request/${repairRequestId}`);
       
       if (res.data.success && res.data.data) {
         setChecklist(res.data.data);
         organizeCategories(res.data.data.items);
       } else {
-        // 체크리스트 생성
         const createRes = await api.post('/repair-shipment-checklists', {
           repair_request_id: repairRequestId,
           mold_id: moldId,
@@ -84,7 +82,6 @@ export default function RepairShipmentChecklist() {
     }
   };
 
-  // 카테고리별로 항목 정리
   const organizeCategories = (items) => {
     const categoryMap = {};
     
@@ -110,7 +107,6 @@ export default function RepairShipmentChecklist() {
     setCategories(sortedCategories);
   };
 
-  // 항목 결과 업데이트
   const handleResultChange = async (itemId, result) => {
     if (!checklist) return;
     
@@ -121,7 +117,6 @@ export default function RepairShipmentChecklist() {
         checked_by_name: user?.name
       });
       
-      // 로컬 상태 업데이트
       setCategories(prev => prev.map(cat => ({
         ...cat,
         items: cat.items.map(item => 
@@ -129,7 +124,6 @@ export default function RepairShipmentChecklist() {
         )
       })));
       
-      // 체크리스트 통계 업데이트
       const allItems = categories.flatMap(c => c.items);
       const updatedItems = allItems.map(item => item.id === itemId ? { ...item, result } : item);
       setChecklist(prev => prev ? {
@@ -143,7 +137,6 @@ export default function RepairShipmentChecklist() {
     }
   };
 
-  // 비고 업데이트
   const handleNotesChange = async (itemId, notes) => {
     if (!checklist) return;
     
@@ -161,7 +154,6 @@ export default function RepairShipmentChecklist() {
     }
   };
 
-  // 카메라/갤러리 열기
   const handleCameraClick = (itemId) => {
     setCurrentPhotoItemId(itemId);
     if (fileInputRef.current) {
@@ -169,7 +161,6 @@ export default function RepairShipmentChecklist() {
     }
   };
 
-  // 사진 업로드 처리
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !currentPhotoItemId || !checklist) return;
@@ -190,7 +181,6 @@ export default function RepairShipmentChecklist() {
       if (res.data.success) {
         const photoUrl = res.data.data.file_url;
         
-        // 항목의 photo_urls 업데이트
         const item = categories.flatMap(c => c.items).find(i => i.id === currentPhotoItemId);
         const currentPhotos = item?.photo_urls || [];
         const newPhotos = [...currentPhotos, photoUrl];
@@ -220,7 +210,6 @@ export default function RepairShipmentChecklist() {
     }
   };
 
-  // 사진 삭제
   const handleDeletePhoto = async (itemId, photoUrl) => {
     if (!checklist) return;
     
@@ -243,11 +232,9 @@ export default function RepairShipmentChecklist() {
     }
   };
 
-  // 승인 요청 (제작처 점검 완료)
   const handleSubmit = async () => {
     if (!checklist) return;
     
-    // 미완료 항목 확인
     const allItems = categories.flatMap(c => c.items);
     const pendingItems = allItems.filter(i => i.result === 'pending');
     
@@ -256,14 +243,12 @@ export default function RepairShipmentChecklist() {
       return;
     }
     
-    // FAIL 항목 확인
     const failedItems = allItems.filter(i => i.result === 'fail');
     if (failedItems.length > 0) {
       setError(`불합격 항목이 ${failedItems.length}개 있습니다. 모든 항목이 PASS여야 승인 요청이 가능합니다.`);
       return;
     }
     
-    // 사진 필수 항목 확인
     const photoRequiredItems = allItems.filter(i => i.photo_required && i.result === 'pass');
     for (const item of photoRequiredItems) {
       if (!item.photo_urls || item.photo_urls.length === 0) {
@@ -290,7 +275,6 @@ export default function RepairShipmentChecklist() {
     }
   };
 
-  // 본사 승인
   const handleApprove = async () => {
     if (!checklist) return;
     
@@ -311,7 +295,6 @@ export default function RepairShipmentChecklist() {
     }
   };
 
-  // 본사 반려
   const handleReject = async () => {
     if (!checklist || !rejectionReason.trim()) {
       setError('반려 사유를 입력해주세요.');
@@ -337,17 +320,15 @@ export default function RepairShipmentChecklist() {
     }
   };
 
-  // 카테고리 진행률 계산
   const getCategoryProgress = (category) => {
     const completed = category.items.filter(i => i.result !== 'pending').length;
     return { completed, total: category.items.length };
   };
 
-  // 전체 진행률 계산
   const getTotalProgress = () => {
     const allItems = categories.flatMap(c => c.items);
     const completed = allItems.filter(i => i.result !== 'pending').length;
-    return Math.round((completed / allItems.length) * 100) || 0;
+    return { completed, total: allItems.length, percentage: Math.round((completed / allItems.length) * 100) || 0 };
   };
 
   const isHQ = user?.user_type === 'system_admin' || user?.user_type === 'mold_developer';
@@ -359,10 +340,7 @@ export default function RepairShipmentChecklist() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto mb-2" />
-          <p className="text-sm text-gray-600">체크리스트 로딩 중...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -374,19 +352,14 @@ export default function RepairShipmentChecklist() {
           <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
           <p className="text-gray-700 font-medium mb-2">체크리스트를 불러올 수 없습니다</p>
           <p className="text-sm text-gray-500 mb-4">{error || '수리요청 ID를 확인해주세요.'}</p>
-          <button
-            onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm"
-          >
-            돌아가기
-          </button>
+          <button onClick={() => navigate(-1)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm">돌아가기</button>
         </div>
       </div>
     );
   }
 
   const currentCategory = categories[currentCategoryIndex];
-  const progress = getTotalProgress();
+  const { completed: totalCompleted, total: totalAll, percentage: progress } = getTotalProgress();
   const CategoryIcon = categoryIcons[currentCategory?.code] || FileText;
 
   return (
@@ -400,302 +373,282 @@ export default function RepairShipmentChecklist() {
         className="hidden"
       />
 
-      {/* 헤더 */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      {/* Header - MoldChecklist 스타일 */}
+      <div className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
+              <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full">
                 <ArrowLeft size={20} />
               </button>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">수리 후 출하점검 체크리스트</h1>
+                <h1 className="text-xl font-bold text-gray-900">수리 후 출하점검 체크리스트</h1>
                 <p className="text-sm text-gray-500">{checklist.checklist_number}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            
+            {/* 통계 + 상태 */}
+            <div className="flex items-center gap-6">
+              <div className="text-center">
+                <p className="text-xs text-gray-500">총 점검항목</p>
+                <p className="text-2xl font-bold text-gray-900">{totalAll}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-500">완료</p>
+                <p className="text-2xl font-bold text-blue-600">{totalCompleted}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-500">진행률</p>
+                <p className="text-2xl font-bold text-green-600">{progress}%</p>
+              </div>
+
               {/* 상태 배지 */}
               {checklist.status === 'draft' && (
                 <span className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full">작성중</span>
               )}
               {checklist.status === 'pending_approval' && (
                 <span className="px-3 py-1 bg-amber-100 text-amber-700 text-sm rounded-full flex items-center gap-1">
-                  <Clock size={14} />
-                  승인대기
+                  <Clock size={14} /> 승인대기
                 </span>
               )}
               {checklist.status === 'approved' && (
                 <span className="px-3 py-1 bg-green-100 text-green-700 text-sm rounded-full flex items-center gap-1">
-                  <CheckCircle size={14} />
-                  승인완료
+                  <CheckCircle size={14} /> 승인완료
                 </span>
               )}
               {checklist.status === 'rejected' && (
                 <span className="px-3 py-1 bg-red-100 text-red-700 text-sm rounded-full flex items-center gap-1">
-                  <X size={14} />
-                  반려
+                  <X size={14} /> 반려
                 </span>
               )}
-              
-              {/* 승인/반려 버튼 (본사 담당자) */}
+
+              {/* 승인/반려 버튼 */}
               {canApprove && (
                 <button
                   onClick={() => setShowApprovalModal(true)}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
                 >
                   승인/반려
                 </button>
               )}
             </div>
           </div>
-          
-          {/* 진행률 바 */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-sm mb-1">
-              <span className="text-gray-600">전체 진행률</span>
-              <span className="font-medium">{progress}%</span>
-            </div>
-            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500 transition-all duration-300"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
         </div>
-      </header>
+      </div>
 
-      <div className="max-w-7xl mx-auto p-4">
-        <div className="grid grid-cols-12 gap-6">
-          {/* 사이드바 - 카테고리 목록 */}
-          <div className="col-span-3">
-            <div className="bg-white rounded-xl border border-gray-200 p-4 sticky top-32">
-              <h3 className="font-semibold text-gray-900 mb-3">점검 카테고리</h3>
-              <div className="space-y-2">
-                {categories.map((category, index) => {
-                  const { completed, total } = getCategoryProgress(category);
-                  const isActive = index === currentCategoryIndex;
-                  const isComplete = completed === total;
-                  const Icon = categoryIcons[category.code] || FileText;
-
-                  return (
-                    <button
-                      key={category.code}
-                      onClick={() => setCurrentCategoryIndex(index)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all ${
-                        isActive
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                          : isComplete
-                          ? 'bg-green-50 text-green-700'
-                          : 'hover:bg-gray-50 text-gray-600'
-                      }`}
-                    >
-                      <Icon size={16} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{category.name}</div>
-                        <div className="text-xs opacity-75">{completed}/{total} 완료</div>
-                      </div>
-                      {isComplete && <Check size={14} className="text-green-500" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* 에러/성공 메시지 */}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center justify-between">
+            {error}
+            <button onClick={() => setError('')} className="text-red-400 hover:text-red-600"><X size={16} /></button>
           </div>
+        )}
+        {success && (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center justify-between">
+            {success}
+            <button onClick={() => setSuccess('')} className="text-green-400 hover:text-green-600"><X size={16} /></button>
+          </div>
+        )}
 
-          {/* 메인 컨텐츠 - 점검 항목 */}
-          <div className="col-span-9">
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <CategoryIcon size={20} className="text-blue-500" />
-                  {currentCategory?.name}
-                </h2>
-                <span className="text-sm text-gray-500">
-                  {currentCategoryIndex + 1} / {categories.length}
-                </span>
+        {/* 카테고리별 체크리스트 - MoldChecklist 테이블 스타일 */}
+        {categories.map((category, catIndex) => {
+          const { completed, total } = getCategoryProgress(category);
+          const isActive = catIndex === currentCategoryIndex;
+          const isComplete = completed === total;
+          const Icon = categoryIcons[category.code] || FileText;
+          const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+          return (
+            <div key={category.code} className="bg-white rounded-xl shadow-sm border overflow-hidden">
+              {/* 카테고리 헤더 - gradient 스타일 */}
+              <div 
+                className="bg-gradient-to-r from-indigo-900 to-blue-800 text-white px-6 py-3 flex items-center justify-between cursor-pointer"
+                onClick={() => setCurrentCategoryIndex(catIndex)}
+              >
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Icon size={18} />
+                  {category.name}
+                </h3>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm opacity-80">{completed}/{total} ({percentage}%)</span>
+                  {isComplete && <CheckCircle size={18} className="text-green-400" />}
+                </div>
               </div>
 
-              <div className="space-y-4">
-                {currentCategory?.items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
-                  >
-                    {/* 항목 헤더 */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">
-                          <span className="text-blue-500 mr-2">[{item.item_code}]</span>
-                          {item.item_name}
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-1">{item.item_description}</p>
-                        {/* 사진 필수 상태 표시 */}
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${
-                            item.photo_urls && item.photo_urls.length > 0 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-red-100 text-red-700'
-                          }`}>
-                            📷 사진필수 {item.photo_urls && item.photo_urls.length > 0 ? `(${item.photo_urls.length}장 첨부)` : '(미첨부)'}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleCameraClick(item.id)}
-                        disabled={isReadOnly || uploadingItemId === item.id}
-                        className={`ml-4 p-3 rounded-lg ${
-                          uploadingItemId === item.id
-                            ? 'bg-blue-100 text-blue-500'
-                            : isReadOnly
-                            ? 'bg-gray-100 text-gray-400'
-                            : item.photo_urls && item.photo_urls.length > 0
-                            ? 'bg-green-50 text-green-600 hover:bg-green-100'
-                            : 'bg-red-50 text-red-600 hover:bg-red-100 animate-pulse'
-                        }`}
-                      >
-                        {uploadingItemId === item.id ? (
-                          <Loader2 size={24} className="animate-spin" />
-                        ) : (
-                          <Camera size={24} />
-                        )}
-                      </button>
-                    </div>
+              {/* 테이블 형식 점검 항목 */}
+              {isActive && (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-24">코드</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">점검 항목</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-64">점검 결과</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-20">사진</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">확인</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {category.items.map((item) => {
+                          const hasResult = item.result !== 'pending';
+                          
+                          return (
+                            <tr key={item.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-sm text-blue-600 font-medium">{item.item_code}</td>
+                              <td className="px-4 py-3">
+                                <div className="text-sm text-gray-900 font-medium">{item.item_name}</div>
+                                <p className="text-xs text-gray-500 mt-0.5">{item.item_description}</p>
+                                {/* 사진 필수 배지 */}
+                                <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-[10px] rounded-full ${
+                                  item.photo_urls && item.photo_urls.length > 0 
+                                    ? 'bg-green-100 text-green-700' 
+                                    : 'bg-red-100 text-red-700'
+                                }`}>
+                                  📷 사진필수 {item.photo_urls && item.photo_urls.length > 0 ? `(${item.photo_urls.length}장)` : '(미첨부)'}
+                                </span>
+                                {/* 비고 입력 (FAIL 시) */}
+                                {item.result === 'fail' && (
+                                  <textarea
+                                    value={item.notes || ''}
+                                    onChange={(e) => handleNotesChange(item.id, e.target.value)}
+                                    disabled={isReadOnly}
+                                    className="mt-2 w-full border border-red-200 rounded px-3 py-1.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-red-500 disabled:bg-gray-50"
+                                    rows={2}
+                                    placeholder="불합격 사유를 입력하세요"
+                                  />
+                                )}
+                                {/* 첨부 사진 미리보기 */}
+                                {item.photo_urls && item.photo_urls.length > 0 && (
+                                  <div className="mt-2 flex gap-1.5 flex-wrap">
+                                    {item.photo_urls.map((url, idx) => (
+                                      <div key={idx} className="relative group">
+                                        <img src={url} alt={`점검 사진 ${idx + 1}`} className="w-14 h-14 object-cover rounded border border-gray-200" />
+                                        {!isReadOnly && (
+                                          <button
+                                            onClick={() => handleDeletePhoto(item.id, url)}
+                                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                          >
+                                            <Trash2 size={10} />
+                                          </button>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {/* 점검자 */}
+                                {item.checked_by_name && (
+                                  <div className="mt-1 text-[10px] text-gray-400">점검: {item.checked_by_name}</div>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex gap-1.5 justify-center">
+                                  {['pass', 'fail', 'na'].map((result) => {
+                                    const isSelected = item.result === result;
+                                    const colors = {
+                                      pass: isSelected ? 'bg-green-500 text-white' : 'bg-white text-green-600 border-green-300 hover:bg-green-50',
+                                      fail: isSelected ? 'bg-red-500 text-white' : 'bg-white text-red-600 border-red-300 hover:bg-red-50',
+                                      na: isSelected ? 'bg-gray-500 text-white' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                    };
+                                    const labels = { pass: 'PASS', fail: 'FAIL', na: 'N/A' };
+                                    const icons = {
+                                      pass: <Check size={14} />,
+                                      fail: <X size={14} />,
+                                      na: <span className="text-[10px]">N/A</span>
+                                    };
 
-                    {/* 상태 선택 버튼 */}
-                    <div className="flex gap-2 mb-3">
-                      {['pass', 'fail', 'na'].map((result) => {
-                        const isSelected = item.result === result;
-                        const colors = {
-                          pass: isSelected ? 'bg-green-500 text-white' : 'bg-white text-green-600 border-green-300 hover:bg-green-50',
-                          fail: isSelected ? 'bg-red-500 text-white' : 'bg-white text-red-600 border-red-300 hover:bg-red-50',
-                          na: isSelected ? 'bg-gray-500 text-white' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                        };
-                        const labels = { pass: 'PASS', fail: 'FAIL', na: 'N/A' };
-                        const icons = {
-                          pass: <Check size={16} />,
-                          fail: <X size={16} />,
-                          na: <span className="text-xs">N/A</span>
-                        };
-
-                        return (
-                          <button
-                            key={result}
-                            onClick={() => !isReadOnly && handleResultChange(item.id, result)}
-                            disabled={isReadOnly}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border font-medium transition-all ${colors[result]} ${isReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          >
-                            {icons[result]}
-                            {labels[result]}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* 비고 입력 */}
-                    {item.result === 'fail' && (
-                      <textarea
-                        value={item.notes || ''}
-                        onChange={(e) => handleNotesChange(item.id, e.target.value)}
-                        disabled={isReadOnly}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-500 disabled:bg-gray-50"
-                        rows={2}
-                        placeholder="불합격 사유를 입력하세요"
-                      />
-                    )}
-
-                    {/* 첨부 사진 */}
-                    {item.photo_urls && item.photo_urls.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Image size={14} className="text-gray-400" />
-                          <span className="text-sm text-gray-500">첨부 사진 ({item.photo_urls.length})</span>
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                          {item.photo_urls.map((url, idx) => (
-                            <div key={idx} className="relative group">
-                              <img
-                                src={url}
-                                alt={`점검 사진 ${idx + 1}`}
-                                className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                              />
-                              {!isReadOnly && (
+                                    return (
+                                      <button
+                                        key={result}
+                                        onClick={() => !isReadOnly && handleResultChange(item.id, result)}
+                                        disabled={isReadOnly}
+                                        className={`flex items-center justify-center gap-1 px-3 py-1.5 rounded border text-sm font-medium transition-all ${colors[result]} ${isReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                      >
+                                        {icons[result]}
+                                        {labels[result]}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-center">
                                 <button
-                                  onClick={() => handleDeletePhoto(item.id, url)}
-                                  className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => handleCameraClick(item.id)}
+                                  disabled={isReadOnly || uploadingItemId === item.id}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    uploadingItemId === item.id
+                                      ? 'bg-blue-100 text-blue-500'
+                                      : isReadOnly
+                                      ? 'bg-gray-100 text-gray-400'
+                                      : item.photo_urls && item.photo_urls.length > 0
+                                      ? 'bg-green-50 text-green-600 hover:bg-green-100'
+                                      : 'bg-red-50 text-red-600 hover:bg-red-100'
+                                  }`}
                                 >
-                                  <Trash2 size={12} />
+                                  {uploadingItemId === item.id ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                  ) : (
+                                    <Camera size={18} />
+                                  )}
                                 </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 점검자 정보 */}
-                    {item.checked_by_name && (
-                      <div className="mt-2 text-xs text-gray-400">
-                        점검: {item.checked_by_name}
-                      </div>
-                    )}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                {hasResult ? (
+                                  <CheckCircle size={20} className={item.result === 'pass' ? 'text-green-500 mx-auto' : item.result === 'fail' ? 'text-red-500 mx-auto' : 'text-gray-400 mx-auto'} />
+                                ) : (
+                                  <div className="w-5 h-5 rounded-full border-2 border-gray-300 mx-auto" />
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
-              </div>
 
-              {/* 에러/성공 메시지 */}
-              {error && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                  {error}
-                </div>
-              )}
-              {success && (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
-                  {success}
-                </div>
-              )}
-
-              {/* 하단 네비게이션 */}
-              <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between">
-                <button
-                  onClick={() => setCurrentCategoryIndex(prev => Math.max(0, prev - 1))}
-                  disabled={currentCategoryIndex === 0}
-                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 disabled:opacity-40"
-                >
-                  <ChevronLeft size={16} />
-                  이전
-                </button>
-                
-                {currentCategoryIndex === categories.length - 1 ? (
-                  isMaker && checklist.status === 'draft' && (
-                    <button
-                      onClick={handleSubmit}
-                      disabled={submitting}
-                      className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50"
-                    >
-                      {submitting ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Send size={16} />
-                      )}
-                      승인 요청
+                  {/* 관련 자료 첨부 */}
+                  <div className="px-6 py-3 border-t bg-gray-50 flex items-center justify-between">
+                    <span className="text-sm text-gray-600">관련 자료 첨부</span>
+                    <button className="px-4 py-2 bg-gray-700 text-white rounded text-sm flex items-center gap-1 hover:bg-gray-800">
+                      <Upload size={14} /> 파일 첨부
                     </button>
-                  )
-                ) : (
-                  <button
-                    onClick={() => setCurrentCategoryIndex(prev => Math.min(categories.length - 1, prev + 1))}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600"
-                  >
-                    다음
-                    <ChevronRight size={16} />
-                  </button>
-                )}
-              </div>
+                  </div>
+                </>
+              )}
+
+              {/* 비활성 카테고리 요약 */}
+              {!isActive && completed > 0 && (
+                <div className="px-6 py-2 text-xs text-gray-400 flex items-center gap-2">
+                  <CheckCircle size={12} className="text-green-400" />
+                  {completed}/{total} 항목 완료 — 클릭하여 펼치기
+                </div>
+              )}
             </div>
-          </div>
+          );
+        })}
+
+        {/* 하단 버튼 영역 */}
+        <div className="flex gap-3">
+          {isMaker && checklist.status === 'draft' && (
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
+              {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+              승인 요청
+            </button>
+          )}
+          {canApprove && (
+            <button
+              onClick={() => setShowApprovalModal(true)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700"
+            >
+              <ThumbsUp size={18} />
+              승인/반려 처리
+            </button>
+          )}
         </div>
       </div>
 
@@ -706,7 +659,7 @@ export default function RepairShipmentChecklist() {
             <h3 className="text-lg font-bold text-gray-900 mb-4">출하점검 승인/반려</h3>
             
             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 space-y-1">
                 <p>체크리스트: {checklist.checklist_number}</p>
                 <p>제작처 점검자: {checklist.maker_checker_name}</p>
                 <p>점검일: {checklist.maker_check_date ? new Date(checklist.maker_check_date).toLocaleDateString('ko-KR') : '-'}</p>
@@ -727,7 +680,7 @@ export default function RepairShipmentChecklist() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowApprovalModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-600"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
               >
                 취소
               </button>
