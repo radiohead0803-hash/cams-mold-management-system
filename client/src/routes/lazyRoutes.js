@@ -141,6 +141,22 @@ export const ChecklistMasterConsole = lazy(() => import('../pages/StandardDocume
 export const ChecklistMasterDetail = lazy(() => import('../pages/StandardDocumentMaster'));
 export const DocumentMasterConsole = lazy(() => import('../pages/StandardDocumentMaster'));
 
+// 모바일 — 신규 추가 페이지
+export const MobileDocuments = lazy(() => import('../pages/mobile/MobileDocuments'));
+export const MobilePhotoGallery = lazy(() => import('../pages/mobile/MobilePhotoGallery'));
+export const MobileRepairList = lazy(() => import('../pages/mobile/MobileRepairList'));
+export const MobileHqRepairList = lazy(() => import('../pages/mobile/MobileHqRepairList'));
+export const MobileMakerRepairList = lazy(() => import('../pages/mobile/MobileMakerRepairList'));
+export const MobileMakerMoldDetail = lazy(() => import('../pages/mobile/MobileMakerMoldDetail'));
+export const MobileMoldLifecycle = lazy(() => import('../pages/mobile/MobileMoldLifecycle'));
+export const MobileCompanyList = lazy(() => import('../pages/mobile/MobileCompanyList'));
+export const MobileCompanyDetail = lazy(() => import('../pages/mobile/MobileCompanyDetail'));
+export const MobileWorkflow = lazy(() => import('../pages/mobile/MobileWorkflow'));
+export const MobileMoldQRCode = lazy(() => import('../pages/mobile/MobileMoldQRCode'));
+export const MobilePlantMoldSelect = lazy(() => import('../pages/mobile/MobilePlantMoldSelect'));
+export const MobileUserRequests = lazy(() => import('../pages/mobile/MobileUserRequests'));
+export const MobileApprovalInbox = lazy(() => import('../pages/mobile/MobileApprovalInbox'));
+
 // 모바일 통합 점검
 export const MobileInspectionNew = lazy(() => import('../pages/mobile/MobileInspectionNew'));
 

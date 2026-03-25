@@ -232,6 +232,15 @@ export default function MobileMoldDetailNew() {
       items: [
         { label: '이관현황', action: () => navigate(`/mobile/mold/${moldId}/transfer`) }
       ]
+    },
+    documents: {
+      label: '문서/사진',
+      icon: FileText,
+      color: 'bg-indigo-400',
+      items: [
+        { label: '문서관리', action: () => navigate(`/mobile/mold/${moldId}/documents`) },
+        { label: '사진갤러리', action: () => navigate(`/mobile/mold/${moldId}/photos`) }
+      ]
     }
   }
 

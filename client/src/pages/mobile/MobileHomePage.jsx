@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Package, ClipboardCheck, Wrench, Trash2, FileCheck, 
+import {
+  Package, ClipboardCheck, Wrench, Trash2, FileCheck,
   Bell, QrCode, Settings, ChevronRight, Calendar,
   TrendingUp, AlertTriangle, CheckCircle, Cog, BarChart3, MapPin, History, List,
-  Clock, Wifi, WifiOff, RefreshCw
+  Clock, Wifi, WifiOff, RefreshCw, Building2, FileText, GitBranch, Users, Inbox, Image, LifeBuoy
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import api from '../../lib/api';
@@ -138,7 +138,13 @@ export default function MobileHomePage() {
     { icon: Trash2, label: '폐기관리', color: 'gray', path: '/mobile/scrapping' },
     { icon: FileCheck, label: '체크리스트', color: 'blue', path: '/mobile/pre-production-checklist' },
     { icon: MapPin, label: '위치지도', color: 'green', path: '/mobile/location-map' },
-    { icon: QrCode, label: 'QR세션', color: 'blue', path: '/mobile/qr-sessions' }
+    { icon: QrCode, label: 'QR세션', color: 'blue', path: '/mobile/qr-sessions' },
+    { icon: GitBranch, label: '워크플로우', color: 'purple', path: '/mobile/workflow' },
+    { icon: Building2, label: '업체관리', color: 'blue', path: '/mobile/companies' },
+    { icon: QrCode, label: 'QR코드', color: 'green', path: '/mobile/mold-qrcode' },
+    { icon: LifeBuoy, label: '라이프사이클', color: 'orange', path: '/mobile/mold-lifecycle' },
+    { icon: Inbox, label: '승인함', color: 'red', path: '/mobile/approval-inbox' },
+    { icon: Users, label: '사용자요청', color: 'purple', path: '/mobile/user-requests' }
   ];
 
   return (

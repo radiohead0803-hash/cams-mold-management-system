@@ -120,6 +120,20 @@ import {
   MobilePeriodicInspection,
   MobileRepairShipmentChecklist,
   MobileProductionTransferChecklist,
+  MobileDocuments,
+  MobilePhotoGallery,
+  MobileRepairList,
+  MobileHqRepairList,
+  MobileMakerRepairList,
+  MobileMakerMoldDetail,
+  MobileMoldLifecycle,
+  MobileCompanyList,
+  MobileCompanyDetail,
+  MobileWorkflow,
+  MobileMoldQRCode,
+  MobilePlantMoldSelect,
+  MobileUserRequests,
+  MobileApprovalInbox,
   RepairShipmentChecklist,
   QrScanPage,
   DailyInspectionPageQr,
@@ -268,7 +282,37 @@ function App() {
       {/* Mobile - 대시보드 & 검색 */}
       <Route path="/mobile/dashboard" element={<MobileDashboard />} />
       <Route path="/mobile/search" element={<MobileSearch />} />
-      
+
+      {/* Mobile - 금형 문서/사진 */}
+      <Route path="/mobile/mold/:moldId/documents" element={<MobileDocuments />} />
+      <Route path="/mobile/mold/:moldId/photos" element={<MobilePhotoGallery />} />
+
+      {/* Mobile - 수리관리 */}
+      <Route path="/mobile/repairs" element={<MobileRepairList />} />
+      <Route path="/mobile/hq/repair-requests" element={<MobileHqRepairList />} />
+      <Route path="/mobile/maker/repair-requests" element={<MobileMakerRepairList />} />
+      <Route path="/mobile/maker/mold/:moldId" element={<MobileMakerMoldDetail />} />
+
+      {/* Mobile - 금형 라이프사이클 */}
+      <Route path="/mobile/mold-lifecycle" element={<MobileMoldLifecycle />} />
+
+      {/* Mobile - 업체 관리 */}
+      <Route path="/mobile/companies" element={<MobileCompanyList />} />
+      <Route path="/mobile/companies/:companyId" element={<MobileCompanyDetail />} />
+
+      {/* Mobile - 통합관리 워크플로우 */}
+      <Route path="/mobile/workflow" element={<MobileWorkflow />} />
+
+      {/* Mobile - QR코드 조회 */}
+      <Route path="/mobile/mold-qrcode" element={<MobileMoldQRCode />} />
+
+      {/* Mobile - 생산처 금형 선택 */}
+      <Route path="/mobile/plant/select-mold/:task" element={<MobilePlantMoldSelect />} />
+
+      {/* Mobile - 사용자 요청 / 승인함 */}
+      <Route path="/mobile/user-requests" element={<MobileUserRequests />} />
+      <Route path="/mobile/approval-inbox" element={<MobileApprovalInbox />} />
+
       {/* Mobile Routes - 기존 호환 */}
       <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
       <Route path="/mobile/molds/:moldId/check/:category" element={<ChecklistStartPage />} />
