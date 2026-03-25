@@ -510,8 +510,8 @@ export default function PeriodicInspectionNew() {
         <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
           {/* 금형 기본 정보 */}
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4">
-              <h2 className="text-lg font-semibold">금형 정보</h2>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 px-6 py-4">
+              <h2 className="text-lg font-semibold text-blue-900">금형 정보</h2>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -543,8 +543,8 @@ export default function PeriodicInspectionNew() {
 
           {/* 점검 주기 안내 */}
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-900 to-blue-800 text-white px-6 py-3">
-              <h3 className="font-semibold">정기점검 주기 구분표</h3>
+            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-200 px-6 py-3">
+              <h3 className="font-semibold text-indigo-900">정기점검 주기 구분표</h3>
             </div>
             <div className="p-6 space-y-2 text-sm text-gray-700">
               <p>• <strong>20,000 SHOT</strong> (3개월): 기본 항목 점검</p>
@@ -557,8 +557,8 @@ export default function PeriodicInspectionNew() {
 
           {/* 점검 유형 선택 */}
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-900 to-blue-800 text-white px-6 py-3">
-              <h3 className="font-semibold">점검 유형 선택</h3>
+            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-200 px-6 py-3">
+              <h3 className="font-semibold text-indigo-900">점검 유형 선택</h3>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -662,8 +662,8 @@ export default function PeriodicInspectionNew() {
         {/* 세척제 정보 (80K, 100K) */}
         {(selectedType.id === '80k' || selectedType.id === '100k') && (
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <div className="bg-gradient-to-r from-yellow-600 to-amber-600 text-white px-6 py-3">
-              <h3 className="font-semibold">세척 정보</h3>
+            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border-b border-yellow-200 px-6 py-3">
+              <h3 className="font-semibold text-yellow-900">세척 정보</h3>
             </div>
             <div className="p-6">
               <div className="grid grid-cols-2 gap-4">
@@ -708,16 +708,16 @@ export default function PeriodicInspectionNew() {
             <div key={category.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
               {/* 카테고리 헤더 */}
               <div
-                className="bg-gradient-to-r from-indigo-900 to-blue-800 text-white px-6 py-3 flex items-center justify-between cursor-pointer"
+                className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-200 px-6 py-3 flex items-center justify-between cursor-pointer"
                 onClick={() => setCurrentCategoryIndex(catIndex)}
               >
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold text-indigo-900 flex items-center gap-2">
                   {category.icon && <span>{category.icon}</span>}
                   {catIndex + 1}. {category.name}
                 </h3>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm opacity-80">{completed}/{total} ({percentage}%)</span>
-                  {completed === total && total > 0 && <CheckCircle size={18} className="text-green-400" />}
+                  <span className="text-sm text-indigo-600">{completed}/{total} ({percentage}%)</span>
+                  {completed === total && total > 0 && <CheckCircle size={18} className="text-green-500" />}
                 </div>
               </div>
 
