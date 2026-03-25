@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Send, Camera, Upload, X, AlertCircle, CheckCircle, Clock, Calendar, FileText, Package, Wrench, Building, ClipboardList, Scale, Link2, User, WifiOff, Image } from 'lucide-react';
-import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, workflowAPI } from '../../lib/api';
+import api, { repairRequestAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, workflowAPI, codeOptionsAPI } from '../../lib/api';
 import useGeoLocation from '../../hooks/useGeoLocation';
 import { useAuthStore } from '../../stores/authStore';
 import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
@@ -32,6 +32,7 @@ export default function MobileRepairRequestForm() {
   const [injectionCondition, setInjectionCondition] = useState(null);
   const [moldSpec, setMoldSpec] = useState(null);
   const [repairProgress, setRepairProgress] = useState(null);
+  const [codeOptions, setCodeOptions] = useState({});
   const moldInfo = location.state?.moldInfo || { id: moldId };
   
   const [formData, setFormData] = useState({
@@ -62,6 +63,21 @@ export default function MobileRepairRequestForm() {
 
   useEffect(() => { if (id) loadRepairRequest(); else if (moldInfo?.id || moldId) loadMoldInfo(moldInfo?.id || moldId); }, [id, moldInfo?.id, moldId]);
   useEffect(() => { if (moldId || moldInfo?.id) { loadInspectionInfo(moldId || moldInfo?.id); loadInjectionCondition(moldId || moldInfo?.id); loadRepairProgress(moldId || moldInfo?.id); } }, [moldId, moldInfo?.id]);
+
+  // DB 코드옵션 로드
+  useEffect(() => {
+    const loadCodeOptions = async () => {
+      try {
+        const res = await codeOptionsAPI.getByCategory(['priority','repair_status','repair_occurrence','repair_operation','repair_problem_type','repair_category','repair_shop_type','repair_liability','repair_management_type']);
+        if (res.data?.success && res.data.data) {
+          const mapped = {};
+          Object.entries(res.data.data).forEach(([cat, items]) => { mapped[cat] = items.map(i => i.code); });
+          setCodeOptions(mapped);
+        }
+      } catch (err) { console.log('[MobileRepair] 코드옵션 DB 로드 실패, 기본값 사용'); }
+    };
+    loadCodeOptions();
+  }, []);
 
   // 금형개발 담당자 검색 디바운스
   useEffect(() => {
@@ -190,15 +206,15 @@ export default function MobileRepairRequestForm() {
   };
 
   const sections = [{ id: 'request', name: '1.요청', icon: FileText }, { id: 'repairShop', name: '2.수리처', icon: Building }, { id: 'repair', name: '3.수리', icon: Wrench }, { id: 'checklist', name: '4.점검', icon: ClipboardList }, { id: 'plantInspection', name: '5.검수', icon: CheckCircle }, { id: 'liability', name: '6.귀책', icon: Scale }, { id: 'complete', name: '7.관리', icon: Package }];
-  const priorityOptions = ['높음', '보통', '낮음'];
-  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '수리진행', '체크리스트점검', '귀책처리', '수리완료', '검수중', '완료'];
-  const occurrenceOptions = ['신규', '재발'];
-  const operationOptions = ['양산', '개발', '시작'];
-  const problemTypeOptions = ['내구성', '외관', '치수', '기능', '기타'];
-  const repairCategoryOptions = ['EO', '현실화', '돌발'];
-  const repairShopTypeOptions = ['자체', '외주'];
-  const liabilityTypeOptions = ['제작처', '생산처', '공동', '기타'];
-  const managementTypeOptions = ['전산공유(L1)', '일반', '긴급'];
+  const priorityOptions = codeOptions.priority || ['높음', '보통', '낮음'];
+  const statusOptions = codeOptions.repair_status || ['요청접수', '수리처선정', '수리처승인대기', '수리진행', '체크리스트점검', '귀책처리', '수리완료', '검수중', '완료'];
+  const occurrenceOptions = codeOptions.repair_occurrence || ['신규', '재발'];
+  const operationOptions = codeOptions.repair_operation || ['양산', '개발', '시작'];
+  const problemTypeOptions = codeOptions.repair_problem_type || ['내구성', '외관', '치수', '기능', '기타'];
+  const repairCategoryOptions = codeOptions.repair_category || ['EO', '현실화', '돌발'];
+  const repairShopTypeOptions = codeOptions.repair_shop_type || ['자체', '외주'];
+  const liabilityTypeOptions = codeOptions.repair_liability || ['제작처', '생산처', '공동', '기타'];
+  const managementTypeOptions = codeOptions.repair_management_type || ['전산공유(L1)', '일반', '긴급'];
   const isDeveloper = ['mold_developer', 'system_admin'].includes(user?.user_type);
   const isRepairShopApproved = formData.repair_shop_approval_status === '승인';
   // 개발단계에서는 4번 체크리스트, 5번 생산처검수 항목 항상 활성화

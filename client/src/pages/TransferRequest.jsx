@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, Check, Image as ImageIcon, Shield, Save
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
-import api, { transferAPI, moldSpecificationAPI, userAPI, masterDataAPI } from '../lib/api';
+import api, { transferAPI, moldSpecificationAPI, userAPI, masterDataAPI, codeOptionsAPI } from '../lib/api';
 import ApprovalFlow from '../components/ApprovalFlow';
 // draftStorage 불필요 - transferAPI로 서버 저장 통합
 
@@ -39,6 +39,7 @@ export default function TransferRequest() {
   const [stepSaving, setStepSaving] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [selectedApprover, setSelectedApprover] = useState(null);
+  const [codeOptions, setCodeOptions] = useState({});
   const [expandedSections, setExpandedSections] = useState({
     request: true,
     checklist: false,
@@ -104,6 +105,25 @@ export default function TransferRequest() {
     loadDevelopers();
     // 서버 draft 복원은 transferAPI로 처리
   }, [moldId]);
+
+  // DB 코드옵션 로드
+  useEffect(() => {
+    const loadCodeOptions = async () => {
+      try {
+        const res = await codeOptionsAPI.getByCategory(['transfer_type', 'priority']);
+        if (res.data?.success && res.data.data) {
+          const mapped = {};
+          Object.entries(res.data.data).forEach(([cat, items]) => {
+            mapped[cat] = items.map(i => ({ code: i.code, label: i.label }));
+          });
+          setCodeOptions(mapped);
+        }
+      } catch (err) {
+        console.log('[TransferRequest] 코드옵션 DB 로드 실패, 기본값 사용');
+      }
+    };
+    loadCodeOptions();
+  }, []);
 
   const loadInitialData = async () => {
     try {
@@ -436,18 +456,13 @@ export default function TransferRequest() {
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">이관 유형</label>
                     <select value={formData.transfer_type} onChange={(e) => handleChange('transfer_type', e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500">
-                      <option value="plant_to_plant">생산처 → 생산처</option>
-                      <option value="maker_to_plant">제작처 → 생산처</option>
-                      <option value="plant_to_maker">생산처 → 제작처</option>
+                      {(codeOptions.transfer_type || [{code:'plant_to_plant',label:'생산처 → 생산처'},{code:'maker_to_plant',label:'제작처 → 생산처'},{code:'plant_to_maker',label:'생산처 → 제작처'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1">우선순위</label>
                     <select value={formData.priority} onChange={(e) => handleChange('priority', e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500">
-                      <option value="낮음">낮음</option>
-                      <option value="보통">보통</option>
-                      <option value="높음">높음</option>
-                      <option value="긴급">긴급</option>
+                      {(codeOptions.priority || [{code:'낮음',label:'낮음'},{code:'보통',label:'보통'},{code:'높음',label:'높음'},{code:'긴급',label:'긴급'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                     </select>
                   </div>
                   <div>

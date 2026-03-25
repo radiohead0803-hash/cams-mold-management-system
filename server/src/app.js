@@ -146,6 +146,7 @@ const equipmentRouter = require('./routes/equipment');
 const generalEquipmentRouter = require('./routes/generalEquipment');
 const companyProfileRouter = require('./routes/companyProfile');
 const moldCostsRouter = require('./routes/moldCosts');
+const codeOptionsRouter = require('./routes/codeOptions');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -277,6 +278,8 @@ app.use('/api/v1/general-equipment', generalEquipmentRouter);
 app.use('/api/v1/company-profile', companyProfileRouter);
 // 금형 원가/감가상각 관리
 app.use('/api/v1/mold-costs', moldCostsRouter);
+// 시스템 코드 옵션 마스터
+app.use('/api/v1/code-options', codeOptionsRouter);
 
 // Health check
 app.get('/health', (req, res) => {

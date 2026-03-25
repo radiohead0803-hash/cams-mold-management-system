@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Send, CheckCircle, Clock, AlertCircle, Upload, Calendar, Edit, Trash2, Plus, Copy, Settings } from 'lucide-react';
-import { moldSpecificationAPI, standardDocumentAPI } from '../lib/api';
+import { moldSpecificationAPI, standardDocumentAPI, codeOptionsAPI } from '../lib/api';
 import api from '../lib/api';
 import ApprovalFlow from '../components/ApprovalFlow';
 
@@ -114,6 +114,26 @@ export default function MoldDevelopmentPlan() {
   // 승인 상태
   const [approvalStatus, setApprovalStatus] = useState('draft'); // draft, pending, approved, rejected
   const [selectedApprover, setSelectedApprover] = useState(null);
+  const [codeOptions, setCodeOptions] = useState({});
+
+  // DB 코드옵션 로드 (재질 등)
+  useEffect(() => {
+    const loadCodeOptions = async () => {
+      try {
+        const res = await codeOptionsAPI.getByCategory(['mold_material']);
+        if (res.data?.success && res.data.data) {
+          const mapped = {};
+          Object.entries(res.data.data).forEach(([cat, items]) => {
+            mapped[cat] = items.map(i => ({ code: i.code, label: i.label }));
+          });
+          setCodeOptions(mapped);
+        }
+      } catch (err) {
+        console.log('[MoldDevelopmentPlan] 코드옵션 DB 로드 실패, 기본값 사용');
+      }
+    };
+    loadCodeOptions();
+  }, []);
 
   // 마스터 DB에서 개발계획 단계 로드
   useEffect(() => {
@@ -841,9 +861,7 @@ export default function MoldDevelopmentPlan() {
                     className="flex-1 border rounded px-3 py-2 text-sm"
                   >
                     <option value="">재질 선택</option>
-                    <option value="NAK80">NAK80</option>
-                    <option value="S45C">S45C</option>
-                    <option value="SKD61">SKD61</option>
+                    {(codeOptions.mold_material || [{code:'NAK80',label:'NAK80'},{code:'S45C',label:'S45C'},{code:'SKD61',label:'SKD61'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                   </select>
                 </div>
                 <div className="flex items-center gap-2 row-span-2">
@@ -880,9 +898,7 @@ export default function MoldDevelopmentPlan() {
                     className="flex-1 border rounded px-3 py-2 text-sm"
                   >
                     <option value="">재질 선택</option>
-                    <option value="NAK80">NAK80</option>
-                    <option value="S45C">S45C</option>
-                    <option value="SKD61">SKD61</option>
+                    {(codeOptions.mold_material || [{code:'NAK80',label:'NAK80'},{code:'S45C',label:'S45C'},{code:'SKD61',label:'SKD61'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                   </select>
                 </div>
               </div>

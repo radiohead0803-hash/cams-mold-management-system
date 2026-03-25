@@ -651,4 +651,13 @@ export const notificationAPI = {
 // 하위호환: alertAPI → notificationAPI alias
 export const alertAPI = notificationAPI
 
+// Code Options API (시스템 코드 옵션 마스터)
+export const codeOptionsAPI = {
+  getByCategory: (categories) => api.get('/code-options', { params: { category: Array.isArray(categories) ? categories.join(',') : categories } }),
+  getCategories: () => api.get('/code-options'),
+  create: (data) => api.post('/code-options', data),
+  update: (id, data) => api.patch(`/code-options/${id}`, data),
+  delete: (id) => api.delete(`/code-options/${id}`),
+}
+
 export default api

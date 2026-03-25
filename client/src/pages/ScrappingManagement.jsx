@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, Shield, AlertCircle, Package, User, Wrench, Check,
   ClipboardList, DollarSign, Calculator, Search, Archive, BookOpen
 } from 'lucide-react';
-import api, { standardDocumentAPI } from '../lib/api';
+import api, { standardDocumentAPI, codeOptionsAPI } from '../lib/api';
 import ApprovalFlow from '../components/ApprovalFlow';
 import { useAuthStore } from '../stores/authStore';
 
@@ -215,6 +215,7 @@ function ScrappingDetail() {
   const [selectedMold, setSelectedMold] = useState(null);
   const [masterSource, setMasterSource] = useState('default');
   const [masterSections, setMasterSections] = useState(null);
+  const [codeOptions, setCodeOptions] = useState({});
 
   const [expandedSections, setExpandedSections] = useState({
     request: true,
@@ -225,6 +226,28 @@ function ScrappingDetail() {
     disposal: false,
     postcare: false
   });
+
+  // DB 코드옵션 로드
+  useEffect(() => {
+    const loadCodeOptions = async () => {
+      try {
+        const res = await codeOptionsAPI.getByCategory([
+          'scrapping_reason', 'scrapping_appearance', 'scrapping_functional',
+          'scrapping_dimensional', 'scrapping_review_result', 'scrapping_disposal_method'
+        ]);
+        if (res.data?.success && res.data.data) {
+          const mapped = {};
+          Object.entries(res.data.data).forEach(([cat, items]) => {
+            mapped[cat] = items.map(i => ({ code: i.code, label: i.label }));
+          });
+          setCodeOptions(mapped);
+        }
+      } catch (err) {
+        console.log('[Scrapping] 코드옵션 DB 로드 실패, 기본값 사용');
+      }
+    };
+    loadCodeOptions();
+  }, []);
 
   // 마스터 DB에서 폐기 섹션 구조 로드
   useEffect(() => {
@@ -648,8 +671,7 @@ function ScrappingDetail() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">폐기 사유 <span className="text-red-500">*</span></label>
                   <select value={formData.reason} onChange={(e) => handleChange('reason', e.target.value)} disabled={!canEditRequest} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100">
                     <option value="">사유를 선택하세요</option>
-                    <option value="수명종료">수명 종료</option><option value="수리불가">수리 불가</option><option value="모델단종">모델 단종</option>
-                    <option value="품질불량">품질 불량</option><option value="경제성부족">경제성 부족</option><option value="기타">기타</option>
+                    {(codeOptions.scrapping_reason || [{code:'수명종료',label:'수명 종료'},{code:'수리불가',label:'수리 불가'},{code:'모델단종',label:'모델 단종'},{code:'품질불량',label:'품질 불량'},{code:'경제성부족',label:'경제성 부족'},{code:'기타',label:'기타'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                   </select>
                 </div>
                 <div>
@@ -714,19 +736,22 @@ function ScrappingDetail() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">외관 상태 <span className="text-red-500">*</span></label>
                   <select value={formData.appearance_condition} onChange={(e) => handleChange('appearance_condition', e.target.value)} disabled={status !== 'requested'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100">
-                    <option value="">선택</option><option value="양호">양호</option><option value="경미손상">경미 손상</option><option value="중대손상">중대 손상</option><option value="파손">파손</option>
+                    <option value="">선택</option>
+                    {(codeOptions.scrapping_appearance || [{code:'양호',label:'양호'},{code:'경미손상',label:'경미 손상'},{code:'중대손상',label:'중대 손상'},{code:'파손',label:'파손'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">기능 상태 <span className="text-red-500">*</span></label>
                   <select value={formData.functional_condition} onChange={(e) => handleChange('functional_condition', e.target.value)} disabled={status !== 'requested'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100">
-                    <option value="">선택</option><option value="정상">정상</option><option value="부분불량">부분 불량</option><option value="기능저하">기능 저하</option><option value="작동불가">작동 불가</option>
+                    <option value="">선택</option>
+                    {(codeOptions.scrapping_functional || [{code:'정상',label:'정상'},{code:'부분불량',label:'부분 불량'},{code:'기능저하',label:'기능 저하'},{code:'작동불가',label:'작동 불가'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">치수 상태</label>
                   <select value={formData.dimensional_condition} onChange={(e) => handleChange('dimensional_condition', e.target.value)} disabled={status !== 'requested'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100">
-                    <option value="">선택</option><option value="규격내">규격 내</option><option value="경미이탈">경미 이탈</option><option value="규격초과">규격 초과</option>
+                    <option value="">선택</option>
+                    {(codeOptions.scrapping_dimensional || [{code:'규격내',label:'규격 내'},{code:'경미이탈',label:'경미 이탈'},{code:'규격초과',label:'규격 초과'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                   </select>
                 </div>
               </div>
@@ -795,10 +820,7 @@ function ScrappingDetail() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">경제성 검토 결과 <span className="text-red-500">*</span></label>
                   <select value={formData.review_result} onChange={(e) => handleChange('review_result', e.target.value)} disabled={status !== 'assessed'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100">
                     <option value="">결과 선택</option>
-                    <option value="폐기타당">폐기 타당 - 수리비가 잔존가치 초과</option>
-                    <option value="폐기권고">폐기 권고 - 경제적 효율 낮음</option>
-                    <option value="수리검토">수리 검토 필요 - 수리 가능성 있음</option>
-                    <option value="폐기보류">폐기 보류 - 추가 검토 필요</option>
+                    {(codeOptions.scrapping_review_result || [{code:'폐기타당',label:'폐기 타당 - 수리비가 잔존가치 초과'},{code:'폐기권고',label:'폐기 권고 - 경제적 효율 낮음'},{code:'수리검토',label:'수리 검토 필요 - 수리 가능성 있음'},{code:'폐기보류',label:'폐기 보류 - 추가 검토 필요'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}
                   </select>
                 </div>
                 <div>
@@ -914,7 +936,7 @@ function ScrappingDetail() {
             <div className="p-6 space-y-4">
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4"><p className="text-sm text-orange-800"><AlertCircle className="inline mr-2" size={16} />최종 승인 완료 후 실제 폐기 처리를 진행합니다.</p></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">처리 방법</label><select value={formData.disposal_method} onChange={(e) => handleChange('disposal_method', e.target.value)} disabled={status !== 'approved'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"><option value="">방법 선택</option><option value="전문업체 위탁">전문업체 위탁</option><option value="자체 처리">자체 처리</option><option value="재활용 매각">재활용 매각</option><option value="부품 분리 후 폐기">부품 분리 후 폐기</option></select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">처리 방법</label><select value={formData.disposal_method} onChange={(e) => handleChange('disposal_method', e.target.value)} disabled={status !== 'approved'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"><option value="">방법 선택</option>{(codeOptions.scrapping_disposal_method || [{code:'전문업체 위탁',label:'전문업체 위탁'},{code:'자체 처리',label:'자체 처리'},{code:'재활용 매각',label:'재활용 매각'},{code:'부품 분리 후 폐기',label:'부품 분리 후 폐기'}]).map(o => <option key={o.code} value={o.code}>{o.label}</option>)}</select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">처리 업체</label><input type="text" value={formData.disposal_company} onChange={(e) => handleChange('disposal_company', e.target.value)} disabled={status !== 'approved'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100" placeholder="처리 업체명" /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">처리 비용 (원)</label><input type="number" value={formData.disposal_cost} onChange={(e) => handleChange('disposal_cost', e.target.value)} disabled={status !== 'approved'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100" placeholder="0" /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">폐기 인증서 번호</label><input type="text" value={formData.disposal_certificate} onChange={(e) => handleChange('disposal_certificate', e.target.value)} disabled={status !== 'approved'} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100" placeholder="인증서 번호" /></div>

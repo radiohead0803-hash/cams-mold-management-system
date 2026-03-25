@@ -94,6 +94,34 @@ INSERT INTO system_code_options (category, code, label, sort_order) VALUES
   ('priority', '낮음', '낮음', 3)
 ON CONFLICT (category, code) DO NOTHING;
 
+-- 우선순위 (긴급 추가)
+INSERT INTO system_code_options (category, code, label, sort_order) VALUES
+  ('priority', '긴급', '긴급', 0)
+ON CONFLICT (category, code) DO NOTHING;
+
+-- =============================================
+-- 이관 유형
+-- =============================================
+INSERT INTO system_code_options (category, code, label, sort_order) VALUES
+  ('transfer_type', 'plant_to_plant', '생산처 → 생산처', 1),
+  ('transfer_type', 'maker_to_plant', '제작처 → 생산처', 2),
+  ('transfer_type', 'plant_to_maker', '생산처 → 제작처', 3)
+ON CONFLICT (category, code) DO NOTHING;
+
+-- =============================================
+-- 금형 재질
+-- =============================================
+INSERT INTO system_code_options (category, code, label, sort_order) VALUES
+  ('mold_material', 'NAK80', 'NAK80', 1),
+  ('mold_material', 'S45C', 'S45C', 2),
+  ('mold_material', 'SKD61', 'SKD61', 3),
+  ('mold_material', 'SKD11', 'SKD11', 4),
+  ('mold_material', 'SUS420', 'SUS420', 5),
+  ('mold_material', 'HPM38', 'HPM38', 6),
+  ('mold_material', 'STAVAX', 'STAVAX', 7),
+  ('mold_material', 'P20', 'P20', 8)
+ON CONFLICT (category, code) DO NOTHING;
+
 -- =============================================
 -- 2. 폐기관리 관련 옵션
 -- =============================================

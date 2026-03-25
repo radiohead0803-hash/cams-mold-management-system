@@ -6,7 +6,7 @@ import {
   Building, Truck, DollarSign, ClipboardList, Link2, ChevronDown, ChevronUp,
   Image, Plus, Trash2, Loader2
 } from 'lucide-react';
-import api, { repairRequestAPI, repairStepWorkflowAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, userAPI, workflowAPI } from '../lib/api';
+import api, { repairRequestAPI, repairStepWorkflowAPI, moldSpecificationAPI, inspectionAPI, injectionConditionAPI, userAPI, workflowAPI, codeOptionsAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 /**
@@ -55,6 +55,8 @@ export default function RepairRequestForm() {
   const [approverKeyword, setApproverKeyword] = useState('');
   const [filteredApprovers, setFilteredApprovers] = useState([]);
   const [camsManagerList, setCamsManagerList] = useState([]); // 캠스 담당자 목록
+  // DB 코드옵션 동적 로드
+  const [codeOptions, setCodeOptions] = useState({});
   const [developerSearch, setDeveloperSearch] = useState(''); // 개발담당자 검색어
   const [showDeveloperDropdown, setShowDeveloperDropdown] = useState(false); // 검색 드롭다운 표시
   const [searchingDeveloper, setSearchingDeveloper] = useState(false);
@@ -157,6 +159,29 @@ export default function RepairRequestForm() {
   // 캠스 담당자 목록 로드
   useEffect(() => {
     loadCamsManagers();
+  }, []);
+
+  // DB 코드옵션 로드
+  useEffect(() => {
+    const loadCodeOptions = async () => {
+      try {
+        const res = await codeOptionsAPI.getByCategory([
+          'priority', 'repair_status', 'repair_occurrence', 'repair_operation',
+          'repair_problem_type', 'repair_category', 'repair_shop_type',
+          'repair_liability', 'repair_management_type'
+        ]);
+        if (res.data?.success && res.data.data) {
+          const mapped = {};
+          Object.entries(res.data.data).forEach(([cat, items]) => {
+            mapped[cat] = items.map(i => i.code);
+          });
+          setCodeOptions(mapped);
+        }
+      } catch (err) {
+        console.log('[RepairRequestForm] 코드옵션 DB 로드 실패, 기본값 사용:', err.message);
+      }
+    };
+    loadCodeOptions();
   }, []);
 
   const loadMoldInfo = async () => {
@@ -751,15 +776,16 @@ export default function RepairRequestForm() {
     }
   };
 
-  const priorityOptions = ['높음', '보통', '낮음'];
-  const statusOptions = ['요청접수', '수리처선정', '수리처승인대기', '수리진행', '체크리스트점검', '생산처검수대기', '생산처검수완료', '귀책처리', '수리완료', '완료'];
-  const occurrenceOptions = ['신규', '재발'];
-  const operationOptions = ['양산', '개발', '시작'];
-  const problemTypeOptions = ['내구성', '외관', '치수', '기능', '기타'];
-  const repairCategoryOptions = ['EO', '현실화', '돌발'];  // 수리 카테고리
-  const repairShopTypeOptions = ['자체', '외주'];  // 수리처 유형
-  const liabilityTypeOptions = ['제작처', '생산처', '공동', '기타'];  // 귀책 유형
-  const managementTypeOptions = ['전산공유(L1)', '일반', '긴급'];
+  // DB에서 로드된 코드옵션 (폴백 포함)
+  const priorityOptions = codeOptions.priority || ['높음', '보통', '낮음'];
+  const statusOptions = codeOptions.repair_status || ['요청접수', '수리처선정', '수리처승인대기', '수리진행', '체크리스트점검', '생산처검수대기', '생산처검수완료', '귀책처리', '수리완료', '완료'];
+  const occurrenceOptions = codeOptions.repair_occurrence || ['신규', '재발'];
+  const operationOptions = codeOptions.repair_operation || ['양산', '개발', '시작'];
+  const problemTypeOptions = codeOptions.repair_problem_type || ['내구성', '외관', '치수', '기능', '기타'];
+  const repairCategoryOptions = codeOptions.repair_category || ['EO', '현실화', '돌발'];
+  const repairShopTypeOptions = codeOptions.repair_shop_type || ['자체', '외주'];
+  const liabilityTypeOptions = codeOptions.repair_liability || ['제작처', '생산처', '공동', '기타'];
+  const managementTypeOptions = codeOptions.repair_management_type || ['전산공유(L1)', '일반', '긴급'];
   
   const isDeveloper = ['mold_developer', 'system_admin'].includes(user?.user_type);
   const isRepairShopApproved = formData.repair_shop_approval_status === '승인';
