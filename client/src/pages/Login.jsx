@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { authAPI } from '../lib/api'
+import { Smartphone } from 'lucide-react'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -11,6 +12,11 @@ export default function Login() {
   
   const { login } = useAuthStore()
   const navigate = useNavigate()
+  
+  // 모바일 감지
+  const isMobile = useMemo(() => 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.innerWidth <= 768, [])
 
   // 테스트 계정 빠른 로그인
   const quickLogin = async (testUsername, testPassword) => {
@@ -22,9 +28,8 @@ export default function Login() {
     try {
       const result = await login(testUsername, testPassword)
       if (result.success) {
-        // 역할별 대시보드로 이동
         const role = result.user.role || result.user.user_type
-        navigate(getDashboardPath(role))
+        navigate(isMobile ? '/mobile/home' : getDashboardPath(role))
       } else {
         setError(result.error || '로그인에 실패했습니다')
       }
@@ -43,9 +48,8 @@ export default function Login() {
     try {
       const result = await login(username, password)
       if (result.success) {
-        // 역할별 대시보드로 이동
         const role = result.user.role || result.user.user_type
-        navigate(getDashboardPath(role))
+        navigate(isMobile ? '/mobile/home' : getDashboardPath(role))
       } else {
         setError(result.error || '로그인에 실패했습니다')
       }
@@ -54,6 +58,68 @@ export default function Login() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 모바일 레이아웃
+  if (isMobile) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-900 to-slate-800 px-6 py-10">
+        <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
+          {/* 로고/타이틀 */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+              <Smartphone className="text-white" size={32} />
+            </div>
+            <h1 className="text-2xl font-bold text-white">CAMS</h1>
+            <p className="text-sm text-slate-400 mt-1">금형관리 시스템</p>
+          </div>
+
+          {error && (
+            <div className="rounded-xl bg-red-500/20 border border-red-500/30 p-3 mb-4">
+              <p className="text-sm text-red-300 text-center">{error}</p>
+            </div>
+          )}
+
+          {/* 로그인 폼 */}
+          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
+            <input
+              type="text" required placeholder="사용자명"
+              value={username} onChange={(e) => setUsername(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+            />
+            <input
+              type="password" required placeholder="비밀번호"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+            />
+            <button type="submit" disabled={loading}
+              className="w-full py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 transition-colors text-base">
+              {loading ? '로그인 중...' : '로그인'}
+            </button>
+          </form>
+
+          {/* 테스트 계정 */}
+          <div className="bg-slate-700/30 border border-slate-600/50 rounded-xl p-4">
+            <p className="text-xs text-slate-400 mb-3 text-center">테스트 계정 (터치하여 로그인)</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[{label:'시스템관리',u:'admin',p:'admin123'},{label:'금형개발',u:'developer',p:'dev123'},{label:'제작처',u:'maker1',p:'maker123'},{label:'생산처',u:'plant1',p:'plant123'}].map(acc => (
+                <button key={acc.u} type="button" onClick={() => quickLogin(acc.u, acc.p)}
+                  className="px-3 py-2.5 bg-slate-600/50 border border-slate-500/50 rounded-lg active:bg-slate-500/50 transition-colors">
+                  <div className="text-xs font-medium text-white">{acc.label}</div>
+                  <div className="text-xs text-slate-400">{acc.u}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-center mt-4">
+            <Link to="/mobile/qr-login" className="text-sm text-blue-400 hover:text-blue-300">
+              QR 코드로 로그인
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

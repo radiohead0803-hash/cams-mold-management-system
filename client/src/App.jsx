@@ -138,6 +138,19 @@ function DailyAlias() {
   return <Navigate to={`/checklist/daily${location.search || ''}`} replace />
 }
 
+// 모바일 감지 유틸
+const isMobileDevice = () =>
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+  window.innerWidth <= 768
+
+// 인증된 모바일 사용자 → /mobile/home 리다이렉트
+function MobileRedirectRoot() {
+  if (isMobileDevice()) {
+    return <Navigate to="/mobile/home" replace />
+  }
+  return <Layout />
+}
+
 function App() {
   const { isAuthenticated, initialize } = useAuthStore()
 
@@ -281,7 +294,7 @@ function App() {
         path="/"
         element={
           isAuthenticated ? (
-            <Layout />
+            <MobileRedirectRoot />
           ) : (
             <Navigate to="/login" replace />
           )
