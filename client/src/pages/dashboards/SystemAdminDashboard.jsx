@@ -449,7 +449,7 @@ export default function SystemAdminDashboard() {
               icon="📋" 
               title="점검표 관리" 
               description="체크리스트 설정"
-              link="/checklist-master"
+              link="/standard-document-master"
             />
             <QuickActionCard 
               icon="🔔" 

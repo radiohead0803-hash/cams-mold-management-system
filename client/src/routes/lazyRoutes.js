@@ -40,7 +40,7 @@ export const MoldQRCode = lazy(() => import('../pages/MoldQRCode'));
 export const DailyChecklist = lazy(() => import('../pages/DailyChecklistNew'));
 export const PeriodicInspection = lazy(() => import('../pages/PeriodicInspectionNew'));
 export const InspectionApproval = lazy(() => import('../pages/InspectionApproval'));
-export const ChecklistMaster = lazy(() => import('../pages/ChecklistMaster'));
+export const ChecklistMaster = lazy(() => import('../pages/StandardDocumentMaster'));
 export const MoldChecklist = lazy(() => import('../pages/MoldChecklist'));
 
 // 이관 관리
@@ -90,7 +90,7 @@ export const NotificationSettings = lazy(() => import('../pages/NotificationSett
 export const Reports = lazy(() => import('../pages/Reports'));
 export const QRSessionsPage = lazy(() => import('../pages/QRSessionsPage'));
 export const MoldLocationMapPage = lazy(() => import('../pages/MoldLocationMapPage'));
-export const ProductionTransferChecklistMaster = lazy(() => import('../pages/ProductionTransferChecklistMaster'));
+export const ProductionTransferChecklistMaster = lazy(() => import('../pages/StandardDocumentMaster'));
 
 // 모바일 페이지
 export const MobileQRLogin = lazy(() => import('../pages/mobile/MobileQRLogin'));
@@ -136,12 +136,10 @@ export const MobilePeriodicInspection = lazy(() => import('../pages/mobile/Mobil
 export const MobileRepairShipmentChecklist = lazy(() => import('../pages/mobile/MobileRepairShipmentChecklist'));
 export const MobileProductionTransferChecklist = lazy(() => import('../pages/mobile/MobileProductionTransferChecklist'));
 
-// 체크리스트 마스터 관리
-export const ChecklistMasterConsole = lazy(() => import('../pages/ChecklistMasterConsole'));
-export const ChecklistMasterDetail = lazy(() => import('../pages/ChecklistMasterDetail'));
-
-// 표준문서 통합관리 콘솔
-export const DocumentMasterConsole = lazy(() => import('../pages/DocumentMasterConsole'));
+// 삭제된 페이지 → StandardDocumentMaster로 리다이렉트
+export const ChecklistMasterConsole = lazy(() => import('../pages/StandardDocumentMaster'));
+export const ChecklistMasterDetail = lazy(() => import('../pages/StandardDocumentMaster'));
+export const DocumentMasterConsole = lazy(() => import('../pages/StandardDocumentMaster'));
 
 // 모바일 통합 점검
 export const MobileInspectionNew = lazy(() => import('../pages/mobile/MobileInspectionNew'));

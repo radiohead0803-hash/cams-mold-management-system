@@ -171,14 +171,12 @@ export default function Layout() {
           ]
         },
         { 
-          to: '/document-master-console', 
+          to: '/standard-document-master', 
           icon: FileCheck, 
           label: '표준관리',
           subMenus: [
-            { to: '/document-master-console', label: '통합관리 콘솔' },
-            { to: '/pre-production-checklist', label: '점검 마스터' },
             { to: '/standard-document-master', label: '표준문서 마스터' },
-            { to: '/production-transfer/checklist-master', label: '이관 체크리스트' }
+            { to: '/master-data', label: '기초정보 관리' }
           ]
         },
         { 
@@ -289,14 +287,12 @@ export default function Layout() {
           ]
         },
         { 
-          to: '/document-master-console', 
+          to: '/standard-document-master', 
           icon: FileCheck, 
           label: '표준관리',
           subMenus: [
-            { to: '/document-master-console', label: '통합관리 콘솔' },
-            { to: '/pre-production-checklist', label: '점검 마스터' },
             { to: '/standard-document-master', label: '표준문서 마스터' },
-            { to: '/production-transfer/checklist-master', label: '이관 체크리스트' }
+            { to: '/master-data', label: '기초정보 관리' }
           ]
         },
         { 

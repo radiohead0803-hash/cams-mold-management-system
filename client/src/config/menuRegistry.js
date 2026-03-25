@@ -90,10 +90,7 @@ export const SYSTEM_ADMIN_MENU = [
     icon: Settings,
     allowedRoles: [USER_ROLES.SYSTEM_ADMIN],
     subMenus: [
-      { key: 'masters-checklist', label: '체크리스트 마스터', path: '/checklist-master' },
-      { key: 'masters-inspection', label: '점검 마스터 콘솔', path: '/pre-production-checklist' },
       { key: 'masters-document', label: '표준문서 마스터', path: '/standard-document-master' },
-      { key: 'masters-transfer', label: '이관 체크리스트', path: '/production-transfer/checklist-master' },
       { key: 'master-data', label: '기초정보 관리', path: '/master-data' }
     ]
   },
@@ -417,10 +414,7 @@ export const REGISTERED_ROUTES = [
   '/mold-qrcode',
   '/checklist/daily',
   '/inspection/periodic',
-  '/checklist-master',
-  '/pre-production-checklist',
   '/standard-document-master',
-  '/production-transfer/checklist-master',
   '/master-data',
   '/repairs',
   '/hq/repair-requests',
