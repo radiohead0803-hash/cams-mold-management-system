@@ -10,6 +10,7 @@ import PageLoader from './components/PageLoader'
 import ScanInfoPage from './pages/ScanInfoPage'
 import RepairRequestPage from './pages/RepairRequestPage'
 import MobileReLoginModal from './components/mobile/MobileReLoginModal'
+import { isMobileDevice } from './utils/deviceDetect'
 
 // Lazy loaded components
 import {
@@ -137,11 +138,6 @@ function DailyAlias() {
   const location = useLocation()
   return <Navigate to={`/checklist/daily${location.search || ''}`} replace />
 }
-
-// 모바일 감지 유틸
-const isMobileDevice = () =>
-  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-  window.innerWidth <= 768
 
 // 인증된 모바일 사용자 → /mobile/home 리다이렉트
 function MobileRedirectRoot() {

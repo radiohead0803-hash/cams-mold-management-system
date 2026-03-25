@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { authAPI } from '../lib/api'
 import { Smartphone } from 'lucide-react'
+import { isMobileDevice } from '../utils/deviceDetect'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -13,10 +14,8 @@ export default function Login() {
   const { login } = useAuthStore()
   const navigate = useNavigate()
   
-  // 모바일 감지
-  const isMobile = useMemo(() => 
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    window.innerWidth <= 768, [])
+  // 모바일 감지 (다중 신호 기반 — 터치, 화면크기, UA, Client Hints)
+  const isMobile = isMobileDevice()
 
   // 테스트 계정 빠른 로그인
   const quickLogin = async (testUsername, testPassword) => {
