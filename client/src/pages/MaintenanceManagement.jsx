@@ -5,6 +5,7 @@ import {
   Clock, CheckCircle, Settings, Droplets, Cog, Save
 } from 'lucide-react';
 import api from '../lib/api';
+import ApprovalFlow from '../components/ApprovalFlow';
 // draftStorage 불필요 - 서버 API로 저장 통합
 
 // 유지보전 유형 아이콘
@@ -407,6 +408,7 @@ function MaintenanceForm() {
   const [molds, setMolds] = useState([]);
   const [types, setTypes] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedApprover, setSelectedApprover] = useState(null);
   const [saveMessage, setSaveMessage] = useState(null);
 
   useEffect(() => {
@@ -455,7 +457,7 @@ function MaintenanceForm() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!formData.mold_id || !formData.maintenance_type) {
       alert('금형과 유지보전 유형을 선택해주세요.');
       return;
@@ -466,7 +468,9 @@ function MaintenanceForm() {
       await api.post('/maintenance', {
         ...formData,
         cost: formData.cost ? parseInt(formData.cost) : null,
-        next_maintenance_shots: formData.next_maintenance_shots ? parseInt(formData.next_maintenance_shots) : null
+        next_maintenance_shots: formData.next_maintenance_shots ? parseInt(formData.next_maintenance_shots) : null,
+        approver_id: selectedApprover?.id || null,
+        approver_name: selectedApprover?.name || null
       });
       alert('유지보전 기록이 등록되었습니다.');
       navigate('/maintenance');
@@ -629,14 +633,17 @@ function MaintenanceForm() {
               <Save size={18} />
               임시저장
             </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
-            >
-              <Wrench size={18} />
-              {submitting ? '등록 중...' : '기록 등록'}
-            </button>
+          </div>
+
+          {/* 승인 플로우 */}
+          <div className="pt-4 border-t border-gray-200">
+            <ApprovalFlow
+              selectedApprover={selectedApprover}
+              onSelectApprover={setSelectedApprover}
+              onRequestApproval={handleSubmit}
+              saving={submitting}
+              label="기록 등록 및 승인요청"
+            />
           </div>
         </div>
       </form>

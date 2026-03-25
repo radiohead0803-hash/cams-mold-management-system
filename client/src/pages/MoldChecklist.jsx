@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, Upload, Save, Send, Image as ImageIcon } from 'lucide-react';
 import api, { moldSpecificationAPI, standardDocumentAPI } from '../lib/api';
 import InlinePhotoButton from '../components/InlinePhotoButton';
+import ApprovalFlow from '../components/ApprovalFlow';
 
 // 폴백용 기본 금형체크리스트 항목 (DB 로드 실패 시 사용)
 const DEFAULT_CHECKLIST_CATEGORIES = [
@@ -154,6 +155,7 @@ export default function MoldChecklist() {
   const [checklistData, setChecklistData] = useState({});
   const [categoryEnabled, setCategoryEnabled] = useState({});
   const [approvalStatus, setApprovalStatus] = useState('draft');
+  const [selectedApprover, setSelectedApprover] = useState(null);
   const [CHECKLIST_CATEGORIES, setChecklistCategories] = useState(DEFAULT_CHECKLIST_CATEGORIES);
   const [masterSource, setMasterSource] = useState('default');
   
@@ -316,11 +318,19 @@ export default function MoldChecklist() {
   };
 
   const handleSubmitForApproval = async () => {
+    if (!selectedApprover) {
+      alert('승인자를 선택해주세요.');
+      return;
+    }
     try {
       setSaving(true);
-      await api.post('/checklist-instances/mold-checklist/complete', buildPayload());
+      await api.post('/checklist-instances/mold-checklist/complete', {
+        ...buildPayload(),
+        approver_id: selectedApprover.id,
+        approver_name: selectedApprover.name
+      });
       setApprovalStatus('completed');
-      alert('금형 체크리스트가 완료되었습니다.');
+      alert('금형 체크리스트가 완료되어 승인요청되었습니다.');
       navigate(-1);
     } catch (error) {
       console.error('Submit failed:', error);
@@ -520,12 +530,12 @@ export default function MoldChecklist() {
               )}
               
               <button
-                onClick={handleSubmitForApproval}
+                onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2"
               >
-                <Send size={16} />
-                점검완료 및 승인요청
+                <Save size={16} />
+                임시저장
               </button>
             </div>
           </div>
@@ -754,6 +764,17 @@ export default function MoldChecklist() {
             )}
           </div>
         ))}
+
+        {/* 승인 플로우 */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <ApprovalFlow
+            selectedApprover={selectedApprover}
+            onSelectApprover={setSelectedApprover}
+            onRequestApproval={handleSubmitForApproval}
+            saving={saving}
+            label="점검완료 및 승인요청"
+          />
+        </div>
       </div>
     </div>
   );

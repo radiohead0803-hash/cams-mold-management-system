@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Send, CheckCircle, Clock, AlertCircle, Upload, Calendar, Edit, Trash2, Plus, Copy, Settings } from 'lucide-react';
 import { moldSpecificationAPI, standardDocumentAPI } from '../lib/api';
 import api from '../lib/api';
+import ApprovalFlow from '../components/ApprovalFlow';
 
 // 폴백용 기본 14단계 공정 정의 (DB 로드 실패 시 사용)
 const DEFAULT_DEVELOPMENT_STAGES = [
@@ -112,6 +113,7 @@ export default function MoldDevelopmentPlan() {
   
   // 승인 상태
   const [approvalStatus, setApprovalStatus] = useState('draft'); // draft, pending, approved, rejected
+  const [selectedApprover, setSelectedApprover] = useState(null);
 
   // 마스터 DB에서 개발계획 단계 로드
   useEffect(() => {
@@ -342,11 +344,15 @@ export default function MoldDevelopmentPlan() {
   };
 
   const handleSubmitForApproval = async () => {
+    if (!selectedApprover) {
+      alert('승인자를 선택해주세요.');
+      return;
+    }
     try {
       setSaving(true);
+      await handleSave(); // 먼저 저장
       setApprovalStatus('pending');
-      // await moldSpecificationAPI.submitPlanForApproval(moldId);
-      alert('승인 요청이 제출되었습니다.');
+      alert('저장 및 승인요청이 완료되었습니다.');
     } catch (error) {
       console.error('Submit failed:', error);
     } finally {
@@ -712,10 +718,10 @@ export default function MoldDevelopmentPlan() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2"
               >
                 <Save size={16} />
-                저장 및 승인요청
+                임시저장
               </button>
             </div>
           </div>
@@ -1148,6 +1154,17 @@ export default function MoldDevelopmentPlan() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* 승인 플로우 */}
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <ApprovalFlow
+            selectedApprover={selectedApprover}
+            onSelectApprover={setSelectedApprover}
+            onRequestApproval={handleSubmitForApproval}
+            saving={saving}
+            label="저장 및 승인요청"
+          />
         </div>
 
         {/* 승인 대기 알림 */}

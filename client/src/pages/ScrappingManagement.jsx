@@ -7,6 +7,7 @@ import {
   ClipboardList, DollarSign, Calculator, Search, Archive, BookOpen
 } from 'lucide-react';
 import api, { standardDocumentAPI } from '../lib/api';
+import ApprovalFlow from '../components/ApprovalFlow';
 import { useAuthStore } from '../stores/authStore';
 
 // 상태 배지 컴포넌트
@@ -178,6 +179,7 @@ function ScrappingDetail() {
   const [stepSaving, setStepSaving] = useState(null);
   const [saveMessage, setSaveMessage] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [selectedApprover, setSelectedApprover] = useState(null);
 
   const [formData, setFormData] = useState({
     mold_id: '',
@@ -367,6 +369,10 @@ function ScrappingDetail() {
       alert('금형과 폐기 사유를 선택해주세요.');
       return;
     }
+    if (!selectedApprover) {
+      alert('승인자를 선택해주세요.');
+      return;
+    }
     try {
       setSaving(true);
       const response = await api.post('/scrapping', {
@@ -374,10 +380,12 @@ function ScrappingDetail() {
         reason: formData.reason,
         reason_detail: formData.reason_detail || null,
         condition_assessment: formData.condition_assessment || null,
-        estimated_scrap_value: formData.estimated_scrap_value ? parseFloat(formData.estimated_scrap_value) : null
+        estimated_scrap_value: formData.estimated_scrap_value ? parseFloat(formData.estimated_scrap_value) : null,
+        approver_id: selectedApprover.id,
+        approver_name: selectedApprover.name
       });
       if (response.data.success) {
-        alert('폐기 요청이 등록되었습니다.');
+        alert('폐기 요청이 등록 및 승인요청되었습니다.');
         navigate('/scrapping');
       }
     } catch (error) {
@@ -664,9 +672,17 @@ function ScrappingDetail() {
                 </div>
               )}
               {canEditRequest && (
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                  <button type="button" onClick={() => handleStepSave('요청')} disabled={stepSaving === '요청'} className="px-5 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium"><Save size={16} />{stepSaving === '요청' ? '저장중...' : '임시저장'}</button>
-                  <button type="button" onClick={handleSubmit} disabled={saving} className="px-5 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 text-sm font-medium"><Send size={16} />{saving ? '제출중...' : '폐기 요청 제출'}</button>
+                <div className="pt-4 border-t border-gray-200 space-y-3">
+                  <div className="flex justify-end">
+                    <button type="button" onClick={() => handleStepSave('요청')} disabled={stepSaving === '요청'} className="px-5 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium"><Save size={16} />{stepSaving === '요청' ? '저장중...' : '임시저장'}</button>
+                  </div>
+                  <ApprovalFlow
+                    selectedApprover={selectedApprover}
+                    onSelectApprover={setSelectedApprover}
+                    onRequestApproval={handleSubmit}
+                    saving={saving}
+                    label="폐기 요청 및 승인요청"
+                  />
                 </div>
               )}
             </div>

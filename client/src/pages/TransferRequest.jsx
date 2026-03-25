@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import api, { transferAPI, moldSpecificationAPI, userAPI, masterDataAPI } from '../lib/api';
+import ApprovalFlow from '../components/ApprovalFlow';
 // draftStorage 불필요 - transferAPI로 서버 저장 통합
 
 /**
@@ -37,6 +38,7 @@ export default function TransferRequest() {
   
   const [stepSaving, setStepSaving] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [selectedApprover, setSelectedApprover] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
     request: true,
     checklist: false,
@@ -236,9 +238,17 @@ export default function TransferRequest() {
       alert('인계 업체와 인수 업체를 선택해주세요.');
       return;
     }
+    if (!selectedApprover) {
+      alert('승인자를 선택해주세요.');
+      return;
+    }
     try {
       setSaving(true);
-      const transferData = buildTransferData();
+      const transferData = {
+        ...buildTransferData(),
+        approver_id: selectedApprover.id,
+        approver_name: selectedApprover.name
+      };
       const response = await transferAPI.create(transferData);
       if (response.data.success) {
         alert('이관 요청이 등록되었습니다.');
@@ -539,10 +549,14 @@ export default function TransferRequest() {
                 <button type="button" onClick={() => handleStepSave('요청')} disabled={stepSaving === '요청'} className="px-5 py-2 border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
                   <Save size={16} />{stepSaving === '요청' ? '저장중...' : '요청단계 임시저장'}
                 </button>
-                <button type="button" onClick={handleSubmit} disabled={saving} className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2 text-sm font-medium">
-                  <Send size={16} />{saving ? '제출중...' : '요청 제출'}
-                </button>
               </div>
+              <ApprovalFlow
+                selectedApprover={selectedApprover}
+                onSelectApprover={setSelectedApprover}
+                onRequestApproval={handleSubmit}
+                saving={saving}
+                label="이관 요청 및 승인요청"
+              />
             </div>
           )}
         </div>
