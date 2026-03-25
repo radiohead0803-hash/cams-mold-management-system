@@ -5,7 +5,7 @@ import {
   FileText, Upload, Send, ArrowLeft, Plus, Filter,
   CheckCircle, Clock, AlertCircle, Eye
 } from 'lucide-react';
-import api from '../lib/api';
+import api, { standardDocumentAPI } from '../lib/api';
 
 // 상태 배지 컴포넌트
 const StatusBadge = ({ status }) => {
@@ -179,6 +179,7 @@ function ChecklistDetail() {
   const [expandedCategories, setExpandedCategories] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [masterSource, setMasterSource] = useState('default');
 
   useEffect(() => {
     if (id && id !== 'new') {
@@ -208,6 +209,44 @@ function ChecklistDetail() {
   const loadItems = async () => {
     try {
       setLoading(true);
+
+      // 1) 마스터 DB에서 제작전 항목 로드 시도
+      try {
+        const masterRes = await standardDocumentAPI.getAll({ template_type: 'pre_production', status: 'deployed' });
+        const templates = masterRes.data?.data || masterRes.data;
+        if (Array.isArray(templates) && templates.length > 0) {
+          const masterItems = templates[0].items;
+          if (Array.isArray(masterItems) && masterItems.length > 0) {
+            // nested 구조 → categories 변환
+            const converted = masterItems.map(cat => ({
+              category_code: cat.id,
+              category_name: cat.title || cat.id,
+              items: (cat.items || []).map(item => ({
+                item_id: item.id,
+                item_no: item.item_code,
+                item_name: item.item_name,
+                item_description: item.description,
+                input_type: item.field_type || 'text',
+                input_options: item.input_options,
+                default_spec: item.default_spec || '',
+                is_checked: false,
+                result_value: ''
+              }))
+            }));
+            setCategories(converted);
+            if (converted.length > 0) {
+              setExpandedCategories({ [converted[0].category_code]: true });
+            }
+            setMasterSource('database');
+            console.log(`[PreProductionChecklist] 마스터 DB에서 ${converted.length}개 카테고리 로드 완료`);
+            return;
+          }
+        }
+      } catch (err) {
+        console.log('[PreProductionChecklist] 마스터 DB 로드 실패, API 폴백:', err.message);
+      }
+
+      // 2) 기존 API 폴백
       const response = await api.get('/pre-production-checklist/items');
       setCategories(response.data.data.categories || []);
       if (response.data.data.categories?.length > 0) {
@@ -323,9 +362,14 @@ function ChecklistDetail() {
                 <ArrowLeft size={20} />
               </button>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  {checklist?.checklist_number || '새 체크리스트'}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-gray-900">
+                    {checklist?.checklist_number || '새 체크리스트'}
+                  </h1>
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${masterSource === 'database' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {masterSource === 'database' ? '📋 마스터 연동' : '기본 항목'}
+                  </span>
+                </div>
                 <p className="text-sm text-gray-500">
                   {checklist?.part_number} - {checklist?.part_name}
                 </p>

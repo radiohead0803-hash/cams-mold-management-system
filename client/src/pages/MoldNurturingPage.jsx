@@ -6,8 +6,7 @@ import {
   ChevronDown, ChevronUp, Edit, Trash2, Eye, AlertCircle, RotateCcw,
   Settings, Lock, Unlock, Upload, Image, X
 } from 'lucide-react';
-import api from '../lib/api';
-import { moldSpecificationAPI } from '../lib/api';
+import api, { moldSpecificationAPI, standardDocumentAPI } from '../lib/api';
 
 // 상태 정의
 const STATUSES = [
@@ -72,6 +71,7 @@ export default function MoldNurturingPage() {
   const [moldInfo, setMoldInfo] = useState(null);
   const [problems, setProblems] = useState([]);
   const [statistics, setStatistics] = useState(null);
+  const [masterSource, setMasterSource] = useState('default');
   
   // 필터
   const [stageFilter, setStageFilter] = useState('');
@@ -139,8 +139,33 @@ export default function MoldNurturingPage() {
     }
   }, [moldId, stageFilter, statusFilter, severityFilter]);
 
-  // 육성 단계 로드
+  // 육성 단계 로드 (마스터 DB 우선, 실패 시 API 폴백)
   const loadStages = async () => {
+    try {
+      // 1) 마스터 DB에서 육성 단계 로드 시도
+      const masterRes = await standardDocumentAPI.getAll({ template_type: 'nurturing', status: 'deployed' });
+      const templates = masterRes.data?.data || masterRes.data;
+      if (Array.isArray(templates) && templates.length > 0) {
+        const items = templates[0].items;
+        if (Array.isArray(items) && items.length > 0) {
+          const converted = items.map(item => ({
+            stage_code: item.stage_code,
+            stage_name: item.item_name,
+            stage_order: item.stage_order,
+            description: item.description,
+            is_required: item.is_required
+          }));
+          setNurturingStages(converted);
+          setMasterSource('database');
+          console.log(`[MoldNurturingPage] 마스터 DB에서 ${converted.length}개 육성 단계 로드 완료`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.log('[MoldNurturingPage] 마스터 DB 로드 실패, API 폴백:', err.message);
+    }
+
+    // 2) 기존 API 폴백
     try {
       const response = await api.get(`/mold-nurturing/stages?mold_id=${moldId || ''}`);
       if (response.data?.success) {
@@ -529,7 +554,12 @@ export default function MoldNurturingPage() {
                     <span className="text-sm text-gray-500">{moldInfo.mold?.mold_code || `M-${moldId}`}</span>
                   )}
                 </div>
-                <h1 className="text-xl font-bold text-gray-900 mt-1">금형육성 문제점 관리</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <h1 className="text-xl font-bold text-gray-900">금형육성 문제점 관리</h1>
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${masterSource === 'database' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {masterSource === 'database' ? '📋 마스터 연동' : '기본 항목'}
+                  </span>
+                </div>
                 <p className="text-sm text-gray-500">{moldInfo?.part_name || '금형'} - TRY 및 양산 단계 문제 추적</p>
               </div>
             </div>

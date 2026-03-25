@@ -7,7 +7,7 @@ import {
   Settings, List, Eye, Trash2
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import api, { moldSpecificationAPI } from '../../lib/api';
+import api, { moldSpecificationAPI, standardDocumentAPI } from '../../lib/api';
 
 /**
  * 모바일 양산이관 체크리스트 페이지
@@ -30,6 +30,7 @@ export default function MobileProductionTransferChecklist() {
   const [checklistResults, setChecklistResults] = useState({});
   const [attachments, setAttachments] = useState({});
   const [online, setOnline] = useState(navigator.onLine);
+  const [masterSource, setMasterSource] = useState('default');
   
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
@@ -103,15 +104,56 @@ export default function MobileProductionTransferChecklist() {
         }
       }
       
+      // 1) 마스터 DB에서 양산이관 항목 로드 시도
+      let itemsLoaded = false;
       try {
-        const response = await api.get('/production-transfer/checklist-master');
-        if (response.data.success && response.data.data?.items) {
-          setChecklistItems(response.data.data.items);
-        } else {
+        const masterRes = await standardDocumentAPI.getAll({ template_type: 'transfer', status: 'deployed' });
+        const templates = masterRes.data?.data || masterRes.data;
+        if (Array.isArray(templates) && templates.length > 0) {
+          const masterItems = templates[0].items;
+          if (Array.isArray(masterItems) && masterItems.length > 0) {
+            // nested 구조 → flat 변환
+            const flatItems = [];
+            masterItems.forEach(cat => {
+              if (cat.items && Array.isArray(cat.items)) {
+                cat.items.forEach(item => {
+                  flatItems.push({
+                    id: item.id,
+                    category: cat.title || cat.id,
+                    item_code: item.item_code,
+                    item_name: item.item_name,
+                    description: item.description,
+                    is_required: item.is_required !== false,
+                    requires_attachment: item.requires_attachment || false,
+                    attachment_type: item.attachment_type || 'image'
+                  });
+                });
+              }
+            });
+            if (flatItems.length > 0) {
+              setChecklistItems(flatItems);
+              setMasterSource('database');
+              itemsLoaded = true;
+              console.log(`[MobileTransferChecklist] 마스터 DB에서 ${flatItems.length}개 항목 로드 완료`);
+            }
+          }
+        }
+      } catch (err) {
+        console.log('[MobileTransferChecklist] 마스터 DB 로드 실패:', err.message);
+      }
+
+      // 2) 기존 API 폴백
+      if (!itemsLoaded) {
+        try {
+          const response = await api.get('/production-transfer/checklist-master');
+          if (response.data.success && response.data.data?.items) {
+            setChecklistItems(response.data.data.items);
+          } else {
+            setChecklistItems(getDefaultChecklistItems());
+          }
+        } catch {
           setChecklistItems(getDefaultChecklistItems());
         }
-      } catch {
-        setChecklistItems(getDefaultChecklistItems());
       }
 
       if (requestId) {

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Send, CheckCircle, Clock, AlertCircle, Upload, Calendar, Edit, Trash2, Plus, Copy, Settings } from 'lucide-react';
-import { moldSpecificationAPI } from '../lib/api';
+import { moldSpecificationAPI, standardDocumentAPI } from '../lib/api';
 import api from '../lib/api';
 
-// 14단계 공정 정의 (개발 12단계 + 금형육성 + 양산이관)
-const DEVELOPMENT_STAGES = [
+// 폴백용 기본 14단계 공정 정의 (DB 로드 실패 시 사용)
+const DEFAULT_DEVELOPMENT_STAGES = [
   // 개발 단계 (12단계)
   { id: 'drawing_receipt', name: '도면접수', order: 1, category: 'development', defaultDays: 3 },
   { id: 'mold_base_order', name: '몰드베이스 발주', order: 2, category: 'development', defaultDays: 5 },
@@ -53,6 +53,8 @@ export default function MoldDevelopmentPlan() {
   const [saving, setSaving] = useState(false);
   const [moldInfo, setMoldInfo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [masterSource, setMasterSource] = useState('default');
+  const [DEVELOPMENT_STAGES, setDevelopmentStages] = useState(DEFAULT_DEVELOPMENT_STAGES);
   
   // 마스터 템플릿 정보
   const [templateInfo, setTemplateInfo] = useState({
@@ -65,7 +67,7 @@ export default function MoldDevelopmentPlan() {
   });
   
   // 마스터 단계 편집
-  const [editingStages, setEditingStages] = useState([...DEVELOPMENT_STAGES.map(s => ({ ...s, defaultDays: 5 }))]);
+  const [editingStages, setEditingStages] = useState([...DEFAULT_DEVELOPMENT_STAGES.map(s => ({ ...s, defaultDays: 5 }))]);
   
   // 제작사양
   const [specData, setSpecData] = useState({
@@ -84,7 +86,7 @@ export default function MoldDevelopmentPlan() {
   
   // 추진계획 (14단계 + 사용자 정의 단계)
   const [planData, setPlanData] = useState(
-    DEVELOPMENT_STAGES.map(stage => ({
+    DEFAULT_DEVELOPMENT_STAGES.map(stage => ({
       stage_id: stage.id,
       stage_name: stage.name,
       category: stage.category,
@@ -110,6 +112,50 @@ export default function MoldDevelopmentPlan() {
   
   // 승인 상태
   const [approvalStatus, setApprovalStatus] = useState('draft'); // draft, pending, approved, rejected
+
+  // 마스터 DB에서 개발계획 단계 로드
+  useEffect(() => {
+    const loadMasterStages = async () => {
+      try {
+        const res = await standardDocumentAPI.getAll({ template_type: 'development_plan', status: 'deployed' });
+        const templates = res.data?.data || res.data;
+        if (Array.isArray(templates) && templates.length > 0) {
+          const template = templates[0];
+          const items = template.items;
+          if (Array.isArray(items) && items.length > 0) {
+            // DB items를 DEVELOPMENT_STAGES 형태로 변환
+            const converted = items.map((item, idx) => ({
+              id: item.stage_id || item.id || `stage_${idx + 1}`,
+              name: item.item_name || item.name,
+              order: item.sort_order || idx + 1,
+              category: item.category || 'development',
+              defaultDays: item.default_days || item.defaultDays || 5
+            }));
+            setDevelopmentStages(converted);
+            setEditingStages(converted.map(s => ({ ...s })));
+            setPlanData(converted.map(stage => ({
+              stage_id: stage.id,
+              stage_name: stage.name,
+              category: stage.category,
+              defaultDays: stage.defaultDays,
+              start_date: '',
+              end_date: '',
+              status: 'pending',
+              remarks: '',
+              days_diff: 0,
+              is_custom: false,
+              sort_order: stage.order
+            })));
+            setMasterSource('database');
+            console.log(`[MoldDevelopmentPlan] 마스터 DB에서 ${converted.length}개 단계 로드 완료`);
+          }
+        }
+      } catch (err) {
+        console.log('[MoldDevelopmentPlan] 마스터 DB 로드 실패, 기본값 사용:', err.message);
+      }
+    };
+    loadMasterStages();
+  }, []);
 
   useEffect(() => {
     if (moldId) {
@@ -641,7 +687,12 @@ export default function MoldDevelopmentPlan() {
                 <ArrowLeft size={20} />
               </button>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">개발계획</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-gray-900">개발계획</h1>
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${masterSource === 'database' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {masterSource === 'database' ? '📋 마스터 연동' : '기본 항목'}
+                  </span>
+                </div>
                 <p className="text-sm text-gray-500">
                   {moldInfo?.mold?.mold_code || `M-${moldId}`} - {moldInfo?.part_name || '금형'}
                 </p>
