@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Save, Edit3, CheckCircle, AlertCircle, Clock,
@@ -40,6 +40,9 @@ export default function InjectionConditionNew() {
   const isDeveloper = ['mold_developer', 'system_admin'].includes(user?.user_type);
   
   const [rawMaterials, setRawMaterials] = useState([]);
+  const [materialSearchKeyword, setMaterialSearchKeyword] = useState('');
+  const [showMaterialDropdown, setShowMaterialDropdown] = useState(false);
+  const materialDropdownRef = useRef(null);
   const [masterSource, setMasterSource] = useState('default');
   const [masterSections, setMasterSections] = useState(null);
   
@@ -91,6 +94,17 @@ export default function InjectionConditionNew() {
     // 중량관리
     design_weight: '', management_weight: ''
   });
+
+  // 원재료 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (materialDropdownRef.current && !materialDropdownRef.current.contains(e.target)) {
+        setShowMaterialDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // 마스터 DB에서 사출조건 섹션 구조 로드
   useEffect(() => {
@@ -542,21 +556,73 @@ export default function InjectionConditionNew() {
           
           {expandedSections.material && (
             <div className="p-6 space-y-4">
-              {/* 원재료 선택 드롭다운 */}
+              {/* 원재료 검색 선택 */}
               {isEditing && isDeveloper && rawMaterials.length > 0 && (
-                <div className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <div ref={materialDropdownRef} className="mb-4 p-4 bg-purple-50 rounded-lg border border-purple-200 relative">
                   <label className="block text-sm font-medium text-purple-700 mb-2">📦 기초정보에서 원재료 선택</label>
-                  <select
-                    onChange={(e) => handleRawMaterialSelect(e.target.value)}
-                    className="w-full border border-purple-300 rounded-lg px-4 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">-- 원재료를 선택하면 자동으로 정보가 입력됩니다 --</option>
-                    {rawMaterials.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.material_name} - {m.material_grade} ({m.supplier}) | 수축률: {m.shrinkage_rate}% | 비중: {m.density}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={materialSearchKeyword}
+                      onChange={(e) => { setMaterialSearchKeyword(e.target.value); setShowMaterialDropdown(true); }}
+                      onFocus={() => setShowMaterialDropdown(true)}
+                      placeholder="MS SPEC, 원재료명, 원재료업체로 검색..."
+                      className="w-full border border-purple-300 rounded-lg px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-purple-500 pr-10"
+                    />
+                    {materialSearchKeyword && (
+                      <button
+                        type="button"
+                        onClick={() => { setMaterialSearchKeyword(''); setShowMaterialDropdown(false); }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                  {showMaterialDropdown && (() => {
+                    const keyword = materialSearchKeyword.toLowerCase().trim();
+                    const filtered = keyword
+                      ? rawMaterials.filter(m =>
+                          (m.material_name || '').toLowerCase().includes(keyword) ||
+                          (m.material_grade || '').toLowerCase().includes(keyword) ||
+                          (m.supplier || '').toLowerCase().includes(keyword) ||
+                          (m.ms_spec || '').toLowerCase().includes(keyword)
+                        )
+                      : rawMaterials;
+                    return filtered.length > 0 ? (
+                      <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-purple-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {filtered.map(m => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              handleRawMaterialSelect(m.id);
+                              setMaterialSearchKeyword(`${m.material_name} - ${m.material_grade || ''} (${m.supplier || ''})`);
+                              setShowMaterialDropdown(false);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="text-sm font-medium text-gray-900">{m.material_name}</span>
+                                {m.material_grade && <span className="text-sm text-gray-500 ml-2">({m.material_grade})</span>}
+                              </div>
+                              <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded">{m.supplier || '-'}</span>
+                            </div>
+                            <div className="flex gap-4 mt-1 text-xs text-gray-500">
+                              <span>수축률: {m.shrinkage_rate || '-'}%</span>
+                              <span>비중: {m.density || '-'}</span>
+                              {m.ms_spec && <span>MS SPEC: {m.ms_spec}</span>}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : keyword ? (
+                      <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-purple-200 rounded-lg shadow-lg p-4 text-center text-sm text-gray-500">
+                        검색 결과가 없습니다
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
               )}
               
