@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, Upload, Save, Send, Image as ImageIcon } from 'lucide-react';
 import api, { moldSpecificationAPI, standardDocumentAPI } from '../lib/api';
+import InlinePhotoButton from '../components/InlinePhotoButton';
 
 // 폴백용 기본 금형체크리스트 항목 (DB 로드 실패 시 사용)
 const DEFAULT_CHECKLIST_CATEGORIES = [
@@ -696,6 +697,7 @@ export default function MoldChecklist() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">점검 항목</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-64">규격/사양</th>
                         <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">확인</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-14">사진</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -718,6 +720,16 @@ export default function MoldChecklist() {
                               checked={checklistData[`${category.id}_${item.id}`]?.checked || false}
                               onChange={(e) => handleItemChange(category.id, item.id, 'checked', e.target.checked)}
                               className="w-5 h-5 rounded border-gray-300"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <InlinePhotoButton
+                              photos={checklistData[`${category.id}_${item.id}`]?.photos || []}
+                              onPhotosChange={(photos) => handleItemChange(category.id, item.id, 'photos', photos)}
+                              moldId={moldId}
+                              itemId={`${category.id}_${item.id}`}
+                              inspectionType="mold_checklist"
+                              maxPhotos={3}
                             />
                           </td>
                         </tr>

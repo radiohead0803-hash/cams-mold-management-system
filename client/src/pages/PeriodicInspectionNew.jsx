@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin, ArrowLeft, Loader2, Info, Hash, Save, Send, Search, X, User, Upload } from 'lucide-react'
 import api, { checklistMasterAPI } from '../lib/api'
 import InspectionPhotoSection from '../components/InspectionPhotoSection'
+import InlinePhotoButton from '../components/InlinePhotoButton'
 
 // 정기점검 유형 메타 정보
 const INSPECTION_TYPE_META = {
@@ -732,6 +733,7 @@ export default function PeriodicInspectionNew() {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">점검 항목</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-80">점검 결과</th>
                           <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-16">확인</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 w-14">사진</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -771,6 +773,16 @@ export default function PeriodicInspectionNew() {
                                   <div className="w-5 h-5 rounded-full border-2 border-gray-300 mx-auto" />
                                 )}
                               </td>
+                              <td className="px-4 py-3 text-center">
+                                <InlinePhotoButton
+                                  photos={checkResults[item.id]?.photos || []}
+                                  onPhotosChange={(photos) => handlePhotosChange(item.id, photos)}
+                                  moldId={mold?.id || moldId}
+                                  itemId={item.id}
+                                  inspectionType="periodic"
+                                  maxPhotos={3}
+                                />
+                              </td>
                             </tr>
                           )
                         })}
@@ -778,22 +790,7 @@ export default function PeriodicInspectionNew() {
                     </table>
                   </div>
 
-                  {/* 사진 첨부 영역 */}
-                  <div className="px-6 py-3 border-t bg-gray-50">
-                    <div className="space-y-3">
-                      {category.items.map(item => (
-                        <InspectionPhotoSection
-                          key={item.id}
-                          photos={checkResults[item.id]?.photos || []}
-                          onPhotosChange={(photos) => handlePhotosChange(item.id, photos)}
-                          moldId={mold?.id || moldId}
-                          itemId={item.id}
-                          inspectionType="periodic"
-                          maxPhotos={10}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  {/* 사진 첨부 - 각 항목별 인라인 버튼으로 이동됨 */}
                 </>
               )}
 
