@@ -140,6 +140,9 @@ export const MobileProductionTransferChecklist = lazy(() => import('../pages/mob
 export const ChecklistMasterConsole = lazy(() => import('../pages/ChecklistMasterConsole'));
 export const ChecklistMasterDetail = lazy(() => import('../pages/ChecklistMasterDetail'));
 
+// 표준문서 통합관리 콘솔
+export const DocumentMasterConsole = lazy(() => import('../pages/DocumentMasterConsole'));
+
 // 모바일 통합 점검
 export const MobileInspectionNew = lazy(() => import('../pages/mobile/MobileInspectionNew'));
 

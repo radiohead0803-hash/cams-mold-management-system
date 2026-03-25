@@ -124,7 +124,8 @@ import {
   DailyInspectionPageQr,
   PeriodicInspectionPageQr,
   DailyInspectionPage,
-  PeriodicInspectionPage
+  PeriodicInspectionPage,
+  DocumentMasterConsole
 } from './routes/lazyRoutes'
 
 function PeriodicAlias() {
@@ -385,6 +386,9 @@ function App() {
         
         {/* 표준문서 마스터 관리 */}
         <Route path="standard-document-master" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><StandardDocumentMaster /></ProtectedRoute>} />
+        
+        {/* 표준문서 통합관리 콘솔 */}
+        <Route path="document-master-console" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><DocumentMasterConsole /></ProtectedRoute>} />
         
         {/* 양산이관 체크리스트 마스터 관리 */}
         <Route path="production-transfer/checklist-master" element={<ProtectedRoute allowedRoles={['system_admin', 'mold_developer']}><ProductionTransferChecklistMaster /></ProtectedRoute>} />
