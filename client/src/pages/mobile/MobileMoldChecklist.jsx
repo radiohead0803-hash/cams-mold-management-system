@@ -4,10 +4,10 @@ import {
   ArrowLeft, Save, CheckCircle, Clock, ChevronDown, ChevronUp,
   AlertCircle, Send, FileText
 } from 'lucide-react';
-import api, { moldSpecificationAPI } from '../../lib/api';
+import api, { moldSpecificationAPI, standardDocumentAPI } from '../../lib/api';
 
-// 9개 카테고리 체크리스트 정의
-const CHECKLIST_CATEGORIES = [
+// 폴백용 기본 금형체크리스트 항목 (DB 로드 실패 시 사용)
+const DEFAULT_CHECKLIST_CATEGORIES = [
   {
     id: 'material',
     title: 'Ⅰ. 원재료',
@@ -105,6 +105,32 @@ export default function MobileMoldChecklist() {
   const [checklistData, setChecklistData] = useState({});
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [CHECKLIST_CATEGORIES, setChecklistCategories] = useState(DEFAULT_CHECKLIST_CATEGORIES);
+
+  // 마스터 항목 로드 (DB → 폴백)
+  useEffect(() => {
+    const loadMaster = async () => {
+      try {
+        const res = await standardDocumentAPI.getAll({ template_type: 'mold_checklist', status: 'deployed' });
+        const templates = res.data?.data || res.data;
+        if (Array.isArray(templates) && templates.length > 0) {
+          const items = templates[0].items;
+          if (Array.isArray(items) && items.length > 0) {
+            setChecklistCategories(items);
+            console.log(`[MobileMoldChecklist] 마스터 DB에서 ${items.length}개 카테고리 로드`);
+          }
+        }
+      } catch (err) {
+        console.log('[MobileMoldChecklist] 마스터 로드 실패, 기본값 사용:', err.message);
+      }
+    };
+    loadMaster();
+  }, []);
+
+  // 카테고리 변경 시 초기화 재실행
+  useEffect(() => {
+    initializeChecklist();
+  }, [CHECKLIST_CATEGORIES]);
 
   useEffect(() => {
     initializeChecklist();

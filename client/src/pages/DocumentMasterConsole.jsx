@@ -761,10 +761,33 @@ function DocumentDetailModal({ item, onClose, onAction }) {
   const docType = DOC_TYPES[item.type] || DOC_TYPES.mold_checklist;
   const statusCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.draft;
   const StatusIcon = statusCfg.icon;
+  const [detailItems, setDetailItems] = useState([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // 표준문서인 경우 items JSONB 로드
+  useEffect(() => {
+    if (item._source === 'standard_doc' && item._sourceId) {
+      const loadItems = async () => {
+        try {
+          setLoadingDetail(true);
+          const res = await standardDocumentAPI.getById(item._sourceId);
+          const tmpl = res.data?.data || res.data;
+          if (tmpl && Array.isArray(tmpl.items)) {
+            setDetailItems(tmpl.items);
+          }
+        } catch (err) {
+          console.error('상세 항목 로드 실패:', err);
+        } finally {
+          setLoadingDetail(false);
+        }
+      };
+      loadItems();
+    }
+  }, [item]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[80vh] overflow-hidden">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center">
             <div className={`p-2 rounded-lg mr-3 ${docType.color}`}>
@@ -775,7 +798,7 @@ function DocumentDetailModal({ item, onClose, onAction }) {
           <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(85vh-140px)]">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -809,6 +832,47 @@ function DocumentDetailModal({ item, onClose, onAction }) {
               <div>
                 <span className="text-xs text-gray-500">설명</span>
                 <p className="text-sm text-gray-700 mt-1">{item.description}</p>
+              </div>
+            )}
+
+            {/* 표준문서 항목 목록 */}
+            {item._source === 'standard_doc' && (
+              <div>
+                <span className="text-xs font-semibold text-gray-700 mb-2 block">문서 항목</span>
+                {loadingDetail ? (
+                  <div className="flex items-center justify-center py-6 text-gray-400">
+                    <RefreshCw className="w-4 h-4 animate-spin mr-2" /> 로드 중...
+                  </div>
+                ) : detailItems.length > 0 ? (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-gray-50 sticky top-0">
+                        <tr>
+                          <th className="px-3 py-1.5 text-left text-xs text-gray-500 w-10">#</th>
+                          <th className="px-3 py-1.5 text-left text-xs text-gray-500">항목명</th>
+                          <th className="px-3 py-1.5 text-center text-xs text-gray-500 w-16">유형</th>
+                          <th className="px-3 py-1.5 text-center text-xs text-gray-500 w-12">필수</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {detailItems.map((di, idx) => (
+                          <tr key={di.id || idx} className="hover:bg-gray-50">
+                            <td className="px-3 py-1.5 text-gray-400 text-xs">{idx + 1}</td>
+                            <td className="px-3 py-1.5 text-gray-900">{di.item_name || di.name || di.grade || '-'}</td>
+                            <td className="px-3 py-1.5 text-center text-xs text-gray-500">{di.item_type || di.type || '-'}</td>
+                            <td className="px-3 py-1.5 text-center">
+                              {(di.is_required || di.required || di.photo_required) && (
+                                <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-[10px] rounded">필수</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 text-center py-4">등록된 항목이 없습니다</p>
+                )}
               </div>
             )}
 

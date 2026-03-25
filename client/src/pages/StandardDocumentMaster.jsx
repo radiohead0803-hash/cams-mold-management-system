@@ -164,6 +164,8 @@ export default function StandardDocumentMaster() {
     deployedTo: [],
     developmentStage: 'all' // 'all', 'development', 'production'
   });
+  const [editItems, setEditItems] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(false);
 
   useEffect(() => {
     loadDocuments();
@@ -226,10 +228,11 @@ export default function StandardDocumentMaster() {
       description: '',
       deployedTo: []
     });
+    setEditItems([]);
     setShowModal(true);
   };
 
-  const handleEdit = (doc) => {
+  const handleEdit = async (doc) => {
     setEditingDoc(doc);
     setFormData({
       name: doc.name,
@@ -238,19 +241,67 @@ export default function StandardDocumentMaster() {
       description: doc.description || '',
       deployedTo: doc.deployedTo || []
     });
+    setEditItems([]);
     setShowModal(true);
     setShowActionMenu(null);
+    // DB에서 items JSONB 로드
+    try {
+      setLoadingItems(true);
+      const res = await api.get(`/standard-document-templates/${doc.id}`);
+      const tmpl = res.data?.data || res.data;
+      if (tmpl && Array.isArray(tmpl.items)) {
+        setEditItems(tmpl.items);
+      }
+    } catch (err) {
+      console.error('items 로드 실패:', err);
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
+  // 항목 추가
+  const handleAddItem = () => {
+    const newItem = {
+      id: Date.now(),
+      item_name: '',
+      item_type: 'check',
+      is_required: false,
+      sort_order: editItems.length + 1,
+      options: []
+    };
+    setEditItems(prev => [...prev, newItem]);
+  };
+
+  // 항목 수정
+  const handleItemChange = (index, field, value) => {
+    setEditItems(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  };
+
+  // 항목 삭제
+  const handleRemoveItem = (index) => {
+    setEditItems(prev => prev.filter((_, i) => i !== index).map((item, i) => ({ ...item, sort_order: i + 1 })));
+  };
+
+  // 항목 순서 변경
+  const handleMoveItem = (index, direction) => {
+    const newItems = [...editItems];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= newItems.length) return;
+    [newItems[index], newItems[targetIdx]] = [newItems[targetIdx], newItems[index]];
+    setEditItems(newItems.map((item, i) => ({ ...item, sort_order: i + 1 })));
   };
 
   const handleSave = async () => {
     try {
       if (editingDoc) {
-        // 수정
+        // 수정 (항목 포함)
         await api.patch(`/standard-document-templates/${editingDoc.id}`, {
           template_name: formData.name,
           template_type: formData.type,
           description: formData.description,
-          version: formData.version
+          version: formData.version,
+          items: editItems,
+          item_count: editItems.length
         });
         setDocuments(prev => prev.map(d => 
           d.id === editingDoc.id 
@@ -670,8 +721,8 @@ export default function StandardDocumentMaster() {
       {/* 신규/편집 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
-            <div className="flex items-center justify-between p-6 border-b">
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b shrink-0">
               <h2 className="text-xl font-bold text-gray-900">
                 {editingDoc ? '표준문서 편집' : '새 표준문서 추가'}
               </h2>
@@ -683,7 +734,7 @@ export default function StandardDocumentMaster() {
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">문서명 *</label>
                 <input
@@ -807,9 +858,122 @@ export default function StandardDocumentMaster() {
                   </label>
                 </div>
               </div>
+
+              {/* 항목 관리 섹션 */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-semibold text-gray-900">
+                    항목 관리 {editItems.length > 0 && <span className="text-blue-600 font-normal">({editItems.length}개)</span>}
+                  </label>
+                  <button
+                    onClick={handleAddItem}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Plus size={14} />
+                    항목 추가
+                  </button>
+                </div>
+
+                {loadingItems ? (
+                  <div className="flex items-center justify-center py-8 text-gray-400">
+                    <RefreshCw size={20} className="animate-spin mr-2" />
+                    항목 로드 중...
+                  </div>
+                ) : editItems.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-lg">
+                    <FileText size={32} className="mx-auto mb-2 text-gray-300" />
+                    <p className="text-sm">항목이 없습니다. '항목 추가' 버튼을 클릭하세요.</p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <table className="min-w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-2 py-2 text-center text-xs text-gray-500 w-12">순서</th>
+                          <th className="px-3 py-2 text-left text-xs text-gray-500">항목명</th>
+                          <th className="px-2 py-2 text-center text-xs text-gray-500 w-24">필드 유형</th>
+                          <th className="px-2 py-2 text-center text-xs text-gray-500 w-12">필수</th>
+                          <th className="px-2 py-2 text-center text-xs text-gray-500 w-16">이동</th>
+                          <th className="px-2 py-2 text-center text-xs text-gray-500 w-12">삭제</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {editItems.map((item, idx) => (
+                          <tr key={item.id || idx} className="hover:bg-gray-50">
+                            <td className="px-2 py-2 text-center text-gray-400">{idx + 1}</td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="text"
+                                value={item.item_name || item.name || ''}
+                                onChange={(e) => handleItemChange(idx, item.item_name !== undefined ? 'item_name' : 'name', e.target.value)}
+                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="항목명 입력"
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <select
+                                value={item.item_type || item.type || 'check'}
+                                onChange={(e) => handleItemChange(idx, item.item_type !== undefined ? 'item_type' : 'type', e.target.value)}
+                                className="w-full px-1 py-1 border border-gray-200 rounded text-xs"
+                              >
+                                <option value="check">예/아니오</option>
+                                <option value="text">텍스트</option>
+                                <option value="number">숫자</option>
+                                <option value="select">선택</option>
+                                <option value="date">날짜</option>
+                                <option value="photo">사진</option>
+                              </select>
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={item.is_required || item.required || false}
+                                onChange={(e) => handleItemChange(idx, item.is_required !== undefined ? 'is_required' : 'required', e.target.checked)}
+                                className="w-4 h-4 text-blue-600 rounded"
+                              />
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <div className="flex justify-center gap-0.5">
+                                <button
+                                  onClick={() => handleMoveItem(idx, 'up')}
+                                  disabled={idx === 0}
+                                  className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                                >
+                                  <ChevronDown size={14} className="rotate-180" />
+                                </button>
+                                <button
+                                  onClick={() => handleMoveItem(idx, 'down')}
+                                  disabled={idx === editItems.length - 1}
+                                  className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30"
+                                >
+                                  <ChevronDown size={14} />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-2 py-2 text-center">
+                              <button
+                                onClick={() => handleRemoveItem(idx)}
+                                className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="px-3 py-2 bg-gray-50 text-xs text-gray-500 border-t">
+                      총 {editItems.length}개 항목
+                      {editItems.filter(i => i.is_required || i.required).length > 0 && (
+                        <span> (필수: {editItems.filter(i => i.is_required || i.required).length}개)</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
+            <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50 shrink-0">
               <button
                 onClick={() => setShowModal(false)}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"

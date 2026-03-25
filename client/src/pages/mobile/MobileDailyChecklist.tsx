@@ -2,12 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, AlertTriangle, X, ChevronRight, ChevronLeft, Loader2, BookOpen, Save, Send, Search, User } from 'lucide-react';
-import api from '../../lib/api';
-// draftStorage 불필요 - 서버 checklist-instances API로 통합
+import api, { checklistMasterAPI } from '../../lib/api';
 import InspectionPhotoSection from '../../components/InspectionPhotoSection';
 
-// 웹버전과 동일한 일상점검 카테고리/항목 구조 (checkPoints 포함)
-const CHECK_CATEGORIES = [
+// 폴백용 기본 일상점검 카테고리 (DB 로드 실패 시 사용)
+const DEFAULT_CHECK_CATEGORIES = [
   {
     id: 1,
     name: '금형 외관 점검',
@@ -148,6 +147,7 @@ export default function MobileDailyChecklist() {
   const [searchParams] = useSearchParams();
   const moldId = params.moldId || searchParams.get('moldId') || searchParams.get('mold');
 
+  const [CHECK_CATEGORIES, setCheckCategories] = useState(DEFAULT_CHECK_CATEGORIES);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [checkResults, setCheckResults] = useState<Record<number, CheckResult>>({});
   const [mold, setMold] = useState<Mold | null>(null);
@@ -163,9 +163,48 @@ export default function MobileDailyChecklist() {
   const [selectedApprover, setSelectedApprover] = useState<any>(null);
   const [saveMessage, setSaveMessage] = useState<{type: string, text: string} | null>(null);
 
+  // 마스터 항목 로드 (DB → 폴백)
+  useEffect(() => {
+    const loadMaster = async () => {
+      try {
+        const res = await checklistMasterAPI.getItems({ inspection_type: 'daily', is_active: true });
+        const items = res.data?.data || res.data;
+        if (Array.isArray(items) && items.length > 0) {
+          const catMap: Record<string, any> = {};
+          items.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)).forEach((item: any, idx: number) => {
+            const catName = item.major_category || '기타';
+            if (!catMap[catName]) {
+              catMap[catName] = {
+                id: Object.keys(catMap).length + 1,
+                name: catName,
+                icon: item.category_icon || '📝',
+                items: []
+              };
+            }
+            const checkPoints = Array.isArray(item.check_points) ? item.check_points
+              : (typeof item.check_points === 'string' ? JSON.parse(item.check_points || '[]') : []);
+            catMap[catName].items.push({
+              id: item.id || (catMap[catName].id * 100 + catMap[catName].items.length + 1),
+              name: item.item_name,
+              description: item.description || '',
+              required: item.is_required !== false,
+              checkPoints,
+              fieldType: item.field_type || undefined
+            });
+          });
+          setCheckCategories(Object.values(catMap));
+          console.log(`[MobileDailyChecklist] 마스터 DB에서 ${items.length}개 항목 로드`);
+        }
+      } catch (err: any) {
+        console.log('[MobileDailyChecklist] 마스터 로드 실패, 기본값 사용:', err.message);
+      }
+    };
+    loadMaster();
+  }, []);
+
   const currentCategory = CHECK_CATEGORIES[currentCategoryIndex];
   const totalCategories = CHECK_CATEGORIES.length;
-  const totalItems = CHECK_CATEGORIES.reduce((sum, cat) => sum + cat.items.length, 0);
+  const totalItems = CHECK_CATEGORIES.reduce((sum: number, cat: any) => sum + cat.items.length, 0);
   const completedItems = Object.keys(checkResults).filter(
     key => checkResults[Number(key)]?.status || checkResults[Number(key)]?.value !== undefined
   ).length;

@@ -2,12 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, AlertTriangle, Wrench, ChevronRight, ChevronLeft, Loader2, BookOpen, X, MapPin, Save, Send, Search, User } from 'lucide-react';
-import api from '../../lib/api';
-// draftStorage 불필요 - 서버 checklist-instances API로 통합
+import api, { checklistMasterAPI } from '../../lib/api';
 import InspectionPhotoSection from '../../components/InspectionPhotoSection';
 
-// 웹버전과 동일한 정기점검 유형/카테고리/항목 구조
-const INSPECTION_TYPES = [
+// 폴백용 기본 정기점검 유형 (DB 로드 실패 시 사용)
+const DEFAULT_INSPECTION_TYPES = [
   {
     id: '20k',
     name: '20,000 SHOT 점검',
@@ -299,13 +298,65 @@ interface Item {
   isShotLinked?: boolean;
 }
 
+// 유형 메타 정보
+const INSPECTION_TYPE_META: Record<string, { name: string; period: string; shotThreshold: number }> = {
+  '20k': { name: '20,000 SHOT 점검', period: '3개월', shotThreshold: 20000 },
+  '50k': { name: '50,000 SHOT 점검', period: '6개월', shotThreshold: 50000 },
+  '80k': { name: '80,000 SHOT 점검', period: '청소/습합 집중', shotThreshold: 80000 },
+  '100k': { name: '100,000 SHOT 점검', period: '1년', shotThreshold: 100000 }
+};
+
 export default function MobilePeriodicInspection() {
   const navigate = useNavigate();
   const params = useParams();
   const [searchParams] = useSearchParams();
   const moldId = params.moldId || searchParams.get('moldId') || searchParams.get('mold');
 
+  const [INSPECTION_TYPES, setInspectionTypes] = useState<InspectionType[]>(DEFAULT_INSPECTION_TYPES);
   const [selectedType, setSelectedType] = useState<InspectionType | null>(null);
+
+  // 마스터 항목 로드 (DB → 폴백)
+  useEffect(() => {
+    const loadMaster = async () => {
+      try {
+        const res = await checklistMasterAPI.getItems({ inspection_type: 'periodic', is_active: true });
+        const items = res.data?.data || res.data;
+        if (Array.isArray(items) && items.length > 0) {
+          const typeMap: Record<string, any> = {};
+          items.sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)).forEach((item: any) => {
+            const subType = item.inspection_sub_type || '20k';
+            if (!typeMap[subType]) {
+              const meta = INSPECTION_TYPE_META[subType] || { name: `${subType} 점검`, period: '-', shotThreshold: 0 };
+              typeMap[subType] = { id: subType, name: meta.name, period: meta.period, shotThreshold: meta.shotThreshold, categories: [] };
+            }
+            const catName = item.major_category || '기타';
+            let cat = typeMap[subType].categories.find((c: any) => c.name === catName);
+            if (!cat) {
+              cat = { id: typeMap[subType].categories.length + 1, name: catName, icon: item.category_icon || '📝', items: [] };
+              typeMap[subType].categories.push(cat);
+            }
+            const checkPoints = Array.isArray(item.check_points) ? item.check_points
+              : (typeof item.check_points === 'string' ? JSON.parse(item.check_points || '[]') : []);
+            cat.items.push({
+              id: item.id || (cat.id * 100 + cat.items.length + 1),
+              name: item.item_name,
+              description: item.description || '',
+              required: item.is_required !== false,
+              checkPoints
+            });
+          });
+          const sorted = ['20k','50k','80k','100k'].filter(k => typeMap[k]).map(k => typeMap[k]);
+          if (sorted.length > 0) {
+            setInspectionTypes(sorted);
+            console.log(`[MobilePeriodicInspection] 마스터 DB에서 ${items.length}개 항목 로드`);
+          }
+        }
+      } catch (err: any) {
+        console.log('[MobilePeriodicInspection] 마스터 로드 실패, 기본값 사용:', err.message);
+      }
+    };
+    loadMaster();
+  }, []);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const [checkResults, setCheckResults] = useState<Record<number, CheckResult>>({});
   const [mold, setMold] = useState<Mold | null>(null);

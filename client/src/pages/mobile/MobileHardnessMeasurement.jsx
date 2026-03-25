@@ -4,10 +4,10 @@ import {
   ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp,
   Gauge, Target, Calendar
 } from 'lucide-react';
-import api, { moldSpecificationAPI } from '../../lib/api';
+import api, { moldSpecificationAPI, standardDocumentAPI } from '../../lib/api';
 
-// 경도 기준 정의
-const HARDNESS_STANDARDS = {
+// 폴백용 기본 경도 기준 (DB 로드 실패 시 사용)
+const DEFAULT_HARDNESS_STANDARDS = {
   'NAK80': { min: 38, max: 42, unit: 'HRC' },
   'S45C': { min: 18, max: 22, unit: 'HRC' },
   'SKD61': { min: 48, max: 52, unit: 'HRC' }
@@ -22,6 +22,31 @@ export default function MobileHardnessMeasurement() {
   const [moldInfo, setMoldInfo] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [expandedSection, setExpandedSection] = useState('cavity');
+  const [HARDNESS_STANDARDS, setHardnessStandards] = useState(DEFAULT_HARDNESS_STANDARDS);
+
+  // 마스터 경도 기준 로드 (DB → 폴백)
+  useEffect(() => {
+    const loadMaster = async () => {
+      try {
+        const res = await standardDocumentAPI.getAll({ template_type: 'hardness_standards', status: 'deployed' });
+        const templates = res.data?.data || res.data;
+        if (Array.isArray(templates) && templates.length > 0) {
+          const items = templates[0].items;
+          if (Array.isArray(items) && items.length > 0) {
+            const stdObj = {};
+            items.forEach(item => {
+              stdObj[item.grade] = { min: item.min, max: item.max, unit: 'HRC' };
+            });
+            setHardnessStandards(stdObj);
+            console.log(`[MobileHardnessMeasurement] 마스터 DB에서 ${items.length}개 경도 기준 로드`);
+          }
+        }
+      } catch (err) {
+        console.log('[MobileHardnessMeasurement] 마스터 로드 실패, 기본값 사용:', err.message);
+      }
+    };
+    loadMaster();
+  }, []);
   
   const [measurements, setMeasurements] = useState({
     cavity: {
