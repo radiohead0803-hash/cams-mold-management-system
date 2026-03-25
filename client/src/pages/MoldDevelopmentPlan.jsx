@@ -882,51 +882,59 @@ export default function MoldDevelopmentPlan() {
               </div>
             </div>
 
-            {/* 업무플로어 - planData 기반 동적 렌더링 */}
-            <div className="mb-8 overflow-x-auto">
-              <div className="flex items-center gap-1 min-w-[1100px] px-4 pb-2">
+            {/* 업무 플로우 - 스텝 인디케이터 */}
+            <div className="mb-6 overflow-x-auto">
+              <div className="flex items-start min-w-[1000px] px-2">
                 {planData.map((plan, index) => {
                   const catColor = getCategoryColor(plan.category);
+                  const catName = CATEGORIES.find(c => c.code === plan.category)?.name || '개발';
+                  const isCompleted = plan.status === 'completed';
+                  const isInProgress = plan.status === 'in_progress';
+                  const isDelayed = plan.status === 'delayed';
                   return (
-                    <div key={plan.stage_id} className="flex flex-col items-center min-w-[70px]">
-                      <div className="relative">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          plan.status === 'completed' ? 'bg-green-500 text-white' :
-                          plan.status === 'in_progress' ? 'bg-yellow-500 text-white' :
-                          plan.status === 'delayed' ? 'bg-red-500 text-white' :
-                          `${catColor.bg} ${catColor.text}`
-                        }`}>
-                          {plan.status === 'completed' ? <CheckCircle size={16} /> :
-                           plan.status === 'in_progress' ? <Clock size={16} /> :
-                           plan.status === 'delayed' ? <AlertCircle size={16} /> :
-                           <span className="text-xs font-bold">{index + 1}</span>}
+                    <div key={plan.stage_id} className="flex items-start" style={{ flex: '1 1 0' }}>
+                      <div className="flex flex-col items-center" style={{ minWidth: '60px' }}>
+                        {/* 원 + 연결선 */}
+                        <div className="flex items-center w-full">
+                          {index > 0 && (
+                            <div className={`flex-1 h-0.5 ${planData[index - 1].status === 'completed' ? 'bg-green-400' : 'bg-gray-300'}`} />
+                          )}
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                            isCompleted ? 'bg-green-500 text-white' :
+                            isInProgress ? 'bg-yellow-400 text-white' :
+                            isDelayed ? 'bg-red-500 text-white' :
+                            'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                          }`}>
+                            {isCompleted ? <CheckCircle size={14} /> : index + 1}
+                          </div>
+                          {index < planData.length - 1 && (
+                            <div className={`flex-1 h-0.5 ${isCompleted ? 'bg-green-400' : 'bg-gray-300'}`} />
+                          )}
                         </div>
-                        {index < planData.length - 1 && (
-                          <div className={`absolute top-4 left-8 w-8 h-0.5 ${
-                            plan.status === 'completed' ? 'bg-green-400' : 'bg-gray-300'
-                          }`} />
-                        )}
+                        {/* 단계명 */}
+                        <span className="text-[10px] mt-1 text-center text-gray-700 leading-tight" style={{ width: '70px', wordBreak: 'keep-all' }}>
+                          {plan.stage_name}
+                        </span>
+                        {/* 카테고리 배지 */}
+                        <span className={`text-[9px] mt-0.5 px-1.5 py-0.5 rounded-full font-medium ${catColor.bg} ${catColor.text}`}>
+                          {catName}
+                        </span>
                       </div>
-                      <span className={`text-[10px] mt-1 text-center leading-tight ${
-                        plan.is_custom ? 'text-purple-600 font-medium' : 'text-gray-600'
-                      }`} style={{ width: '65px', wordBreak: 'keep-all' }}>
-                        {plan.stage_name.length > 8 ? plan.stage_name.substring(0, 8) + '..' : plan.stage_name}
-                      </span>
-                      <span className={`text-[9px] px-1 rounded ${catColor.bg} ${catColor.text}`}>
-                        {CATEGORIES.find(c => c.code === plan.category)?.name || '개발'}
-                      </span>
                     </div>
                   );
                 })}
               </div>
-              <div className="flex items-center justify-between px-4 mt-2 text-xs text-gray-500">
+
+              {/* 통계 */}
+              <div className="flex items-center justify-between px-2 mt-3 text-xs text-gray-500 border-t pt-2">
                 <span>총 {planData.length}단계 | 완료: {planData.filter(p => p.status === 'completed').length} | 진행중: {planData.filter(p => p.status === 'in_progress').length}</span>
                 <div className="flex items-center gap-2">
                   {CATEGORIES.map(cat => {
                     const color = getCategoryColor(cat.code);
+                    const count = planData.filter(p => p.category === cat.code).length;
                     return (
-                      <span key={cat.code} className={`px-2 py-0.5 rounded ${color.bg} ${color.text}`}>
-                        {cat.name}: {planData.filter(p => p.category === cat.code).length}
+                      <span key={cat.code} className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${color.bg} ${color.text}`}>
+                        {cat.name}: {count}
                       </span>
                     );
                   })}
@@ -936,109 +944,107 @@ export default function MoldDevelopmentPlan() {
 
             {/* 추진계획 테이블 */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-3">
                 <h3 className="text-md font-semibold text-gray-700 flex items-center gap-2">
                   <span className="text-blue-600">▶</span> 추진계획
-                  <span className="text-xs font-normal text-gray-500">({planData.length}단계)</span>
+                  <span className="text-xs font-normal text-gray-400">({planData.length}단계)</span>
                 </h3>
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm flex items-center gap-1 hover:bg-blue-600"
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm flex items-center gap-1 hover:bg-blue-700"
                 >
                   <Plus size={14} /> 단계 추가
                 </button>
               </div>
               
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
+              <div className="overflow-x-auto border rounded-lg">
+                <table className="w-full border-collapse text-sm">
                   <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border px-2 py-3 text-sm font-medium text-gray-700 w-8">#</th>
-                      <th className="border px-4 py-3 text-sm font-medium text-gray-700 w-32">구분</th>
-                      <th className="border px-2 py-3 text-sm font-medium text-gray-700 w-20">카테고리</th>
-                      <th className="border px-4 py-3 text-sm font-medium text-gray-700" colSpan={2}>제작일정</th>
-                      <th className="border px-4 py-3 text-sm font-medium text-gray-700 w-24">상태</th>
-                      <th className="border px-4 py-3 text-sm font-medium text-gray-700">비고</th>
-                      <th className="border px-4 py-3 text-sm font-medium text-gray-700 w-16">일정</th>
-                      <th className="border px-2 py-3 text-sm font-medium text-gray-700 w-12">삭제</th>
+                    <tr className="bg-gray-50 border-b">
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-10 border-r">#</th>
+                      <th className="px-4 py-2.5 text-left font-semibold text-gray-600 w-36 border-r">구분</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-20 border-r">카테고리</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-600 border-r" colSpan={2}>제작일정</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-24 border-r">상태</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-600 border-r">비고</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-16 border-r">일정</th>
+                      <th className="px-3 py-2.5 text-center font-semibold text-gray-600 w-12">삭제</th>
                     </tr>
-                    <tr className="bg-gray-50">
-                      <th className="border px-2 py-2 text-xs text-gray-500"></th>
-                      <th className="border px-4 py-2 text-xs text-gray-500"></th>
-                      <th className="border px-2 py-2 text-xs text-gray-500"></th>
-                      <th className="border px-4 py-2 text-xs text-gray-500">시작일</th>
-                      <th className="border px-4 py-2 text-xs text-gray-500">종료일</th>
-                      <th className="border px-4 py-2 text-xs text-gray-500"></th>
-                      <th className="border px-4 py-2 text-xs text-gray-500"></th>
-                      <th className="border px-4 py-2 text-xs text-gray-500"></th>
-                      <th className="border px-2 py-2 text-xs text-gray-500"></th>
+                    <tr className="bg-gray-50 border-b text-xs text-gray-400">
+                      <th className="border-r"></th>
+                      <th className="border-r"></th>
+                      <th className="border-r"></th>
+                      <th className="px-3 py-1.5 text-center border-r">시작일</th>
+                      <th className="px-3 py-1.5 text-center border-r">종료일</th>
+                      <th className="border-r"></th>
+                      <th className="border-r"></th>
+                      <th className="border-r"></th>
+                      <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {planData.map((plan, index) => {
                       const catColor = getCategoryColor(plan.category);
+                      const catName = CATEGORIES.find(c => c.code === plan.category)?.name || '개발';
                       return (
-                        <tr key={plan.stage_id} className={`hover:bg-gray-50 ${plan.is_custom ? 'bg-purple-50' : ''}`}>
-                          <td className="border px-2 py-2 text-center text-xs text-gray-500">
+                        <tr key={plan.stage_id} className={`border-b hover:bg-blue-50/30 ${plan.is_custom ? 'bg-purple-50/50' : ''}`}>
+                          <td className="px-3 py-2.5 text-center text-gray-400 border-r">
                             {index + 1}
                           </td>
-                          <td className="border px-2 py-2">
-                            <div className="flex items-center gap-1">
-                              <span className={`text-sm font-medium ${plan.is_custom ? 'text-purple-600' : 'text-blue-600'} cursor-pointer hover:underline`}>
-                                {plan.stage_name}
-                              </span>
-                              {plan.is_custom && (
-                                <span className="text-[10px] px-1 bg-purple-200 text-purple-700 rounded">사용자</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="border px-2 py-2 text-center">
-                            <span className={`text-xs px-2 py-0.5 rounded ${catColor.bg} ${catColor.text}`}>
-                              {CATEGORIES.find(c => c.code === plan.category)?.name || '개발'}
+                          <td className="px-4 py-2.5 border-r">
+                            <span className={`font-medium ${plan.is_custom ? 'text-purple-600' : 'text-gray-800'}`}>
+                              {plan.stage_name}
                             </span>
                           </td>
-                          <td className="border px-2 py-2">
+                          <td className="px-3 py-2.5 text-center border-r">
+                            <span className={`text-xs px-2 py-1 rounded-full font-medium ${catColor.bg} ${catColor.text}`}>
+                              {catName}
+                            </span>
+                          </td>
+                          <td className="px-2 py-2.5 border-r">
                             <input
                               type="date"
                               value={plan.start_date}
                               onChange={(e) => handlePlanChange(index, 'start_date', e.target.value)}
-                              className="w-full border rounded px-2 py-1 text-sm"
+                              className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-gray-600 focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+                              placeholder="연도-월-일"
                             />
                           </td>
-                          <td className="border px-2 py-2">
+                          <td className="px-2 py-2.5 border-r">
                             <input
                               type="date"
                               value={plan.end_date}
                               onChange={(e) => handlePlanChange(index, 'end_date', e.target.value)}
-                              className="w-full border rounded px-2 py-1 text-sm"
+                              className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-gray-600 focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
+                              placeholder="연도-월-일"
                             />
                           </td>
-                          <td className="border px-2 py-2">
+                          <td className="px-2 py-2.5 border-r">
                             <select
                               value={plan.status}
                               onChange={(e) => handlePlanChange(index, 'status', e.target.value)}
-                              className={`w-full rounded px-2 py-1 text-sm font-medium ${getStatusColor(plan.status)}`}
+                              className={`w-full rounded px-2 py-1 text-sm font-medium border-0 ${getStatusColor(plan.status)}`}
                             >
                               {STATUS_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                               ))}
                             </select>
                           </td>
-                          <td className="border px-2 py-2">
+                          <td className="px-2 py-2.5 border-r">
                             <input
                               type="text"
                               value={plan.remarks}
                               onChange={(e) => handlePlanChange(index, 'remarks', e.target.value)}
                               placeholder="비고"
-                              className="w-full border rounded px-2 py-1 text-sm"
+                              className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-gray-600 focus:ring-1 focus:ring-blue-400 focus:border-blue-400"
                             />
                           </td>
-                          <td className="border px-2 py-2 text-center">
-                            <span className={`text-sm font-bold ${plan.days_diff >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                              D{plan.days_diff >= 0 ? '+' : ''}{plan.days_diff || '00'}
+                          <td className="px-2 py-2.5 text-center border-r">
+                            <span className={`text-sm font-bold ${plan.days_diff > 0 ? 'text-blue-600' : plan.days_diff < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                              D+{String(Math.abs(plan.days_diff || 0)).padStart(2, '0')}
                             </span>
                           </td>
-                          <td className="border px-2 py-2 text-center">
+                          <td className="px-2 py-2.5 text-center">
                             <button
                               onClick={() => handleDeletePlanStep(index)}
                               disabled={!plan.is_custom}
@@ -1055,10 +1061,10 @@ export default function MoldDevelopmentPlan() {
                 </table>
               </div>
               
-              {/* 단계 추가 안내 */}
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-700">
-                <p><strong>💡 단계 추가:</strong> "단계 추가" 버튼을 클릭하여 사용자 정의 단계를 추가할 수 있습니다.</p>
-                <p className="mt-1"><strong>🗑️ 단계 삭제:</strong> 사용자 정의 단계만 삭제 가능합니다. 기본 14단계는 삭제할 수 없습니다.</p>
+              {/* 단계 추가/삭제 안내 */}
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg text-sm text-blue-700 space-y-1">
+                <p>💡 <strong>단계 추가:</strong> "단계 추가" 버튼을 클릭하여 사용자 정의 단계를 추가할 수 있습니다.</p>
+                <p>🗑️ <strong>단계 삭제:</strong> 사용자 정의 단계만 삭제 가능합니다. 기본 14단계는 삭제할 수 없습니다.</p>
               </div>
             </div>
             
