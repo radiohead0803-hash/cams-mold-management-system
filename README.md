@@ -1,4 +1,4 @@
-# QR + GPS 기반 금형관리시스템 Ver.09
+# QR + GPS 기반 금형관리시스템 Ver.10
 
 금형 개발부터 폐기까지 QR 스캔과 GPS 위치를 기반으로 모든 현장 작업을 실시간 추적하고 제어하는 시스템입니다.
 
@@ -6,18 +6,53 @@
 
 | 서비스 | URL | 상태 |
 |--------|-----|------|
-| **프론트엔드** | https://spirited-liberation-production-1a4d.up.railway.app | ✅ 운영중 |
+| **프론트엔드** | https://spirited-liberation-production-1a4d.up.railway.app | ✅ 운영중 (v1.0.3) |
 | **백엔드 API** | https://cams-mold-management-system-production-b7d0.up.railway.app | ✅ 운영중 |
+| **PostgreSQL** | Railway PostgreSQL | ✅ 운영중 |
 | **GitHub** | https://github.com/radiohead0803-hash/cams-mold-management-system | |
 
-### 개발 완료율: 100% 🎉
+### 시스템 현황 (2026-03-25 기준)
 
-| 구분 | 완료 | 전체 | 완료율 |
-|------|------|------|--------|
-| 백엔드 API | 97+ | 97+ | 100% |
-| 프론트엔드 페이지 | 80+ | 80+ | 100% |
-| 데이터베이스 테이블 | 52 | 52 | 100% |
-| 테스트 코드 | 20 | 20 | 100% |
+| 구분 | 수량 | 비고 |
+|------|------|------|
+| **백엔드 라우트 파일** | 85 | Express Router (app.js 등록) |
+| **백엔드 컨트롤러** | 32 | 비즈니스 로직 |
+| **프론트 페이지 (PC)** | 60+ | React lazy import |
+| **프론트 페이지 (모바일)** | 53 | 모바일 전용 |
+| **프론트 API 클라이언트** | 33 | api.js export |
+| **데이터베이스 테이블** | 133 | Railway PostgreSQL |
+| **마이그레이션 SQL** | 66 | server/src/migrations/ |
+| **Sequelize 모델** | 66 | server/src/models/ |
+
+### 🔍 시스템 무결성 점검 결과 (2026-03-25)
+
+| 점검 항목 | 결과 | 상세 |
+|-----------|------|------|
+| 백엔드 라우트 파일 존재 (85개) | ✅ 전체 일치 | app.js 등록 → 실제 파일 |
+| 프론트 페이지 파일 존재 (113개) | ✅ 전체 일치 | lazyRoutes → 실제 JSX |
+| 프론트 API → 백엔드 라우트 매칭 (33개) | ✅ 전체 매칭 | api.js → app.js 라우트 |
+| Sequelize 모델 → DB 테이블 (66개) | ✅ 전체 존재 | tableName → pg_tables |
+| 컨트롤러 참조 테이블 → DB 존재 | ✅ 전체 해결 | 누락 6개 테이블 생성 완료 |
+| 핵심 테이블 데이터 존재 | ✅ 정상 | users(368), molds(63), companies(11) |
+| 마이그레이션 SQL 파일 (66개) | ✅ 확인 | server/src/migrations/ |
+
+#### 수정 완료 이슈
+
+| # | 이슈 | 수정 커밋 |
+|---|------|----------|
+| 1 | `codeOptions.js` auth 미들웨어 import 오류 → 서버 크래시 | 42c5b3a → 81aeaa3 |
+| 2 | DB 누락 테이블 6개 (컨트롤러 참조 but DB 미존재) | 6cba17e |
+
+#### 생성된 누락 테이블 6개
+
+| 테이블 | 용도 |
+|--------|------|
+| `checklist_template_versions` | 체크리스트 템플릿 버전 관리 |
+| `injection_condition_history` | 사출조건 변경 이력 |
+| `mold_transfers` | 금형 이관 마스터 |
+| `pre_production_checklist_results` | 제작전 체크리스트 결과 |
+| `production_transfer_attachments` | 양산이관 첨부파일 |
+| `transfer_history` | 이관 이력 |
 
 --- 
 
@@ -255,23 +290,25 @@
 ## 🏗️ 기술 스택
 
 ### Frontend
-- React 18 + Vite
-- Tailwind CSS + Apple Design System
-- Lucide React (아이콘)
-- React Query + Context API
-- React Router v6
+- React 19 + Vite 7
+- Tailwind CSS 3.4 + Apple Design System
+- Lucide React 0.555 (아이콘)
+- React Query (TanStack Query v5)
+- React Router v7
+- Zustand (전역 상태 관리)
+- React Hook Form
 
 ### Backend
-- Node.js 18+ + Express.js
+- Node.js 18 + Express.js
 - Sequelize ORM
-- PostgreSQL 14+
+- PostgreSQL (Railway)
 - JWT 인증
-- Multer (파일 업로드)
+- Multer (memoryStorage → Cloudinary/DB BYTEA 폴백)
 
 ### DevOps
-- Docker + Docker Compose
-- GitHub Actions (CI/CD)
-- Nginx (리버스 프록시)
+- Railway (프론트/백엔드/DB 호스팅)
+- GitHub → Railway 자동 배포 (CI/CD)
+- Monorepo 구조 (client/ + server/)
 
 ---
 
@@ -305,27 +342,45 @@
 
 ## 📊 데이터베이스 구조
 
-**총 52개 테이블, 10개 카테고리**
+**총 133개 테이블 (Railway PostgreSQL)**
 
 **참고 문서**: `docs/DATABASE_SCHEMA.md`
 
-**주요 변경사항**: 습합점검과 세척점검은 정기점검 내 체크리스트 항목으로 통합
+### 핵심 데이터 현황 (2026-03-25)
 
-1. **사용자 및 권한** (2개) - `users`, `qr_sessions`
-2. **데이터 흐름 및 자동 연동** (4개) - `mold_specifications`, `maker_specifications`, `plant_molds`, `stage_change_history`
-3. **금형정보 관리** (11개)
-   - 금형 기본: `molds`, `mold_development`
-   - **금형개발계획**: `mold_development_plans` (진도 관리), `mold_process_steps` (12단계 공정)
-   - **제작전 체크리스트**: `pre_production_checklists` (9개 카테고리, 81개 항목)
-   - **체크리스트 템플릿**: `checklist_master_templates`, `checklist_template_items`
-   - 기타: `mold_replication`, `mold_drawings`, `maker_info` 등
-4. **사출정보 관리** (5개) - `plant_info`, `injection_conditions`, `production_lines` 등
-5. **점검 관리** (4개) - `daily_checks`, `inspections` (정기점검: 1차/2차/3차, 습합/세척 통합), `inspection_items`, `inspection_history`
-6. **수리 관리** (3개) - `repairs`, `repair_management`, `repair_progress`
-7. **이관 관리** (4개) - `transfer_logs`, `transfer_management`, `transfer_checklist`, `transfer_approvals`
-8. **금형 폐기 관리** (3개) - `scrapping_requests`, `scrapping_approvals`, `scrapping_history`
-9. **관리자 수정 및 배포 관리** (4개) - `document_master_templates`, `checklist_template_deployment`, `checklist_template_history`, `template_deployment_log`
-10. **기타** (8개) - `shots`, `notifications`, `production_quantities`, `production_progress`, `trial_run_results`, `gps_locations`, `comments`, `mold_images`
+| 테이블 | 레코드 수 | 설명 |
+|--------|----------|------|
+| `users` | 368 | 사용자 (4가지 유형) |
+| `molds` | 63 | 금형 마스터 |
+| `mold_specifications` | 62 | 금형제작사양 (본사 입력) |
+| `companies` | 11 | 업체 정보 |
+| `car_models` | 18 | 차종 |
+| `tonnages` | 1,155 | 톤수 마스터 |
+| `raw_materials` | 3,072 | 원재료 마스터 |
+| `ms_spec_materials` | 486 | 사양별 원재료 매핑 |
+| `general_equipment_master` | 566 | 범용장비 마스터 |
+| `mold_process_step_masters` | 378 | 12단계 공정 마스터 |
+| `mold_nurturing_problems` | 183 | 금형육성 문제점 |
+| `company_equipment` | 182 | 업체별 보유장비 |
+| `system_code_options` | 96 | 시스템 코드 옵션 (21카테고리) |
+| `system_rules` | 27 | 시스템 규칙 |
+| `standard_document_templates` | 12 | 표준문서 마스터 (9종) |
+| `maintenance_types` | 9 | 유지보전 유형 |
+
+### 주요 테이블 카테고리
+
+1. **사용자 및 권한** - `users`, `qr_sessions`, `user_requests`, `user_device_tokens`
+2. **금형정보 관리** - `molds`, `mold_specifications`, `maker_specifications`, `mold_development_plans`, `mold_process_steps`, `mold_images`, `mold_history` 등
+3. **점검 관리** - `daily_checks`, `periodic_inspections`, `checklist_instances`, `checklist_items_master`, `inspection_photos` 등
+4. **수리 관리** - `repair_requests`, `repair_attachments`, `repair_progress`, `repair_shipment_checklists`, `repair_step_approvals` 등
+5. **이관 관리** - `transfers`, `transfer_requests`, `transfer_history`, `mold_transfers`, `transfer_4m_checklist` 등
+6. **금형 폐기** - `scrapping_requests`
+7. **유지보전** - `maintenance_records`, `maintenance_types`
+8. **사출/생산** - `injection_conditions`, `injection_condition_history`, `production_quantities`, `production_transfer_requests` 등
+9. **업체/장비** - `companies`, `company_equipment`, `equipment_master`, `general_equipment_master`, `general_equipment_category` 등
+10. **표준문서/체크리스트 마스터** - `standard_document_templates`, `checklist_master_templates`, `checklist_template_versions` 등
+11. **시스템 관리** - `system_rules`, `system_code_options`, `system_settings`, `audit_logs`, `approvals` 등
+12. **알림/기타** - `notifications`, `alerts`, `gps_locations`, `mold_location_logs`, `drafts` 등
 
 ---
 
@@ -1553,10 +1608,13 @@ npm run dev
 
 ---
 
-**마지막 업데이트**: 2024-01-18
-**버전**: Ver.09
-**문서 개수**: 20개
-**테이블 개수**: 50개
+**마지막 업데이트**: 2026-03-25
+**버전**: Ver.10
+**문서 개수**: 35개
+**테이블 개수**: 133개
+**백엔드 라우트**: 85개
+**프론트 페이지**: 113개 (PC 60+ / 모바일 53)
+**마이그레이션 SQL**: 66개
 
 ---
 
