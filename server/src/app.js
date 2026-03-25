@@ -147,6 +147,9 @@ const generalEquipmentRouter = require('./routes/generalEquipment');
 const companyProfileRouter = require('./routes/companyProfile');
 const moldCostsRouter = require('./routes/moldCosts');
 const codeOptionsRouter = require('./routes/codeOptions');
+const moldDocumentsRouter = require('./routes/moldDocuments');
+const moldPhotosRouter = require('./routes/moldPhotos');
+const moldLifecycleRouter = require('./routes/moldLifecycle');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -280,6 +283,12 @@ app.use('/api/v1/company-profile', companyProfileRouter);
 app.use('/api/v1/mold-costs', moldCostsRouter);
 // 시스템 코드 옵션 마스터
 app.use('/api/v1/code-options', codeOptionsRouter);
+// 금형 문서 관리 (모바일)
+app.use('/api/v1/mold-documents', moldDocumentsRouter);
+// 금형 사진 관리 (모바일)
+app.use('/api/v1/mold-photos', moldPhotosRouter);
+// 금형 수명주기 관리 (모바일)
+app.use('/api/v1/mold-lifecycle', moldLifecycleRouter);
 
 // Health check
 app.get('/health', (req, res) => {

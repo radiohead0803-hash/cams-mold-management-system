@@ -10,6 +10,7 @@ import PageLoader from './components/PageLoader'
 import ScanInfoPage from './pages/ScanInfoPage'
 import RepairRequestPage from './pages/RepairRequestPage'
 import MobileReLoginModal from './components/mobile/MobileReLoginModal'
+import MobileAuthGuard from './components/mobile/MobileAuthGuard'
 import { isMobileDevice } from './utils/deviceDetect'
 
 // Lazy loaded components
@@ -185,139 +186,118 @@ function App() {
       <Route path="/m/qr" element={<MobileQRScan />} />
       <Route path="/qr/:qrCode" element={<MobileQRScan />} />
       
-      {/* Mobile Routes - 새로운 QR 로그인 플로우 */}
+      {/* Mobile - 공개 라우트 (인증 불필요) */}
       <Route path="/mobile/qr-login" element={<MobileQRLogin />} />
-      <Route path="/mobile/mold/:moldId" element={<MobileMoldDetail />} />
-      <Route path="/mobile/mold/:moldId/daily-check" element={<MobileDailyChecklist />} />
-      <Route path="/mobile/mold/:moldId/periodic-check" element={<MobilePeriodicInspection />} />
-      <Route path="/mobile/mold/:moldId/repair-request" element={<MobileRepairRequestForm />} />
-      <Route path="/mobile/mold/:moldId/repair-list" element={<RepairRequestListPage />} />
-      <Route path="/mobile/mold/:moldId/repair-shipment-checklist" element={<MobileRepairShipmentChecklist />} />
-      <Route path="/mobile/mold/:moldId/development-plan" element={<MobileDevelopmentPlan />} />
-      <Route path="/mobile/mold/:moldId/mold-checklist" element={<MobileMoldChecklist />} />
-      <Route path="/mobile/mold/:moldId/nurturing" element={<MobileMoldNurturing />} />
-      <Route path="/mobile/mold/:moldId/hardness" element={<MobileHardnessMeasurement />} />
-      <Route path="/mobile/mold/:moldId/specification" element={<MobileMoldSpecification />} />
-      <Route path="/mobile/mold/:moldId/injection-condition" element={<MobileInjectionCondition />} />
-      <Route path="/mobile/mold/:moldId/injection-history" element={<MobileInjectionHistory />} />
-      <Route path="/mobile/mold/:moldId/injection-stats" element={<MobileInjectionStats />} />
-      <Route path="/mobile/mold/:moldId/transfer" element={<MobileTransferList />} />
-      <Route path="/mobile/mold/:moldId/transfer/new" element={<MobileTransferRequest />} />
-      <Route path="/mobile/mold/:moldId/transfer/list" element={<MobileTransferList />} />
-      <Route path="/mobile/mold/:moldId/tryout-issues" element={<MobileTryoutIssue />} />
-      <Route path="/mobile/transfer/:id" element={<MobileTransferList />} />
-      
-      {/* 웹버전 이관관리 (모바일 경로에서도 접근 가능) */}
-      <Route path="/mobile/mold/:moldId/transfer-web" element={<TransferManagement />} />
-      <Route path="/mobile/mold/:moldId/transfer-web/new" element={<TransferRequest />} />
-      <Route path="/mobile/mold/:moldId/inspection-approval" element={<MobileInspectionApproval />} />
-      <Route path="/mobile/inspection-approval" element={<MobileInspectionApproval />} />
-      
-      {/* Mobile - 유지보전 */}
-      <Route path="/mobile/maintenance" element={<MobileMaintenancePage />} />
-      <Route path="/mobile/mold/:moldId/maintenance" element={<MobileMaintenancePage />} />
-      
-      {/* Mobile - 제작전 체크리스트 */}
-      <Route path="/mobile/pre-production-checklist" element={<MobilePreProductionChecklist />} />
-      <Route path="/mobile/pre-production-checklist/:id" element={<MobilePreProductionChecklist />} />
-      
-      {/* Mobile - 통합 점검 시스템 */}
-      <Route path="/mobile/inspection-new" element={<MobileInspectionNew />} />
-      <Route path="/mobile/inspection-new/:id" element={<MobileInspectionNew />} />
-      
-      {/* Mobile - 금형 폐기 */}
-      <Route path="/mobile/scrapping" element={<MobileScrappingPage />} />
-      <Route path="/mobile/scrapping/new" element={<MobileScrappingPage />} />
-      <Route path="/mobile/scrapping/:id" element={<MobileScrappingPage />} />
-      
-      {/* Mobile - 홈 */}
-      <Route path="/mobile/home" element={<MobileHomePage />} />
-      <Route path="/mobile" element={<MobileHomePage />} />
-      
-      {/* Mobile - 알림 */}
-      <Route path="/mobile/alerts" element={<MobileAlerts />} />
-      <Route path="/mobile/notifications" element={<MobileAlerts />} />
-      
-      {/* Mobile - 통계/리포트 */}
-      <Route path="/mobile/reports" element={<MobileReports />} />
-      <Route path="/mobile/statistics" element={<MobileReports />} />
-      
-      {/* Mobile - 금형 목록 */}
-      <Route path="/mobile/molds" element={<MobileMoldList />} />
-      <Route path="/mobile/mold-list" element={<MobileMoldList />} />
-      
-      {/* Mobile - 금형 이력 */}
-      <Route path="/mobile/mold/:moldId/history" element={<MobileMoldHistory />} />
-      <Route path="/mobile/mold-history/:moldId" element={<MobileMoldHistory />} />
-      
-      {/* Mobile - 양산이관 체크리스트 */}
-      <Route path="/mobile/production-transfer-checklist" element={<MobileProductionTransferChecklist />} />
-      <Route path="/mobile/mold/:moldId/production-transfer-checklist" element={<MobileProductionTransferChecklist />} />
-      
-      {/* Mobile - QR 세션 */}
-      <Route path="/mobile/qr-sessions" element={<MobileQRSessions />} />
-      
-      {/* Mobile - 금형 위치 지도 */}
-      <Route path="/mobile/location-map" element={<MobileLocationMap />} />
-      <Route path="/mobile/mold-location" element={<MobileLocationMap />} />
-      
-      {/* Mobile - 프로필 */}
-      <Route path="/mobile/profile" element={<MobileProfile />} />
-      <Route path="/mobile/my" element={<MobileProfile />} />
-      
-      {/* Mobile - 알림 설정 */}
-      <Route path="/mobile/settings/notifications" element={<MobileNotificationSettings />} />
-      <Route path="/mobile/notification-settings" element={<MobileNotificationSettings />} />
-      
-      {/* Mobile - 도움말 */}
-      <Route path="/mobile/help" element={<MobileHelp />} />
-      <Route path="/mobile/about" element={<MobileHelp />} />
-      
-      {/* Mobile - 점검 플로우 */}
-      <Route path="/mobile/qr-scan" element={<QrScanPageMobile />} />
-      <Route path="/mobile/checklist-select" element={<ChecklistSelectPage />} />
-      <Route path="/mobile/checklist-form" element={<ChecklistFormPage />} />
-      <Route path="/mobile/checklist-complete" element={<ChecklistCompletePage />} />
-      
-      {/* Mobile - 대시보드 & 검색 */}
-      <Route path="/mobile/dashboard" element={<MobileDashboard />} />
-      <Route path="/mobile/search" element={<MobileSearch />} />
 
-      {/* Mobile - 금형 문서/사진 */}
-      <Route path="/mobile/mold/:moldId/documents" element={<MobileDocuments />} />
-      <Route path="/mobile/mold/:moldId/photos" element={<MobilePhotoGallery />} />
+      {/* ═══ Mobile 인증 필요 라우트 (MobileAuthGuard) ═══ */}
+      <Route element={<MobileAuthGuard />}>
+        {/* Mobile - 홈 */}
+        <Route path="/mobile/home" element={<MobileHomePage />} />
+        <Route path="/mobile" element={<MobileHomePage />} />
 
-      {/* Mobile - 수리관리 */}
-      <Route path="/mobile/repairs" element={<MobileRepairList />} />
-      <Route path="/mobile/hq/repair-requests" element={<MobileHqRepairList />} />
-      <Route path="/mobile/maker/repair-requests" element={<MobileMakerRepairList />} />
-      <Route path="/mobile/maker/mold/:moldId" element={<MobileMakerMoldDetail />} />
+        {/* Mobile - 금형 상세 & 하위 기능 */}
+        <Route path="/mobile/mold/:moldId" element={<MobileMoldDetail />} />
+        <Route path="/mobile/mold/:moldId/daily-check" element={<MobileDailyChecklist />} />
+        <Route path="/mobile/mold/:moldId/periodic-check" element={<MobilePeriodicInspection />} />
+        <Route path="/mobile/mold/:moldId/repair-request" element={<MobileRepairRequestForm />} />
+        <Route path="/mobile/mold/:moldId/repair-list" element={<RepairRequestListPage />} />
+        <Route path="/mobile/mold/:moldId/repair-shipment-checklist" element={<MobileRepairShipmentChecklist />} />
+        <Route path="/mobile/mold/:moldId/development-plan" element={<MobileDevelopmentPlan />} />
+        <Route path="/mobile/mold/:moldId/mold-checklist" element={<MobileMoldChecklist />} />
+        <Route path="/mobile/mold/:moldId/nurturing" element={<MobileMoldNurturing />} />
+        <Route path="/mobile/mold/:moldId/hardness" element={<MobileHardnessMeasurement />} />
+        <Route path="/mobile/mold/:moldId/specification" element={<MobileMoldSpecification />} />
+        <Route path="/mobile/mold/:moldId/injection-condition" element={<MobileInjectionCondition />} />
+        <Route path="/mobile/mold/:moldId/injection-history" element={<MobileInjectionHistory />} />
+        <Route path="/mobile/mold/:moldId/injection-stats" element={<MobileInjectionStats />} />
+        <Route path="/mobile/mold/:moldId/transfer" element={<MobileTransferList />} />
+        <Route path="/mobile/mold/:moldId/transfer/new" element={<MobileTransferRequest />} />
+        <Route path="/mobile/mold/:moldId/transfer/list" element={<MobileTransferList />} />
+        <Route path="/mobile/mold/:moldId/tryout-issues" element={<MobileTryoutIssue />} />
+        <Route path="/mobile/mold/:moldId/documents" element={<MobileDocuments />} />
+        <Route path="/mobile/mold/:moldId/photos" element={<MobilePhotoGallery />} />
+        <Route path="/mobile/mold/:moldId/history" element={<MobileMoldHistory />} />
+        <Route path="/mobile/mold/:moldId/maintenance" element={<MobileMaintenancePage />} />
+        <Route path="/mobile/mold/:moldId/production-transfer-checklist" element={<MobileProductionTransferChecklist />} />
+        <Route path="/mobile/mold/:moldId/inspection-approval" element={<MobileInspectionApproval />} />
+        <Route path="/mobile/transfer/:id" element={<MobileTransferList />} />
 
-      {/* Mobile - 금형 라이프사이클 */}
-      <Route path="/mobile/mold-lifecycle" element={<MobileMoldLifecycle />} />
+        {/* Mobile - 웹버전 이관관리 */}
+        <Route path="/mobile/mold/:moldId/transfer-web" element={<TransferManagement />} />
+        <Route path="/mobile/mold/:moldId/transfer-web/new" element={<TransferRequest />} />
 
-      {/* Mobile - 업체 관리 */}
-      <Route path="/mobile/companies" element={<MobileCompanyList />} />
-      <Route path="/mobile/companies/:companyId" element={<MobileCompanyDetail />} />
+        {/* Mobile - 수리관리 */}
+        <Route path="/mobile/repairs" element={<MobileRepairList />} />
+        <Route path="/mobile/hq/repair-requests" element={<MobileHqRepairList />} />
+        <Route path="/mobile/maker/repair-requests" element={<MobileMakerRepairList />} />
+        <Route path="/mobile/maker/mold/:moldId" element={<MobileMakerMoldDetail />} />
 
-      {/* Mobile - 통합관리 워크플로우 */}
-      <Route path="/mobile/workflow" element={<MobileWorkflow />} />
+        {/* Mobile - 금형 관리 */}
+        <Route path="/mobile/molds" element={<MobileMoldList />} />
+        <Route path="/mobile/mold-list" element={<MobileMoldList />} />
+        <Route path="/mobile/mold-lifecycle" element={<MobileMoldLifecycle />} />
+        <Route path="/mobile/mold-history/:moldId" element={<MobileMoldHistory />} />
+        <Route path="/mobile/mold-qrcode" element={<MobileMoldQRCode />} />
+        <Route path="/mobile/mold-location" element={<MobileLocationMap />} />
 
-      {/* Mobile - QR코드 조회 */}
-      <Route path="/mobile/mold-qrcode" element={<MobileMoldQRCode />} />
+        {/* Mobile - 점검/승인/워크플로우 */}
+        <Route path="/mobile/inspection-approval" element={<MobileInspectionApproval />} />
+        <Route path="/mobile/inspection-new" element={<MobileInspectionNew />} />
+        <Route path="/mobile/inspection-new/:id" element={<MobileInspectionNew />} />
+        <Route path="/mobile/approval-inbox" element={<MobileApprovalInbox />} />
+        <Route path="/mobile/workflow" element={<MobileWorkflow />} />
 
-      {/* Mobile - 생산처 금형 선택 */}
-      <Route path="/mobile/plant/select-mold/:task" element={<MobilePlantMoldSelect />} />
+        {/* Mobile - 체크리스트 */}
+        <Route path="/mobile/pre-production-checklist" element={<MobilePreProductionChecklist />} />
+        <Route path="/mobile/pre-production-checklist/:id" element={<MobilePreProductionChecklist />} />
+        <Route path="/mobile/production-transfer-checklist" element={<MobileProductionTransferChecklist />} />
 
-      {/* Mobile - 사용자 요청 / 승인함 */}
-      <Route path="/mobile/user-requests" element={<MobileUserRequests />} />
-      <Route path="/mobile/approval-inbox" element={<MobileApprovalInbox />} />
+        {/* Mobile - 유지보전/폐기 */}
+        <Route path="/mobile/maintenance" element={<MobileMaintenancePage />} />
+        <Route path="/mobile/scrapping" element={<MobileScrappingPage />} />
+        <Route path="/mobile/scrapping/new" element={<MobileScrappingPage />} />
+        <Route path="/mobile/scrapping/:id" element={<MobileScrappingPage />} />
 
-      {/* Mobile Routes - 기존 호환 */}
-      <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
-      <Route path="/mobile/molds/:moldId/check/:category" element={<ChecklistStartPage />} />
-      <Route path="/mobile/molds/:moldId/repair/requests" element={<RepairRequestListPage />} />
-      <Route path="/mobile/molds/:moldId/repair/progress" element={<RepairRequestListPage showStatusOnly />} />
+        {/* Mobile - 업체 관리 */}
+        <Route path="/mobile/companies" element={<MobileCompanyList />} />
+        <Route path="/mobile/companies/:companyId" element={<MobileCompanyDetail />} />
+
+        {/* Mobile - 알림/리포트 */}
+        <Route path="/mobile/alerts" element={<MobileAlerts />} />
+        <Route path="/mobile/notifications" element={<MobileAlerts />} />
+        <Route path="/mobile/reports" element={<MobileReports />} />
+        <Route path="/mobile/statistics" element={<MobileReports />} />
+
+        {/* Mobile - 점검 플로우 */}
+        <Route path="/mobile/qr-scan" element={<QrScanPageMobile />} />
+        <Route path="/mobile/checklist-select" element={<ChecklistSelectPage />} />
+        <Route path="/mobile/checklist-form" element={<ChecklistFormPage />} />
+        <Route path="/mobile/checklist-complete" element={<ChecklistCompletePage />} />
+
+        {/* Mobile - 대시보드/검색 */}
+        <Route path="/mobile/dashboard" element={<MobileDashboard />} />
+        <Route path="/mobile/search" element={<MobileSearch />} />
+
+        {/* Mobile - 생산처 전용 */}
+        <Route path="/mobile/plant/select-mold/:task" element={<MobilePlantMoldSelect />} />
+
+        {/* Mobile - 사용자/세션/설정 */}
+        <Route path="/mobile/user-requests" element={<MobileUserRequests />} />
+        <Route path="/mobile/qr-sessions" element={<MobileQRSessions />} />
+        <Route path="/mobile/location-map" element={<MobileLocationMap />} />
+        <Route path="/mobile/profile" element={<MobileProfile />} />
+        <Route path="/mobile/my" element={<MobileProfile />} />
+        <Route path="/mobile/settings/notifications" element={<MobileNotificationSettings />} />
+        <Route path="/mobile/notification-settings" element={<MobileNotificationSettings />} />
+        <Route path="/mobile/help" element={<MobileHelp />} />
+        <Route path="/mobile/about" element={<MobileHelp />} />
+
+        {/* Mobile - 기존 호환 라우트 */}
+        <Route path="/mobile/molds/:moldId" element={<MoldOverviewPage />} />
+        <Route path="/mobile/molds/:moldId/check/:category" element={<ChecklistStartPage />} />
+        <Route path="/mobile/molds/:moldId/repair/requests" element={<RepairRequestListPage />} />
+        <Route path="/mobile/molds/:moldId/repair/progress" element={<RepairRequestListPage showStatusOnly />} />
+      </Route>
       
       {/* QR Scan and Inspection Routes */}
       <Route path="/qr/scan" element={<ProtectedRoute allowedRoles={['plant', 'maker']}><QrScanPage /></ProtectedRoute>} />

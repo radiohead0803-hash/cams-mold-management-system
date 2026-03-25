@@ -186,7 +186,7 @@ export default function MobileCompanyList() {
                       <span>{company.email || company.contact_email}</span>
                     </div>
                   )}
-                  {(company.mold_count !== undefined || company.mold_count !== null) && company.mold_count > 0 && (
+                  {(company.mold_count !== undefined && company.mold_count !== null) && company.mold_count > 0 && (
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <Package className="w-3.5 h-3.5 shrink-0" />
                       <span>관리 금형 {company.mold_count}개</span>

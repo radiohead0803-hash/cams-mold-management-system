@@ -30,8 +30,9 @@ export default function MobileMakerMoldDetail() {
       setLoading(true);
       setError('');
       const response = await api.get(`/molds/${moldId}`);
-      if (response.data.success) {
-        setMold(response.data.data);
+      const moldData = response.data?.data || response.data;
+      if (moldData) {
+        setMold(moldData);
       } else {
         setError('금형 정보를 불러올 수 없습니다.');
       }

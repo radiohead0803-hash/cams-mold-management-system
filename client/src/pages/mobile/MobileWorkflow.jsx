@@ -104,7 +104,7 @@ export default function MobileWorkflow() {
         date: item.request_date || item.created_at?.split('T')[0] || '-',
         status: item.status,
         id: item.id || item.repair_id,
-        detailPath: `/mobile/repair/${item.id || item.repair_id}`,
+        detailPath: `/mobile/mold/${item.mold_id || item.mold?.id}/repair-request`,
       };
     } else if (activeTab === 'transfer') {
       return {
@@ -113,7 +113,7 @@ export default function MobileWorkflow() {
         date: item.request_date || item.transfer_date || item.created_at?.split('T')[0] || '-',
         status: item.status,
         id: item.id || item.transfer_id,
-        detailPath: `/mobile/transfer/${item.id || item.transfer_id}`,
+        detailPath: `/mobile/mold/${item.mold_id || item.mold?.id}/transfer`,
         extra: item.from_location && item.to_location
           ? `${item.from_location} → ${item.to_location}`
           : null,

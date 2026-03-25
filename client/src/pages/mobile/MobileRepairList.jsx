@@ -41,7 +41,7 @@ export default function MobileRepairList() {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/repairs');
+      const response = await api.get('/repair-requests');
       const data = response.data?.data || response.data || [];
       setRepairs(Array.isArray(data) ? data : data.items || data.repairs || []);
     } catch (err) {

@@ -44,7 +44,7 @@ export default function MobileApprovalInbox() {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/approvals/pending');
+      const response = await api.get('/approvals');
       if (response.data.success) {
         setApprovals(response.data.data || []);
       }
