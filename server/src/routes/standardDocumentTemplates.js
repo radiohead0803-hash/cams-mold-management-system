@@ -106,7 +106,7 @@ router.patch('/:id', authorize(['system_admin', 'mold_developer']), async (req, 
     const allowedFields = [
       'template_name', 'template_type', 'description', 'version',
       'development_stage', 'deployed_to', 'item_count', 'category_count',
-      'template_data', 'items', 'stages', 'is_active'
+      'template_data', 'items', 'stages', 'revision_history', 'is_active'
     ];
     const updates = {};
     for (const field of allowedFields) {
@@ -206,6 +206,132 @@ router.post('/:id/duplicate', authorize(['system_admin', 'mold_developer']), asy
   } catch (error) {
     logger.error('Standard document duplicate error:', error);
     res.status(500).json({ success: false, error: { message: '복제 실패' } });
+  }
+});
+
+/**
+ * POST /api/v1/standard-document-templates/:id/revise
+ * 표준문서 개정 (새 버전 생성 + 승인요청)
+ */
+router.post('/:id/revise', authorize(['system_admin', 'mold_developer']), async (req, res) => {
+  try {
+    const template = await StandardDocumentTemplate.findByPk(req.params.id);
+    if (!template) {
+      return res.status(404).json({ success: false, error: { message: '표준문서를 찾을 수 없습니다' } });
+    }
+
+    const { new_version, revision_reason, items, description } = req.body;
+    if (!new_version) {
+      return res.status(400).json({ success: false, error: { message: '새 버전 번호는 필수입니다' } });
+    }
+
+    // 현재 상태를 이력 JSONB에 스냅샷 저장
+    const currentHistory = template.revision_history || [];
+    currentHistory.push({
+      version: template.version || '1.0',
+      status: template.status,
+      items_snapshot: template.items,
+      item_count: template.item_count,
+      category_count: template.category_count,
+      description: template.description,
+      revised_by: req.user.id,
+      revised_by_name: req.user.name || req.user.username,
+      revised_at: new Date().toISOString(),
+      revision_reason: revision_reason || '개정'
+    });
+
+    // 새 버전으로 업데이트 + 승인 대기 상태
+    const updates = {
+      version: new_version,
+      status: 'pending',
+      revision_history: currentHistory,
+      approved_by: null,
+      approved_by_name: null,
+      approved_at: null,
+      deployed_by: null,
+      deployed_by_name: null,
+      deployed_at: null
+    };
+    if (items !== undefined) updates.items = items;
+    if (description !== undefined) updates.description = description;
+    if (items) {
+      const struct = Array.isArray(items) && items[0]?.items ? 'nested' : 'flat';
+      updates.item_count = struct === 'nested'
+        ? items.reduce((s, c) => s + (c.items?.length || 0), 0)
+        : items.length;
+      updates.category_count = struct === 'nested' ? items.length : 1;
+    }
+
+    await template.update(updates);
+    logger.info(`Standard document revised: ${template.template_name} to v${new_version} by user ${req.user.id}`);
+    res.json({ success: true, data: template, message: `v${new_version}으로 개정되었습니다. 승인을 요청합니다.` });
+  } catch (error) {
+    logger.error('Standard document revise error:', error);
+    res.status(500).json({ success: false, error: { message: '개정 실패' } });
+  }
+});
+
+/**
+ * POST /api/v1/standard-document-templates/:id/reject
+ * 표준문서 반려
+ */
+router.post('/:id/reject', authorize(['system_admin']), async (req, res) => {
+  try {
+    const template = await StandardDocumentTemplate.findByPk(req.params.id);
+    if (!template) {
+      return res.status(404).json({ success: false, error: { message: '표준문서를 찾을 수 없습니다' } });
+    }
+
+    await template.update({
+      status: 'rejected',
+      approved_by: req.user.id,
+      approved_by_name: req.user.name || req.user.username,
+      approved_at: new Date()
+    });
+
+    res.json({ success: true, data: template, message: '반려되었습니다' });
+  } catch (error) {
+    logger.error('Standard document reject error:', error);
+    res.status(500).json({ success: false, error: { message: '반려 실패' } });
+  }
+});
+
+/**
+ * GET /api/v1/standard-document-templates/:id/history
+ * 표준문서 개정 이력 조회
+ */
+router.get('/:id/history', async (req, res) => {
+  try {
+    const template = await StandardDocumentTemplate.findByPk(req.params.id, {
+      attributes: ['id', 'template_name', 'version', 'status', 'revision_history',
+        'created_by_name', 'created_at', 'approved_by_name', 'approved_at',
+        'deployed_by_name', 'deployed_at']
+    });
+    if (!template) {
+      return res.status(404).json({ success: false, error: { message: '표준문서를 찾을 수 없습니다' } });
+    }
+
+    const history = (template.revision_history || []).map((h, i) => ({
+      ...h,
+      revision_number: i + 1
+    }));
+
+    // 현재 버전도 추가
+    history.push({
+      revision_number: history.length + 1,
+      version: template.version,
+      status: template.status,
+      item_count: null,
+      revised_by_name: null,
+      revised_at: null,
+      revision_reason: '현재 버전',
+      is_current: true
+    });
+
+    res.json({ success: true, data: { template_name: template.template_name, history } });
+  } catch (error) {
+    logger.error('Standard document history error:', error);
+    res.status(500).json({ success: false, error: { message: '이력 조회 실패' } });
   }
 });
 

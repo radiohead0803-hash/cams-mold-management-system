@@ -71,6 +71,11 @@ class StandardDocumentTemplate extends Model {
           type: DataTypes.JSONB,
           defaultValue: []
         },
+        revision_history: {
+          type: DataTypes.JSONB,
+          defaultValue: [],
+          comment: '개정 이력 스냅샷 배열'
+        },
         created_by: {
           type: DataTypes.INTEGER
         },
