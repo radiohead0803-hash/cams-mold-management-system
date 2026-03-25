@@ -166,6 +166,8 @@ export default function StandardDocumentMaster() {
   });
   const [editItems, setEditItems] = useState([]);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [itemsStructure, setItemsStructure] = useState('flat');
+  const [expandedCats, setExpandedCats] = useState({});
 
   useEffect(() => {
     loadDocuments();
@@ -232,6 +234,22 @@ export default function StandardDocumentMaster() {
     setShowModal(true);
   };
 
+  // items 구조 감지: 중첩(카테고리+items) vs flat
+  const detectStructure = (items) => {
+    if (!Array.isArray(items) || items.length === 0) return 'flat';
+    const first = items[0];
+    if (first && (first.items || first.title)) return 'nested';
+    return 'flat';
+  };
+
+  // 중첩 구조에서 총 항목 수 계산
+  const countTotalItems = (items, structure) => {
+    if (structure === 'nested') {
+      return items.reduce((sum, cat) => sum + (cat.items?.length || 0), 0);
+    }
+    return items.length;
+  };
+
   const handleEdit = async (doc) => {
     setEditingDoc(doc);
     setFormData({
@@ -242,6 +260,8 @@ export default function StandardDocumentMaster() {
       deployedTo: doc.deployedTo || []
     });
     setEditItems([]);
+    setItemsStructure('flat');
+    setExpandedCats({});
     setShowModal(true);
     setShowActionMenu(null);
     // DB에서 items JSONB 로드
@@ -250,7 +270,14 @@ export default function StandardDocumentMaster() {
       const res = await api.get(`/standard-document-templates/${doc.id}`);
       const tmpl = res.data?.data || res.data;
       if (tmpl && Array.isArray(tmpl.items)) {
+        const struct = detectStructure(tmpl.items);
+        setItemsStructure(struct);
         setEditItems(tmpl.items);
+        if (struct === 'nested') {
+          const exp = {};
+          tmpl.items.forEach((_, i) => { exp[i] = true; });
+          setExpandedCats(exp);
+        }
       }
     } catch (err) {
       console.error('items 로드 실패:', err);
@@ -259,8 +286,19 @@ export default function StandardDocumentMaster() {
     }
   };
 
-  // 항목 추가
+  // === Flat 구조 핸들러 ===
   const handleAddItem = () => {
+    if (itemsStructure === 'nested') {
+      // 새 카테고리 추가
+      const newCat = {
+        id: `cat_${Date.now()}`,
+        title: '',
+        items: []
+      };
+      setEditItems(prev => [...prev, newCat]);
+      setExpandedCats(prev => ({ ...prev, [editItems.length]: true }));
+      return;
+    }
     const newItem = {
       id: Date.now(),
       item_name: '',
@@ -272,27 +310,74 @@ export default function StandardDocumentMaster() {
     setEditItems(prev => [...prev, newItem]);
   };
 
-  // 항목 수정
   const handleItemChange = (index, field, value) => {
     setEditItems(prev => prev.map((item, i) => i === index ? { ...item, [field]: value } : item));
   };
 
-  // 항목 삭제
   const handleRemoveItem = (index) => {
-    setEditItems(prev => prev.filter((_, i) => i !== index).map((item, i) => ({ ...item, sort_order: i + 1 })));
+    setEditItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  // 항목 순서 변경
   const handleMoveItem = (index, direction) => {
     const newItems = [...editItems];
     const targetIdx = direction === 'up' ? index - 1 : index + 1;
     if (targetIdx < 0 || targetIdx >= newItems.length) return;
     [newItems[index], newItems[targetIdx]] = [newItems[targetIdx], newItems[index]];
-    setEditItems(newItems.map((item, i) => ({ ...item, sort_order: i + 1 })));
+    setEditItems(newItems);
+  };
+
+  // === Nested(카테고리) 구조 핸들러 ===
+  const handleCatTitleChange = (catIdx, value) => {
+    setEditItems(prev => prev.map((cat, i) => i === catIdx ? { ...cat, title: value, id: cat.id || value } : cat));
+  };
+
+  const handleAddSubItem = (catIdx) => {
+    setEditItems(prev => prev.map((cat, i) => {
+      if (i !== catIdx) return cat;
+      const newSub = {
+        id: Date.now(),
+        name: '',
+        item_name: '',
+        type: 'check',
+        item_type: 'check',
+        is_required: false
+      };
+      return { ...cat, items: [...(cat.items || []), newSub] };
+    }));
+  };
+
+  const handleSubItemChange = (catIdx, itemIdx, field, value) => {
+    setEditItems(prev => prev.map((cat, ci) => {
+      if (ci !== catIdx) return cat;
+      const newItems = cat.items.map((item, ii) => ii === itemIdx ? { ...item, [field]: value } : item);
+      return { ...cat, items: newItems };
+    }));
+  };
+
+  const handleRemoveSubItem = (catIdx, itemIdx) => {
+    setEditItems(prev => prev.map((cat, ci) => {
+      if (ci !== catIdx) return cat;
+      return { ...cat, items: cat.items.filter((_, ii) => ii !== itemIdx) };
+    }));
+  };
+
+  const handleRemoveCategory = (catIdx) => {
+    if (!confirm('이 카테고리와 모든 하위 항목을 삭제하시겠습니까?')) return;
+    setEditItems(prev => prev.filter((_, i) => i !== catIdx));
+  };
+
+  const handleMoveCat = (catIdx, direction) => {
+    const newItems = [...editItems];
+    const targetIdx = direction === 'up' ? catIdx - 1 : catIdx + 1;
+    if (targetIdx < 0 || targetIdx >= newItems.length) return;
+    [newItems[catIdx], newItems[targetIdx]] = [newItems[targetIdx], newItems[catIdx]];
+    setEditItems(newItems);
   };
 
   const handleSave = async () => {
     try {
+      const totalItems = countTotalItems(editItems, itemsStructure);
+      const catCount = itemsStructure === 'nested' ? editItems.length : 1;
       if (editingDoc) {
         // 수정 (항목 포함)
         await api.patch(`/standard-document-templates/${editingDoc.id}`, {
@@ -301,13 +386,10 @@ export default function StandardDocumentMaster() {
           description: formData.description,
           version: formData.version,
           items: editItems,
-          item_count: editItems.length
+          item_count: totalItems,
+          category_count: catCount
         });
-        setDocuments(prev => prev.map(d => 
-          d.id === editingDoc.id 
-            ? { ...d, ...formData, lastModified: new Date().toISOString().split('T')[0] }
-            : d
-        ));
+        await loadDocuments();
       } else {
         // 신규 생성
         const response = await api.post('/standard-document-templates', {
@@ -331,14 +413,8 @@ export default function StandardDocumentMaster() {
       alert('저장되었습니다.');
     } catch (error) {
       console.error('Save error:', error);
-      // API 실패해도 로컬에서 처리
-      if (editingDoc) {
-        setDocuments(prev => prev.map(d => 
-          d.id === editingDoc.id 
-            ? { ...d, ...formData, lastModified: new Date().toISOString().split('T')[0] }
-            : d
-        ));
-      } else {
+      alert(`저장 실패: ${error?.response?.data?.error?.message || error.message}`);
+      if (!editingDoc) {
         const newDoc = {
           id: Date.now(),
           ...formData,
@@ -863,15 +939,35 @@ export default function StandardDocumentMaster() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="block text-sm font-semibold text-gray-900">
-                    항목 관리 {editItems.length > 0 && <span className="text-blue-600 font-normal">({editItems.length}개)</span>}
+                    항목 관리
+                    {editItems.length > 0 && (
+                      <span className="text-blue-600 font-normal ml-1">
+                        ({itemsStructure === 'nested'
+                          ? `${editItems.length}개 카테고리, ${countTotalItems(editItems, 'nested')}개 항목`
+                          : `${editItems.length}개`})
+                      </span>
+                    )}
+                    {itemsStructure === 'nested' && (
+                      <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[10px] rounded">카테고리 구조</span>
+                    )}
                   </label>
-                  <button
-                    onClick={handleAddItem}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    <Plus size={14} />
-                    항목 추가
-                  </button>
+                  <div className="flex gap-2">
+                    {itemsStructure === 'flat' && editItems.length === 0 && (
+                      <button
+                        onClick={() => { setItemsStructure('nested'); setExpandedCats({}); }}
+                        className="flex items-center gap-1 px-2 py-1 text-xs border border-purple-300 text-purple-700 rounded hover:bg-purple-50"
+                      >
+                        카테고리 구조로 전환
+                      </button>
+                    )}
+                    <button
+                      onClick={handleAddItem}
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      <Plus size={14} />
+                      {itemsStructure === 'nested' ? '카테고리 추가' : '항목 추가'}
+                    </button>
+                  </div>
                 </div>
 
                 {loadingItems ? (
@@ -884,7 +980,117 @@ export default function StandardDocumentMaster() {
                     <FileText size={32} className="mx-auto mb-2 text-gray-300" />
                     <p className="text-sm">항목이 없습니다. '항목 추가' 버튼을 클릭하세요.</p>
                   </div>
+                ) : itemsStructure === 'nested' ? (
+                  /* ========== 카테고리 중첩 구조 편집 ========== */
+                  <div className="space-y-3">
+                    {editItems.map((cat, catIdx) => (
+                      <div key={cat.id || catIdx} className="border border-gray-200 rounded-lg overflow-hidden">
+                        {/* 카테고리 헤더 */}
+                        <div className="bg-gray-50 px-3 py-2 flex items-center gap-2">
+                          <button
+                            onClick={() => setExpandedCats(prev => ({ ...prev, [catIdx]: !prev[catIdx] }))}
+                            className="p-0.5 text-gray-500 hover:text-gray-700"
+                          >
+                            {expandedCats[catIdx] ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          </button>
+                          <span className="text-xs text-gray-400 w-6">{catIdx + 1}.</span>
+                          <input
+                            type="text"
+                            value={cat.title || cat.id || ''}
+                            onChange={(e) => handleCatTitleChange(catIdx, e.target.value)}
+                            className="flex-1 px-2 py-1 border border-gray-200 rounded text-sm font-medium focus:ring-1 focus:ring-blue-500"
+                            placeholder="카테고리명 입력"
+                          />
+                          <span className="text-xs text-gray-400">{cat.items?.length || 0}개</span>
+                          <div className="flex gap-0.5">
+                            <button onClick={() => handleMoveCat(catIdx, 'up')} disabled={catIdx === 0}
+                              className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                              <ChevronDown size={14} className="rotate-180" />
+                            </button>
+                            <button onClick={() => handleMoveCat(catIdx, 'down')} disabled={catIdx === editItems.length - 1}
+                              className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
+                              <ChevronDown size={14} />
+                            </button>
+                          </div>
+                          <button onClick={() => handleRemoveCategory(catIdx)}
+                            className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        {/* 카테고리 하위 항목 */}
+                        {expandedCats[catIdx] && (
+                          <div className="px-3 pb-2">
+                            {cat.items && cat.items.length > 0 ? (
+                              <table className="min-w-full text-sm mt-1">
+                                <thead>
+                                  <tr className="text-[10px] text-gray-400 uppercase">
+                                    <th className="px-1 py-1 text-center w-8">#</th>
+                                    <th className="px-1 py-1 text-left">항목명</th>
+                                    <th className="px-1 py-1 text-center w-20">유형</th>
+                                    <th className="px-1 py-1 text-center w-10">필수</th>
+                                    <th className="px-1 py-1 text-center w-10">삭제</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {cat.items.map((subItem, subIdx) => (
+                                    <tr key={subItem.id || subIdx} className="hover:bg-gray-50">
+                                      <td className="px-1 py-1 text-center text-gray-300 text-xs">{subIdx + 1}</td>
+                                      <td className="px-1 py-1">
+                                        <input
+                                          type="text"
+                                          value={subItem.item_name || subItem.name || ''}
+                                          onChange={(e) => handleSubItemChange(catIdx, subIdx, subItem.item_name !== undefined ? 'item_name' : 'name', e.target.value)}
+                                          className="w-full px-2 py-0.5 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-blue-500"
+                                          placeholder="항목명"
+                                        />
+                                      </td>
+                                      <td className="px-1 py-1">
+                                        <select
+                                          value={subItem.item_type || subItem.type || 'check'}
+                                          onChange={(e) => handleSubItemChange(catIdx, subIdx, subItem.item_type !== undefined ? 'item_type' : 'type', e.target.value)}
+                                          className="w-full px-1 py-0.5 border border-gray-200 rounded text-xs"
+                                        >
+                                          <option value="check">예/아니오</option>
+                                          <option value="text">텍스트</option>
+                                          <option value="number">숫자</option>
+                                          <option value="select">선택</option>
+                                        </select>
+                                      </td>
+                                      <td className="px-1 py-1 text-center">
+                                        <input type="checkbox"
+                                          checked={subItem.is_required || subItem.required || subItem.photo_required || false}
+                                          onChange={(e) => handleSubItemChange(catIdx, subIdx, 'is_required', e.target.checked)}
+                                          className="w-3.5 h-3.5 text-blue-600 rounded" />
+                                      </td>
+                                      <td className="px-1 py-1 text-center">
+                                        <button onClick={() => handleRemoveSubItem(catIdx, subIdx)}
+                                          className="p-0.5 text-red-400 hover:text-red-600 rounded">
+                                          <Trash2 size={12} />
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            ) : (
+                              <p className="text-xs text-gray-400 py-2 text-center">하위 항목 없음</p>
+                            )}
+                            <button
+                              onClick={() => handleAddSubItem(catIdx)}
+                              className="mt-1 flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
+                            >
+                              <Plus size={12} /> 항목 추가
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div className="text-xs text-gray-500 mt-1">
+                      총 {editItems.length}개 카테고리, {countTotalItems(editItems, 'nested')}개 항목
+                    </div>
+                  </div>
                 ) : (
+                  /* ========== Flat 구조 편집 ========== */
                   <div className="border border-gray-200 rounded-lg overflow-hidden">
                     <table className="min-w-full text-sm">
                       <thead className="bg-gray-50">
@@ -904,8 +1110,8 @@ export default function StandardDocumentMaster() {
                             <td className="px-3 py-2">
                               <input
                                 type="text"
-                                value={item.item_name || item.name || ''}
-                                onChange={(e) => handleItemChange(idx, item.item_name !== undefined ? 'item_name' : 'name', e.target.value)}
+                                value={item.item_name || item.name || item.grade || ''}
+                                onChange={(e) => handleItemChange(idx, item.item_name !== undefined ? 'item_name' : item.grade !== undefined ? 'grade' : 'name', e.target.value)}
                                 className="w-full px-2 py-1 border border-gray-200 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 placeholder="항목명 입력"
                               />
@@ -934,27 +1140,19 @@ export default function StandardDocumentMaster() {
                             </td>
                             <td className="px-2 py-2 text-center">
                               <div className="flex justify-center gap-0.5">
-                                <button
-                                  onClick={() => handleMoveItem(idx, 'up')}
-                                  disabled={idx === 0}
-                                  className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30"
-                                >
+                                <button onClick={() => handleMoveItem(idx, 'up')} disabled={idx === 0}
+                                  className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
                                   <ChevronDown size={14} className="rotate-180" />
                                 </button>
-                                <button
-                                  onClick={() => handleMoveItem(idx, 'down')}
-                                  disabled={idx === editItems.length - 1}
-                                  className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30"
-                                >
+                                <button onClick={() => handleMoveItem(idx, 'down')} disabled={idx === editItems.length - 1}
+                                  className="p-0.5 text-gray-400 hover:text-gray-700 disabled:opacity-30">
                                   <ChevronDown size={14} />
                                 </button>
                               </div>
                             </td>
                             <td className="px-2 py-2 text-center">
-                              <button
-                                onClick={() => handleRemoveItem(idx)}
-                                className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
-                              >
+                              <button onClick={() => handleRemoveItem(idx)}
+                                className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded">
                                 <Trash2 size={14} />
                               </button>
                             </td>
