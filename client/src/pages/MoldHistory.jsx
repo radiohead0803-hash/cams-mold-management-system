@@ -136,79 +136,13 @@ export default function MoldHistory() {
         setMold(moldRes.data.data);
       }
 
-      // 이력 데이터 (실제 API가 없으면 더미 데이터)
-      // TODO: 실제 이력 API 연동
-      setHistory([
-        {
-          id: 1,
-          type: 'created',
-          title: '금형 등록',
-          description: '신규 금형이 시스템에 등록되었습니다.',
-          user_name: '김개발',
-          created_at: '2024-01-15T09:00:00Z'
-        },
-        {
-          id: 2,
-          type: 'specification',
-          title: '사양 변경',
-          description: '금형 사양이 수정되었습니다.',
-          changes: [
-            { field: '캐비티 수', old_value: '2', new_value: '4' },
-            { field: '톤수', old_value: '850T', new_value: '1000T' }
-          ],
-          user_name: '이설계',
-          created_at: '2024-02-20T14:30:00Z'
-        },
-        {
-          id: 3,
-          type: 'status_change',
-          title: '상태 변경',
-          description: '금형 상태가 변경되었습니다.',
-          changes: [
-            { field: '상태', old_value: '개발', new_value: '양산' }
-          ],
-          user_name: '박관리',
-          created_at: '2024-03-10T10:00:00Z'
-        },
-        {
-          id: 4,
-          type: 'transfer',
-          title: '금형 이관',
-          description: 'A공장에서 B공장으로 이관되었습니다.',
-          changes: [
-            { field: '위치', old_value: 'A공장', new_value: 'B공장' }
-          ],
-          user_name: '최이관',
-          created_at: '2024-04-05T11:00:00Z'
-        },
-        {
-          id: 5,
-          type: 'inspection',
-          title: '정기점검 완료',
-          description: '2024년 1분기 정기점검이 완료되었습니다.',
-          user_name: '정점검',
-          created_at: '2024-04-15T16:00:00Z'
-        },
-        {
-          id: 6,
-          type: 'repair',
-          title: '수리 완료',
-          description: '슬라이드 코어 마모 수리가 완료되었습니다.',
-          changes: [
-            { field: '수리 비용', old_value: '-', new_value: '1,500,000원' }
-          ],
-          user_name: '한수리',
-          created_at: '2024-05-20T09:30:00Z'
-        },
-        {
-          id: 7,
-          type: 'maintenance',
-          title: '예방 유지보전',
-          description: '정기 유지보전 작업이 수행되었습니다.',
-          user_name: '오보전',
-          created_at: '2024-06-10T14:00:00Z'
-        }
-      ]);
+      // 이력 데이터 - 실제 DB API 연동
+      const historyRes = await api.get(`/mold-history/${loadId}`, { params: { limit: 50 } }).catch(() => null);
+      if (historyRes?.data?.data?.history) {
+        setHistory(historyRes.data.data.history);
+      } else {
+        setHistory([]);
+      }
 
     } catch (error) {
       console.error('Failed to load data:', error);

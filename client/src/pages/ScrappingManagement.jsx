@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronUp, Shield, AlertCircle, Package, User, Wrench, Check,
   ClipboardList, DollarSign, Calculator, Search, Archive, BookOpen
 } from 'lucide-react';
-import api from '../lib/api';
+import api, { standardDocumentAPI } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 
 // 상태 배지 컴포넌트
@@ -211,6 +211,8 @@ function ScrappingDetail() {
   });
   const [molds, setMolds] = useState([]);
   const [selectedMold, setSelectedMold] = useState(null);
+  const [masterSource, setMasterSource] = useState('default');
+  const [masterSections, setMasterSections] = useState(null);
 
   const [expandedSections, setExpandedSections] = useState({
     request: true,
@@ -221,6 +223,27 @@ function ScrappingDetail() {
     disposal: false,
     postcare: false
   });
+
+  // 마스터 DB에서 폐기 섹션 구조 로드
+  useEffect(() => {
+    const loadMasterTemplate = async () => {
+      try {
+        const res = await standardDocumentAPI.getAll({ template_type: 'scrapping', status: 'deployed' });
+        const templates = res.data?.data || res.data;
+        if (Array.isArray(templates) && templates.length > 0) {
+          const template = templates[0];
+          if (Array.isArray(template.items) && template.items.length > 0) {
+            setMasterSections(template.items);
+            setMasterSource('database');
+            console.log(`[Scrapping] 마스터 DB에서 ${template.items.length}개 섹션 로드 완료`);
+          }
+        }
+      } catch (err) {
+        console.log('[Scrapping] 마스터 DB 로드 실패, 기본 구조 사용:', err.message);
+      }
+    };
+    loadMasterTemplate();
+  }, []);
 
   useEffect(() => {
     loadMolds();
@@ -529,7 +552,12 @@ function ScrappingDetail() {
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-100 rounded-lg"><Trash2 className="text-red-600" size={24} /></div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{isNew ? '금형 폐기 요청' : request?.request_number || '폐기 요청'}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-gray-900">{isNew ? '금형 폐기 요청' : request?.request_number || '폐기 요청'}</h1>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded ${masterSource === 'database' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {masterSource === 'database' ? '📋 마스터 연동' : '기본 항목'}
+                </span>
+              </div>
               <p className="text-sm text-gray-500">
                 {selectedMold ? `${selectedMold.mold_code} - ${selectedMold.part_name || ''}` : request ? `${request.mold_code || ''} - ${request.part_name || ''}` : '금형을 선택하세요'}
               </p>

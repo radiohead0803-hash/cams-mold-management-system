@@ -317,7 +317,22 @@ const getMoldMaintenanceHistory = async (req, res) => {
  */
 const getMaintenanceTypes = async (req, res) => {
   try {
-    const types = [
+    const [types] = await sequelize.query(`
+      SELECT code, name, description, icon, sort_order
+      FROM maintenance_types
+      WHERE is_active = true
+      ORDER BY sort_order
+    `);
+    
+    res.json({
+      success: true,
+      data: types
+    });
+    
+  } catch (error) {
+    logger.error('Get maintenance types error:', error);
+    // DB 실패 시 폴백
+    const fallbackTypes = [
       { code: 'periodic', name: '정기점검', description: '타수/일자 기준 정기 점검' },
       { code: 'cleaning', name: '세척', description: '금형 세척 작업' },
       { code: 'lubrication', name: '윤활', description: '윤활유 보충/교체' },
@@ -328,18 +343,7 @@ const getMaintenanceTypes = async (req, res) => {
       { code: 'preventive', name: '예방정비', description: '예방 차원의 정비' },
       { code: 'other', name: '기타', description: '기타 유지보전 작업' }
     ];
-    
-    res.json({
-      success: true,
-      data: types
-    });
-    
-  } catch (error) {
-    logger.error('Get maintenance types error:', error);
-    res.status(500).json({
-      success: false,
-      error: { message: 'Failed to get maintenance types' }
-    });
+    res.json({ success: true, data: fallbackTypes });
   }
 };
 

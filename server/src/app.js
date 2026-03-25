@@ -108,6 +108,7 @@ const testDataRouter = require('./routes/testData');
 const alertsRouter = require('./routes/alerts');
 const preProductionChecklistRouter = require('./routes/preProductionChecklist');
 const maintenanceRouter = require('./routes/maintenance');
+const moldHistoryRouter = require('./routes/moldHistory');
 const scrappingRouter = require('./routes/scrapping');
 const statisticsRouter = require('./routes/statistics');
 const transfersRouter = require('./routes/transfers');
@@ -215,6 +216,8 @@ app.use('/api/v1/checklist-masters', checklistMastersRouter);
 app.use('/api/v1/inspections-new', inspectionsNewRouter);
 // Maintenance (유지보전)
 app.use('/api/v1/maintenance', maintenanceRouter);
+// Mold History (금형 통합 변경이력)
+app.use('/api/v1/mold-history', moldHistoryRouter);
 // Scrapping (폐기)
 app.use('/api/v1/scrapping', scrappingRouter);
 // Statistics (통계)
