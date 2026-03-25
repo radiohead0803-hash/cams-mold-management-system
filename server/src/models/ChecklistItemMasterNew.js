@@ -32,6 +32,39 @@ class ChecklistItemMasterNew extends Model {
           type: DataTypes.TEXT,
           comment: '점검방법 (서술형)'
         },
+        check_points: {
+          type: DataTypes.JSONB,
+          defaultValue: [],
+          comment: '점검 포인트 배열 (가이드용)'
+        },
+        is_required: {
+          type: DataTypes.BOOLEAN,
+          defaultValue: true,
+          comment: '필수 점검 항목 여부'
+        },
+        field_type: {
+          type: DataTypes.STRING(30),
+          defaultValue: 'yes_no',
+          comment: '입력 필드 유형: yes_no, number, text, select'
+        },
+        inspection_type: {
+          type: DataTypes.STRING(30),
+          defaultValue: 'daily',
+          comment: '점검 유형: daily, periodic, all'
+        },
+        category_icon: {
+          type: DataTypes.STRING(10),
+          comment: '카테고리 아이콘 (이모지)'
+        },
+        inspection_sub_type: {
+          type: DataTypes.STRING(30),
+          comment: '정기점검 세부 유형: 20k, 50k, 80k, 100k (periodic 전용)'
+        },
+        extra_config: {
+          type: DataTypes.JSONB,
+          defaultValue: {},
+          comment: '추가 설정 (isShotLinked 등)'
+        },
         required_photo: {
           type: DataTypes.BOOLEAN,
           defaultValue: false,

@@ -425,11 +425,17 @@ const getCurrentDeployedVersion = async (req, res) => {
  */
 const getChecklistItems = async (req, res) => {
   try {
-    const { category, is_active } = req.query;
+    const { category, is_active, inspection_type } = req.query;
 
     const where = {};
     if (category) where.major_category = category;
     if (is_active !== undefined) where.is_active = is_active === 'true';
+    if (inspection_type) {
+      where[Op.or] = [
+        { inspection_type },
+        { inspection_type: 'all' }
+      ];
+    }
 
     const items = await ChecklistItemMasterNew.findAll({
       where,

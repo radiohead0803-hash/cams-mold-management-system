@@ -1,12 +1,62 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, MapPin, ArrowLeft, Loader2, Info, Hash, Save, Send, Search, X, User } from 'lucide-react'
-import api from '../lib/api'
-// draftStorage 불필요 - 서버 checklist-instances API로 통합
+import api, { checklistMasterAPI } from '../lib/api'
 import InspectionPhotoSection from '../components/InspectionPhotoSection'
 
-// 정기점검 대항목/소항목 구조 (템플릿 마스터 + 기존 항목 통합)
-const INSPECTION_TYPES = [
+// 정기점검 유형 메타 정보
+const INSPECTION_TYPE_META = {
+  '20k': { id: '20k', name: '20,000 SHOT 점검', period: '3개월', shotThreshold: 20000 },
+  '50k': { id: '50k', name: '50,000 SHOT 점검', period: '6개월', shotThreshold: 50000 },
+  '80k': { id: '80k', name: '80,000 SHOT 점검', period: '청소/습합 집중', shotThreshold: 80000 },
+  '100k': { id: '100k', name: '100,000 SHOT 점검', period: '1년', shotThreshold: 100000 }
+}
+
+/**
+ * DB 마스터 항목을 INSPECTION_TYPES 구조로 변환
+ */
+function convertMasterItemsToInspectionTypes(items) {
+  const subTypeMap = new Map()
+
+  items.forEach(item => {
+    const subType = item.inspection_sub_type || '20k'
+    if (!subTypeMap.has(subType)) {
+      subTypeMap.set(subType, new Map())
+    }
+    const categoryMap = subTypeMap.get(subType)
+    const catKey = item.major_category
+    if (!categoryMap.has(catKey)) {
+      categoryMap.set(catKey, { name: catKey, icon: item.category_icon || '', items: [] })
+    }
+    const checkPoints = Array.isArray(item.check_points)
+      ? item.check_points
+      : (typeof item.check_points === 'string' ? JSON.parse(item.check_points || '[]') : [])
+
+    categoryMap.get(catKey).items.push({
+      id: item.id,
+      name: item.item_name,
+      description: item.description || '',
+      required: item.is_required !== false,
+      fieldType: item.field_type || 'yes_no',
+      checkPoints,
+      isShotLinked: item.extra_config?.isShotLinked || item.field_type === 'number'
+    })
+  })
+
+  const result = []
+  for (const [subType, categoryMap] of subTypeMap) {
+    const meta = INSPECTION_TYPE_META[subType] || { id: subType, name: subType, period: '-', shotThreshold: 0 }
+    const categories = Array.from(categoryMap.values()).map((cat, idx) => ({ id: idx + 1, ...cat }))
+    result.push({ ...meta, categories })
+  }
+
+  // shotThreshold 순 정렬
+  result.sort((a, b) => a.shotThreshold - b.shotThreshold)
+  return result
+}
+
+// 폴백용 기본 정기점검 항목 (DB 로드 실패 시 사용)
+const DEFAULT_INSPECTION_TYPES = [
   {
     id: '20k',
     name: '20,000 SHOT 점검',
@@ -248,6 +298,28 @@ export default function PeriodicInspectionNew() {
   const [approverKeyword, setApproverKeyword] = useState('')
   const [approverResults, setApproverResults] = useState([])
   const [selectedApprover, setSelectedApprover] = useState(null)
+  const [INSPECTION_TYPES, setInspectionTypes] = useState(DEFAULT_INSPECTION_TYPES)
+  const [masterSource, setMasterSource] = useState('default')
+
+  // 마스터 항목 로드 (DB → 폴백)
+  useEffect(() => {
+    const loadMasterItems = async () => {
+      try {
+        const res = await checklistMasterAPI.getItems({ inspection_type: 'periodic', is_active: 'true' })
+        if (res.data?.success && res.data.data?.length > 0) {
+          const types = convertMasterItemsToInspectionTypes(res.data.data)
+          if (types.length > 0) {
+            setInspectionTypes(types)
+            setMasterSource('database')
+            console.log(`[PeriodicInspection] 마스터 DB에서 ${res.data.data.length}개 항목 로드 완료 (${types.length}개 유형)`)
+          }
+        }
+      } catch (err) {
+        console.log('[PeriodicInspection] 마스터 DB 로드 실패, 기본값 사용:', err.message)
+      }
+    }
+    loadMasterItems()
+  }, [])
 
   // 금형 정보 로드
   useEffect(() => {
@@ -535,7 +607,14 @@ export default function PeriodicInspectionNew() {
             <ArrowLeft size={20} className="text-gray-600" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">정기점검</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-gray-900">정기점검</h1>
+              <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${
+                masterSource === 'database' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {masterSource === 'database' ? '마스터 연동' : '기본 항목'}
+              </span>
+            </div>
             <p className="text-sm text-gray-600 mt-1">
               {mold.mold_code} - {mold.mold_name} ({mold.car_model})
             </p>

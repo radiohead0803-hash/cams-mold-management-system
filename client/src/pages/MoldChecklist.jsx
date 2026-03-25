@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, CheckCircle, Upload, Save, Send, Image as ImageIcon } from 'lucide-react';
-import api, { moldSpecificationAPI } from '../lib/api';
+import api, { moldSpecificationAPI, standardDocumentAPI } from '../lib/api';
 
-// 9개 카테고리 체크리스트 정의
-const CHECKLIST_CATEGORIES = [
+// 폴백용 기본 금형체크리스트 항목 (DB 로드 실패 시 사용)
+const DEFAULT_CHECKLIST_CATEGORIES = [
   {
     id: 'material',
     title: 'Ⅰ. 원재료 (Material)',
@@ -153,14 +153,46 @@ export default function MoldChecklist() {
   const [checklistData, setChecklistData] = useState({});
   const [categoryEnabled, setCategoryEnabled] = useState({});
   const [approvalStatus, setApprovalStatus] = useState('draft');
+  const [CHECKLIST_CATEGORIES, setChecklistCategories] = useState(DEFAULT_CHECKLIST_CATEGORIES);
+  const [masterSource, setMasterSource] = useState('default');
   
   // 통계 - 점검대상 카테고리만 계산
   const [stats, setStats] = useState({ total: 81, completed: 0, progress: 0 });
+
+  // 마스터 항목 로드 (DB → 폴백)
+  useEffect(() => {
+    const loadMasterTemplate = async () => {
+      try {
+        const res = await standardDocumentAPI.getAll({ template_type: 'mold_checklist', status: 'deployed' });
+        const templates = res.data?.data || res.data;
+        if (Array.isArray(templates) && templates.length > 0) {
+          const template = templates[0];
+          const items = template.items;
+          if (Array.isArray(items) && items.length > 0) {
+            setChecklistCategories(items);
+            setMasterSource('database');
+            console.log(`[MoldChecklist] 마스터 DB에서 ${items.length}개 카테고리 로드 완료`);
+          }
+        }
+      } catch (err) {
+        console.log('[MoldChecklist] 마스터 DB 로드 실패, 기본값 사용:', err.message);
+      }
+    };
+    loadMasterTemplate();
+  }, []);
 
   // 점검대상 카테고리 변경 시 통계 업데이트
   useEffect(() => {
     updateStats();
   }, [categoryEnabled, checklistData]);
+
+  // 카테고리 변경 시 초기화 재실행
+  useEffect(() => {
+    initializeChecklist();
+    if (moldId && moldInfo) {
+      prefillLinkedFields(moldInfo);
+    }
+  }, [CHECKLIST_CATEGORIES]);
 
   useEffect(() => {
     initializeChecklist();
@@ -451,7 +483,14 @@ export default function MoldChecklist() {
                 <ArrowLeft size={20} />
               </button>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">금형 체크리스트</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-gray-900">금형 체크리스트</h1>
+                  <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${
+                    masterSource === 'database' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {masterSource === 'database' ? '마스터 연동' : '기본 항목'}
+                  </span>
+                </div>
                 <p className="text-sm text-gray-500">
                   {moldInfo?.mold?.mold_code || `M-${moldId}`} - {moldInfo?.part_name || '금형'}
                 </p>

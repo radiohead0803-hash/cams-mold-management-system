@@ -1,16 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, AlertCircle, Camera, FileText, ChevronRight, ChevronLeft, BookOpen, ArrowLeft, Loader2, Info, Hash, Save, Send, Search, X, User } from 'lucide-react'
-import api from '../lib/api'
-// draftStorage 불필요 - 서버 checklist-instances API로 통합
+import api, { checklistMasterAPI } from '../lib/api'
 import InspectionPhotoSection from '../components/InspectionPhotoSection'
 
-// 일상점검 대항목/소항목 구조 (템플릿 마스터 + 기존 항목 통합)
-const CHECK_CATEGORIES = [
+// 폴백용 기본 일상점검 항목 (DB 로드 실패 시 사용)
+const DEFAULT_CHECK_CATEGORIES = [
   {
-    id: 1,
-    name: '금형 외관 점검',
-    icon: '🔍',
+    id: 1, name: '금형 외관 점검', icon: '🔍',
     items: [
       { id: 101, name: '금형 외관 상태', description: '금형 외관의 손상, 변형, 부식 여부 확인', required: true, fieldType: 'yes_no',
         checkPoints: ['금형 표면 스크래치 확인', '찌그러짐/변형 여부', '녹/부식 발생 여부', '외관 청결 상태'] },
@@ -20,114 +17,87 @@ const CHECK_CATEGORIES = [
         checkPoints: ['상/하형 접합부 밀착도', '버(Burr) 발생 여부', '수지 간섭 흔적 확인', '찌꺼기 제거 상태'] }
     ]
   },
-  {
-    id: 2,
-    name: '냉각 시스템',
-    icon: '💧',
-    items: [
-      { id: 201, name: '냉각수 연결 상태', description: '냉각수 라인 연결 및 누수 여부', required: true, fieldType: 'yes_no',
-        checkPoints: ['입/출구 호스 연결 상태', '누수 여부 확인', '커플링 체결 상태'] },
-      { id: 202, name: '냉각수 유량', description: '냉각수 흐름 원활 여부 (온도차 5℃ 이하)', required: true, fieldType: 'yes_no',
-        checkPoints: ['입구 온도 측정', '출구 온도 측정', '온도차 5℃ 이하 확인', '유량 정상 여부'] },
-      { id: 203, name: '냉각 채널 막힘', description: '냉각 채널 스케일/이물질 막힘', required: false, fieldType: 'yes_no',
-        checkPoints: ['채널 막힘 여부', '스케일 축적 상태', '냉각 효율 저하 여부'] }
-    ]
-  },
-  {
-    id: 3,
-    name: '작동부 점검',
-    icon: '⚙️',
-    items: [
-      { id: 301, name: '이젝터 작동 상태', description: '이젝터 핀 작동 원활성', required: true, fieldType: 'yes_no',
-        checkPoints: ['이젝터 핀 걸림 없음', '부드러운 작동 확인', '복귀 동작 정상'] },
-      { id: 302, name: '슬라이드 작동 상태', description: '슬라이드 코어 작동 상태', required: false, fieldType: 'yes_no',
-        checkPoints: ['슬라이드 이동 시 걸림 확인', '이상음 발생 여부', '작동 속도 정상 여부'] },
-      { id: 303, name: '가이드 핀/부시 상태', description: '가이드 핀 마모 및 유격', required: true, fieldType: 'yes_no',
-        checkPoints: ['가이드핀 손상 확인', '마모 상태 점검', '유격 정상 여부'] },
-      { id: 304, name: '밀핀/제품핀', description: '작동 시 걸림, 파손, 변형 無', required: true, fieldType: 'yes_no',
-        checkPoints: ['밀핀 작동 확인', '파손 여부 점검', '변형 상태 확인'] },
-      { id: 305, name: '리턴 핀/스프링', description: '리턴 핀 작동 및 스프링 탄성', required: true, fieldType: 'yes_no',
-        checkPoints: ['리턴 핀 복귀 동작', '스프링 탄성 상태', '정상 작동 확인'] }
-    ]
-  },
-  {
-    id: 4,
-    name: '게이트/런너/벤트',
-    icon: '🔄',
-    items: [
-      { id: 401, name: '게이트 상태', description: '게이트 마모 및 손상 여부', required: true, fieldType: 'yes_no',
-        checkPoints: ['게이트 마모 확인', '변형/손상 여부', '막힘 상태 점검'] },
-      { id: 402, name: '런너 상태', description: '런너 청결 및 막힘 여부', required: true, fieldType: 'yes_no',
-        checkPoints: ['잔류 수지 확인', '이물질 여부', '청결 상태'] },
-      { id: 403, name: '벤트 상태', description: '가스 벤트 막힘 여부', required: true, fieldType: 'yes_no',
-        checkPoints: ['벤트 구멍 막힘 확인', '가스 배출 원활성', '이물질 제거 상태'] }
-    ]
-  },
-  {
-    id: 5,
-    name: '히터/센서/전기',
-    icon: '🌡️',
-    items: [
-      { id: 501, name: '히터/온도센서 상태', description: '히터 작동 및 센서 정상 여부', required: false, fieldType: 'yes_no',
-        checkPoints: ['히터 작동 확인', '온도센서 정상 작동', '과열 여부 점검', '단선/접촉불량 확인'] },
-      { id: 502, name: '배선/커넥터 상태', description: '전기 배선 손상 여부', required: false, fieldType: 'yes_no',
-        checkPoints: ['배선 피복 상태', '커넥터 접촉 상태', '단선 여부 확인'] }
-    ]
-  },
-  {
-    id: 6,
-    name: '체결/취출 계통',
-    icon: '🔧',
-    items: [
-      { id: 601, name: '금형 체결볼트', description: '풀림, 균열, 아이마킹 상태', required: true, fieldType: 'yes_no',
-        checkPoints: ['볼트 풀림 확인', '균열 발생 여부', '아이마킹 상태'] },
-      { id: 602, name: '로케이트링/스프루부', description: '위치이탈, 손상 無', required: true, fieldType: 'yes_no',
-        checkPoints: ['로케이트링 위치', '스프루부 손상 여부', '고정 상태 확인'] },
-      { id: 603, name: '취출핀/스프링', description: '정상작동, 파손·마모 無', required: true, fieldType: 'yes_no',
-        checkPoints: ['취출핀 작동 확인', '스프링 탄성 상태', '파손/마모 여부'] }
-    ]
-  },
-  {
-    id: 7,
-    name: '윤활/청결 관리',
-    icon: '🧴',
-    items: [
-      { id: 701, name: '슬라이드/핀류 윤활', description: '그리스 도포 상태 양호', required: true, fieldType: 'yes_no',
-        checkPoints: ['슬라이드 그리스 상태', '핀류 윤활 상태', '그리스 도포량 적정'] },
-      { id: 702, name: '엘글라/리프트핀 윤활', description: '그리스 도포 상태 양호', required: true, fieldType: 'yes_no',
-        checkPoints: ['엘글라 그리스 상태', '리프트핀 윤활 상태', '도포 상태 확인'] },
-      { id: 703, name: '성형면 청결', description: '캐비티/코어 이물질 제거', required: true, fieldType: 'yes_no',
-        checkPoints: ['캐비티 표면 수지 잔류 확인', '코어 청결 상태', '이물질 제거 완료'] }
-    ]
-  },
-  {
-    id: 8,
-    name: '이상/누출 점검',
-    icon: '⚠️',
-    items: [
-      { id: 801, name: '누유/누수 여부', description: '냉각수, 오일, 에어라인 이상 無', required: true, fieldType: 'yes_no',
-        checkPoints: ['냉각수 누수 확인', '오일 누유 확인', '에어라인 이상 확인'] }
-    ]
-  },
-  {
-    id: 9,
-    name: '방청 관리',
-    icon: '🛡️',
-    items: [
-      { id: 901, name: '방청유 도포', description: '보관 시 성형면 방청처리 (비가동 시)', required: false, fieldType: 'yes_no',
-        checkPoints: ['방청유 도포 상태', '성형면 처리 확인', '보관 환경 적정'] }
-    ]
-  },
-  {
-    id: 10,
-    name: '생산 정보',
-    icon: '📊',
-    items: [
-      { id: 1001, name: '생산수량', description: '금일 생산수량 입력 (숏수 자동 누적)', required: false, fieldType: 'number', isShotLinked: true,
-        checkPoints: ['생산수량 정확히 입력', '숏수 자동 누적 확인', '보증숏수 90% 도달 시 경고', '100% 도달 시 긴급 알림'] }
-    ]
-  }
+  { id: 2, name: '냉각 시스템', icon: '💧', items: [
+    { id: 201, name: '냉각수 연결 상태', description: '냉각수 라인 연결 및 누수 여부', required: true, fieldType: 'yes_no', checkPoints: ['입/출구 호스 연결 상태', '누수 여부 확인', '커플링 체결 상태'] },
+    { id: 202, name: '냉각수 유량', description: '냉각수 흐름 원활 여부', required: true, fieldType: 'yes_no', checkPoints: ['입구 온도 측정', '출구 온도 측정', '온도차 5℃ 이하 확인'] },
+    { id: 203, name: '냉각 채널 막힘', description: '냉각 채널 스케일/이물질 막힘', required: false, fieldType: 'yes_no', checkPoints: ['채널 막힘 여부', '스케일 축적 상태'] }
+  ]},
+  { id: 3, name: '작동부 점검', icon: '⚙️', items: [
+    { id: 301, name: '이젝터 작동 상태', description: '이젝터 핀 작동 원활성', required: true, fieldType: 'yes_no', checkPoints: ['이젝터 핀 걸림 없음', '부드러운 작동 확인', '복귀 동작 정상'] },
+    { id: 302, name: '슬라이드 작동 상태', description: '슬라이드 코어 작동 상태', required: false, fieldType: 'yes_no', checkPoints: ['슬라이드 이동 시 걸림 확인', '이상음 발생 여부'] },
+    { id: 303, name: '가이드 핀/부시 상태', description: '가이드 핀 마모 및 유격', required: true, fieldType: 'yes_no', checkPoints: ['가이드핀 손상 확인', '마모 상태 점검'] },
+    { id: 304, name: '밀핀/제품핀', description: '작동 시 걸림, 파손, 변형 無', required: true, fieldType: 'yes_no', checkPoints: ['밀핀 작동 확인', '파손 여부 점검'] },
+    { id: 305, name: '리턴 핀/스프링', description: '리턴 핀 작동 및 스프링 탄성', required: true, fieldType: 'yes_no', checkPoints: ['리턴 핀 복귀 동작', '스프링 탄성 상태'] }
+  ]},
+  { id: 4, name: '게이트/런너/벤트', icon: '🔄', items: [
+    { id: 401, name: '게이트 상태', description: '게이트 마모 및 손상 여부', required: true, fieldType: 'yes_no', checkPoints: ['게이트 마모 확인', '변형/손상 여부'] },
+    { id: 402, name: '런너 상태', description: '런너 청결 및 막힘 여부', required: true, fieldType: 'yes_no', checkPoints: ['잔류 수지 확인', '이물질 여부'] },
+    { id: 403, name: '벤트 상태', description: '가스 벤트 막힘 여부', required: true, fieldType: 'yes_no', checkPoints: ['벤트 구멍 막힘 확인', '가스 배출 원활성'] }
+  ]},
+  { id: 5, name: '히터/센서/전기', icon: '🌡️', items: [
+    { id: 501, name: '히터/온도센서 상태', description: '히터 작동 및 센서 정상 여부', required: false, fieldType: 'yes_no', checkPoints: ['히터 작동 확인', '온도센서 정상 작동'] },
+    { id: 502, name: '배선/커넥터 상태', description: '전기 배선 손상 여부', required: false, fieldType: 'yes_no', checkPoints: ['배선 피복 상태', '커넥터 접촉 상태'] }
+  ]},
+  { id: 6, name: '체결/취출 계통', icon: '🔧', items: [
+    { id: 601, name: '금형 체결볼트', description: '풀림, 균열, 아이마킹 상태', required: true, fieldType: 'yes_no', checkPoints: ['볼트 풀림 확인', '균열 발생 여부'] },
+    { id: 602, name: '로케이트링/스프루부', description: '위치이탈, 손상 無', required: true, fieldType: 'yes_no', checkPoints: ['로케이트링 위치', '스프루부 손상 여부'] },
+    { id: 603, name: '취출핀/스프링', description: '정상작동, 파손·마모 無', required: true, fieldType: 'yes_no', checkPoints: ['취출핀 작동 확인', '스프링 탄성 상태'] }
+  ]},
+  { id: 7, name: '윤활/청결 관리', icon: '🧴', items: [
+    { id: 701, name: '슬라이드/핀류 윤활', description: '그리스 도포 상태 양호', required: true, fieldType: 'yes_no', checkPoints: ['슬라이드 그리스 상태', '핀류 윤활 상태'] },
+    { id: 702, name: '옥글라/리프트핀 윤활', description: '그리스 도포 상태 양호', required: true, fieldType: 'yes_no', checkPoints: ['옥글라 그리스 상태', '리프트핀 윤활 상태'] },
+    { id: 703, name: '성형면 청결', description: '캐비티/코어 이물질 제거', required: true, fieldType: 'yes_no', checkPoints: ['캐비티 표면 수지 잔류 확인', '코어 청결 상태'] }
+  ]},
+  { id: 8, name: '이상/누출 점검', icon: '⚠️', items: [
+    { id: 801, name: '누유/누수 여부', description: '냉각수, 오일, 에어라인 이상 無', required: true, fieldType: 'yes_no', checkPoints: ['냉각수 누수 확인', '오일 누유 확인', '에어라인 이상 확인'] }
+  ]},
+  { id: 9, name: '방청 관리', icon: '🛡️', items: [
+    { id: 901, name: '방청유 도포', description: '보관 시 성형면 방청처리 (비가동 시)', required: false, fieldType: 'yes_no', checkPoints: ['방청유 도포 상태', '성형면 처리 확인'] }
+  ]},
+  { id: 10, name: '생산 정보', icon: '📊', items: [
+    { id: 1001, name: '생산수량', description: '금일 생산수량 입력 (숏수 자동 누적)', required: false, fieldType: 'number', isShotLinked: true,
+      checkPoints: ['생산수량 정확히 입력', '숏수 자동 누적 확인', '보증숏수 90% 도달 시 경고', '100% 도달 시 긴급 알림'] }
+  ]}
 ]
+
+/**
+ * DB 마스터 항목을 프론트엔드 카테고리 구조로 변환
+ * @param {Array} items - checklist_items_master 레코드 배열
+ * @returns {Array} CHECK_CATEGORIES 형태 배열
+ */
+function convertMasterItemsToCategories(items) {
+  const categoryMap = new Map()
+
+  items.forEach(item => {
+    const catKey = item.major_category
+    if (!categoryMap.has(catKey)) {
+      categoryMap.set(catKey, {
+        name: catKey,
+        icon: item.category_icon || '',
+        items: []
+      })
+    }
+    const cat = categoryMap.get(catKey)
+    const checkPoints = Array.isArray(item.check_points)
+      ? item.check_points
+      : (typeof item.check_points === 'string' ? JSON.parse(item.check_points || '[]') : [])
+
+    cat.items.push({
+      id: item.id,
+      name: item.item_name,
+      description: item.description || '',
+      required: item.is_required !== false,
+      fieldType: item.field_type || 'yes_no',
+      checkPoints,
+      isShotLinked: item.extra_config?.isShotLinked || item.field_type === 'number'
+    })
+  })
+
+  return Array.from(categoryMap.values()).map((cat, idx) => ({
+    id: idx + 1,
+    ...cat
+  }))
+}
 
 export default function DailyChecklistNew() {
   const navigate = useNavigate()
@@ -148,12 +118,34 @@ export default function DailyChecklistNew() {
   const [approverLoading, setApproverLoading] = useState(false)
   const [selectedApprover, setSelectedApprover] = useState(null)
   const [saveMessage, setSaveMessage] = useState(null)
+  const [CHECK_CATEGORIES, setCheckCategories] = useState(DEFAULT_CHECK_CATEGORIES)
+  const [masterSource, setMasterSource] = useState('default')
 
   const currentCategory = CHECK_CATEGORIES[currentCategoryIndex]
   const totalCategories = CHECK_CATEGORIES.length
   const totalItems = CHECK_CATEGORIES.reduce((sum, cat) => sum + cat.items.length, 0)
   const completedItems = Object.keys(checkResults).filter(key => checkResults[key]?.status || checkResults[key]?.value !== undefined).length
   const progress = Math.round((completedItems / totalItems) * 100)
+
+  // 마스터 항목 로드 (DB → 폴백)
+  useEffect(() => {
+    const loadMasterItems = async () => {
+      try {
+        const res = await checklistMasterAPI.getItems({ inspection_type: 'daily', is_active: 'true' })
+        if (res.data?.success && res.data.data?.length > 0) {
+          const categories = convertMasterItemsToCategories(res.data.data)
+          if (categories.length > 0 && categories.reduce((s, c) => s + c.items.length, 0) > 0) {
+            setCheckCategories(categories)
+            setMasterSource('database')
+            console.log(`[DailyChecklist] 마스터 DB에서 ${res.data.data.length}개 항목 로드 완료`)
+          }
+        }
+      } catch (err) {
+        console.log('[DailyChecklist] 마스터 DB 로드 실패, 기본값 사용:', err.message)
+      }
+    }
+    loadMasterItems()
+  }, [])
 
   // 금형 정보 로드
   useEffect(() => {
@@ -452,7 +444,14 @@ export default function DailyChecklistNew() {
           <ArrowLeft size={20} className="text-gray-600" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">일상점검</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">일상점검</h1>
+            <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${
+              masterSource === 'database' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+            }`}>
+              {masterSource === 'database' ? '마스터 연동' : '기본 항목'}
+            </span>
+          </div>
         <p className="text-sm text-gray-600 mt-1">
           {mold.mold_code} - {mold.mold_name} ({mold.car_model})
         </p>

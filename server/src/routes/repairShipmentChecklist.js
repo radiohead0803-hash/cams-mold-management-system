@@ -11,7 +11,7 @@ const db = require('../models/newIndex');
 const { Op } = require('sequelize');
 
 // 표준 점검 항목 정의 (8개 카테고리) - 전체 항목 사진 필수
-const STANDARD_CHECKLIST_ITEMS = [
+const DEFAULT_CHECKLIST_ITEMS = [
   // 1️⃣ 수리 이력 및 범위 확인
   { category_code: 'repair_history', category_name: '수리 이력 및 범위 확인', category_order: 1, item_code: '1-1', item_name: '수리 요청 내역 일치 여부', item_description: '요청서의 NG 내용과 실제 수리 내용 일치', item_order: 1, photo_required: true },
   { category_code: 'repair_history', category_name: '수리 이력 및 범위 확인', category_order: 1, item_code: '1-2', item_name: '수리 범위 명확화', item_description: '코어/캐비티/슬라이드/리프터 등 명시', item_order: 2, photo_required: true },
@@ -62,6 +62,45 @@ const STANDARD_CHECKLIST_ITEMS = [
   { category_code: 'final', category_name: '최종 확인 및 승인', category_order: 8, item_code: '8-1', item_name: '제작처 확인', item_description: '수리 완료 확인', item_order: 1, photo_required: true },
   { category_code: 'final', category_name: '최종 확인 및 승인', category_order: 8, item_code: '8-2', item_name: '본사 승인', item_description: '승인 / 반려', item_order: 2, photo_required: true }
 ];
+
+/**
+ * DB에서 수리출하점검 마스터 항목 로드 (폴백: DEFAULT_CHECKLIST_ITEMS)
+ */
+const getStandardChecklistItems = async () => {
+  try {
+    if (db.StandardDocumentTemplate) {
+      const template = await db.StandardDocumentTemplate.findOne({
+        where: { template_type: 'repair_shipment_checklist', status: 'deployed', is_active: true },
+        order: [['updated_at', 'DESC']]
+      });
+      if (template && Array.isArray(template.items) && template.items.length > 0) {
+        // JSONB 카테고리 구조 → flat 항목 배열로 변환
+        const flatItems = [];
+        template.items.forEach(cat => {
+          (cat.items || []).forEach(item => {
+            flatItems.push({
+              category_code: cat.category_code,
+              category_name: cat.category_name,
+              category_order: cat.category_order,
+              item_code: item.item_code,
+              item_name: item.item_name,
+              item_description: item.item_description,
+              item_order: item.item_order,
+              photo_required: item.photo_required !== false
+            });
+          });
+        });
+        if (flatItems.length > 0) {
+          console.log(`[RepairShipmentChecklist] 마스터 DB에서 ${flatItems.length}개 항목 로드`);
+          return flatItems;
+        }
+      }
+    }
+  } catch (err) {
+    console.log('[RepairShipmentChecklist] 마스터 DB 로드 실패, 기본값 사용:', err.message);
+  }
+  return DEFAULT_CHECKLIST_ITEMS;
+};
 
 // 체크리스트 번호 생성
 const generateChecklistNumber = async () => {
@@ -198,6 +237,9 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ success: false, error: { message: '수리요청 ID와 금형 ID는 필수입니다.' } });
     }
     
+    // 마스터 항목 로드
+    const standardItems = await getStandardChecklistItems();
+    
     // 이미 존재하는지 확인
     const existing = await db.RepairShipmentChecklist.findOne({
       where: { repair_request_id }
@@ -223,11 +265,11 @@ router.post('/', async (req, res) => {
       shipment_destination,
       notes,
       status: 'draft',
-      total_items: STANDARD_CHECKLIST_ITEMS.length
+      total_items: standardItems.length
     }, { transaction });
     
     // 표준 점검 항목 생성
-    const items = STANDARD_CHECKLIST_ITEMS.map(item => ({
+    const items = standardItems.map(item => ({
       ...item,
       checklist_id: checklist.id,
       result: 'pending'
@@ -479,9 +521,10 @@ router.post('/:id/ship', async (req, res) => {
 // GET /api/v1/repair-shipment-checklists/template/items - 표준 점검 항목 조회
 router.get('/template/items', async (req, res) => {
   try {
+    const checklistItems = await getStandardChecklistItems();
     // 카테고리별로 그룹화
     const categories = {};
-    STANDARD_CHECKLIST_ITEMS.forEach(item => {
+    checklistItems.forEach(item => {
       if (!categories[item.category_code]) {
         categories[item.category_code] = {
           code: item.category_code,
