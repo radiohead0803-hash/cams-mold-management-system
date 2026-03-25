@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Upload, Camera, Send, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
-import api, { moldSpecificationAPI, workflowAPI } from '../lib/api';
+import api, { moldSpecificationAPI, workflowAPI, standardDocumentAPI } from '../lib/api';
 
-// 금형 재질별 경도 기준 (min, max 값 포함)
-const HARDNESS_STANDARDS = [
+// 폴백용 기본 경도 기준 (DB 로드 실패 시 사용)
+const DEFAULT_HARDNESS_STANDARDS = [
   { id: 1, grade: 'S45C', hardness: 'HRC 10 ~ 18', min: 10, max: 18, characteristics: '-' },
   { id: 2, grade: 'HP1A (HP1)', hardness: 'HRC 10 ~ 18', min: 10, max: 18, characteristics: '-' },
   { id: 3, grade: 'HP4A (HP4)', hardness: 'HRC 28 ~ 32', min: 28, max: 32, characteristics: '-' },
@@ -17,8 +17,8 @@ const HARDNESS_STANDARDS = [
   { id: 10, grade: 'H13', hardness: 'HRC 48 ~ 52', min: 48, max: 52, characteristics: '-' }
 ];
 
-// 재질 옵션
-const MATERIAL_OPTIONS = [
+// 기본 재질 옵션
+const DEFAULT_MATERIAL_OPTIONS = [
   'S45C', 'HP1A (HP1)', 'HP4A (HP4)', 'HS-PA', 'HP4MA (HP4M)', 
   'CENA G', 'NAK-80', 'SKD61', 'P20', 'H13'
 ];
@@ -31,6 +31,9 @@ export default function HardnessMeasurement() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [moldInfo, setMoldInfo] = useState(null);
+  const [HARDNESS_STANDARDS, setHardnessStandards] = useState(DEFAULT_HARDNESS_STANDARDS);
+  const [MATERIAL_OPTIONS, setMaterialOptions] = useState(DEFAULT_MATERIAL_OPTIONS);
+  const [masterSource, setMasterSource] = useState('default');
   
   // 금형 재질
   const [cavityMaterial, setCavityMaterial] = useState('');
@@ -58,6 +61,29 @@ export default function HardnessMeasurement() {
   const [approverKeyword, setApproverKeyword] = useState('');
   const [approverResults, setApproverResults] = useState([]);
   const [selectedApprover, setSelectedApprover] = useState(null);
+
+  // 마스터 경도 기준 로드 (DB → 폴백)
+  useEffect(() => {
+    const loadMasterStandards = async () => {
+      try {
+        const res = await standardDocumentAPI.getAll({ template_type: 'hardness_standards', status: 'deployed' });
+        const templates = res.data?.data || res.data;
+        if (Array.isArray(templates) && templates.length > 0) {
+          const template = templates[0];
+          const items = template.items;
+          if (Array.isArray(items) && items.length > 0) {
+            setHardnessStandards(items);
+            setMaterialOptions(items.map(i => i.grade));
+            setMasterSource('database');
+            console.log(`[HardnessMeasurement] 마스터 DB에서 ${items.length}개 경도 기준 로드 완료`);
+          }
+        }
+      } catch (err) {
+        console.log('[HardnessMeasurement] 마스터 DB 로드 실패, 기본값 사용:', err.message);
+      }
+    };
+    loadMasterStandards();
+  }, []);
 
   useEffect(() => {
     if (moldId) {
@@ -246,7 +272,14 @@ export default function HardnessMeasurement() {
                 <ArrowLeft size={20} />
               </button>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">경도측정</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-gray-900">경도측정</h1>
+                  <span className={`px-2 py-0.5 text-[10px] rounded-full font-medium ${
+                    masterSource === 'database' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {masterSource === 'database' ? '마스터 연동' : '기본 항목'}
+                  </span>
+                </div>
                 <p className="text-sm text-gray-500">
                   {moldInfo?.mold?.mold_code || `M-${moldId}`} - {moldInfo?.part_name || '금형'}
                 </p>

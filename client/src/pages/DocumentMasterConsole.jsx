@@ -18,6 +18,8 @@ const DOC_TYPES = {
   development_plan: { label: '개발계획', icon: BarChart3, color: 'bg-cyan-100 text-cyan-700', group: 'document' },
   transfer: { label: '이관 체크리스트', icon: Truck, color: 'bg-pink-100 text-pink-700', group: 'transfer' },
   hardness: { label: '경도측정', icon: Shield, color: 'bg-red-100 text-red-700', group: 'inspection' },
+  hardness_standards: { label: '경도기준 마스터', icon: Shield, color: 'bg-red-100 text-red-700', group: 'inspection' },
+  repair_shipment_checklist: { label: '수리출하점검', icon: ClipboardList, color: 'bg-teal-100 text-teal-700', group: 'checklist' },
   nurturing: { label: '금형육성', icon: Archive, color: 'bg-amber-100 text-amber-700', group: 'document' },
   transfer_master: { label: '이관 마스터', icon: Truck, color: 'bg-rose-100 text-rose-700', group: 'transfer' }
 };
