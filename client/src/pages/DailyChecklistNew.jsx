@@ -520,8 +520,8 @@ export default function DailyChecklistNew() {
 
         {/* 기본 정보 - MoldChecklist 스타일 */}
         <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4">
-            <h2 className="text-lg font-semibold">일상점검 체크리스트</h2>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 px-6 py-4">
+            <h2 className="text-lg font-semibold text-blue-900">일상점검 체크리스트</h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -589,16 +589,16 @@ export default function DailyChecklistNew() {
             <div key={category.id} className="bg-white rounded-xl shadow-sm border overflow-hidden">
               {/* 카테고리 헤더 - gradient 스타일 */}
               <div 
-                className="bg-gradient-to-r from-indigo-900 to-blue-800 text-white px-6 py-3 flex items-center justify-between cursor-pointer"
+                className="bg-gradient-to-r from-indigo-50 to-blue-50 border-b border-indigo-200 px-6 py-3 flex items-center justify-between cursor-pointer"
                 onClick={() => setCurrentCategoryIndex(catIndex)}
               >
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold text-indigo-900 flex items-center gap-2">
                   {category.icon && <span>{category.icon}</span>}
                   {catIndex + 1}. {category.name}
                 </h3>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm opacity-80">{completed}/{total} ({percentage}%)</span>
-                  {completed === total && total > 0 && <CheckCircle size={18} className="text-green-400" />}
+                  <span className="text-sm text-indigo-600">{completed}/{total} ({percentage}%)</span>
+                  {completed === total && total > 0 && <CheckCircle size={18} className="text-green-500" />}
                 </div>
               </div>
               
