@@ -574,8 +574,44 @@ const deleteUser = async (req, res) => {
       });
     }
 
-    // 먼저 물리 삭제 시도
+    // 동적 FK 참조 조회 → NULL 처리 → 물리 삭제
     try {
+      // 1) users 테이블을 참조하는 모든 FK 컬럼 동적 조회
+      const [fkRefs] = await sequelize.query(`
+        SELECT tc.table_name, kcu.column_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+        JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND ccu.table_name = 'users' AND ccu.column_name = 'id'
+      `);
+
+      // 2) 각 FK 참조 NULL 처리
+      for (const ref of fkRefs) {
+        const t = await sequelize.transaction();
+        try {
+          await sequelize.query(
+            `UPDATE "${ref.table_name}" SET "${ref.column_name}" = NULL WHERE "${ref.column_name}" = :id`,
+            { replacements: { id }, transaction: t }
+          );
+          await t.commit();
+        } catch (e) {
+          await t.rollback();
+          // NULL 불가 컬럼이면 DELETE
+          const t2 = await sequelize.transaction();
+          try {
+            await sequelize.query(
+              `DELETE FROM "${ref.table_name}" WHERE "${ref.column_name}" = :id`,
+              { replacements: { id }, transaction: t2 }
+            );
+            await t2.commit();
+          } catch (e2) {
+            await t2.rollback();
+          }
+        }
+      }
+
+      // 3) 물리 삭제
       const [result] = await sequelize.query(
         'DELETE FROM users WHERE id = :id RETURNING id',
         { replacements: { id } }
@@ -590,23 +626,19 @@ const deleteUser = async (req, res) => {
         });
       }
     } catch (deleteError) {
-      // FK 제약조건 위반 (23503) → soft-delete로 전환
-      if (deleteError.parent?.code === '23503' || deleteError.original?.code === '23503') {
-        logger.info(`User ${id} has FK references, switching to soft-delete`);
+      // 최종 실패 시 soft-delete
+      logger.warn(`User ${id} hard-delete failed, soft-deleting:`, deleteError.message);
 
-        await sequelize.query(
-          `UPDATE users SET is_active = false, updated_at = NOW() WHERE id = :id`,
-          { replacements: { id } }
-        );
+      await sequelize.query(
+        `UPDATE users SET is_active = false, updated_at = NOW() WHERE id = :id`,
+        { replacements: { id } }
+      );
 
-        logger.info(`User ${id} (${userRows[0].username}) soft-deleted (deactivated) by user ${req.user.id}`);
-        return res.json({
-          success: true,
-          message: '다른 데이터에서 참조 중이므로 비활성화 처리되었습니다',
-          deleteType: 'soft'
-        });
-      }
-      throw deleteError;
+      return res.json({
+        success: true,
+        message: '비활성화 처리되었습니다',
+        deleteType: 'soft'
+      });
     }
 
     res.status(404).json({

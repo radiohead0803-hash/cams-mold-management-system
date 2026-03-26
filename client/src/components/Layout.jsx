@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2, Trash2, Cog, FileCheck, Keyboard, Search } from 'lucide-react'
+import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2, Trash2, Cog, FileCheck, Keyboard, Search, User } from 'lucide-react'
 import { getMenuByRole, isRouteRegistered } from '../config/menuRegistry'
 import NotificationBell from './NotificationBell'
+import UserProfileModal from './UserProfileModal'
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
 
   // 키보드 단축키
   useEffect(() => {
@@ -478,11 +480,20 @@ export default function Layout() {
                 </span>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.company_name}</p>
-              </div>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors group"
+                title="내 정보 관리"
+              >
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User size={16} className="text-blue-600" />
+                </div>
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600">{user?.name}</p>
+                  <p className="text-xs text-gray-500">{user?.company_name}</p>
+                </div>
+              </button>
               <button
                 onClick={handleLogout}
                 className="flex items-center space-x-1 px-3 py-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -568,6 +579,9 @@ export default function Layout() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Outlet />
       </main>
+
+      {/* 프로필 수정 모달 */}
+      <UserProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
 
       {/* 키보드 단축키 도움말 모달 */}
       {showShortcuts && (
