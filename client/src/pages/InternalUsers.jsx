@@ -6,6 +6,24 @@ import {
   RefreshCw, Key, UserCheck, UserX, Filter,
   ArrowUp, ArrowDown, ArrowUpDown
 } from 'lucide-react';
+import useResizableColumns from '../hooks/useResizableColumns';
+
+const INTERNAL_DEFAULT_WIDTHS = {
+  '#': 40,
+  username: 80,
+  employee_id: 70,
+  name: 80,
+  department: 80,
+  position: 70,
+  factory: 70,
+  permission_class: 70,
+  email: 160,
+  phone: 110,
+  created_at: 90,
+  is_active: 60,
+  password_changed: 70,
+  actions: 80,
+};
 
 const InternalUsers = () => {
   const navigate = useNavigate();
@@ -23,6 +41,12 @@ const InternalUsers = () => {
   const [sortField, setSortField] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
 
+  const { columnWidths, handleMouseDown } = useResizableColumns(
+    'internalUsers_colWidths',
+    INTERNAL_DEFAULT_WIDTHS,
+    60
+  );
+
   useEffect(() => {
     fetchUsers();
     fetchDepartments();
@@ -37,7 +61,7 @@ const InternalUsers = () => {
       if (filterDepartment) params.department = filterDepartment;
       if (filterPermission) params.permission_class = filterPermission;
       if (filterActive) params.is_active = filterActive;
-      
+
       const response = await userManagementAPI.getInternalUsers(params);
       setUsers(response.data.data || []);
     } catch (error) {
@@ -150,10 +174,49 @@ const InternalUsers = () => {
     return cls?.class_name || code;
   };
 
+  const sortableColumns = [
+    { key: 'username', label: '아이디' },
+    { key: 'employee_id', label: '사번' },
+    { key: 'name', label: '이름' },
+    { key: 'department', label: '부서' },
+    { key: 'position', label: '직급' },
+    { key: 'factory', label: '공장' },
+    { key: 'permission_class', label: '권한' },
+    { key: 'email', label: '이메일' },
+    { key: 'phone', label: '핸드폰' },
+    { key: 'created_at', label: '등록일' },
+    { key: 'is_active', label: '상태' },
+  ];
+
+  /** Render a resize handle for a given column key */
+  const ResizeHandle = ({ colKey }) => (
+    <div
+      style={{
+        position: 'absolute',
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: 4,
+        cursor: 'col-resize',
+        zIndex: 1,
+      }}
+      onMouseDown={(e) => handleMouseDown(colKey, e)}
+    />
+  );
+
+  const cellStyle = (key) => ({
+    width: columnWidths[key],
+    minWidth: 60,
+    maxWidth: columnWidths[key],
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  });
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6 flex items-center gap-4">
-        <button 
+        <button
           onClick={() => navigate(-1)}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
         >
@@ -334,26 +397,22 @@ const InternalUsers = () => {
       {/* 사용자 목록 테이블 */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 340px)' }}>
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="divide-y divide-gray-200" style={{ tableLayout: 'fixed', width: Object.values(columnWidths).reduce((a, b) => a + b, 0) }}>
             <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                {[
-                  { key: 'username', label: '아이디' },
-                  { key: 'employee_id', label: '사번' },
-                  { key: 'name', label: '이름' },
-                  { key: 'department', label: '부서' },
-                  { key: 'position', label: '직급' },
-                  { key: 'factory', label: '공장' },
-                  { key: 'permission_class', label: '권한' },
-                  { key: 'email', label: '이메일' },
-                  { key: 'phone', label: '핸드폰' },
-                  { key: 'created_at', label: '등록일' },
-                  { key: 'is_active', label: '상태' },
-                ].map(col => (
+                {/* # column */}
+                <th
+                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  style={{ ...cellStyle('#'), position: 'relative' }}
+                >
+                  #
+                  <ResizeHandle colKey="#" />
+                </th>
+                {sortableColumns.map(col => (
                   <th
                     key={col.key}
-                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none transition-colors"
+                    className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none transition-colors"
+                    style={{ ...cellStyle(col.key), position: 'relative' }}
                     onClick={() => {
                       if (sortField === col.key) {
                         setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -371,10 +430,25 @@ const InternalUsers = () => {
                         <ArrowUpDown size={10} className="text-gray-300" />
                       )}
                     </span>
+                    <ResizeHandle colKey={col.key} />
                   </th>
                 ))}
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">비번변경</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                {/* 비번변경 column */}
+                <th
+                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  style={{ ...cellStyle('password_changed'), position: 'relative' }}
+                >
+                  비번변경
+                  <ResizeHandle colKey="password_changed" />
+                </th>
+                {/* 작업 column */}
+                <th
+                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  style={{ ...cellStyle('actions'), position: 'relative' }}
+                >
+                  작업
+                  <ResizeHandle colKey="actions" />
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -409,14 +483,14 @@ const InternalUsers = () => {
                   return 0;
                 }).map((user, index) => (
                   <tr key={user.id} className={!user.is_active ? 'bg-gray-50 opacity-60' : ''}>
-                    <td className="px-3 py-2 text-xs text-gray-400">{index + 1}</td>
-                    <td className="px-3 py-2 text-xs font-medium text-blue-600">{user.username}</td>
-                    <td className="px-3 py-2 text-xs">{user.employee_id || '-'}</td>
-                    <td className="px-3 py-2 text-xs font-medium">{user.name}</td>
-                    <td className="px-3 py-2 text-xs">{user.department || '-'}</td>
-                    <td className="px-3 py-2 text-xs">{user.position || '-'}</td>
-                    <td className="px-3 py-2 text-xs">{user.factory || '-'}</td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs text-gray-400" style={cellStyle('#')}>{index + 1}</td>
+                    <td className="px-2 py-2 text-xs font-medium text-blue-600" style={cellStyle('username')}>{user.username}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('employee_id')}>{user.employee_id || '-'}</td>
+                    <td className="px-2 py-2 text-xs font-medium" style={cellStyle('name')}>{user.name}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('department')}>{user.department || '-'}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('position')}>{user.position || '-'}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('factory')}>{user.factory || '-'}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('permission_class')}>
                       <span className={`px-2 py-1 rounded text-xs ${
                         user.permission_class === 'admin' ? 'bg-red-100 text-red-700' :
                         user.permission_class === 'manager' ? 'bg-orange-100 text-orange-700' :
@@ -426,12 +500,12 @@ const InternalUsers = () => {
                         {getPermissionLabel(user.permission_class)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-xs">{user.email || '-'}</td>
-                    <td className="px-3 py-2 text-xs">{user.phone || '-'}</td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs" style={cellStyle('email')}>{user.email || '-'}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('phone')}>{user.phone || '-'}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('created_at')}>
                       {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs" style={cellStyle('is_active')}>
                       <button
                         onClick={() => handleToggleActive(user)}
                         className={`px-2 py-1 rounded text-xs ${
@@ -441,14 +515,14 @@ const InternalUsers = () => {
                         {user.is_active ? '활성' : '비활성'}
                       </button>
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs" style={cellStyle('password_changed')}>
                       {user.is_password_changed ? (
                         <span className="text-green-600">변경됨</span>
                       ) : (
                         <span className="text-orange-600">미변경</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-2 py-2" style={cellStyle('actions')}>
                       <div className="flex gap-1">
                         <button
                           onClick={() => handleEdit(user)}

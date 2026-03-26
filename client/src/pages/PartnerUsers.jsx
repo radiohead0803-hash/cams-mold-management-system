@@ -6,6 +6,24 @@ import {
   Key, CheckCircle, XCircle, Clock, Building2,
   ArrowUp, ArrowDown, ArrowUpDown
 } from 'lucide-react';
+import useResizableColumns from '../hooks/useResizableColumns';
+
+const PARTNER_DEFAULT_WIDTHS = {
+  '#': 40,
+  partner_code: 80,
+  username: 80,
+  company_name: 150,
+  company_type: 60,
+  name: 90,
+  phone: 110,
+  email: 160,
+  address: 120,
+  permission_class: 70,
+  approval_status: 70,
+  created_at: 90,
+  is_active: 60,
+  actions: 80,
+};
 
 const PartnerUsers = () => {
   const navigate = useNavigate();
@@ -24,6 +42,12 @@ const PartnerUsers = () => {
   const [sortField, setSortField] = useState('company_name');
   const [sortOrder, setSortOrder] = useState('asc');
 
+  const { columnWidths, handleMouseDown } = useResizableColumns(
+    'partnerUsers_colWidths',
+    PARTNER_DEFAULT_WIDTHS,
+    60
+  );
+
   useEffect(() => {
     fetchUsers();
     fetchPendingApprovals();
@@ -38,7 +62,7 @@ const PartnerUsers = () => {
       if (filterPartnerType) params.partner_type = filterPartnerType;
       if (filterApprovalStatus) params.approval_status = filterApprovalStatus;
       if (filterActive) params.is_active = filterActive;
-      
+
       const response = await userManagementAPI.getPartnerUsers(params);
       setUsers(response.data.data || []);
     } catch (error) {
@@ -193,11 +217,51 @@ const PartnerUsers = () => {
     }
   };
 
+  const sortableColumns = [
+    { key: 'partner_code', label: '업체코드' },
+    { key: 'username', label: '아이디' },
+    { key: 'company_name', label: '업체명' },
+    { key: 'company_type', label: '구분' },
+    { key: 'name', label: '담당자' },
+    { key: 'phone', label: '연락처' },
+    { key: 'email', label: '이메일' },
+    { key: 'address', label: '주소' },
+    { key: 'permission_class', label: '권한' },
+    { key: 'approval_status', label: '승인상태' },
+    { key: 'created_at', label: '등록일' },
+    { key: 'is_active', label: '상태' },
+  ];
+
+  /** Render a resize handle for a given column key */
+  const ResizeHandle = ({ colKey }) => (
+    <div
+      style={{
+        position: 'absolute',
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: 4,
+        cursor: 'col-resize',
+        zIndex: 1,
+      }}
+      onMouseDown={(e) => handleMouseDown(colKey, e)}
+    />
+  );
+
+  const cellStyle = (key) => ({
+    width: columnWidths[key],
+    minWidth: 60,
+    maxWidth: columnWidths[key],
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  });
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => navigate(-1)}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
@@ -208,7 +272,7 @@ const PartnerUsers = () => {
             <p className="text-sm text-gray-600 mt-1">제작처/생산처 사용자 계정을 관리합니다</p>
           </div>
         </div>
-        
+
         {/* 승인 대기 알림 */}
         {pendingApprovals.length > 0 && (
           <button
@@ -431,27 +495,22 @@ const PartnerUsers = () => {
       {/* 사용자 목록 테이블 */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto" style={{ maxHeight: 'calc(100vh - 380px)' }}>
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="divide-y divide-gray-200" style={{ tableLayout: 'fixed', width: Object.values(columnWidths).reduce((a, b) => a + b, 0) }}>
             <thead className="bg-gray-50 sticky top-0">
               <tr>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                {[
-                  { key: 'partner_code', label: '업체코드' },
-                  { key: 'username', label: '아이디' },
-                  { key: 'company_name', label: '업체명' },
-                  { key: 'company_type', label: '구분' },
-                  { key: 'name', label: '담당자' },
-                  { key: 'phone', label: '연락처' },
-                  { key: 'email', label: '이메일' },
-                  { key: 'address', label: '주소' },
-                  { key: 'permission_class', label: '권한' },
-                  { key: 'approval_status', label: '승인상태' },
-                  { key: 'created_at', label: '등록일' },
-                  { key: 'is_active', label: '상태' },
-                ].map(col => (
+                {/* # column */}
+                <th
+                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  style={{ ...cellStyle('#'), position: 'relative' }}
+                >
+                  #
+                  <ResizeHandle colKey="#" />
+                </th>
+                {sortableColumns.map(col => (
                   <th
                     key={col.key}
-                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none transition-colors"
+                    className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none transition-colors"
+                    style={{ ...cellStyle(col.key), position: 'relative' }}
                     onClick={() => {
                       if (sortField === col.key) {
                         setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -469,9 +528,17 @@ const PartnerUsers = () => {
                         <ArrowUpDown size={10} className="text-gray-300" />
                       )}
                     </span>
+                    <ResizeHandle colKey={col.key} />
                   </th>
                 ))}
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
+                {/* 작업 column */}
+                <th
+                  className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                  style={{ ...cellStyle('actions'), position: 'relative' }}
+                >
+                  작업
+                  <ResizeHandle colKey="actions" />
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -506,26 +573,26 @@ const PartnerUsers = () => {
                   return 0;
                 }).map((user, index) => (
                   <tr key={user.id} className={!user.is_active ? 'bg-gray-50 opacity-60' : ''}>
-                    <td className="px-3 py-2 text-xs text-gray-400">{index + 1}</td>
-                    <td className="px-3 py-2 text-xs font-medium text-purple-600">{user.partner_code || '-'}</td>
-                    <td className="px-3 py-2 text-xs font-medium text-blue-600">{user.username}</td>
-                    <td className="px-3 py-2 text-xs font-medium">{user.company_name || '-'}</td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs text-gray-400" style={cellStyle('#')}>{index + 1}</td>
+                    <td className="px-2 py-2 text-xs font-medium text-purple-600" style={cellStyle('partner_code')}>{user.partner_code || '-'}</td>
+                    <td className="px-2 py-2 text-xs font-medium text-blue-600" style={cellStyle('username')}>{user.username}</td>
+                    <td className="px-2 py-2 text-xs font-medium" style={cellStyle('company_name')}>{user.company_name || '-'}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('company_type')}>
                       <span className={`px-2 py-1 rounded text-xs ${
-                        user.partner_type === 'maker' || user.user_type === 'maker' 
-                          ? 'bg-blue-100 text-blue-700' 
+                        user.partner_type === 'maker' || user.user_type === 'maker'
+                          ? 'bg-blue-100 text-blue-700'
                           : 'bg-green-100 text-green-700'
                       }`}>
                         {getPartnerTypeLabel(user.partner_type || user.user_type)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-xs">{user.name}</td>
-                    <td className="px-3 py-2 text-xs">{user.partner_contact || user.phone || '-'}</td>
-                    <td className="px-3 py-2 text-xs">{user.email || '-'}</td>
-                    <td className="px-3 py-2 text-xs max-w-[150px] truncate" title={user.partner_address}>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('name')}>{user.name}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('phone')}>{user.partner_contact || user.phone || '-'}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('email')}>{user.email || '-'}</td>
+                    <td className="px-2 py-2 text-xs" style={cellStyle('address')} title={user.partner_address}>
                       {user.partner_address || '-'}
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs" style={cellStyle('permission_class')}>
                       <span className={`px-2 py-1 rounded text-xs ${
                         user.permission_class === 'admin' ? 'bg-red-100 text-red-700' :
                         user.permission_class === 'manager' ? 'bg-orange-100 text-orange-700' :
@@ -534,13 +601,13 @@ const PartnerUsers = () => {
                         {getPermissionLabel(user.permission_class)}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs" style={cellStyle('approval_status')}>
                       {getApprovalStatusBadge(user.approval_status)}
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs" style={cellStyle('created_at')}>
                       {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
                     </td>
-                    <td className="px-3 py-2 text-xs">
+                    <td className="px-2 py-2 text-xs" style={cellStyle('is_active')}>
                       <button
                         onClick={() => handleToggleActive(user)}
                         className={`px-2 py-1 rounded text-xs ${
@@ -550,7 +617,7 @@ const PartnerUsers = () => {
                         {user.is_active ? '활성' : '비활성'}
                       </button>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-2 py-2" style={cellStyle('actions')}>
                       <div className="flex gap-1">
                         {user.approval_status === 'pending' && (
                           <>
