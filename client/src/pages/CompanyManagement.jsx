@@ -8,9 +8,10 @@ export default function CompanyManagement() {
   const { token } = useAuthStore();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all'); // all, maker, plant
+  const [filter, setFilter] = useState('all'); // all, maker, plant, pending_approval
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const [stats, setStats] = useState({
     totalCompanies: 0,
     makers: 0,
@@ -27,15 +28,18 @@ export default function CompanyManagement() {
       setLoading(true);
 
       const params = { limit: 100 };
-      if (filter !== 'all') {
+      if (filter === 'maker' || filter === 'plant') {
         params.company_type = filter;
+      }
+      if (filter === 'pending_approval') {
+        params.profile_status = 'pending_approval';
       }
 
       const response = await api.get('/companies', { params });
-      setCompanies(response.data.data.items || []);
+      const items = response.data.data.items || [];
+      setCompanies(items);
 
       // 통계 계산
-      const items = response.data.data.items || [];
       const makers = items.filter(c => c.company_type === 'maker').length;
       const plants = items.filter(c => c.company_type === 'plant').length;
       const active = items.filter(c => c.is_active).length;
@@ -46,6 +50,21 @@ export default function CompanyManagement() {
         plants,
         activeCompanies: active
       });
+
+      // 승인대기 건수는 항상 전체 목록에서 계산 (필터와 무관)
+      if (filter === 'all') {
+        const pending = items.filter(c => c.profile_status === 'pending_approval').length;
+        setPendingCount(pending);
+      } else {
+        // 별도로 전체 목록을 조회해서 pending 건수 파악
+        try {
+          const allRes = await api.get('/companies', { params: { limit: 100 } });
+          const allItems = allRes.data.data.items || [];
+          setPendingCount(allItems.filter(c => c.profile_status === 'pending_approval').length);
+        } catch {
+          // 실패시 무시
+        }
+      }
     } catch (error) {
       console.error('회사 목록 조회 에러:', error);
       alert(`회사 목록을 불러오는데 실패했습니다: ${error.response?.data?.error?.message || error.message}`);
@@ -68,8 +87,8 @@ export default function CompanyManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader 
-        title="업체 관리" 
+      <DashboardHeader
+        title="업체 관리"
         subtitle="제작처 및 생산처 통합 관리"
         stats={headerStats}
       />
@@ -79,7 +98,7 @@ export default function CompanyManagement() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             {/* 필터 버튼 */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setFilter('all')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -98,7 +117,7 @@ export default function CompanyManagement() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                🏭 제작처
+                제작처
               </button>
               <button
                 onClick={() => setFilter('plant')}
@@ -108,7 +127,26 @@ export default function CompanyManagement() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                🏢 생산처
+                생산처
+              </button>
+              <button
+                onClick={() => setFilter('pending_approval')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors relative ${
+                  filter === 'pending_approval'
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-yellow-50 text-yellow-800 hover:bg-yellow-100 border border-yellow-300'
+                }`}
+              >
+                승인대기
+                {pendingCount > 0 && (
+                  <span className={`ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold ${
+                    filter === 'pending_approval'
+                      ? 'bg-white text-yellow-600'
+                      : 'bg-yellow-500 text-white'
+                  }`}>
+                    {pendingCount}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -123,9 +161,9 @@ export default function CompanyManagement() {
               />
               <button
                 onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium whitespace-nowrap"
               >
-                ➕ 업체 등록
+                업체 등록
               </button>
             </div>
           </div>
@@ -205,8 +243,9 @@ export default function CompanyManagement() {
 
 // 업체 행 컴포넌트
 function CompanyRow({ company, onRefresh }) {
-  const typeLabel = company.company_type === 'maker' ? '🏭 제작처' : '🏢 생산처';
+  const typeLabel = company.company_type === 'maker' ? '제작처' : '생산처';
   const typeColor = company.company_type === 'maker' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+  const isPending = company.profile_status === 'pending_approval';
 
   const getRatingBadge = (rating) => {
     if (!rating) return null;
@@ -219,13 +258,13 @@ function CompanyRow({ company, onRefresh }) {
 
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded-full ${color}`}>
-        ⭐ {score.toFixed(1)}
+        {score.toFixed(1)}
       </span>
     );
   };
 
   return (
-    <tr className="hover:bg-gray-50">
+    <tr className={isPending ? 'bg-yellow-50 hover:bg-yellow-100' : 'hover:bg-gray-50'}>
       <td className="px-6 py-4 whitespace-nowrap">
         <span className={`px-2 py-1 text-xs font-medium rounded-full ${typeColor}`}>
           {typeLabel}
@@ -235,7 +274,14 @@ function CompanyRow({ company, onRefresh }) {
         {company.company_code}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-        {company.company_name}
+        <div className="flex items-center gap-2">
+          {company.company_name}
+          {isPending && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-200 text-yellow-800">
+              승인대기
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
         {company.phone || '-'}
@@ -292,7 +338,7 @@ function AddCompanyModal({ onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.company_name) {
       alert('업체명은 필수입니다.');
       return;
@@ -339,8 +385,8 @@ function AddCompanyModal({ onClose, onSuccess }) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="maker">🏭 제작처</option>
-                  <option value="plant">🏢 생산처</option>
+                  <option value="maker">제작처</option>
+                  <option value="plant">생산처</option>
                 </select>
               </div>
               <div>

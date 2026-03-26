@@ -227,6 +227,24 @@ const submitForApproval = async (req, res) => {
     await sequelize.query(`UPDATE companies SET profile_draft = :draft, profile_status = 'pending_approval', profile_submitted_at = NOW() WHERE id = :id`, {
       replacements: { draft: JSON.stringify(draft_data || {}), id: companyId }
     });
+
+    // 알림: 관리자/금형개발자에게 승인 요청 알림 발송
+    try {
+      const companyName = req.user?.company_name || '업체';
+      const [admins] = await sequelize.query(
+        `SELECT id FROM users WHERE user_type IN ('system_admin', 'mold_developer')`,
+      );
+      for (const admin of admins) {
+        await sequelize.query(
+          `INSERT INTO notifications (user_id, notification_type, title, message, priority, related_type, related_id, action_url, created_at)
+           VALUES ($1, 'approval_needed', '업체 프로필 승인 요청', $2, 'high', 'company', $3, $4, NOW())`,
+          { bind: [admin.id, `${companyName}에서 프로필 승인을 요청했습니다`, companyId, `/companies/${companyId}`] }
+        );
+      }
+    } catch (notifError) {
+      logger.error('Submit approval notification error:', notifError);
+    }
+
     res.json({ success: true, message: '승인 요청이 제출되었습니다' });
   } catch (error) {
     logger.error('Submit for approval error:', error);
@@ -265,6 +283,23 @@ const approveProfile = async (req, res) => {
       await sequelize.query(`UPDATE companies SET profile_status = 'approved', profile_approved_at = NOW(), profile_approved_by = :approver, profile_draft = '{}' WHERE id = :id`, { replacements });
     }
 
+    // 알림: 해당 업체 사용자에게 승인 완료 알림 발송
+    try {
+      const [companyUsers] = await sequelize.query(
+        `SELECT id FROM users WHERE company_id = $1 AND user_type IN ('maker', 'plant')`,
+        { bind: [company_id] }
+      );
+      for (const user of companyUsers) {
+        await sequelize.query(
+          `INSERT INTO notifications (user_id, notification_type, title, message, priority, action_url, created_at)
+           VALUES ($1, 'profile_approved', '프로필 승인 완료', '업체 프로필이 승인되었습니다', 'normal', '/company-profile', NOW())`,
+          { bind: [user.id] }
+        );
+      }
+    } catch (notifError) {
+      logger.error('Approve profile notification error:', notifError);
+    }
+
     res.json({ success: true, message: '프로필 승인 완료' });
   } catch (error) {
     logger.error('Approve profile error:', error);
@@ -276,9 +311,28 @@ const rejectProfile = async (req, res) => {
   try {
     const { company_id } = req.params;
     const { reason } = req.body;
+    const rejectReason = reason || '반려 사유 없음';
     await sequelize.query(`UPDATE companies SET profile_status = 'rejected', profile_reject_reason = :reason WHERE id = :id`, {
-      replacements: { reason: reason || '반려 사유 없음', id: company_id }
+      replacements: { reason: rejectReason, id: company_id }
     });
+
+    // 알림: 해당 업체 사용자에게 반려 알림 발송
+    try {
+      const [companyUsers] = await sequelize.query(
+        `SELECT id FROM users WHERE company_id = $1 AND user_type IN ('maker', 'plant')`,
+        { bind: [company_id] }
+      );
+      for (const user of companyUsers) {
+        await sequelize.query(
+          `INSERT INTO notifications (user_id, notification_type, title, message, priority, action_url, created_at)
+           VALUES ($1, 'profile_rejected', '프로필 반려', $2, 'high', '/company-profile', NOW())`,
+          { bind: [user.id, `업체 프로필이 반려되었습니다: ${rejectReason}`] }
+        );
+      }
+    } catch (notifError) {
+      logger.error('Reject profile notification error:', notifError);
+    }
+
     res.json({ success: true, message: '프로필 반려 완료' });
   } catch (error) {
     logger.error('Reject profile error:', error);

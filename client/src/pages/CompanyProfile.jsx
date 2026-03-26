@@ -29,6 +29,7 @@ export default function CompanyProfile() {
   const [contacts, setContacts] = useState([]);
   const [newContact, setNewContact] = useState({ contact_name: '', contact_role: '', department: '', plant_name: '', car_model: '', phone: '', email: '' });
   const [showContactForm, setShowContactForm] = useState(false);
+  const [editingContact, setEditingContact] = useState(null); // inline edit 중인 담당자
 
   // 인증현황
   const [certifications, setCertifications] = useState([]);
@@ -141,6 +142,14 @@ export default function CompanyProfile() {
     try { await companyProfileAPI.deleteContact(id); await loadContacts(); } catch (e) { alert('삭제 실패'); }
   };
 
+  const handleUpdateContact = async () => {
+    if (!editingContact || !editingContact.contact_name) { alert('담당자명은 필수입니다'); return; }
+    try {
+      const res = await companyProfileAPI.updateContact(editingContact.id, editingContact);
+      if (res.data.success) { await loadContacts(); setEditingContact(null); }
+    } catch (e) { alert('수정 실패: ' + (e.response?.data?.error?.message || e.message)); }
+  };
+
   const handleAddCert = async () => {
     if (!newCert.cert_name) { alert('인증명은 필수입니다'); return; }
     try {
@@ -157,15 +166,22 @@ export default function CompanyProfile() {
   const handleSaveDraft = async () => {
     try {
       const res = await companyProfileAPI.saveDraft({ draft_data: formData });
-      if (res.data.success) setMessage({ type: 'success', text: '임시저장 완료' });
+      if (res.data.success) {
+        setMessage({ type: 'success', text: '임시저장 완료' });
+        setCompany(prev => ({ ...prev, profile_status: 'draft' }));
+      }
     } catch (e) { setMessage({ type: 'error', text: '임시저장 실패' }); }
   };
 
   const handleSubmitForApproval = async () => {
-    if (!confirm('프로필 변경사항을 승인 요청하시겠습니까?')) return;
+    if (!confirm('프로필 변경사항을 승인 요청하시겠습니까?\n제출 후 관리자 승인 전까지 수정이 제한됩니다.')) return;
     try {
       const res = await companyProfileAPI.submitForApproval({ draft_data: formData });
-      if (res.data.success) { setMessage({ type: 'success', text: '승인 요청이 제출되었습니다. 담당자 확인 후 반영됩니다.' }); setEditMode(false); }
+      if (res.data.success) {
+        setMessage({ type: 'success', text: '승인 요청이 제출되었습니다. 담당자 확인 후 반영됩니다.' });
+        setEditMode(false);
+        setCompany(prev => ({ ...prev, profile_status: 'pending_approval', submitted_at: new Date().toISOString() }));
+      }
     } catch (e) { setMessage({ type: 'error', text: '승인 요청 실패' }); }
   };
 
@@ -477,6 +493,60 @@ export default function CompanyProfile() {
         </div>
       )}
 
+      {/* 프로필 승인 상태 배너 */}
+      {company?.profile_status && company.profile_status !== 'approved' && (
+        <div className={`mb-4 p-4 rounded-lg flex items-center gap-3 ${
+          company.profile_status === 'draft' ? 'bg-yellow-50 border border-yellow-300 text-yellow-800' :
+          company.profile_status === 'pending_approval' ? 'bg-blue-50 border border-blue-300 text-blue-800' :
+          company.profile_status === 'rejected' ? 'bg-red-50 border border-red-300 text-red-800' :
+          'bg-gray-50 border border-gray-300 text-gray-800'
+        }`}>
+          {company.profile_status === 'draft' && (
+            <>
+              <span className="text-xl">📝</span>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">임시저장 상태입니다</p>
+                <p className="text-xs mt-0.5">수정 후 승인요청 해주세요.</p>
+              </div>
+            </>
+          )}
+          {company.profile_status === 'pending_approval' && (
+            <>
+              <span className="text-xl">⏳</span>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">승인 대기 중입니다</p>
+                <p className="text-xs mt-0.5">
+                  관리자 확인 후 승인됩니다.
+                  {company.submitted_at && <span className="ml-2 text-blue-600">제출일: {new Date(company.submitted_at).toLocaleDateString('ko-KR')}</span>}
+                </p>
+              </div>
+            </>
+          )}
+          {company.profile_status === 'rejected' && (
+            <>
+              <span className="text-xl">❌</span>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">반려되었습니다</p>
+                <p className="text-xs mt-0.5">사유: {company.reject_reason || '사유 없음'}</p>
+              </div>
+              <button
+                onClick={() => setEditMode(true)}
+                className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 flex items-center gap-1"
+              >
+                <Edit3 size={14} />
+                재수정
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {company?.profile_status === 'approved' && (
+        <div className="mb-4 p-3 rounded-lg bg-green-50 border border-green-200 text-green-800 flex items-center gap-2">
+          <CheckCircle size={18} className="text-green-600" />
+          <span className="text-sm font-medium">프로필이 승인되었습니다</span>
+        </div>
+      )}
+
       {!company ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -680,6 +750,7 @@ export default function CompanyProfile() {
               <Users size={20} className="text-purple-600" />
               담당자 정보
               <span className="text-xs font-normal text-gray-400 ml-2">공장/차종별 여러 명 등록 가능</span>
+              {contacts.length > 0 && <span className="ml-auto text-xs font-normal text-purple-500">{contacts.length}명 등록</span>}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <InputField label="대표 담당자명" field="manager_name" formData={formData} setFormData={setFormData} editMode={editMode} />
@@ -699,28 +770,58 @@ export default function CompanyProfile() {
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">차종</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">연락처</th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">이메일</th>
-                      {editMode && <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">삭제</th>}
+                      {editMode && <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 w-20">관리</th>}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {contacts.map(c => (
-                      <tr key={c.id}>
-                        <td className="px-3 py-2 font-medium">{c.contact_name} {c.is_primary && <span className="text-[10px] bg-purple-100 text-purple-700 rounded px-1">대표</span>}</td>
-                        <td className="px-3 py-2 text-xs">{c.contact_role || '-'}</td>
-                        <td className="px-3 py-2 text-xs">{c.department || '-'}</td>
-                        <td className="px-3 py-2 text-xs">{c.plant_name || '-'}</td>
-                        <td className="px-3 py-2 text-xs">{c.car_model || '-'}</td>
-                        <td className="px-3 py-2 text-xs">{c.phone || '-'}</td>
-                        <td className="px-3 py-2 text-xs">{c.email || '-'}</td>
-                        {editMode && (
-                          <td className="px-3 py-2">
-                            <button onClick={() => handleDeleteContact(c.id)} className="text-red-500 hover:text-red-700"><Trash2 size={14} /></button>
+                      editingContact?.id === c.id ? (
+                        <tr key={c.id} className="bg-purple-50">
+                          <td className="px-2 py-1.5"><input type="text" value={editingContact.contact_name} onChange={e => setEditingContact({...editingContact, contact_name: e.target.value})} className="w-full border rounded px-2 py-1 text-xs" placeholder="이름 *" /></td>
+                          <td className="px-2 py-1.5"><input type="text" value={editingContact.contact_role || ''} onChange={e => setEditingContact({...editingContact, contact_role: e.target.value})} className="w-full border rounded px-2 py-1 text-xs" /></td>
+                          <td className="px-2 py-1.5"><input type="text" value={editingContact.department || ''} onChange={e => setEditingContact({...editingContact, department: e.target.value})} className="w-full border rounded px-2 py-1 text-xs" /></td>
+                          <td className="px-2 py-1.5"><input type="text" value={editingContact.plant_name || ''} onChange={e => setEditingContact({...editingContact, plant_name: e.target.value})} className="w-full border rounded px-2 py-1 text-xs" /></td>
+                          <td className="px-2 py-1.5"><input type="text" value={editingContact.car_model || ''} onChange={e => setEditingContact({...editingContact, car_model: e.target.value})} className="w-full border rounded px-2 py-1 text-xs" /></td>
+                          <td className="px-2 py-1.5"><input type="text" value={editingContact.phone || ''} onChange={e => setEditingContact({...editingContact, phone: e.target.value})} className="w-full border rounded px-2 py-1 text-xs" /></td>
+                          <td className="px-2 py-1.5"><input type="email" value={editingContact.email || ''} onChange={e => setEditingContact({...editingContact, email: e.target.value})} className="w-full border rounded px-2 py-1 text-xs" /></td>
+                          <td className="px-2 py-1.5">
+                            <div className="flex gap-1">
+                              <button onClick={handleUpdateContact} className="text-green-600 hover:text-green-800"><CheckCircle size={14} /></button>
+                              <button onClick={() => setEditingContact(null)} className="text-gray-400 hover:text-gray-600"><X size={14} /></button>
+                            </div>
                           </td>
-                        )}
-                      </tr>
+                        </tr>
+                      ) : (
+                        <tr key={c.id}>
+                          <td className="px-3 py-2 font-medium">
+                            {c.contact_name}
+                            {c.is_primary && <span className="ml-1 text-[10px] bg-purple-100 text-purple-700 rounded px-1.5 py-0.5 font-semibold">대표</span>}
+                          </td>
+                          <td className="px-3 py-2 text-xs">{c.contact_role || '-'}</td>
+                          <td className="px-3 py-2 text-xs">{c.department || '-'}</td>
+                          <td className="px-3 py-2 text-xs">{c.plant_name || '-'}</td>
+                          <td className="px-3 py-2 text-xs">{c.car_model || '-'}</td>
+                          <td className="px-3 py-2 text-xs">{c.phone || '-'}</td>
+                          <td className="px-3 py-2 text-xs">{c.email || '-'}</td>
+                          {editMode && (
+                            <td className="px-3 py-2">
+                              <div className="flex gap-1">
+                                <button onClick={() => setEditingContact({...c})} className="text-blue-500 hover:text-blue-700" title="수정"><Edit3 size={14} /></button>
+                                <button onClick={() => handleDeleteContact(c.id)} className="text-red-500 hover:text-red-700" title="삭제"><Trash2 size={14} /></button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      )
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {contacts.length === 0 && !editMode && (
+              <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-300 mt-3">
+                <Users className="w-6 h-6 text-gray-300 mx-auto mb-1" />
+                <p className="text-sm text-gray-400">등록된 담당자가 없습니다</p>
               </div>
             )}
 
@@ -1178,6 +1279,48 @@ export default function CompanyProfile() {
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{formData.notes || '없음'}</p>
             )}
           </section>
+
+          {/* 하단 액션 버튼 */}
+          {editMode && (
+            <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between sticky bottom-4">
+              <p className="text-xs text-gray-500">
+                변경사항을 저장하거나 승인 요청하세요.
+                {company.profile_status === 'pending_approval' && (
+                  <span className="ml-2 text-blue-600 font-medium">현재 승인 대기 중 — 재제출 시 이전 요청이 갱신됩니다.</span>
+                )}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setEditMode(false); setFormData(company); }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleSaveDraft}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gray-500 text-white rounded-lg text-sm hover:bg-gray-600"
+                >
+                  <Clock size={14} />
+                  임시저장
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:bg-blue-300"
+                >
+                  <Save size={14} />
+                  {saving ? '저장 중...' : '즉시저장'}
+                </button>
+                <button
+                  onClick={handleSubmitForApproval}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700"
+                >
+                  <Send size={14} />
+                  승인요청
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       {/* 기초정보에서 불러오기 모달 */}
