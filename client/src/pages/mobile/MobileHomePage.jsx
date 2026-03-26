@@ -150,15 +150,20 @@ export default function MobileHomePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 pt-8 pb-12">
+      <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 px-5 pt-10 pb-14 rounded-b-[1.5rem]">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className="text-xl font-bold text-white">안녕하세요, {user?.name || '사용자'}님</h1>
-            <p className="text-blue-100 text-sm">{user?.company_name || 'CAMS 금형관리 시스템'}</p>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white font-bold text-lg">
+              {(user?.name || '?')[0]}
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-white">{user?.name || '사용자'}님</h1>
+              <p className="text-blue-100 text-xs">{user?.company_name || 'CAMS'} {user?.department ? `· ${user.department}` : ''}</p>
+            </div>
           </div>
           <button
-            onClick={() => navigate('/notification-settings')}
-            className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center"
+            onClick={() => navigate('/mobile/settings/notifications')}
+            className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center active:bg-white/30"
           >
             <Settings size={20} className="text-white" />
           </button>
