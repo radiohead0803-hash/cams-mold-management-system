@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { Home, Package, ClipboardList, Bell, LogOut, Settings, FileText, Wrench, Users, BarChart3, CheckSquare, Truck, QrCode, ChevronDown, Building2, Trash2, Cog, FileCheck, Keyboard, Search, User } from 'lucide-react'
 import { getMenuByRole, isRouteRegistered } from '../config/menuRegistry'
 import NotificationBell from './NotificationBell'
 import UserProfileModal from './UserProfileModal'
+import { isMobileDevice } from '../utils/deviceDetect'
 
 export default function Layout() {
   const { user, logout } = useAuthStore()
@@ -12,6 +13,11 @@ export default function Layout() {
   const location = useLocation()
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
+
+  // 모바일 디바이스에서 데스크톱 라우트 접근 시 → 모바일 홈으로 리다이렉트
+  if (isMobileDevice()) {
+    return <Navigate to="/mobile/home" replace />
+  }
 
   // 키보드 단축키
   useEffect(() => {
