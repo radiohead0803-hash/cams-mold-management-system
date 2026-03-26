@@ -548,11 +548,12 @@ const getPermissionClasses = async (req, res) => {
   }
 };
 
-// 사용자 삭제
+// 사용자 삭제 (FK 참조 시 soft-delete 자동 전환)
 const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    
+    const forceDelete = req.query.force === 'true';
+
     // 자기 자신은 삭제 불가
     if (parseInt(id) === req.user.id) {
       return res.status(400).json({
@@ -560,30 +561,63 @@ const deleteUser = async (req, res) => {
         error: { message: '자기 자신은 삭제할 수 없습니다' }
       });
     }
-    
-    const [result] = await sequelize.query(
-      'DELETE FROM users WHERE id = :id RETURNING id',
+
+    // 사용자 존재 확인
+    const [userRows] = await sequelize.query(
+      'SELECT id, username, name, is_active FROM users WHERE id = :id',
       { replacements: { id } }
     );
-    
-    if (result.length === 0) {
+    if (userRows.length === 0) {
       return res.status(404).json({
         success: false,
         error: { message: '사용자를 찾을 수 없습니다' }
       });
     }
-    
-    logger.info(`User ${id} deleted by user ${req.user.id}`);
-    
-    res.json({
-      success: true,
-      message: '사용자가 삭제되었습니다'
+
+    // 먼저 물리 삭제 시도
+    try {
+      const [result] = await sequelize.query(
+        'DELETE FROM users WHERE id = :id RETURNING id',
+        { replacements: { id } }
+      );
+
+      if (result.length > 0) {
+        logger.info(`User ${id} (${userRows[0].username}) hard-deleted by user ${req.user.id}`);
+        return res.json({
+          success: true,
+          message: '사용자가 삭제되었습니다',
+          deleteType: 'hard'
+        });
+      }
+    } catch (deleteError) {
+      // FK 제약조건 위반 (23503) → soft-delete로 전환
+      if (deleteError.parent?.code === '23503' || deleteError.original?.code === '23503') {
+        logger.info(`User ${id} has FK references, switching to soft-delete`);
+
+        await sequelize.query(
+          `UPDATE users SET is_active = false, updated_at = NOW() WHERE id = :id`,
+          { replacements: { id } }
+        );
+
+        logger.info(`User ${id} (${userRows[0].username}) soft-deleted (deactivated) by user ${req.user.id}`);
+        return res.json({
+          success: true,
+          message: '다른 데이터에서 참조 중이므로 비활성화 처리되었습니다',
+          deleteType: 'soft'
+        });
+      }
+      throw deleteError;
+    }
+
+    res.status(404).json({
+      success: false,
+      error: { message: '사용자를 찾을 수 없습니다' }
     });
   } catch (error) {
     logger.error('Delete user error:', error);
     res.status(500).json({
       success: false,
-      error: { message: '사용자 삭제 실패' }
+      error: { message: error.message || '사용자 삭제 실패' }
     });
   }
 };

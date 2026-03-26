@@ -111,9 +111,13 @@ const PartnerUsers = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
+    if (!confirm('정말 삭제하시겠습니까?\n(다른 데이터에서 참조 중이면 비활성화 처리됩니다)')) return;
     try {
-      await userManagementAPI.deleteUser(id);
+      const res = await userManagementAPI.deleteUser(id);
+      const msg = res.data?.message || '삭제되었습니다';
+      if (res.data?.deleteType === 'soft') {
+        alert(`⚠️ ${msg}`);
+      }
       fetchUsers();
     } catch (error) {
       alert(error.response?.data?.error?.message || '삭제 실패');
