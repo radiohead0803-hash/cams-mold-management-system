@@ -109,31 +109,62 @@ export default function MobileQRLogin() {
       setCameraError('')
       setError('')
 
-      // HTTPS 및 카메라 API 지원 체크
+      // HTTPS 체크
       if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-        setCameraError('카메라 사용을 위해 HTTPS 연결이 필요합니다. 주소창이 https://로 시작하는지 확인하세요.')
+        setCameraError('카메라 사용을 위해 HTTPS 연결이 필요합니다.')
         return
       }
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setCameraError('이 브라우저는 카메라를 지원하지 않습니다. Chrome 또는 Samsung Internet을 사용해주세요.')
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setCameraError('이 브라우저는 카메라를 지원하지 않습니다.')
         return
       }
+
+      // 1) scanning=true 먼저 → video DOM 생성
+      setScanning(true)
+
+      // 2) 약간의 지연 후 카메라 시작 (DOM이 렌더될 시간)
+      await new Promise(r => setTimeout(r, 100))
 
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
       })
 
-      // stream을 state에 저장 → useEffect에서 video 연결
       setStream(mediaStream)
-      setScanning(true)
+
+      // 3) video DOM이 이미 있으면 직접 연결
+      const tryConnect = () => {
+        const video = videoRef.current
+        if (video) {
+          video.srcObject = mediaStream
+          video.setAttribute('autoplay', '')
+          video.setAttribute('playsinline', '')
+          video.setAttribute('muted', '')
+          video.muted = true
+          video.play().then(() => {
+            console.log('[QR] Camera playing OK, tracks:', mediaStream.getVideoTracks().length)
+            startAutoScan()
+          }).catch(err => {
+            console.error('[QR] play() failed:', err)
+            setCameraError('카메라 재생 실패: ' + err.message)
+          })
+        } else {
+          // video DOM이 아직 없으면 50ms 후 재시도 (최대 10번)
+          setTimeout(tryConnect, 50)
+        }
+      }
+      tryConnect()
+
     } catch (err) {
-      console.error('Camera error:', err)
+      console.error('Camera error:', err.name, err.message)
+      setScanning(false)
       if (err.name === 'NotAllowedError') {
         setCameraError('카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용해주세요.')
       } else if (err.name === 'NotFoundError') {
         setCameraError('카메라를 찾을 수 없습니다.')
+      } else if (err.name === 'NotReadableError') {
+        setCameraError('카메라가 다른 앱에서 사용 중입니다. 다른 앱을 닫고 다시 시도하세요.')
       } else {
-        setCameraError('카메라에 접근할 수 없습니다.')
+        setCameraError(`카메라 오류: ${err.name} - ${err.message}`)
       }
     }
   }
