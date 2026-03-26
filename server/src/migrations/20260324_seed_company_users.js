@@ -73,21 +73,36 @@ module.exports = {
     const hash = await bcrypt.hash('default_temp', 10);
     for (const u of COMPANY_USERS) {
       const pwHash = await bcrypt.hash(u.eid, 10);
-      const userType = u.dept === '임원' ? 'system_admin' : 'mold_developer';
+      // 시스템관리자: 정환(103493), 홍정수(103485), 이시면(103476)
+      // 관리자: 나머지 임원 (회장, 부회장, 대표이사, 상무이사, 이사)
+      // 담당자: 일반 직원
+      const SYSTEM_ADMINS = ['103493', '103485', '103476'];
+      let userType, permClass;
+      if (SYSTEM_ADMINS.includes(u.eid)) {
+        userType = 'system_admin';
+        permClass = 'admin';
+      } else if (u.dept === '임원') {
+        userType = 'mold_developer';
+        permClass = 'manager';
+      } else {
+        userType = 'staff';
+        permClass = 'user';
+      }
 
       await queryInterface.sequelize.query(`
-        INSERT INTO users (username, password_hash, name, phone, email, user_type, company_type, company_name, employee_id, position, department, is_active, created_at, updated_at)
-        VALUES (:username, :pwHash, :name, :phone, :email, :userType, 'hq', 'ICAMS', :eid, :pos, :dept, true, NOW(), NOW())
+        INSERT INTO users (username, password_hash, name, phone, email, user_type, permission_class, company_type, company_name, employee_id, position, department, is_active, created_at, updated_at)
+        VALUES (:username, :pwHash, :name, :phone, :email, :userType, :permClass, 'hq', 'ICAMS', :eid, :pos, :dept, true, NOW(), NOW())
         ON CONFLICT (username) DO UPDATE SET
           name = EXCLUDED.name, phone = EXCLUDED.phone,
-          user_type = EXCLUDED.user_type, employee_id = EXCLUDED.employee_id,
+          user_type = EXCLUDED.user_type, permission_class = EXCLUDED.permission_class,
+          employee_id = EXCLUDED.employee_id,
           position = EXCLUDED.position, department = EXCLUDED.department,
           company_type = 'hq', company_name = 'ICAMS',
           is_active = true, updated_at = NOW()
       `, {
         replacements: {
           username: u.eid, pwHash, name: u.name,
-          phone: u.phone, email: u.email, userType,
+          phone: u.phone, email: u.email, userType, permClass,
           eid: u.eid, pos: u.pos, dept: u.dept
         }
       });

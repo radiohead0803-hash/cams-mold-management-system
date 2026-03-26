@@ -455,8 +455,9 @@ export default function Layout() {
   // 사용자 유형별 표시 이름
   const getUserTypeLabel = () => {
     const labels = {
-      'system_admin': '시스템 관리자',
-      'mold_developer': '금형개발 담당',
+      'system_admin': '시스템관리자',
+      'mold_developer': '관리자',
+      'staff': '담당자',
       'maker': '제작처',
       'plant': '생산처'
     }

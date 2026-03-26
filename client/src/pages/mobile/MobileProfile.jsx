@@ -26,8 +26,9 @@ export default function MobileProfile() {
 
   const getUserTypeLabel = (type) => {
     const types = {
-      system_admin: '시스템 관리자',
-      mold_developer: '금형개발 담당',
+      system_admin: '시스템관리자',
+      mold_developer: '관리자',
+      staff: '담당자',
       maker: '제작처',
       plant: '생산처'
     };

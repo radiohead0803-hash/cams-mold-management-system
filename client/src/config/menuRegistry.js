@@ -15,6 +15,7 @@ import {
 export const USER_ROLES = {
   SYSTEM_ADMIN: 'system_admin',
   MOLD_DEVELOPER: 'mold_developer',
+  STAFF: 'staff',
   MAKER: 'maker',
   PLANT: 'plant'
 };
@@ -25,6 +26,7 @@ export const USER_ROLES = {
 export const DASHBOARD_ROUTES = {
   [USER_ROLES.SYSTEM_ADMIN]: '/dashboard/system-admin',
   [USER_ROLES.MOLD_DEVELOPER]: '/dashboard/mold-developer',
+  [USER_ROLES.STAFF]: '/dashboard/mold-developer',
   [USER_ROLES.MAKER]: '/dashboard/maker',
   [USER_ROLES.PLANT]: '/dashboard/plant'
 };
@@ -364,6 +366,8 @@ export function getMenuByRole(userType) {
     case USER_ROLES.SYSTEM_ADMIN:
       return SYSTEM_ADMIN_MENU;
     case USER_ROLES.MOLD_DEVELOPER:
+      return MOLD_DEVELOPER_MENU;
+    case USER_ROLES.STAFF:
       return MOLD_DEVELOPER_MENU;
     case USER_ROLES.MAKER:
       return MAKER_MENU;

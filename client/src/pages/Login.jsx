@@ -245,6 +245,8 @@ function getDashboardPath(role) {
       return '/dashboard/admin'
     case 'mold_developer':
       return '/dashboard/developer'
+    case 'staff':
+      return '/dashboard/developer'
     case 'maker':
       return '/dashboard/maker'
     case 'plant':

@@ -9,27 +9,36 @@
  */
 
 const USER_TYPES = {
-  SYSTEM_ADMIN: 'system_admin',
-  MOLD_DEVELOPER: 'mold_developer',
-  MAKER: 'maker',
-  PLANT: 'plant'
+  SYSTEM_ADMIN: 'system_admin',    // 시스템관리자 (정환, 홍정수, 이시면)
+  MOLD_DEVELOPER: 'mold_developer', // 관리자 (임원)
+  STAFF: 'staff',                   // 담당자 (일반 사내직원)
+  MAKER: 'maker',                   // 제작처
+  PLANT: 'plant'                    // 생산처
 };
 
 // 모든 사용자 유형
 const ALL_USERS = [
   USER_TYPES.SYSTEM_ADMIN,
   USER_TYPES.MOLD_DEVELOPER,
+  USER_TYPES.STAFF,
   USER_TYPES.MAKER,
   USER_TYPES.PLANT
 ];
 
-// 본사 사용자 (시스템 관리자 + 금형개발)
+// 본사 사용자 (시스템관리자 + 관리자 + 담당자)
 const HQ_USERS = [
+  USER_TYPES.SYSTEM_ADMIN,
+  USER_TYPES.MOLD_DEVELOPER,
+  USER_TYPES.STAFF
+];
+
+// 관리자 이상 (시스템관리자 + 관리자)
+const ADMIN_PLUS = [
   USER_TYPES.SYSTEM_ADMIN,
   USER_TYPES.MOLD_DEVELOPER
 ];
 
-// 관리자 전용
+// 시스템관리자 전용
 const ADMIN_ONLY = [
   USER_TYPES.SYSTEM_ADMIN
 ];
@@ -42,15 +51,15 @@ const API_PERMISSIONS = {
   // 금형 관리
   'GET /molds': ALL_USERS,
   'GET /molds/:id': ALL_USERS,
-  'POST /molds': HQ_USERS,
-  'PUT /molds/:id': HQ_USERS,
+  'POST /molds': ADMIN_PLUS,
+  'PUT /molds/:id': ADMIN_PLUS,
   'DELETE /molds/:id': ADMIN_ONLY,
 
   // 금형 사양
   'GET /mold-specifications': ALL_USERS,
   'GET /mold-specifications/:id': ALL_USERS,
-  'POST /mold-specifications': HQ_USERS,
-  'PUT /mold-specifications/:id': HQ_USERS,
+  'POST /mold-specifications': ADMIN_PLUS,
+  'PUT /mold-specifications/:id': ADMIN_PLUS,
   'DELETE /mold-specifications/:id': ADMIN_ONLY,
 
   // 일상점검
@@ -64,8 +73,8 @@ const API_PERMISSIONS = {
   'GET /periodic-inspections/:id': ALL_USERS,
   'POST /periodic-inspections': [USER_TYPES.PLANT, USER_TYPES.MAKER],
   'PUT /periodic-inspections/:id': [USER_TYPES.PLANT, USER_TYPES.MAKER],
-  'POST /periodic-inspections/:id/approve': HQ_USERS,
-  'POST /periodic-inspections/:id/reject': HQ_USERS,
+  'POST /periodic-inspections/:id/approve': ADMIN_PLUS,
+  'POST /periodic-inspections/:id/reject': ADMIN_PLUS,
 
   // 수리 요청
   'GET /repair-requests': ALL_USERS,
@@ -80,8 +89,8 @@ const API_PERMISSIONS = {
   'GET /transfers': ALL_USERS,
   'GET /transfers/:id': ALL_USERS,
   'POST /transfers': [USER_TYPES.PLANT, USER_TYPES.MOLD_DEVELOPER],
-  'POST /transfers/:id/approve': HQ_USERS,
-  'POST /transfers/:id/reject': HQ_USERS,
+  'POST /transfers/:id/approve': ADMIN_PLUS,
+  'POST /transfers/:id/reject': ADMIN_PLUS,
 
   // 폐기 관리
   'GET /scrapping': ALL_USERS,
@@ -149,17 +158,17 @@ const MENU_PERMISSIONS = {
   
   // 금형 관리
   molds: ALL_USERS,
-  moldRegistration: HQ_USERS,
+  moldRegistration: ADMIN_PLUS,
   moldSpecifications: ALL_USERS,
   
   // 점검 관리
   dailyChecks: ALL_USERS,
   periodicInspections: ALL_USERS,
-  inspectionApproval: HQ_USERS,
+  inspectionApproval: ADMIN_PLUS,
   
   // 수리 관리
   repairRequests: ALL_USERS,
-  repairManagement: [USER_TYPES.MAKER, ...HQ_USERS],
+  repairManagement: [USER_TYPES.MAKER, ...ADMIN_PLUS],
   
   // 이관/폐기
   transfers: ALL_USERS,
@@ -217,6 +226,7 @@ module.exports = {
   USER_TYPES,
   ALL_USERS,
   HQ_USERS,
+  ADMIN_PLUS,
   ADMIN_ONLY,
   API_PERMISSIONS,
   MENU_PERMISSIONS,
