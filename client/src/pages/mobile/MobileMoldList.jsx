@@ -24,11 +24,32 @@ export default function MobileMoldList() {
   const fetchMolds = async () => {
     try {
       setLoading(true);
+      setError && setError('');
       const params = statusFilter !== 'all' ? { status: statusFilter } : {};
-      const response = await api.get('/mold-specifications', { params });
-      if (response.data.success) {
-        setMolds(response.data.data || []);
+
+      // 1차: mold-specifications API
+      let molds = [];
+      try {
+        const response = await api.get('/mold-specifications', { params });
+        molds = response.data?.data || response.data?.molds || [];
+        if (Array.isArray(response.data)) molds = response.data;
+      } catch (e1) {
+        // 2차: mobile/dashboard/molds 폴백
+        try {
+          const fallback = await api.get('/mobile/dashboard/molds', { params: { ...params, limit: 100 } });
+          molds = fallback.data?.data?.molds || fallback.data?.molds || [];
+        } catch (e2) {
+          // 3차: mobile/molds/list 폴백 (인증 불필요)
+          try {
+            const fallback2 = await api.get('/mobile/molds/list');
+            molds = fallback2.data?.data || [];
+          } catch (e3) {
+            console.error('금형 목록 조회 실패:', e3.message);
+          }
+        }
       }
+
+      setMolds(molds);
     } catch (error) {
       console.error('금형 목록 조회 오류:', error);
     } finally {

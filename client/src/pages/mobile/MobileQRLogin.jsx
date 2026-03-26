@@ -84,8 +84,19 @@ export default function MobileQRLogin() {
     try {
       setCameraError('')
       setError('')
+
+      // HTTPS 및 카메라 API 지원 체크
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        setCameraError('카메라 사용을 위해 HTTPS 연결이 필요합니다. 주소창이 https://로 시작하는지 확인하세요.')
+        return
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('이 브라우저는 카메라를 지원하지 않습니다. Chrome 또는 Samsung Internet을 사용해주세요.')
+        return
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
+        video: { facingMode: { ideal: 'environment' } }
       })
 
       if (videoRef.current) {
