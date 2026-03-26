@@ -185,7 +185,8 @@ async function getAdminDeveloperDashboard() {
       (SELECT COUNT(*) FROM qr_sessions WHERE created_at >= CURRENT_DATE)                          AS today_scans,
       0                                                                                            AS over_shot_count,
       (SELECT COUNT(*) FROM checklist_instances
-         WHERE created_at >= CURRENT_DATE - INTERVAL '7 days')                                     AS inspection_due_count,
+         WHERE inspected_at >= CURRENT_DATE - INTERVAL '7 days'
+            OR check_date >= CURRENT_DATE - INTERVAL '7 days')                                     AS inspection_due_count,
       (SELECT COUNT(*) FROM mold_specifications WHERE status IN ('ng','NG','불량'))                 AS ng_molds,
       (SELECT COUNT(*) FROM users WHERE is_active = true)                                          AS total_users
   `);
@@ -251,7 +252,7 @@ async function getAdminDeveloperDashboard() {
 
   // --- Recent activities ---
   const recentActivities = await safeQueryAll(`
-    SELECT qs.id, qs.session_token, qs.scan_type, qs.created_at,
+    SELECT qs.id, qs.session_token, qs.created_at,
            u.name AS user_name,
            ms.mold_code, ms.part_name
     FROM qr_sessions qs
@@ -267,7 +268,7 @@ async function getAdminDeveloperDashboard() {
       (SELECT COUNT(*) FROM mold_specifications
          WHERE status IN ('design_review','design_approval'))                                     AS design_approval,
       (SELECT COUNT(*) FROM periodic_inspections
-         WHERE status = 'pending_approval')                                                       AS trial_approval,
+         WHERE overall_status = 'pending_approval')                                               AS trial_approval,
       (SELECT COUNT(*) FROM repair_requests
          WHERE status = 'liability_discussion')                                                   AS repair_liability
   `);

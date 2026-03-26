@@ -79,6 +79,20 @@ export default function MobileQRLogin() {
     }
   }, [stream, scanInterval])
 
+  // scanning + stream 변경 시 비디오에 스트림 연결
+  useEffect(() => {
+    if (scanning && stream && videoRef.current) {
+      const video = videoRef.current
+      video.srcObject = stream
+      video.play().then(() => {
+        console.log('[QR] Camera playing via useEffect')
+        startAutoScan()
+      }).catch(err => {
+        console.error('[QR] play error:', err)
+      })
+    }
+  }, [scanning, stream])
+
   // ========== QR 스캔 관련 ==========
   const startCamera = async () => {
     try {
@@ -99,26 +113,9 @@ export default function MobileQRLogin() {
         video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
       })
 
-      // 먼저 scanning=true → 다음 렌더에서 video 태그가 DOM에 나타남
+      // stream을 state에 저장 → useEffect에서 video 연결
       setStream(mediaStream)
       setScanning(true)
-
-      // DOM 업데이트 후 video에 스트림 연결 (setTimeout으로 다음 프레임 보장)
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream
-          videoRef.current.play().then(() => {
-            console.log('[QR] Camera playing')
-            startAutoScan()
-          }).catch(err => {
-            console.error('[QR] play() failed:', err)
-            setCameraError('카메라 재생 실패: ' + err.message)
-          })
-        } else {
-          console.error('[QR] videoRef is null after scanning=true')
-          setCameraError('카메라 초기화 실패. 다시 시도해주세요.')
-        }
-      }, 100)
     } catch (err) {
       console.error('Camera error:', err)
       if (err.name === 'NotAllowedError') {
