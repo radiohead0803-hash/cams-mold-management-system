@@ -77,6 +77,60 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(20),
       comment: 'hq, maker, plant'
     },
+    // 사내사용자 추가 정보
+    employee_id: {
+      type: DataTypes.STRING(20),
+      comment: '사번'
+    },
+    department: {
+      type: DataTypes.STRING(50),
+      comment: '부서'
+    },
+    position: {
+      type: DataTypes.STRING(50),
+      comment: '직급'
+    },
+    factory: {
+      type: DataTypes.STRING(100),
+      comment: '공장'
+    },
+    permission_class: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'user',
+      comment: 'admin, manager, user, viewer'
+    },
+    is_password_changed: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    approval_status: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'approved'
+    },
+    // 협력사 사용자 추가 정보
+    partner_type: {
+      type: DataTypes.STRING(20),
+      comment: 'maker, plant'
+    },
+    partner_code: {
+      type: DataTypes.STRING(50),
+      comment: '업체코드'
+    },
+    partner_contact: {
+      type: DataTypes.STRING(100)
+    },
+    partner_address: {
+      type: DataTypes.TEXT
+    },
+    approved_by: {
+      type: DataTypes.INTEGER
+    },
+    approved_at: {
+      type: DataTypes.DATE
+    },
+    rejection_reason: {
+      type: DataTypes.TEXT
+    },
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
