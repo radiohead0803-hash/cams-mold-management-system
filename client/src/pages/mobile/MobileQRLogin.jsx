@@ -79,6 +79,18 @@ export default function MobileQRLogin() {
     }
   }, [stream, scanInterval])
 
+  // stream 변경 시 video에 연결 (타이밍 문제 해결)
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      const video = videoRef.current
+      video.srcObject = stream
+      video.play().then(() => {
+        console.log('[QR] Camera playing via useEffect')
+        startAutoScan()
+      }).catch(err => console.error('[QR] play error:', err))
+    }
+  }, [stream, scanning]) // scanning이 true가 되어야 video DOM이 존재
+
   // video ref 콜백 — DOM에 video가 나타나면 즉시 스트림 연결
   const videoCallbackRef = (node) => {
     videoRef.current = node
