@@ -212,18 +212,24 @@ export default function QRScanner({
     }
   };
 
-  // 초기화
+  // 1단계: 카메라 권한 확인 (마운트 시 1회)
   useEffect(() => {
-    checkCameraPermission().then(granted => {
-      if (granted) {
-        startCamera();
-      }
-    });
+    checkCameraPermission();
+    return () => { stopCamera(); };
+  }, []);
 
-    return () => {
-      stopCamera();
-    };
-  }, [checkCameraPermission, startCamera, stopCamera]);
+  // 2단계: 권한 허용 후 video DOM 렌더링 → stream 연결
+  //   cameraStatus가 GRANTED가 되면 video DOM이 렌더링됨
+  //   그 후 videoRef.current가 존재할 때 stream 연결
+  useEffect(() => {
+    if (cameraStatus === CAMERA_STATUS.GRANTED && streamRef.current) {
+      // video DOM이 렌더될 시간을 주고 연결
+      const timer = setTimeout(() => {
+        startCamera();
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [cameraStatus, startCamera]);
 
   // 스캔 루프
   useEffect(() => {
@@ -306,6 +312,7 @@ export default function QRScanner({
           ref={videoRef}
           className="w-full h-full object-cover"
           playsInline
+          autoPlay
           muted
         />
         
