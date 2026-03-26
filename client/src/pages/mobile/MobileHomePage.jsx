@@ -503,25 +503,27 @@ export default function MobileHomePage() {
     setPullDistance(0);
   };
 
-  const summary = dashboardData?.summary || {};
+  const summary = dashboardData?.kpi || dashboardData?.summary || {};
   const kpiItems = getKpiConfig(role, summary);
   const quickActions = getQuickActions(role, unreadAlerts);
   const mgmtConfig = getManagementConfig(role);
 
-  // Management section values from API summary
+  // Management section values from API managementStatus + kpi
+  const mgmt = dashboardData?.managementStatus || {};
+  const inspStatus = dashboardData?.inspectionStatus || {};
   const getManagementValues = () => {
     switch (role) {
       case 'system_admin':
         return {
-          repairs: summary.pendingRepairs ?? 0,
-          transfers: summary.transferPending ?? 0,
-          scrapping: summary.ngMolds ?? 0,
+          repairs: mgmt.repairs?.total ?? summary.openRepairs ?? 0,
+          transfers: mgmt.transfers?.total ?? 0,
+          scrapping: mgmt.scrapping?.total ?? 0,
         };
       case 'mold_developer':
         return {
-          checklist: summary.pendingApprovals ?? 0,
-          maintenance: summary.inspectionDue ?? 0,
-          scrapping: summary.ngMolds ?? 0,
+          checklist: dashboardData?.approvals?.designApproval ?? 0,
+          maintenance: summary.inspectionDueCount ?? 0,
+          scrapping: mgmt.scrapping?.total ?? summary.ngMolds ?? 0,
         };
       default:
         return {};
@@ -530,14 +532,14 @@ export default function MobileHomePage() {
 
   const mgmtValues = getManagementValues();
 
-  // Maker progress list from API assignedMoldList
-  const makerProgressList = dashboardData?.assignedMoldList || [];
+  // Maker progress list from API
+  const makerProgressList = dashboardData?.assignedMolds || dashboardData?.assignedMoldList || [];
 
   // Plant inspection summary from API
   const plantInspection = {
-    completed: summary.todayChecks ?? 0,
-    pending: summary.needsCheck ?? 0,
-    overdue: summary.overdueChecks ?? 0,
+    completed: inspStatus.completed ?? summary.todayChecks ?? 0,
+    pending: inspStatus.pending ?? 0,
+    overdue: inspStatus.overdue ?? summary.overdueChecks ?? 0,
   };
 
   // Activity icon mapping

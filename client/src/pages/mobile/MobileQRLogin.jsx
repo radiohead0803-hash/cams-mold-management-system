@@ -79,19 +79,17 @@ export default function MobileQRLogin() {
     }
   }, [stream, scanInterval])
 
-  // scanning + stream 변경 시 비디오에 스트림 연결
-  useEffect(() => {
-    if (scanning && stream && videoRef.current) {
-      const video = videoRef.current
-      video.srcObject = stream
-      video.play().then(() => {
-        console.log('[QR] Camera playing via useEffect')
+  // video ref 콜백 — DOM에 video가 나타나면 즉시 스트림 연결
+  const videoCallbackRef = (node) => {
+    videoRef.current = node
+    if (node && stream) {
+      node.srcObject = stream
+      node.play().then(() => {
+        console.log('[QR] Camera playing via ref callback')
         startAutoScan()
-      }).catch(err => {
-        console.error('[QR] play error:', err)
-      })
+      }).catch(err => console.error('[QR] play error:', err))
     }
-  }, [scanning, stream])
+  }
 
   // ========== QR 스캔 관련 ==========
   const startCamera = async () => {
@@ -376,11 +374,11 @@ export default function MobileQRLogin() {
             {scanning ? (
               <div className="bg-black rounded-2xl overflow-hidden relative" style={{ height: '60vh', maxHeight: '500px' }}>
                 <video
-                  ref={videoRef}
+                  ref={videoCallbackRef}
                   autoPlay
                   playsInline
                   muted
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
                 <canvas ref={canvasRef} style={{ display: 'none' }} />
 
