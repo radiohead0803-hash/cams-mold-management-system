@@ -1231,6 +1231,16 @@ const startServer = async () => {
       console.warn('⚠️ Company users migration:', e.message);
     }
 
+    // 금형제조업체 16개사 + 사용자 계정 시드 (UPSERT — 재실행 안전)
+    try {
+      const seedMakers = require('./migrations/20260326_seed_maker_companies');
+      const QueryInterface2 = sequelize.getQueryInterface();
+      await seedMakers.up(QueryInterface2, require('sequelize'));
+      console.log('✅ Maker companies seed executed.');
+    } catch (e) {
+      console.warn('⚠️ Maker companies seed:', e.message);
+    }
+
     // Sync remaining models that may not have migration files
     try {
       await sequelize.sync({ alter: true });
