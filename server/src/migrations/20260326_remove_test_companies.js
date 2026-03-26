@@ -11,7 +11,7 @@
 
 const TEST_CODES = [
   'MKR-001', 'MKR-002', 'MKR-003', 'MKR-004', 'MKR-005',
-  'PLT-001', 'PLT-002', 'PLT-003'
+  'PLT-001', 'PLT-002', 'PLT-003', 'PLT-004', 'PLT-005', 'PLT-006'
 ];
 
 module.exports = {
