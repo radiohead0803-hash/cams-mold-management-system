@@ -17,28 +17,6 @@ export default function Login() {
   // 모바일 감지 (다중 신호 기반 — 터치, 화면크기, UA, Client Hints)
   const isMobile = isMobileDevice()
 
-  // 테스트 계정 빠른 로그인
-  const quickLogin = async (testUsername, testPassword) => {
-    setUsername(testUsername)
-    setPassword(testPassword)
-    setError('')
-    setLoading(true)
-
-    try {
-      const result = await login(testUsername, testPassword)
-      if (result.success) {
-        const role = result.user.role || result.user.user_type
-        navigate(isMobile ? '/mobile/home' : getDashboardPath(role))
-      } else {
-        setError(result.error || '로그인에 실패했습니다')
-      }
-    } catch (err) {
-      setError(err?.message || '로그인에 실패했습니다')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -97,20 +75,6 @@ export default function Login() {
             </button>
           </form>
 
-          {/* 테스트 계정 */}
-          <div className="bg-slate-700/30 border border-slate-600/50 rounded-xl p-4">
-            <p className="text-xs text-slate-400 mb-3 text-center">테스트 계정 (터치하여 로그인)</p>
-            <div className="grid grid-cols-2 gap-2">
-              {[{label:'시스템관리',u:'admin',p:'admin123'},{label:'금형개발',u:'developer',p:'dev123'},{label:'제작처',u:'maker1',p:'maker123'},{label:'생산처',u:'plant1',p:'plant123'}].map(acc => (
-                <button key={acc.u} type="button" onClick={() => quickLogin(acc.u, acc.p)}
-                  className="px-3 py-2.5 bg-slate-600/50 border border-slate-500/50 rounded-lg active:bg-slate-500/50 transition-colors">
-                  <div className="text-xs font-medium text-white">{acc.label}</div>
-                  <div className="text-xs text-slate-400">{acc.u}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="text-center mt-4">
             <Link to="/mobile/qr-login" className="text-sm text-blue-400 hover:text-blue-300">
               QR 코드로 로그인
@@ -131,47 +95,6 @@ export default function Login() {
           <p className="mt-2 text-center text-sm text-gray-600">
             금형관리 시스템
           </p>
-        </div>
-        
-        {/* 테스트 계정 안내 */}
-        <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-          <h3 className="text-sm font-semibold text-blue-900 mb-3">
-            🔧 개발 테스트 계정 (클릭하여 자동 입력)
-          </h3>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => quickLogin('admin', 'admin123')}
-              className="text-left px-3 py-2 bg-white border border-blue-300 rounded hover:bg-blue-100 transition-colors"
-            >
-              <div className="text-xs font-semibold text-blue-900">시스템 관리</div>
-              <div className="text-xs text-blue-700">admin</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => quickLogin('developer', 'dev123')}
-              className="text-left px-3 py-2 bg-white border border-blue-300 rounded hover:bg-blue-100 transition-colors"
-            >
-              <div className="text-xs font-semibold text-blue-900">금형개발</div>
-              <div className="text-xs text-blue-700">developer</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => quickLogin('maker1', 'maker123')}
-              className="text-left px-3 py-2 bg-white border border-blue-300 rounded hover:bg-blue-100 transition-colors"
-            >
-              <div className="text-xs font-semibold text-blue-900">제작처</div>
-              <div className="text-xs text-blue-700">maker1</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => quickLogin('plant1', 'plant123')}
-              className="text-left px-3 py-2 bg-white border border-blue-300 rounded hover:bg-blue-100 transition-colors"
-            >
-              <div className="text-xs font-semibold text-blue-900">생산처</div>
-              <div className="text-xs text-blue-700">plant1</div>
-            </button>
-          </div>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
