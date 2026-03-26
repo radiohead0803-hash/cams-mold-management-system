@@ -1271,6 +1271,15 @@ const startServer = async () => {
       console.warn('⚠️ Old test users removal:', e.message);
     }
 
+    // 생산처 42개사 + 겸업 4개사 시드
+    try {
+      const seedPlants = require('./migrations/20260326_seed_plant_companies');
+      const QueryInterface6 = sequelize.getQueryInterface();
+      await seedPlants.up(QueryInterface6);
+    } catch (e) {
+      console.warn('⚠️ Plant companies seed:', e.message);
+    }
+
     // Sync remaining models that may not have migration files
     try {
       await sequelize.sync({ alter: true });
