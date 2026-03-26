@@ -1261,6 +1261,16 @@ const startServer = async () => {
       console.warn('⚠️ Test companies removal:', e.message);
     }
 
+    // 2026-03-24 이전 등록된 구 테스트 사용자 삭제 (admin, developer 보존)
+    try {
+      const removeOldUsers = require('./migrations/20260326_remove_old_test_users');
+      const QueryInterface5 = sequelize.getQueryInterface();
+      await removeOldUsers.up(QueryInterface5);
+      console.log('✅ Old test users removed.');
+    } catch (e) {
+      console.warn('⚠️ Old test users removal:', e.message);
+    }
+
     // Sync remaining models that may not have migration files
     try {
       await sequelize.sync({ alter: true });
