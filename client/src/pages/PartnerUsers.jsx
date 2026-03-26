@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userManagementAPI } from '../lib/api';
-import { 
-  ArrowLeft, Plus, Edit2, Trash2, Save, X, Search, 
-  Key, CheckCircle, XCircle, Clock, Building2
+import {
+  ArrowLeft, Plus, Edit2, Trash2, Save, X, Search,
+  Key, CheckCircle, XCircle, Clock, Building2,
+  ArrowUp, ArrowDown, ArrowUpDown
 } from 'lucide-react';
 
 const PartnerUsers = () => {
@@ -20,6 +21,8 @@ const PartnerUsers = () => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({});
   const [showApprovalPanel, setShowApprovalPanel] = useState(false);
+  const [sortField, setSortField] = useState('company_name');
+  const [sortOrder, setSortOrder] = useState('asc');
 
   useEffect(() => {
     fetchUsers();
@@ -432,18 +435,42 @@ const PartnerUsers = () => {
             <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">업체코드</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">아이디</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">업체명</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">구분</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">담당자</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">연락처</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">이메일</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">주소</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">권한</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">승인상태</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">등록일</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                {[
+                  { key: 'partner_code', label: '업체코드' },
+                  { key: 'username', label: '아이디' },
+                  { key: 'company_name', label: '업체명' },
+                  { key: 'company_type', label: '구분' },
+                  { key: 'name', label: '담당자' },
+                  { key: 'phone', label: '연락처' },
+                  { key: 'email', label: '이메일' },
+                  { key: 'address', label: '주소' },
+                  { key: 'permission_class', label: '권한' },
+                  { key: 'approval_status', label: '승인상태' },
+                  { key: 'created_at', label: '등록일' },
+                  { key: 'is_active', label: '상태' },
+                ].map(col => (
+                  <th
+                    key={col.key}
+                    className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none transition-colors"
+                    onClick={() => {
+                      if (sortField === col.key) {
+                        setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        setSortField(col.key);
+                        setSortOrder('asc');
+                      }
+                    }}
+                  >
+                    <span className="flex items-center gap-1">
+                      {col.label}
+                      {sortField === col.key ? (
+                        sortOrder === 'asc' ? <ArrowUp size={12} className="text-blue-600" /> : <ArrowDown size={12} className="text-blue-600" />
+                      ) : (
+                        <ArrowUpDown size={10} className="text-gray-300" />
+                      )}
+                    </span>
+                  </th>
+                ))}
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">작업</th>
               </tr>
             </thead>
@@ -461,7 +488,23 @@ const PartnerUsers = () => {
                   </td>
                 </tr>
               ) : (
-                users.map((user, index) => (
+                [...users].sort((a, b) => {
+                  let aVal = a[sortField] ?? '';
+                  let bVal = b[sortField] ?? '';
+                  if (sortField === 'created_at') {
+                    aVal = new Date(aVal).getTime() || 0;
+                    bVal = new Date(bVal).getTime() || 0;
+                  } else if (sortField === 'is_active') {
+                    aVal = aVal ? 1 : 0;
+                    bVal = bVal ? 1 : 0;
+                  } else {
+                    aVal = String(aVal).toLowerCase();
+                    bVal = String(bVal).toLowerCase();
+                  }
+                  if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+                  if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+                  return 0;
+                }).map((user, index) => (
                   <tr key={user.id} className={!user.is_active ? 'bg-gray-50 opacity-60' : ''}>
                     <td className="px-3 py-2 text-xs text-gray-400">{index + 1}</td>
                     <td className="px-3 py-2 text-xs font-medium text-purple-600">{user.partner_code || '-'}</td>
