@@ -84,13 +84,47 @@ export default function QRScanner({
     }
   }, []);
 
-  // 카메라 시작
+  // 카메라 시작 — stream 연결 후 loadedmetadata 대기 → play()
   const startCamera = useCallback(async () => {
-    if (streamRef.current && videoRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      await videoRef.current.play();
-      setScanning(true);
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!stream || !video) return;
+
+    // 이전 play() 중단 방지
+    video.pause();
+    video.srcObject = null;
+
+    // stream 재연결
+    video.srcObject = stream;
+    video.setAttribute('playsinline', 'true');
+    video.setAttribute('autoplay', 'true');
+    video.muted = true;
+
+    // metadata 로드 대기 후 play
+    await new Promise((resolve) => {
+      const onLoaded = () => {
+        video.removeEventListener('loadedmetadata', onLoaded);
+        resolve();
+      };
+      if (video.readyState >= 1) {
+        resolve();
+      } else {
+        video.addEventListener('loadedmetadata', onLoaded);
+      }
+    });
+
+    try {
+      await video.play();
+    } catch (e) {
+      // "interrupted by new load" 에러는 무시하고 재시도
+      if (e.name === 'AbortError') {
+        await new Promise(r => setTimeout(r, 300));
+        try { await video.play(); } catch (_) {}
+      } else {
+        setErrorMessage(`카메라 재생 실패: ${e.message}`);
+      }
     }
+    setScanning(true);
   }, []);
 
   // 카메라 중지

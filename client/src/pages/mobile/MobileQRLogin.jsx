@@ -79,27 +79,50 @@ export default function MobileQRLogin() {
     }
   }, [stream, scanInterval])
 
-  // stream 변경 시 video에 연결 (타이밍 문제 해결)
+  // 안전한 play — loadedmetadata 대기 후 실행, AbortError 재시도
+  const safePlay = async (video) => {
+    if (!video || !video.srcObject) return
+    await new Promise((resolve) => {
+      if (video.readyState >= 1) return resolve()
+      const h = () => { video.removeEventListener('loadedmetadata', h); resolve() }
+      video.addEventListener('loadedmetadata', h)
+    })
+    try {
+      await video.play()
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        await new Promise(r => setTimeout(r, 300))
+        try { await video.play() } catch (_) {}
+      }
+    }
+  }
+
+  // stream 변경 시 video에 연결 (단일 진입점)
   useEffect(() => {
     if (stream && videoRef.current) {
       const video = videoRef.current
+      video.pause()
+      video.srcObject = null
       video.srcObject = stream
-      video.play().then(() => {
+      video.muted = true
+      video.setAttribute('playsinline', 'true')
+      safePlay(video).then(() => {
         console.log('[QR] Camera playing via useEffect')
         startAutoScan()
-      }).catch(err => console.error('[QR] play error:', err))
+      })
     }
-  }, [stream, scanning]) // scanning이 true가 되어야 video DOM이 존재
+  }, [stream, scanning])
 
-  // video ref 콜백 — DOM에 video가 나타나면 즉시 스트림 연결
+  // video ref 콜백
   const videoCallbackRef = (node) => {
     videoRef.current = node
     if (node && stream) {
       node.srcObject = stream
-      node.play().then(() => {
+      node.muted = true
+      safePlay(node).then(() => {
         console.log('[QR] Camera playing via ref callback')
         startAutoScan()
-      }).catch(err => console.error('[QR] play error:', err))
+      })
     }
   }
 
@@ -132,24 +155,23 @@ export default function MobileQRLogin() {
       setStream(mediaStream)
 
       // 3) video DOM이 이미 있으면 직접 연결
-      const tryConnect = () => {
+      const tryConnect = (retries = 0) => {
         const video = videoRef.current
         if (video) {
+          video.pause()
+          video.srcObject = null
           video.srcObject = mediaStream
-          video.setAttribute('autoplay', '')
-          video.setAttribute('playsinline', '')
-          video.setAttribute('muted', '')
           video.muted = true
-          video.play().then(() => {
+          video.setAttribute('playsinline', 'true')
+          safePlay(video).then(() => {
             console.log('[QR] Camera playing OK, tracks:', mediaStream.getVideoTracks().length)
             startAutoScan()
           }).catch(err => {
             console.error('[QR] play() failed:', err)
             setCameraError('카메라 재생 실패: ' + err.message)
           })
-        } else {
-          // video DOM이 아직 없으면 50ms 후 재시도 (최대 10번)
-          setTimeout(tryConnect, 50)
+        } else if (retries < 10) {
+          setTimeout(() => tryConnect(retries + 1), 50)
         }
       }
       tryConnect()
