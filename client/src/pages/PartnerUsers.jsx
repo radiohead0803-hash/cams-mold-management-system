@@ -450,24 +450,40 @@ const PartnerUsers = () => {
             />
             {editingId && (
               <>
-                <select
-                  value={formData.permission_class || 'user'}
-                  onChange={(e) => setFormData({ ...formData, permission_class: e.target.value })}
-                  className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  {permissionClasses.map(cls => (
-                    <option key={cls.class_code} value={cls.class_code}>{cls.class_name}</option>
-                  ))}
-                </select>
-                <label className="flex items-center gap-2 px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_active || false}
-                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="w-4 h-4"
-                  />
-                  <span>활성화</span>
-                </label>
+                <div className="col-span-4 border-t border-blue-200 pt-3 mt-1">
+                  <p className="text-xs text-blue-600 font-medium mb-2">계정 정보</p>
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="px-3 py-2 bg-white border rounded-lg">
+                      <span className="text-xs text-gray-500">아이디</span>
+                      <p className="text-sm font-medium text-blue-700">{formData.username || '-'}</p>
+                    </div>
+                    <input
+                      type="password"
+                      placeholder="새 비밀번호 (변경 시 입력)"
+                      value={formData.new_password || ''}
+                      onChange={(e) => setFormData({ ...formData, new_password: e.target.value })}
+                      className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <select
+                      value={formData.permission_class || 'user'}
+                      onChange={(e) => setFormData({ ...formData, permission_class: e.target.value })}
+                      className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      {permissionClasses.map(cls => (
+                        <option key={cls.class_code} value={cls.class_code}>{cls.class_name}</option>
+                      ))}
+                    </select>
+                    <label className="flex items-center gap-2 px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_active || false}
+                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span>활성화</span>
+                    </label>
+                  </div>
+                </div>
               </>
             )}
           </div>

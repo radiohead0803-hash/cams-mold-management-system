@@ -368,19 +368,26 @@ const updatePartnerUser = async (req, res) => {
     const updateFields = [];
     const replacements = { id };
     
+    // 비밀번호 변경 처리
+    if (req.body.new_password && req.body.new_password.length >= 4) {
+      const hashed = await bcrypt.hash(req.body.new_password, 10);
+      updateFields.push('password_hash = :password_hash');
+      replacements.password_hash = hashed;
+    }
+
     const allowedFields = [
       'name', 'email', 'phone', 'company_name',
       'partner_contact', 'partner_address',
       'permission_class', 'is_active'
     ];
-    
+
     for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
         updateFields.push(`${field} = :${field}`);
         replacements[field] = req.body[field];
       }
     }
-    
+
     if (updateFields.length === 0) {
       return res.status(400).json({
         success: false,
