@@ -7,6 +7,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, Flashlight, FlashlightOff, Keyboard, X, AlertTriangle, RefreshCw } from 'lucide-react';
+import jsQR from 'jsqr';
 
 // 카메라 권한 상태
 const CAMERA_STATUS = {
@@ -116,34 +117,51 @@ export default function QRScanner({
     }
   }, [torchEnabled, torchSupported]);
 
-  // QR 코드 스캔 (BarcodeDetector API 사용)
+  // QR 코드 스캔 (BarcodeDetector → jsQR 폴백)
   const scanQRCode = useCallback(async () => {
     if (!videoRef.current || !scanning) return;
 
-    // 디바운스 체크
     const now = Date.now();
     if (now - lastScanRef.current < debounceMs) return;
 
     try {
-      // BarcodeDetector API 지원 확인
+      let code = null;
+
+      // 1차: BarcodeDetector API (Chrome Android 등)
       if ('BarcodeDetector' in window) {
-        const barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
-        const barcodes = await barcodeDetector.detect(videoRef.current);
-        
-        if (barcodes.length > 0) {
-          lastScanRef.current = now;
-          const code = barcodes[0].rawValue;
-          
-          // 진동 피드백
-          if (navigator.vibrate) {
-            navigator.vibrate(100);
+        try {
+          const barcodeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+          const barcodes = await barcodeDetector.detect(videoRef.current);
+          if (barcodes.length > 0) {
+            code = barcodes[0].rawValue;
           }
-          
-          onScan?.(code);
+        } catch (e) {
+          // BarcodeDetector 실패 시 jsQR 폴백
         }
-      } else {
-        // BarcodeDetector 미지원 시 대체 로직 필요
-        console.warn('BarcodeDetector not supported');
+      }
+
+      // 2차: jsQR 폴백 (삼성 인터넷, Firefox, iOS Safari 등)
+      if (!code && canvasRef.current && videoRef.current.videoWidth > 0) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const qrResult = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert'
+        });
+        if (qrResult?.data) {
+          code = qrResult.data;
+        }
+      }
+
+      // 결과 처리
+      if (code) {
+        lastScanRef.current = now;
+        if (navigator.vibrate) navigator.vibrate(100);
+        onScan?.(code);
       }
     } catch (error) {
       console.error('QR scan error:', error);
