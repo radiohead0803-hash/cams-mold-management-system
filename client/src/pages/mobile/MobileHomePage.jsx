@@ -316,8 +316,76 @@ function getManagementConfig(role) {
 }
 
 function mapRoleToApiParam(role) {
-  if (role === 'system_admin' || role === 'mold_developer') return 'developer';
-  return role;
+  const roleMap = {
+    system_admin: 'system_admin',
+    mold_developer: 'developer',
+    maker: 'maker',
+    plant: 'plant',
+  };
+  return roleMap[role] || role;
+}
+
+/**
+ * Transform role-specific API lists into a unified recentActivities array.
+ */
+function mapApiToActivities(data, role) {
+  if (!data) return [];
+  const activities = [];
+
+  // Developer / system_admin: recentAlerts + recentMolds
+  if (data.recentAlerts?.length) {
+    data.recentAlerts.forEach((a) => {
+      activities.push({
+        id: `alert-${a.id}`,
+        type: a.priority === 'high' ? 'repair' : 'default',
+        description: a.message || a.title || '알림',
+        moldNumber: a.title || '',
+        timestamp: a.created_at,
+      });
+    });
+  }
+  if (data.recentMolds?.length) {
+    data.recentMolds.forEach((m) => {
+      activities.push({
+        id: `mold-${m.id}`,
+        type: 'default',
+        description: `${m.part_name || m.mold_code} ${m.status || ''}`,
+        moldNumber: m.mold_code || '',
+        timestamp: m.updated_at,
+      });
+    });
+  }
+
+  // Maker: recentWorks
+  if (data.recentWorks?.length) {
+    data.recentWorks.forEach((w) => {
+      activities.push({
+        id: `work-${w.id}`,
+        type: 'repair',
+        description: `${w.mold?.mold_name || w.mold?.mold_code || ''} 수리 ${w.status || ''}`,
+        moldNumber: w.mold?.mold_code || '',
+        timestamp: w.updated_at,
+      });
+    });
+  }
+
+  // Plant: recentChecks
+  if (data.recentChecks?.length) {
+    data.recentChecks.forEach((c) => {
+      activities.push({
+        id: `check-${c.id}`,
+        type: 'check',
+        description: `${c.mold?.mold_name || c.mold?.mold_code || ''} 일상점검`,
+        moldNumber: c.mold?.mold_code || '',
+        timestamp: c.created_at,
+      });
+    });
+  }
+
+  // Sort by timestamp descending and take top 5
+  return activities
+    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
+    .slice(0, 5);
 }
 
 // ─── Main Component ───
@@ -347,23 +415,53 @@ export default function MobileHomePage() {
       const apiRole = mapRoleToApiParam(role);
 
       const [dashRes, alertsRes] = await Promise.all([
-        api.get(`/mobile/dashboard/${apiRole}`).catch(() => ({ data: { success: false } })),
-        api.get('/alerts', { params: { is_read: false, limit: 1 } }).catch(() => ({ data: { data: { total: 0 } } })),
+        api.get(`/mobile/dashboard/${apiRole}`).catch((err) => {
+          console.error('Dashboard API failed:', err);
+          return { data: { success: false } };
+        }),
+        api.get('/alerts', { params: { is_read: false, limit: 1 } }).catch(() => ({
+          data: { data: { total: 0 } },
+        })),
       ]);
 
-      if (dashRes.data?.success) {
-        setDashboardData(dashRes.data.data);
+      if (dashRes.data?.success && dashRes.data.data) {
+        const apiData = dashRes.data.data;
+        setDashboardData(apiData);
+
+        // Build recent activities from API response, then supplement with local storage
+        const apiActivities = mapApiToActivities(apiData, role);
+        try {
+          const localActions = await recentActions.getAll(5).catch(() => []);
+          // Merge: API activities first, then local, deduplicate by id, cap at 5
+          const seen = new Set();
+          const merged = [];
+          [...apiActivities, ...localActions].forEach((a) => {
+            const key = a.id || `${a.timestamp}-${a.description}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              merged.push(a);
+            }
+          });
+          setRecentActivities(merged.slice(0, 5));
+        } catch {
+          setRecentActivities(apiActivities);
+        }
+      } else {
+        // API failed — use local storage activities as fallback
+        try {
+          const localActions = await recentActions.getAll(5).catch(() => []);
+          setRecentActivities(localActions);
+        } catch { /* ignore */ }
       }
 
       setUnreadAlerts(alertsRes.data?.data?.total || 0);
-
-      // Recent activities from local storage
-      try {
-        const actions = await recentActions.getAll(5);
-        setRecentActivities(actions);
-      } catch { /* ignore */ }
     } catch (error) {
       console.error('Failed to load dashboard:', error);
+      // Fallback: try local storage for activities
+      try {
+        const localActions = await recentActions.getAll(5).catch(() => []);
+        setRecentActivities(localActions);
+      } catch { /* ignore */ }
     } finally {
       setLoading(false);
     }
@@ -410,13 +508,21 @@ export default function MobileHomePage() {
   const quickActions = getQuickActions(role, unreadAlerts);
   const mgmtConfig = getManagementConfig(role);
 
-  // Management section values from summary
+  // Management section values from API summary
   const getManagementValues = () => {
     switch (role) {
       case 'system_admin':
-        return { repairs: summary.pendingRepairs || 0, transfers: 0, scrapping: summary.ngMolds || 0 };
+        return {
+          repairs: summary.pendingRepairs ?? 0,
+          transfers: summary.transferPending ?? 0,
+          scrapping: summary.ngMolds ?? 0,
+        };
       case 'mold_developer':
-        return { checklist: summary.pendingApprovals || 0, maintenance: summary.inspectionDue || 0, scrapping: summary.ngMolds || 0 };
+        return {
+          checklist: summary.pendingApprovals ?? 0,
+          maintenance: summary.inspectionDue ?? 0,
+          scrapping: summary.ngMolds ?? 0,
+        };
       default:
         return {};
     }
@@ -424,13 +530,14 @@ export default function MobileHomePage() {
 
   const mgmtValues = getManagementValues();
 
-  // Maker progress list
+  // Maker progress list from API assignedMoldList
   const makerProgressList = dashboardData?.assignedMoldList || [];
-  // Plant inspection summary
+
+  // Plant inspection summary from API
   const plantInspection = {
-    completed: summary.todayChecks || 0,
-    pending: summary.needsCheck || 0,
-    overdue: 0,
+    completed: summary.todayChecks ?? 0,
+    pending: summary.needsCheck ?? 0,
+    overdue: summary.overdueChecks ?? 0,
   };
 
   // Activity icon mapping
