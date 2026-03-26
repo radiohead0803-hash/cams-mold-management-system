@@ -511,11 +511,94 @@ export default function CompanyProfile() {
               <InputField label="이메일" field="email" formData={formData} setFormData={setFormData} editMode={editMode} type="email" />
               <InputField label="전화번호" field="phone" formData={formData} setFormData={setFormData} editMode={editMode} />
               <InputField label="팩스" field="fax" formData={formData} setFormData={setFormData} editMode={editMode} />
-              <InputField label="우편번호" field="postal_code" formData={formData} setFormData={setFormData} editMode={editMode} />
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">우편번호</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={formData.postal_code || ''}
+                    placeholder="우편번호"
+                    className="flex-1 border rounded px-3 py-2 text-sm bg-gray-100 cursor-default"
+                  />
+                  {editMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!window.daum || !window.daum.Postcode) {
+                          alert('주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+                          return;
+                        }
+                        new window.daum.Postcode({
+                          oncomplete: (data) => {
+                            const fullAddress = data.roadAddress || data.jibunAddress;
+                            const updatedForm = {
+                              ...formData,
+                              postal_code: data.zonecode,
+                              address: fullAddress,
+                              address_detail: ''
+                            };
+                            setFormData(updatedForm);
+
+                            // 상세주소 입력란 포커스
+                            setTimeout(() => {
+                              const detailInput = document.getElementById('address_detail_input');
+                              if (detailInput) detailInput.focus();
+                            }, 100);
+
+                            // Nominatim 지오코딩으로 GPS 좌표 조회
+                            fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fullAddress)}&format=json&countrycodes=kr&limit=1`, {
+                              headers: { 'Accept-Language': 'ko' }
+                            })
+                              .then(res => res.json())
+                              .then(results => {
+                                if (results && results.length > 0) {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    latitude: parseFloat(results[0].lat).toFixed(6),
+                                    longitude: parseFloat(results[0].lon).toFixed(6)
+                                  }));
+                                }
+                              })
+                              .catch(err => console.warn('Geocoding failed:', err));
+                          }
+                        }).open();
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors whitespace-nowrap"
+                    >
+                      <Search size={14} />
+                      주소 검색
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <InputField label="주소" field="address" formData={formData} setFormData={setFormData} editMode={editMode} />
-              <InputField label="상세주소" field="address_detail" formData={formData} setFormData={setFormData} editMode={editMode} />
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">주소</label>
+                <input
+                  type="text"
+                  readOnly
+                  value={formData.address || ''}
+                  placeholder="주소 검색 버튼을 클릭하세요"
+                  className="w-full border rounded px-3 py-2 text-sm bg-gray-100 cursor-default"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">상세주소</label>
+                {editMode ? (
+                  <input
+                    id="address_detail_input"
+                    type="text"
+                    value={formData.address_detail || ''}
+                    onChange={e => setFormData({...formData, address_detail: e.target.value})}
+                    placeholder="상세주소를 입력하세요"
+                    className="w-full border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                ) : (
+                  <p className="text-sm text-gray-900 bg-gray-50 rounded px-3 py-2">{formData.address_detail || '-'}</p>
+                )}
+              </div>
             </div>
 
             {/* GPS 좌표 */}
@@ -529,36 +612,18 @@ export default function CompanyProfile() {
                   </span>
                 )}
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">위도 (Latitude)</label>
-                  {editMode ? (
-                    <input
-                      type="number" step="0.000001" placeholder="예: 35.1500"
-                      value={formData.latitude || ''}
-                      onChange={(e) => setFormData({...formData, latitude: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  ) : (
-                    <div className="px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800">
-                      {formData.latitude || '-'}
-                    </div>
-                  )}
+                  <div className="px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800 font-mono">
+                    {formData.latitude || '-'}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">경도 (Longitude)</label>
-                  {editMode ? (
-                    <input
-                      type="number" step="0.000001" placeholder="예: 126.8300"
-                      value={formData.longitude || ''}
-                      onChange={(e) => setFormData({...formData, longitude: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  ) : (
-                    <div className="px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800">
-                      {formData.longitude || '-'}
-                    </div>
-                  )}
+                  <div className="px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800 font-mono">
+                    {formData.longitude || '-'}
+                  </div>
                 </div>
                 <div className="flex items-end gap-2">
                   {editMode && (
@@ -584,9 +649,11 @@ export default function CompanyProfile() {
                       className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
                     >
                       <MapPin size={14} />
-                      현재 위치 가져오기
+                      현재 위치
                     </button>
                   )}
+                </div>
+                <div className="flex items-end gap-2">
                   {formData.latitude && formData.longitude && (
                     <a
                       href={`https://map.kakao.com/link/map/${formData.company_name || '업체'},${formData.latitude},${formData.longitude}`}
@@ -601,7 +668,7 @@ export default function CompanyProfile() {
               </div>
               {formData.latitude && formData.longitude && (
                 <p className="mt-2 text-xs text-gray-500">
-                  📍 위치가 등록되면 금형 위치 추적의 기준점으로 활용됩니다.
+                  주소 검색 시 GPS 좌표가 자동으로 조회됩니다. 위치가 등록되면 금형 위치 추적의 기준점으로 활용됩니다.
                 </p>
               )}
             </div>
