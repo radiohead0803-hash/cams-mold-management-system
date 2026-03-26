@@ -9,7 +9,7 @@ const getInternalUsers = async (req, res) => {
   try {
     const { search, department, permission_class, is_active } = req.query;
     
-    let whereClause = "WHERE user_type IN ('system_admin', 'mold_developer') AND partner_type IS NULL";
+    let whereClause = "WHERE user_type IN ('system_admin', 'mold_developer', 'staff') AND partner_type IS NULL";
     const replacements = {};
     
     if (search) {
@@ -85,7 +85,7 @@ const createInternalUser = async (req, res) => {
         created_at, updated_at
       ) VALUES (
         :username, :password_hash, :employee_id, :name, :email, :phone,
-        'mold_developer', :department, :position, :factory, :permission_class,
+        :user_type, :department, :position, :factory, :permission_class,
         true, false, 'approved',
         NOW(), NOW()
       ) RETURNING *
@@ -94,7 +94,8 @@ const createInternalUser = async (req, res) => {
         username, password_hash, employee_id, name,
         email: email || null, phone: phone || null,
         department: department || null, position: position || null,
-        factory: factory || null, permission_class: permission_class || 'user'
+        factory: factory || null, permission_class: permission_class || 'user',
+        user_type: permission_class === 'admin' ? 'system_admin' : permission_class === 'manager' ? 'mold_developer' : 'staff'
       }
     });
     
