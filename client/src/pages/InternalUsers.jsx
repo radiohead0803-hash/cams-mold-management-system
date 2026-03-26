@@ -40,6 +40,8 @@ const InternalUsers = () => {
   const [formData, setFormData] = useState({});
   const [sortField, setSortField] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 15;
 
   const { columnWidths, handleMouseDown } = useResizableColumns(
     'internalUsers_colWidths',
@@ -90,6 +92,7 @@ const InternalUsers = () => {
   };
 
   const handleSearch = () => {
+    setCurrentPage(1);
     fetchUsers();
   };
 
@@ -465,25 +468,28 @@ const InternalUsers = () => {
                   </td>
                 </tr>
               ) : (
-                [...users].sort((a, b) => {
-                  let aVal = a[sortField] ?? '';
-                  let bVal = b[sortField] ?? '';
-                  if (sortField === 'created_at') {
-                    aVal = new Date(aVal).getTime() || 0;
-                    bVal = new Date(bVal).getTime() || 0;
-                  } else if (sortField === 'is_active') {
-                    aVal = aVal ? 1 : 0;
-                    bVal = bVal ? 1 : 0;
-                  } else {
-                    aVal = String(aVal).toLowerCase();
-                    bVal = String(bVal).toLowerCase();
-                  }
-                  if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-                  if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-                  return 0;
-                }).map((user, index) => (
+                (() => {
+                  const sorted = [...users].sort((a, b) => {
+                    let aVal = a[sortField] ?? '';
+                    let bVal = b[sortField] ?? '';
+                    if (sortField === 'created_at') {
+                      aVal = new Date(aVal).getTime() || 0;
+                      bVal = new Date(bVal).getTime() || 0;
+                    } else if (sortField === 'is_active') {
+                      aVal = aVal ? 1 : 0;
+                      bVal = bVal ? 1 : 0;
+                    } else {
+                      aVal = String(aVal).toLowerCase();
+                      bVal = String(bVal).toLowerCase();
+                    }
+                    if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+                    return 0;
+                  });
+                  const paginatedUsers = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+                  return paginatedUsers.map((user, index) => (
                   <tr key={user.id} className={!user.is_active ? 'bg-gray-50 opacity-60' : ''}>
-                    <td className="px-2 py-2 text-xs text-gray-400" style={cellStyle('#')}>{index + 1}</td>
+                    <td className="px-2 py-2 text-xs text-gray-400" style={cellStyle('#')}>{(currentPage - 1) * PAGE_SIZE + index + 1}</td>
                     <td className="px-2 py-2 text-xs font-medium text-blue-600" style={cellStyle('username')}>{user.username}</td>
                     <td className="px-2 py-2 text-xs" style={cellStyle('employee_id')}>{user.employee_id || '-'}</td>
                     <td className="px-2 py-2 text-xs font-medium" style={cellStyle('name')}>{user.name}</td>
@@ -548,11 +554,58 @@ const InternalUsers = () => {
                       </div>
                     </td>
                   </tr>
-                ))
+                ));
+                })()
               )}
             </tbody>
           </table>
         </div>
+
+        {/* 페이지네이션 */}
+        {!loading && users.length > 0 && (() => {
+          const totalPages = Math.ceil(users.length / PAGE_SIZE);
+          if (totalPages <= 1) return null;
+          const startPage = Math.max(1, currentPage - 2);
+          const endPage = Math.min(totalPages, startPage + 4);
+          const pages = [];
+          for (let i = startPage; i <= endPage; i++) pages.push(i);
+          return (
+            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+              <span className="text-xs text-gray-600">
+                총 {users.length}명 | 페이지 {currentPage}/{totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 text-xs rounded border bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  이전
+                </button>
+                {pages.map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setCurrentPage(p)}
+                    className={`px-2 py-1 text-xs rounded border min-w-[28px] ${
+                      p === currentPage
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-2 py-1 text-xs rounded border bg-white hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  다음
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* 통계 */}
