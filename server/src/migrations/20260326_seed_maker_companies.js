@@ -84,6 +84,11 @@ const MAKER_COMPANIES = [
     code: 'E0249', name: '에스에스몰드',
     address: '광주 광산구 진곡산단4번로 67-21',
     biz_no: '410-86-12973', rep: '김동인'
+  },
+  {
+    code: 'E0198', name: '제일이앤티',
+    address: '광주 광산구 평동산단2번로 112, 나동 1층',
+    biz_no: '228-86-00747', rep: '임영재'
   }
 ];
 
