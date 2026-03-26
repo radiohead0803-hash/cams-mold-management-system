@@ -1241,6 +1241,16 @@ const startServer = async () => {
       console.warn('⚠️ Maker companies seed:', e.message);
     }
 
+    // 금형제조업체 GPS 좌표 반영 + 금형 위치 연동
+    try {
+      const gpsUpdate = require('./migrations/20260326_update_maker_gps');
+      const QueryInterface3 = sequelize.getQueryInterface();
+      await gpsUpdate.up(QueryInterface3, require('sequelize'));
+      console.log('✅ Maker GPS coordinates updated.');
+    } catch (e) {
+      console.warn('⚠️ Maker GPS update:', e.message);
+    }
+
     // Sync remaining models that may not have migration files
     try {
       await sequelize.sync({ alter: true });

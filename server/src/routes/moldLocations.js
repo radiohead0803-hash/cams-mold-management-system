@@ -421,4 +421,66 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+/**
+ * GET /api/v1/mold-locations/companies
+ * GPS 좌표가 있는 업체 목록 (지도 마커용)
+ * - 업체별 금형 수, 활성 금형 수 포함
+ */
+router.get('/companies', async (req, res) => {
+  try {
+    const { sequelize } = require('../models/newIndex');
+    const { company_type } = req.query;
+
+    let whereClause = 'WHERE c.latitude IS NOT NULL AND c.longitude IS NOT NULL AND c.is_active = true';
+    const binds = [];
+
+    if (company_type) {
+      binds.push(company_type);
+      whereClause += ` AND c.company_type = $${binds.length}`;
+    }
+
+    const [rows] = await sequelize.query(`
+      SELECT
+        c.id, c.company_code, c.company_name, c.company_type,
+        c.address, c.representative, c.phone,
+        c.latitude, c.longitude,
+        COUNT(DISTINCT m_maker.id) as maker_mold_count,
+        COUNT(DISTINCT m_plant.id) as plant_mold_count,
+        COUNT(DISTINCT CASE WHEN m_maker.status = 'active' THEN m_maker.id END) as maker_active_count,
+        COUNT(DISTINCT CASE WHEN m_plant.status = 'active' THEN m_plant.id END) as plant_active_count
+      FROM companies c
+      LEFT JOIN molds m_maker ON m_maker.maker_company_id = c.id
+      LEFT JOIN molds m_plant ON m_plant.plant_company_id = c.id
+      ${whereClause}
+      GROUP BY c.id
+      ORDER BY c.company_name
+    `, { bind: binds });
+
+    const companies = rows.map(r => ({
+      id: r.id,
+      company_code: r.company_code,
+      company_name: r.company_name,
+      company_type: r.company_type,
+      address: r.address,
+      representative: r.representative,
+      phone: r.phone,
+      latitude: parseFloat(r.latitude),
+      longitude: parseFloat(r.longitude),
+      total_molds: parseInt(r.maker_mold_count || 0) + parseInt(r.plant_mold_count || 0),
+      active_molds: parseInt(r.maker_active_count || 0) + parseInt(r.plant_active_count || 0)
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        companies,
+        total: companies.length
+      }
+    });
+  } catch (error) {
+    console.error('업체 위치 조회 오류:', error);
+    res.status(500).json({ success: false, message: '업체 위치 조회 실패', error: error.message });
+  }
+});
+
 module.exports = router;
