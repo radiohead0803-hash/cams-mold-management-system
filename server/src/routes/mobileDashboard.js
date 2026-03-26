@@ -78,7 +78,7 @@ router.get('/dashboard/molds', async (req, res) => {
     }
 
     if (search) {
-      conditions.push(`(ms.mold_number ILIKE $${bindIdx} OR ms.part_name ILIKE $${bindIdx} OR ms.car_model ILIKE $${bindIdx})`);
+      conditions.push(`(ms.mold_code ILIKE $${bindIdx} OR ms.part_name ILIKE $${bindIdx} OR ms.car_model ILIKE $${bindIdx})`);
       binds.push(`%${search}%`);
       bindIdx++;
     }
@@ -96,7 +96,7 @@ router.get('/dashboard/molds', async (req, res) => {
 
     // 데이터
     const molds = await safeQueryAll(`
-      SELECT ms.id, ms.mold_number, ms.part_name, ms.car_model,
+      SELECT ms.id, ms.mold_code, ms.part_name, ms.car_model,
              ms.status, ms.current_shots, ms.target_shots,
              ms.progress, ms.target_delivery_date,
              ms.updated_at,
@@ -254,7 +254,7 @@ async function getAdminDeveloperDashboard() {
   const recentActivities = await safeQueryAll(`
     SELECT qs.id, qs.session_token, qs.scan_type, qs.created_at,
            u.name AS user_name,
-           ms.mold_number, ms.part_name
+           ms.mold_code, ms.part_name
     FROM qr_sessions qs
     LEFT JOIN users u ON qs.user_id = u.id
     LEFT JOIN mold_specifications ms ON qs.mold_id = ms.id
@@ -337,7 +337,7 @@ async function getMakerDashboard(companyId) {
 
   // --- Assigned molds (top 10 with progress) ---
   const assignedMolds = await safeQueryAll(`
-    SELECT ms.id, ms.mold_number, ms.part_name, ms.car_model,
+    SELECT ms.id, ms.mold_code, ms.part_name, ms.car_model,
            ms.status, ms.progress, ms.target_delivery_date,
            ms.current_shots, ms.target_shots,
            ms.created_at, ms.updated_at
@@ -360,7 +360,7 @@ async function getMakerDashboard(companyId) {
   const recentActivities = await safeQueryAll(`
     (
       SELECT 'repair' AS type, rr.id, rr.title, rr.status, rr.priority,
-             rr.created_at, ms.mold_number, ms.part_name
+             rr.created_at, ms.mold_code, ms.part_name
       FROM repair_requests rr
       JOIN mold_specifications ms ON rr.mold_id = ms.id
       WHERE rr.assigned_maker_id = $1
@@ -370,7 +370,7 @@ async function getMakerDashboard(companyId) {
     UNION ALL
     (
       SELECT 'specification' AS type, ms.id, ms.part_name AS title, ms.status, NULL AS priority,
-             ms.updated_at AS created_at, ms.mold_number, ms.part_name
+             ms.updated_at AS created_at, ms.mold_code, ms.part_name
       FROM mold_specifications ms
       WHERE ms.maker_id = $1
       ORDER BY ms.updated_at DESC
@@ -444,7 +444,7 @@ async function getPlantDashboard(companyId) {
   const recentActivities = await safeQueryAll(`
     (
       SELECT 'daily_check' AS type, dc.id, dc.status, dc.check_date AS created_at,
-             ms.mold_number, ms.part_name, u.name AS user_name
+             ms.mold_code, ms.part_name, u.name AS user_name
       FROM daily_checks dc
       LEFT JOIN mold_specifications ms ON dc.mold_id = ms.id
       LEFT JOIN users u ON dc.inspector_id = u.id
@@ -455,7 +455,7 @@ async function getPlantDashboard(companyId) {
     UNION ALL
     (
       SELECT 'repair' AS type, rr.id, rr.status, rr.created_at,
-             ms.mold_number, ms.part_name, u.name AS user_name
+             ms.mold_code, ms.part_name, u.name AS user_name
       FROM repair_requests rr
       LEFT JOIN mold_specifications ms ON rr.mold_id = ms.id
       LEFT JOIN users u ON rr.requester_id = u.id

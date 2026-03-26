@@ -31,8 +31,10 @@ export default function MobileMoldList() {
       let molds = [];
       try {
         const response = await api.get('/mold-specifications', { params });
-        molds = response.data?.data || response.data?.molds || [];
-        if (Array.isArray(response.data)) molds = response.data;
+        const d = response.data?.data;
+        // 응답 형식: { data: { total, items } } 또는 { data: [...] }
+        molds = d?.items || d?.rows || (Array.isArray(d) ? d : []);
+        if (!molds.length && Array.isArray(response.data)) molds = response.data;
       } catch (e1) {
         // 2차: mobile/dashboard/molds 폴백
         try {

@@ -101,11 +101,15 @@ export default function MobileQRLogin() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
+        videoRef.current.setAttribute('playsinline', '')
+        videoRef.current.setAttribute('muted', '')
         setStream(mediaStream)
         setScanning(true)
-        
+
+        // play()를 즉시 호출 + metadata 로드 후 재호출
+        videoRef.current.play().catch(() => {})
         videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play()
+          videoRef.current.play().catch(() => {})
           startAutoScan()
         }
       }
@@ -367,11 +371,12 @@ export default function MobileQRLogin() {
 
             {/* 카메라 뷰 */}
             {scanning ? (
-              <div className="bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '4/3' }}>
+              <div className="bg-black rounded-lg overflow-hidden relative" style={{ minHeight: '300px' }}>
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
+                  muted
                   className="w-full h-full object-cover"
                 />
                 <canvas ref={canvasRef} className="hidden" />
