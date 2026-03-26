@@ -248,6 +248,7 @@ export default function CompanyProfile() {
       const updateData = {};
       const fields = [
         'phone', 'fax', 'email', 'address', 'address_detail', 'postal_code',
+        'latitude', 'longitude',
         'manager_name', 'manager_phone', 'manager_email',
         'representative', 'business_number',
         'production_capacity', 'equipment_list', 'certifications', 'specialties',
@@ -515,6 +516,94 @@ export default function CompanyProfile() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               <InputField label="주소" field="address" formData={formData} setFormData={setFormData} editMode={editMode} />
               <InputField label="상세주소" field="address_detail" formData={formData} setFormData={setFormData} editMode={editMode} />
+            </div>
+
+            {/* GPS 좌표 */}
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                <MapPin size={16} className="text-blue-600" />
+                GPS 위치 정보
+                {formData.latitude && formData.longitude && (
+                  <span className="ml-auto text-xs font-normal text-green-600 flex items-center gap-1">
+                    <CheckCircle size={12} /> 좌표 등록됨
+                  </span>
+                )}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">위도 (Latitude)</label>
+                  {editMode ? (
+                    <input
+                      type="number" step="0.000001" placeholder="예: 35.1500"
+                      value={formData.latitude || ''}
+                      onChange={(e) => setFormData({...formData, latitude: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  ) : (
+                    <div className="px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800">
+                      {formData.latitude || '-'}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">경도 (Longitude)</label>
+                  {editMode ? (
+                    <input
+                      type="number" step="0.000001" placeholder="예: 126.8300"
+                      value={formData.longitude || ''}
+                      onChange={(e) => setFormData({...formData, longitude: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  ) : (
+                    <div className="px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-800">
+                      {formData.longitude || '-'}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-end gap-2">
+                  {editMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!navigator.geolocation) {
+                          alert('이 브라우저에서는 GPS를 지원하지 않습니다.');
+                          return;
+                        }
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setFormData({
+                              ...formData,
+                              latitude: pos.coords.latitude.toFixed(6),
+                              longitude: pos.coords.longitude.toFixed(6)
+                            });
+                          },
+                          (err) => alert('위치를 가져올 수 없습니다: ' + err.message),
+                          { enableHighAccuracy: true, timeout: 10000 }
+                        );
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      <MapPin size={14} />
+                      현재 위치 가져오기
+                    </button>
+                  )}
+                  {formData.latitude && formData.longitude && (
+                    <a
+                      href={`https://map.kakao.com/link/map/${formData.company_name || '업체'},${formData.latitude},${formData.longitude}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-yellow-500 text-white text-sm rounded-md hover:bg-yellow-600 transition-colors"
+                    >
+                      <MapPin size={14} />
+                      지도 보기
+                    </a>
+                  )}
+                </div>
+              </div>
+              {formData.latitude && formData.longitude && (
+                <p className="mt-2 text-xs text-gray-500">
+                  📍 위치가 등록되면 금형 위치 추적의 기준점으로 활용됩니다.
+                </p>
+              )}
             </div>
           </section>
 
