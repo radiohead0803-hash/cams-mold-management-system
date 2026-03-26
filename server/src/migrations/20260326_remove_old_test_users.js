@@ -15,8 +15,8 @@
  * - MKR/PLT 업체에 연결된 테스트 사용자
  */
 
-// 삭제하지 않을 계정 (운영 필수)
-const KEEP_USERNAMES = ['admin', 'developer'];
+// 삭제하지 않을 계정 (개발/테스트/운영 필수)
+const KEEP_USERNAMES = ['admin', 'developer', 'hq_manager', 'maker1', 'plant1'];
 
 module.exports = {
   async up(queryInterface) {
