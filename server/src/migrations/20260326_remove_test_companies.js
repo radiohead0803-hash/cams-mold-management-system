@@ -2,7 +2,7 @@
 
 /**
  * MKR-xxx, PLT-xxx 테스트 업체 전체 삭제
- * - FK 트리거 일시 비활성화 후 삭제
+ * - 모든 FK 참조를 동적으로 찾아서 NULL/DELETE 처리
  */
 
 module.exports = {
@@ -17,49 +17,34 @@ module.exports = {
     }
 
     const idList = targets.map(t => t.id).join(',');
+    console.log(`🔍 삭제 대상 업체 ${targets.length}개`);
 
-    const t = await sequelize.transaction();
-    try {
-      await sequelize.query('SET session_replication_role = replica;', { transaction: t });
+    // 동적으로 companies 테이블을 참조하는 모든 FK 컬럼 조회
+    const [fkRefs] = await sequelize.query(`
+      SELECT tc.table_name, kcu.column_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name
+      JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+      WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_name = 'companies' AND ccu.column_name = 'id'
+    `);
 
-      // FK 참조 NULL 처리
-      const refs = [
-        ['users', 'company_id'],
-        ['molds', 'maker_company_id'],
-        ['molds', 'plant_company_id'],
-        ['mold_specifications', 'maker_company_id'],
-        ['mold_specifications', 'plant_company_id'],
-      ];
-      for (const [table, col] of refs) {
-        await sequelize.query(
-          `UPDATE "${table}" SET "${col}" = NULL WHERE "${col}" IN (${idList})`,
-          { transaction: t }
-        ).catch(() => {});
+    console.log(`📋 companies FK 참조 ${fkRefs.length}개 발견`);
+
+    for (const ref of fkRefs) {
+      try {
+        await sequelize.query(`UPDATE "${ref.table_name}" SET "${ref.column_name}" = NULL WHERE "${ref.column_name}" IN (${idList})`);
+      } catch (e) {
+        try {
+          await sequelize.query(`DELETE FROM "${ref.table_name}" WHERE "${ref.column_name}" IN (${idList})`);
+        } catch (e2) {
+          console.warn(`  ⚠️ ${ref.table_name}.${ref.column_name}: ${e2.message?.substring(0, 80)}`);
+        }
       }
-
-      // 관련 데이터 삭제
-      for (const table of ['company_equipments', 'company_contacts', 'company_certifications']) {
-        await sequelize.query(
-          `DELETE FROM "${table}" WHERE company_id IN (${idList})`,
-          { transaction: t }
-        ).catch(() => {});
-      }
-
-      // 업체 삭제
-      const [result] = await sequelize.query(
-        `DELETE FROM companies WHERE ${pattern} RETURNING company_code, company_name`,
-        { transaction: t }
-      );
-
-      await sequelize.query('SET session_replication_role = DEFAULT;', { transaction: t });
-      await t.commit();
-
-      console.log(`🗑️ 테스트 업체 ${result.length}개 삭제:`, result.map(r => `${r.company_code}(${r.company_name})`).join(', '));
-    } catch (error) {
-      await t.rollback();
-      console.error('❌ 테스트 업체 삭제 실패:', error.message);
-      throw error;
     }
+
+    const [result] = await sequelize.query(`DELETE FROM companies WHERE ${pattern} RETURNING company_code, company_name`);
+    console.log(`🗑️ 테스트 업체 ${result.length}개 삭제:`, result.map(r => `${r.company_code}(${r.company_name})`).join(', '));
   },
 
   async down() {}
