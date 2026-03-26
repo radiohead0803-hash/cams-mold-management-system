@@ -1251,6 +1251,16 @@ const startServer = async () => {
       console.warn('⚠️ Maker GPS update:', e.message);
     }
 
+    // 테스트용 업체 데이터 삭제 (MKR-001~005, PLT-001~003)
+    try {
+      const removeTest = require('./migrations/20260326_remove_test_companies');
+      const QueryInterface4 = sequelize.getQueryInterface();
+      await removeTest.up(QueryInterface4);
+      console.log('✅ Test companies removed.');
+    } catch (e) {
+      console.warn('⚠️ Test companies removal:', e.message);
+    }
+
     // Sync remaining models that may not have migration files
     try {
       await sequelize.sync({ alter: true });
