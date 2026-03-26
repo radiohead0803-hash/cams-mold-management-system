@@ -233,7 +233,7 @@ function getKpiConfig(role, summary) {
         { icon: ClipboardCheck, label: '오늘 점검', value: summary?.todayChecks, color: 'cyan', path: '/mobile/daily-check' },
         { icon: Wrench, label: '수리 대기', value: summary?.pendingRepairs, color: 'orange', path: '/mobile/repair-request' },
         { icon: TrendingUp, label: '오늘 생산', value: summary?.todayProduction, color: 'purple', path: '/mobile/reports' },
-        { icon: QrCode, label: 'QR 스캔', value: summary?.todayScans, color: 'indigo', path: '/qr/scan' },
+        { icon: QrCode, label: 'QR 스캔', value: summary?.todayScans, color: 'indigo', path: '/mobile/qr-login' },
       ];
     default:
       return [];
@@ -263,7 +263,7 @@ function getQuickActions(role, unreadAlerts) {
       { icon: Bell, label: '알림', color: 'orange', path: '/mobile/alerts', badge: unreadAlerts },
     ],
     maker: [
-      { icon: QrCode, label: 'QR스캔', color: 'blue', path: '/qr/scan' },
+      { icon: QrCode, label: 'QR스캔', color: 'blue', path: '/mobile/qr-login' },
       { icon: List, label: '금형목록', color: 'blue', path: '/mobile/molds' },
       { icon: Wrench, label: '수리요청', color: 'red', path: '/mobile/repair-request' },
       { icon: Truck, label: '출하체크', color: 'green', path: '/mobile/pre-production-checklist' },
@@ -273,7 +273,7 @@ function getQuickActions(role, unreadAlerts) {
       { icon: Bell, label: '알림', color: 'orange', path: '/mobile/alerts', badge: unreadAlerts },
     ],
     plant: [
-      { icon: QrCode, label: 'QR스캔', color: 'blue', path: '/qr/scan' },
+      { icon: QrCode, label: 'QR스캔', color: 'blue', path: '/mobile/qr-login' },
       { icon: ClipboardCheck, label: '일상점검', color: 'green', path: '/mobile/daily-check' },
       { icon: Calendar, label: '정기점검', color: 'purple', path: '/mobile/periodic-check' },
       { icon: Wrench, label: '수리요청', color: 'red', path: '/mobile/repair-request' },
