@@ -8,6 +8,11 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Skipping seed in production');
+      return;
+    }
+
     const now = new Date();
 
     // 제작처 샘플 데이터

@@ -5,6 +5,11 @@ const bcrypt = require('bcryptjs');
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Skipping seed in production');
+      return;
+    }
+
     const hashedPassword = await bcrypt.hash('password123', 10);
 
     // 1. 사용자 생성 (DATABASE_SCHEMA.md 기준 - user_type 사용)

@@ -106,7 +106,7 @@ const approvalWorkflowRouter = require('./routes/approvalWorkflow');
 const injectionConditionsRouter = require('./routes/injectionConditions');
 const weightRouter = require('./routes/weight');
 const materialRouter = require('./routes/material');
-const testDataRouter = require('./routes/testData');
+// const testDataRouter = require('./routes/testData'); // disabled — test data route not for production
 const alertsRouter = require('./routes/alerts');
 const preProductionChecklistRouter = require('./routes/preProductionChecklist');
 const maintenanceRouter = require('./routes/maintenance');
@@ -211,8 +211,8 @@ app.use('/api/v1/injection-conditions', injectionConditionsRouter);
 app.use('/api/v1/weight', weightRouter);
 // Material management (원재료 정보 이력관리)
 app.use('/api/v1/material', materialRouter);
-// Test data (테스트 데이터 삽입)
-app.use('/api/v1/test-data', testDataRouter);
+// Test data (테스트 데이터 삽입) — disabled for production safety
+// app.use('/api/v1/test-data', testDataRouter);
 // Alerts (알림)
 app.use('/api/v1/alerts', alertsRouter);
 // Pre-production checklist (제작전 체크리스트)

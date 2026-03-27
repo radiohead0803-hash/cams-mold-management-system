@@ -793,19 +793,8 @@ const runMasterDataMigration = async () => {
       } catch (e) { }
     }
 
-    // 제작처/생산처 기본 데이터
-    const defaultCompanies = [
-      { name: '테스트 제작처', type: 'maker' },
-      { name: '테스트 생산처', type: 'plant' }
-    ];
-    for (const comp of defaultCompanies) {
-      try {
-        const [existing] = await sequelize.query(`SELECT id FROM companies WHERE company_name = $1 LIMIT 1`, { bind: [comp.name] });
-        if (!existing || existing.length === 0) {
-          await sequelize.query(`INSERT INTO companies (company_name, company_type, is_active) VALUES ($1, $2, TRUE)`, { bind: [comp.name, comp.type] });
-        }
-      } catch (e) { }
-    }
+    // 제작처/생산처 기본 데이터 — 테스트 데이터 제거됨 (프로덕션 안전)
+    // 실제 회사 데이터는 관리자 UI를 통해 등록하세요.
 
     console.log('✅ Default master data inserted/verified.');
 

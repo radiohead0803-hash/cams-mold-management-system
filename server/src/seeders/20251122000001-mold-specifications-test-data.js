@@ -3,6 +3,11 @@ const bcrypt = require('bcryptjs');
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    if (process.env.NODE_ENV === 'production') {
+      console.log('Skipping seed in production');
+      return;
+    }
+
     // 금형 사양 테스트 데이터 10건
     const moldSpecifications = [
       {

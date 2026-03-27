@@ -36,47 +36,20 @@ export default function MobileReports() {
       if (summaryRes.data?.success || summaryRes.data?.data) {
         setSummary(summaryRes.data.data);
       } else {
-        // Mock 데이터 (API 없을 경우)
-        setSummary(getMockSummary(period));
+        // API 실패 시 null 유지 → 에러 상태 표시
+        setSummary(null);
       }
-      
+
       if (productionRes.data?.data) {
         setProductionStats(productionRes.data.data);
       }
     } catch (error) {
       console.error('통계 조회 오류:', error);
-      setSummary(getMockSummary(period));
+      setSummary(null);
     } finally {
       setLoading(false);
     }
   };
-
-  // Mock 데이터
-  const getMockSummary = (p) => ({
-    inspection: {
-      total: p === 'weekly' ? 156 : 624,
-      completed: p === 'weekly' ? 142 : 598,
-      completionRate: p === 'weekly' ? 91 : 96
-    },
-    repair: {
-      total: p === 'weekly' ? 12 : 48,
-      completed: p === 'weekly' ? 9 : 42,
-      avgDays: p === 'weekly' ? 3.2 : 2.8
-    },
-    ng: {
-      totalNg: p === 'weekly' ? 5 : 18,
-      affectedMolds: p === 'weekly' ? 4 : 12
-    },
-    transfer: {
-      total: p === 'weekly' ? 8 : 32,
-      completed: p === 'weekly' ? 7 : 30
-    },
-    production: {
-      totalQuantity: p === 'weekly' ? 45000 : 180000,
-      totalShots: p === 'weekly' ? 12500 : 50000,
-      activeMolds: 65
-    }
-  });
 
   const StatCard = ({ icon: Icon, title, value, subValue, color }) => (
     <div className="bg-white rounded-lg shadow-sm p-4">

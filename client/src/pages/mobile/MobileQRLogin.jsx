@@ -587,7 +587,8 @@ export default function MobileQRLogin() {
               </button>
             </form>
 
-            {/* 테스트용 빠른 로그인 */}
+            {/* 테스트용 빠른 로그인 (개발 환경에서만 표시) */}
+            {import.meta.env.DEV && (
             <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
               <p className="text-sm font-semibold text-purple-700 mb-3">🔧 테스트용 빠른 로그인</p>
               <div className="grid grid-cols-1 gap-2">
@@ -614,6 +615,7 @@ export default function MobileQRLogin() {
                 </button>
               </div>
             </div>
+            )}
 
             {/* 뒤로가기 */}
             <button

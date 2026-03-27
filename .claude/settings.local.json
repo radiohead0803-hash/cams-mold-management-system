@@ -194,7 +194,8 @@
       "Bash(do npx:*)",
       "Bash(npx sharp-cli:*)",
       "Bash(ls -la *.png)",
-      "Bash(grep -n \"by-qr\\\\|/molds/\" server/src/routes/mobileMold*.js)"
+      "Bash(grep -n \"by-qr\\\\|/molds/\" server/src/routes/mobileMold*.js)",
+      "Bash(grep \"$f\" client/src/routes/lazyRoutes.js)"
     ]
   }
 }

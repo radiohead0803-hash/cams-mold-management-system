@@ -270,7 +270,7 @@ function getQuickActions(role, unreadAlerts) {
       { icon: Truck, label: '출하체크', color: 'green', path: '/mobile/pre-production-checklist' },
       { icon: ClipboardCheck, label: '일상점검', color: 'green', path: '/mobile/plant/select-mold/daily-check' },
       { icon: Calendar, label: '정기점검', color: 'purple', path: '/mobile/plant/select-mold/periodic-check' },
-      { icon: MapPin, label: '금형위치', color: 'cyan', action: 'locationLookup' },
+      { icon: BarChart3, label: '통계', color: 'cyan', path: '/mobile/reports' },
       { icon: Bell, label: '알림', color: 'orange', path: '/mobile/alerts', badge: unreadAlerts },
     ],
     plant: [
@@ -280,7 +280,7 @@ function getQuickActions(role, unreadAlerts) {
       { icon: Wrench, label: '수리요청', color: 'red', path: '/mobile/plant/select-mold/repair-request' },
       { icon: Cog, label: '유지보전', color: 'orange', path: '/mobile/maintenance' },
       { icon: List, label: '금형목록', color: 'blue', path: '/mobile/molds' },
-      { icon: MapPin, label: '금형위치', color: 'cyan', action: 'locationLookup' },
+      { icon: BarChart3, label: '통계', color: 'cyan', path: '/mobile/reports' },
       { icon: Bell, label: '알림', color: 'orange', path: '/mobile/alerts', badge: unreadAlerts },
     ],
   };

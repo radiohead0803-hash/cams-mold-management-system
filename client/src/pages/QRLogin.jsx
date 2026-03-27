@@ -335,13 +335,14 @@ export default function QRLogin() {
           </div>
         </div>
 
-        {/* 개발 테스트용: 빠른 로그인 */}
+        {/* 개발 테스트용: 빠른 로그인 (개발 환경에서만 표시) */}
+        {import.meta.env.DEV && (
         <div className="card bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-2xl">🔧</span>
             <p className="font-semibold text-purple-900">개발 테스트용 - 빠른 로그인</p>
           </div>
-          
+
           <div className="space-y-2 mb-4">
             <button
               onClick={async () => {
@@ -465,6 +466,7 @@ export default function QRLogin() {
             />
           </div>
         </div>
+        )}
       </div>
     </div>
   )
