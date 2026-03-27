@@ -13,6 +13,7 @@ import api from '../../lib/api';
 import { BottomNav } from '../../components/mobile/MobileLayout';
 import { recentActions } from '../../utils/mobileStorage';
 import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
+import MoldLocationLookup from '../../components/mobile/MoldLocationLookup';
 import useAuthRestore from '../../hooks/useAuthRestore';
 
 // ─── Skeleton Loader ───
@@ -247,7 +248,7 @@ function getQuickActions(role, unreadAlerts) {
       { icon: List, label: '금형목록', color: 'blue', path: '/mobile/molds' },
       { icon: Inbox, label: '승인처리', color: 'red', path: '/mobile/approval-inbox' },
       { icon: BarChart3, label: '통계리포트', color: 'purple', path: '/mobile/reports' },
-      { icon: ClipboardCheck, label: '체크리스트관리', color: 'green', path: '/mobile/pre-production-checklist' },
+      { icon: MapPin, label: '금형위치', color: 'cyan', action: 'locationLookup' },
       { icon: Building2, label: '업체관리', color: 'orange', path: '/mobile/companies' },
       { icon: Settings, label: '시스템설정', color: 'gray', path: '/mobile/settings/notifications' },
       { icon: Bell, label: '알림', color: 'orange', path: '/mobile/alerts', badge: unreadAlerts },
@@ -257,7 +258,7 @@ function getQuickActions(role, unreadAlerts) {
       { icon: Inbox, label: '승인처리', color: 'red', path: '/mobile/approval-inbox' },
       { icon: Building2, label: '업체관리', color: 'orange', path: '/mobile/companies' },
       { icon: BarChart3, label: '통계리포트', color: 'purple', path: '/mobile/reports' },
-      { icon: List, label: '금형목록', color: 'blue', path: '/mobile/molds' },
+      { icon: MapPin, label: '금형위치', color: 'cyan', action: 'locationLookup' },
       { icon: ClipboardCheck, label: '체크리스트', color: 'green', path: '/mobile/pre-production-checklist' },
       { icon: GitBranch, label: '워크플로우', color: 'indigo', path: '/mobile/workflow' },
       { icon: Bell, label: '알림', color: 'orange', path: '/mobile/alerts', badge: unreadAlerts },
@@ -269,7 +270,7 @@ function getQuickActions(role, unreadAlerts) {
       { icon: Truck, label: '출하체크', color: 'green', path: '/mobile/pre-production-checklist' },
       { icon: ClipboardCheck, label: '일상점검', color: 'green', path: '/mobile/plant/select-mold/daily-check' },
       { icon: Calendar, label: '정기점검', color: 'purple', path: '/mobile/plant/select-mold/periodic-check' },
-      { icon: MapPin, label: '위치지도', color: 'cyan', path: '/mobile/location-map' },
+      { icon: MapPin, label: '금형위치', color: 'cyan', action: 'locationLookup' },
       { icon: Bell, label: '알림', color: 'orange', path: '/mobile/alerts', badge: unreadAlerts },
     ],
     plant: [
@@ -279,7 +280,7 @@ function getQuickActions(role, unreadAlerts) {
       { icon: Wrench, label: '수리요청', color: 'red', path: '/mobile/plant/select-mold/repair-request' },
       { icon: Cog, label: '유지보전', color: 'orange', path: '/mobile/maintenance' },
       { icon: List, label: '금형목록', color: 'blue', path: '/mobile/molds' },
-      { icon: MapPin, label: '위치지도', color: 'cyan', path: '/mobile/location-map' },
+      { icon: MapPin, label: '금형위치', color: 'cyan', action: 'locationLookup' },
       { icon: Bell, label: '알림', color: 'orange', path: '/mobile/alerts', badge: unreadAlerts },
     ],
   };
@@ -399,6 +400,7 @@ export default function MobileHomePage() {
   const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showLocationLookup, setShowLocationLookup] = useState(false);
 
   // Pull-to-refresh
   const scrollRef = useRef(null);
@@ -673,14 +675,20 @@ export default function MobileHomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-4 gap-4">
-                {quickActions.map((action, idx) => (
+                {quickActions.map((act, idx) => (
                   <QuickActionBtn
                     key={idx}
-                    icon={action.icon}
-                    label={action.label}
-                    color={action.color}
-                    badge={action.badge}
-                    onClick={() => navigate(action.path)}
+                    icon={act.icon}
+                    label={act.label}
+                    color={act.color}
+                    badge={act.badge}
+                    onClick={() => {
+                      if (act.action === 'locationLookup') {
+                        setShowLocationLookup(true);
+                      } else {
+                        navigate(act.path);
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -839,6 +847,11 @@ export default function MobileHomePage() {
 
       {/* ═══ 6. Bottom Navigation ═══ */}
       <BottomNav />
+
+      {/* ═══ 7. 금형 위치 조회 모달 ═══ */}
+      {showLocationLookup && (
+        <MoldLocationLookup onClose={() => setShowLocationLookup(false)} />
+      )}
     </div>
   );
 }
