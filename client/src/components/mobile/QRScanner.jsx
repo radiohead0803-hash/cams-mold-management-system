@@ -310,14 +310,14 @@ export default function QRScanner({
       <div className="relative aspect-square rounded-xl overflow-hidden" style={{ background: '#000' }}>
         <video
           ref={videoRef}
-          className="absolute inset-0 w-full h-full object-cover z-0"
           playsInline
           autoPlay
           muted
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
         />
 
-        {/* 스캔 가이드 — z-10으로 video 위 */}
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+        {/* 스캔 가이드 */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
           <div className="w-64 h-64 border-2 border-white/50 rounded-2xl relative">
             <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-lg" />
             <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-lg" />
@@ -328,7 +328,7 @@ export default function QRScanner({
 
         {/* 스캔 라인 애니메이션 */}
         {scanning && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
             <div className="w-64 h-64 relative overflow-hidden">
               <div className="absolute w-full h-0.5 bg-blue-500 animate-scan" />
             </div>

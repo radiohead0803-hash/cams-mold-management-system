@@ -12,6 +12,7 @@ import RepairRequestPage from './pages/RepairRequestPage'
 import MobileReLoginModal from './components/mobile/MobileReLoginModal'
 import MobileAuthGuard from './components/mobile/MobileAuthGuard'
 import { isMobileDevice } from './utils/deviceDetect'
+import CameraTest from './pages/mobile/CameraTest'
 
 // Lazy loaded components
 import {
@@ -188,6 +189,7 @@ function App() {
       
       {/* Mobile - 공개 라우트 (인증 불필요) */}
       <Route path="/mobile/qr-login" element={<MobileQRLogin />} />
+      <Route path="/mobile/camera-test" element={<CameraTest />} />
 
       {/* ═══ Mobile 인증 필요 라우트 (MobileAuthGuard) ═══ */}
       <Route element={<MobileAuthGuard />}>
