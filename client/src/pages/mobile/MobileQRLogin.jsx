@@ -420,18 +420,18 @@ export default function MobileQRLogin() {
 
             {/* 카메라 뷰 */}
             {scanning ? (
-              <div className="bg-black rounded-2xl overflow-hidden relative" style={{ height: '60vh', maxHeight: '500px' }}>
+              <div className="rounded-2xl overflow-hidden relative" style={{ height: '60vh', maxHeight: '500px', background: '#000' }}>
                 <video
                   ref={videoCallbackRef}
                   autoPlay
                   playsInline
                   muted
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  className="absolute inset-0 w-full h-full object-cover z-0"
                 />
                 <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-                {/* 스캔 가이드 */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {/* 스캔 가이드 — z-10으로 video 위에 표시 */}
+                <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
                   <div className="w-56 h-56 relative">
                     <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-blue-400 rounded-tl-xl" />
                     <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-blue-400 rounded-tr-xl" />
@@ -441,7 +441,7 @@ export default function MobileQRLogin() {
                 </div>
 
                 {/* 안내 텍스트 */}
-                <div className="absolute bottom-4 left-0 right-0 text-center">
+                <div className="absolute bottom-4 left-0 right-0 text-center z-10">
                   <span className="bg-black/60 text-white text-sm px-4 py-2 rounded-full">QR 코드를 사각형 안에 맞춰주세요</span>
                 </div>
               </div>
