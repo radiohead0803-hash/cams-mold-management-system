@@ -193,7 +193,7 @@ router.get('/molds/list', async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     
     const molds = await MoldSpecification.findAll({
-      attributes: ['id', 'mold_code', 'part_name', 'car_model', 'status', 'qr_code', 'created_at'],
+      attributes: ['id', 'mold_code', 'part_name', 'car_model', 'status', 'qr_token', 'created_at'],
       order: [['created_at', 'DESC']],
       limit
     });
@@ -201,8 +201,8 @@ router.get('/molds/list', async (req, res) => {
     // QR 코드가 없는 금형에 자동 생성
     const moldsWithQR = molds.map(m => {
       const mold = m.toJSON();
-      if (!mold.qr_code) {
-        mold.qr_code = `MOLD-${mold.id}`;
+      if (!mold.qr_token) {
+        mold.qr_token = `MOLD-${mold.id}`;
       }
       return mold;
     });
@@ -238,7 +238,7 @@ router.get('/molds/by-qr/:qrCode', async (req, res) => {
     
     // 1. qr_code 컬럼으로 검색
     mold = await MoldSpecification.findOne({
-      where: { qr_code: qrCode }
+      where: { qr_token: qrCode }
     });
     
     // 2. MOLD-{id} 형식이면 ID로 검색

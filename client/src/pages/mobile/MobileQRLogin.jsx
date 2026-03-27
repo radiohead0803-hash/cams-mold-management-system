@@ -224,8 +224,8 @@ export default function MobileQRLogin() {
 
       if (moldData) {
         // QR 코드 설정
-        if (!moldData.qr_code) {
-          moldData.qr_code = `MOLD-${moldData.id}`
+        if (!moldData.qr_token) {
+          moldData.qr_token = `MOLD-${moldData.id}`
         }
         setScannedMold({ ...moldData, qrCode })
         
@@ -493,14 +493,14 @@ export default function MobileQRLogin() {
                 {moldList.map((mold) => (
                   <button
                     key={mold.id}
-                    onClick={() => handleManualInput(mold.qr_code || `MOLD-${mold.id}`)}
+                    onClick={() => handleManualInput(mold.qr_token || `MOLD-${mold.id}`)}
                     className="text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-primary-400 hover:bg-primary-50 transition-colors"
                   >
                     <div className="text-sm font-semibold text-gray-900 truncate">
                       {mold.part_name || mold.mold_name || mold.mold_code || `금형 #${mold.id}`}
                     </div>
                     <div className="text-xs text-primary-600 font-medium">
-                      QR: {mold.qr_code || `MOLD-${mold.id}`}
+                      QR: {mold.qr_token || `MOLD-${mold.id}`}
                     </div>
                     <div className="text-xs text-gray-500">{mold.car_model || '-'} | {mold.status || 'active'}</div>
                   </button>
