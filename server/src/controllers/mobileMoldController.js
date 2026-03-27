@@ -169,27 +169,29 @@ exports.getMoldLocationLogs = async (req, res) => {
   try {
     const { moldId } = req.params;
     const { limit = 50, offset = 0 } = req.query;
+    const { sequelize } = require('../models/newIndex');
 
-    const logs = await MoldLocationLog.findAll({
-      where: { mold_id: moldId },
-      order: [['scanned_at', 'DESC']],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      include: [
-        {
-          model: Plant,
-          as: 'plant',
-          attributes: ['id', 'name', 'gps_lat', 'gps_lng']
-        }
-      ]
-    });
+    let logs = [];
+    try {
+      const [rows] = await sequelize.query(
+        `SELECT * FROM gps_location_logs WHERE mold_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+        { bind: [parseInt(moldId), parseInt(limit), parseInt(offset)] }
+      );
+      logs = rows;
+    } catch (e) {
+      // gps_location_logs 미생성 시 molds 테이블 폴백
+      const [mold] = await sequelize.query(
+        `SELECT id, mold_code, last_gps_lat, last_gps_lng, last_gps_time, last_gps_address FROM molds WHERE id = $1`,
+        { bind: [parseInt(moldId)] }
+      );
+      if (mold.length && mold[0].last_gps_lat) {
+        logs = [{ mold_id: moldId, latitude: mold[0].last_gps_lat, longitude: mold[0].last_gps_lng, created_at: mold[0].last_gps_time, address: mold[0].last_gps_address }];
+      }
+    }
 
     return res.json({
       success: true,
-      data: {
-        logs,
-        count: logs.length
-      }
+      data: { logs, count: logs.length }
     });
 
   } catch (err) {

@@ -12,43 +12,29 @@ router.get('/', async (req, res) => {
   try {
     const { mold_id, status, start_date, end_date, limit = 50, offset = 0 } = req.query;
 
-    const where = {};
-    if (mold_id) where.mold_id = mold_id;
-    if (status) where.status = status;
+    let sql = `SELECT dc.*, m.mold_code, m.mold_name, m.car_model, u.name as user_name
+               FROM daily_checks dc
+               LEFT JOIN molds m ON dc.mold_id = m.id
+               LEFT JOIN users u ON dc.user_id = u.id
+               WHERE 1=1`;
+    const binds = [];
+    if (mold_id) { binds.push(mold_id); sql += ` AND dc.mold_id = $${binds.length}`; }
+    if (status) { binds.push(status); sql += ` AND dc.status = $${binds.length}`; }
     if (start_date && end_date) {
-      where.check_date = {
-        [Op.between]: [start_date, end_date]
-      };
+      binds.push(start_date, end_date);
+      sql += ` AND dc.check_date BETWEEN $${binds.length-1} AND $${binds.length}`;
     }
+    sql += ` ORDER BY dc.check_date DESC, dc.created_at DESC LIMIT $${binds.length+1} OFFSET $${binds.length+2}`;
+    binds.push(parseInt(limit), parseInt(offset));
 
-    const checks = await DailyCheck.findAndCountAll({
-      where,
-      include: [
-        {
-          model: Mold,
-          as: 'mold',
-          attributes: ['id', 'mold_code', 'mold_name', 'car_model']
-        },
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'name', 'role_group']
-        },
-        {
-          model: DailyCheckItem,
-          as: 'items'
-        }
-      ],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['check_date', 'DESC'], ['created_at', 'DESC']]
-    });
+    const [rows] = await sequelize.query(sql, { bind: binds });
+    const [[countRow]] = await sequelize.query('SELECT count(*) FROM daily_checks' + (mold_id ? ' WHERE mold_id = $1' : ''), { bind: mold_id ? [mold_id] : [] });
 
     res.json({
       success: true,
-      data: checks.rows,
+      data: rows,
       pagination: {
-        total: checks.count,
+        total: parseInt(countRow.count),
         limit: parseInt(limit),
         offset: parseInt(offset)
       }

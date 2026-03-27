@@ -1,4 +1,4 @@
-const { Mold, DailyCheckItem, InspectionPhoto } = require('../models/newIndex');
+const { Mold, DailyCheckItem, InspectionPhoto, sequelize } = require('../models/newIndex');
 const logger = require('../utils/logger');
 
 const getMolds = async (req, res) => {
@@ -166,42 +166,17 @@ const getMoldHistory = async (req, res) => {
 // 전체 금형 위치 조회 (필터링 지원)
 const getMoldLocations = async (req, res) => {
   try {
-    const { status, plantId, companyId } = req.query;
-    const { Op } = require('sequelize');
-    
-    const where = {
-      latitude: { [Op.ne]: null },
-      longitude: { [Op.ne]: null }
-    };
-    
-    if (status) {
-      where.status = status;
-    }
-    
-    if (plantId) {
-      where.current_location_company_id = plantId;
-    }
-    
-    if (companyId) {
-      where.current_location_company_id = companyId;
-    }
-    
-    const molds = await Mold.findAll({
-      where,
-      attributes: [
-        'id',
-        'mold_number',
-        'mold_name',
-        'status',
-        'latitude',
-        'longitude',
-        'is_out_of_area',
-        'current_location',
-        'current_location_company_id',
-        'updated_at'
-      ],
-      order: [['updated_at', 'DESC']]
-    });
+    const { status } = req.query;
+    // raw SQL로 실제 DB 컬럼 사용
+    let sql = `SELECT m.id, m.mold_code, m.mold_name, m.status, m.location, m.location_status,
+                      m.base_gps_lat AS latitude, m.last_gps_lat AS last_latitude,
+                      m.updated_at
+               FROM molds m WHERE m.base_gps_lat IS NOT NULL`;
+    const binds = [];
+    if (status) { binds.push(status); sql += ' AND m.status = $' + binds.length; }
+    sql += ' ORDER BY m.updated_at DESC LIMIT 200';
+
+    const [molds] = await sequelize.query(sql, { bind: binds });
     
     res.json({
       success: true,
