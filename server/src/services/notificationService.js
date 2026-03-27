@@ -1,4 +1,5 @@
 const { Notification, User } = require('../models/newIndex');
+const webPushService = require('./webPushService');
 
 /**
  * 알림 생성 헬퍼 함수
@@ -12,14 +13,14 @@ const { Notification, User } = require('../models/newIndex');
  * @param {string} [params.actionUrl] - 액션 URL
  * @returns {Promise<Notification>}
  */
-async function createNotification({ 
-  userId, 
-  type, 
-  title, 
-  message, 
-  moldId, 
+async function createNotification({
+  userId,
+  type,
+  title,
+  message,
+  moldId,
   priority = 'normal',
-  actionUrl 
+  actionUrl
 }) {
   if (!userId) {
     console.warn('[notificationService] userId is required');
@@ -41,7 +42,25 @@ async function createNotification({
     });
 
     console.log(`[notificationService] Created notification ${notification.id} for user ${userId}: ${type}`);
-    
+
+    // Fire-and-forget: send web-push to the user (don't block notification creation)
+    const pushPayload = {
+      title,
+      body: message,
+      icon: '/icons/icon-192x192.png',
+      url: actionUrl || (moldId ? `/molds/${moldId}` : '/notifications'),
+      data: {
+        notificationId: notification.id,
+        type,
+        priority,
+        moldId: moldId || null
+      }
+    };
+
+    webPushService.sendPushToUser(userId, pushPayload).catch(err => {
+      console.error(`[notificationService] Web-push to user ${userId} failed:`, err.message);
+    });
+
     return notification;
   } catch (error) {
     console.error('[notificationService] Failed to create notification:', error);
@@ -66,7 +85,7 @@ async function createBulkNotifications(userIds, notificationData) {
   );
 
   const results = await Promise.allSettled(promises);
-  
+
   return results
     .filter(r => r.status === 'fulfilled' && r.value)
     .map(r => r.value);
@@ -86,7 +105,7 @@ async function notifyUsersByRole(role, notificationData) {
     });
 
     const userIds = users.map(u => u.id);
-    
+
     if (userIds.length === 0) {
       console.warn(`[notificationService] No users found with role: ${role}`);
       return [];

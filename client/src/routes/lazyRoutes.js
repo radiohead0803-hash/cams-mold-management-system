@@ -157,6 +157,9 @@ export const MobilePlantMoldSelect = lazy(() => import('../pages/mobile/MobilePl
 export const MobileUserRequests = lazy(() => import('../pages/mobile/MobileUserRequests'));
 export const MobileApprovalInbox = lazy(() => import('../pages/mobile/MobileApprovalInbox'));
 
+// 모바일 알림 센터
+export const MobileNotificationCenter = lazy(() => import('../pages/mobile/MobileNotificationCenter'));
+
 // 모바일 통합 점검
 export const MobileInspectionNew = lazy(() => import('../pages/mobile/MobileInspectionNew'));
 

@@ -122,7 +122,23 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    Promise.all([
+      self.registration.showNotification(data.title, options),
+      // Forward to foreground clients for in-app toast
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'PUSH_RECEIVED',
+            payload: {
+              title: data.title,
+              body: data.body,
+              url: data.url || '/mobile/notification-center',
+              tag: data.tag,
+            },
+          });
+        });
+      }),
+    ])
   );
 });
 

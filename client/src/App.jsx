@@ -115,6 +115,7 @@ import {
   QrScanPageMobile,
   MobileDashboard,
   MobileSearch,
+  MobileNotificationCenter,
   MoldOverviewPage,
   ChecklistStartPage,
   RepairRequestListPage,
@@ -267,6 +268,7 @@ function App() {
         {/* Mobile - 알림/리포트 */}
         <Route path="/mobile/alerts" element={<MobileAlerts />} />
         <Route path="/mobile/notifications" element={<MobileAlerts />} />
+        <Route path="/mobile/notification-center" element={<MobileNotificationCenter />} />
         <Route path="/mobile/reports" element={<MobileReports />} />
         <Route path="/mobile/statistics" element={<MobileReports />} />
 

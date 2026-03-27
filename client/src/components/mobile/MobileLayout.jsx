@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Home, QrCode, Bell, User, Menu } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
+import NotificationBell from './NotificationBell';
 
 // 하단 고정 CTA 버튼
 export function BottomCTA({ children, className = '' }) {
@@ -34,11 +35,12 @@ export function BottomCTA({ children, className = '' }) {
 }
 
 // 모바일 헤더
-export function MobileHeader({ 
-  title, 
-  showBack = true, 
+export function MobileHeader({
+  title,
+  showBack = true,
   showHome = false,
   rightAction = null,
+  showNotificationBell = true,
   onBack = null,
   transparent = false
 }) {
@@ -80,6 +82,7 @@ export function MobileHeader({
         
         <div className="flex items-center gap-1">
           {rightAction}
+          {!rightAction && showNotificationBell && <NotificationBell />}
         </div>
       </div>
     </header>

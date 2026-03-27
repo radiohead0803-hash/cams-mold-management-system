@@ -16,6 +16,8 @@ import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
 import MoldLocationLookup from '../../components/mobile/MoldLocationLookup';
 import useAuthRestore from '../../hooks/useAuthRestore';
 import usePullToRefresh from '../../hooks/usePullToRefresh';
+import PushNotificationManager from '../../components/mobile/PushNotificationManager';
+import usePushNotification from '../../hooks/usePushNotification';
 
 // ─── Skeleton Loader ───
 const SkeletonCard = () => (
@@ -402,6 +404,11 @@ export default function MobileHomePage() {
   const [loading, setLoading] = useState(true);
   const [showLocationLookup, setShowLocationLookup] = useState(false);
 
+  const { isSubscribed, isBannerDismissed, dismissBanner } = usePushNotification();
+  const [pushBannerVisible, setPushBannerVisible] = useState(
+    () => !isBannerDismissed()
+  );
+
   const scrollRef = useRef(null);
 
   const { online, syncing, pendingCount, processQueue } = useOfflineSync();
@@ -609,6 +616,16 @@ export default function MobileHomePage() {
             </div>
           )}
         </div>
+
+        {/* ═══ Push Notification Opt-in Banner ═══ */}
+        {!isSubscribed && pushBannerVisible && (
+          <PushNotificationManager
+            onDismiss={() => {
+              setPushBannerVisible(false);
+              dismissBanner();
+            }}
+          />
+        )}
 
         {/* ═══ 2. KPI Summary Cards (horizontal scroll) ═══ */}
         <div className="px-4 -mt-8">

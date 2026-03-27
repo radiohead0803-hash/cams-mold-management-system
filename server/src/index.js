@@ -1329,13 +1329,56 @@ const runPreProductionChecklistMigration = async () => {
   logger.info('Pre-production checklist migration completed.');
 };
 
+// Push subscriptions & notifications tables migration
+const runPushSubscriptionsMigration = async () => {
+  try {
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        endpoint TEXT NOT NULL UNIQUE,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_push_subs_user ON push_subscriptions(user_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_push_subs_active ON push_subscriptions(is_active);`);
+
+    await db.sequelize.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        notification_type VARCHAR(50) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        message TEXT NOT NULL,
+        priority VARCHAR(20) DEFAULT 'normal',
+        related_type VARCHAR(50),
+        related_id INTEGER,
+        action_url VARCHAR(500),
+        is_read BOOLEAN DEFAULT false,
+        read_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id);`);
+    await db.sequelize.query(`CREATE INDEX IF NOT EXISTS idx_notif_unread ON notifications(user_id, is_read);`);
+
+    logger.info('Push subscriptions & notifications migration completed.');
+  } catch (err) {
+    logger.warn('Push subscriptions migration (may already exist):', err.message);
+  }
+};
+
 // Database connection and server start
 const startServer = async () => {
   try {
     // Test database connection
     await db.sequelize.authenticate();
     logger.info('Database connection established successfully.');
-    
+
     // 마이그레이션 실행
     await runRepairRequestsMigration();
     await runInjectionConditionsMigration();
@@ -1345,6 +1388,7 @@ const startServer = async () => {
     await runChecklistTemplateMigration();
     await runTransfer4MMigration();
     await runPreProductionChecklistMigration();
+    await runPushSubscriptionsMigration();
     
     // Sync database (only in development)
     if (process.env.NODE_ENV === 'development') {
