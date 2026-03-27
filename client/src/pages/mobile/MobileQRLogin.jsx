@@ -67,17 +67,15 @@ export default function MobileQRLogin() {
     }
   }
 
-  // Cleanup
+  // Cleanup — 컴포넌트 언마운트 시에만 실행 (의존성 없음)
   useEffect(() => {
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop())
-      }
-      if (scanInterval) {
-        clearInterval(scanInterval)
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+        streamRef.current = null
       }
     }
-  }, [stream, scanInterval])
+  }, [])  // 빈 배열 — 언마운트 시에만
 
   // 카메라 스트림 ref (state 대신 ref로 직접 관리)
   const streamRef = useRef(null)
@@ -105,22 +103,34 @@ export default function MobileQRLogin() {
 
       streamRef.current = mediaStream
       setStream(mediaStream)
-
-      // 2) scanning=true → video DOM 생성
       setScanning(true)
 
-      // 3) DOM 렌더 대기 후 video에 직접 연결 (CameraTest와 동일 패턴)
-      await new Promise(r => setTimeout(r, 200))
+      // video DOM이 나타날 때까지 폴링 (최대 2초)
+      const waitForVideo = () => new Promise((resolve) => {
+        let tries = 0
+        const check = () => {
+          tries++
+          if (videoRef.current) return resolve(videoRef.current)
+          if (tries > 40) return resolve(null) // 2초 초과
+          requestAnimationFrame(check)
+        }
+        requestAnimationFrame(check)
+      })
 
-      const video = videoRef.current
-      if (video) {
-        video.srcObject = mediaStream
-        video.muted = true
-        video.playsInline = true
-        await video.play()
-        console.log('[QR] Camera playing, size:', video.videoWidth, 'x', video.videoHeight)
-        startAutoScan()
+      const video = await waitForVideo()
+      if (!video) {
+        console.error('[QR] video element not found after 2s')
+        setCameraError('카메라 화면을 찾을 수 없습니다. 다시 시도해주세요.')
+        return
       }
+
+      // CameraTest와 100% 동일한 연결
+      video.srcObject = mediaStream
+      video.muted = true
+      video.playsInline = true
+      await video.play()
+      console.log('[QR] Camera playing, size:', video.videoWidth, 'x', video.videoHeight)
+      startAutoScan()
 
     } catch (err) {
       console.error('Camera error:', err.name, err.message)
