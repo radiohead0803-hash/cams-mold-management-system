@@ -43,8 +43,8 @@ export default function MobileDashboard() {
       
       // 역할별 모바일 대시보드 API 호출
       const [dashboardRes, alertsRes] = await Promise.all([
-        api.get(`/api/v1/mobile/dashboard/${role}`).catch(() => ({ data: { data: {} } })),
-        api.get('/api/v1/notifications?unread=true&limit=5').catch(() => ({ data: { data: [] } }))
+        api.get(`/mobile/dashboard/${role}`).catch(() => ({ data: { data: {} } })),
+        api.get('/notifications?unread=true&limit=5').catch(() => ({ data: { data: [] } }))
       ]);
 
       const summary = dashboardRes.data?.data?.summary || {};

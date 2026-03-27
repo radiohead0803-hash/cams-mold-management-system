@@ -62,7 +62,7 @@ export default function QrLoginPage() {
       setLoading(true);
       setError('');
 
-      const response = await api.post('/api/v1/auth/login', {
+      const response = await api.post('/auth/login', {
         username,
         password
       });
@@ -99,7 +99,7 @@ export default function QrLoginPage() {
       setLoading(true);
       setError('');
 
-      const response = await api.post('/api/v1/auth/login', {
+      const response = await api.post('/auth/login', {
         username: user,
         password: pass
       });

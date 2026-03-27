@@ -38,10 +38,8 @@ export default function MobileWorkflow() {
       let summaryData = null;
       try {
         const summaryRes = await api.get('/workflow/summary');
-        if (summaryRes.data.success) {
-          summaryData = summaryRes.data.data;
-          setSummary(summaryData);
-        }
+        summaryData = summaryRes.data?.data || summaryRes.data || null;
+        if (summaryData) setSummary(summaryData);
       } catch {
         // Fallback: build summary from individual endpoints
       }
@@ -50,14 +48,17 @@ export default function MobileWorkflow() {
       let itemsData = [];
       try {
         if (activeTab === 'repair') {
-          const res = await api.get('/repairs', { params: { limit: 50 } });
-          itemsData = res.data.data?.items || res.data.data || [];
+          const res = await api.get('/repair-requests', { params: { limit: 50 } });
+          const data = res.data?.data || res.data || [];
+          itemsData = Array.isArray(data) ? data : data.items || data.repairs || [];
         } else if (activeTab === 'transfer') {
           const res = await api.get('/transfers', { params: { limit: 50 } });
-          itemsData = res.data.data?.items || res.data.data || [];
+          const data = res.data?.data || res.data || [];
+          itemsData = Array.isArray(data) ? data : data.items || data.transfers || [];
         } else if (activeTab === 'scrap') {
           const res = await api.get('/scrapping', { params: { limit: 50 } });
-          itemsData = res.data.data?.items || res.data.data || [];
+          const data = res.data?.data || res.data || [];
+          itemsData = Array.isArray(data) ? data : data.items || data.requests || [];
         }
       } catch (err) {
         console.error(`${activeTab} 데이터 조회 실패:`, err);

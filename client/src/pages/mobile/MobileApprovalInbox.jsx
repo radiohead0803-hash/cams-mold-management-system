@@ -191,11 +191,11 @@ export default function MobileApprovalInbox() {
   const fetchCounts = useCallback(async () => {
     try {
       const res = await api.get('/approvals/counts');
-      if (res.data.success) {
-        setCounts(res.data.data);
-      }
+      const data = res.data?.data || res.data || { total: 0, byType: {} };
+      setCounts(data);
     } catch (err) {
       console.error('승인 카운트 조회 오류:', err);
+      setCounts({ total: 0, byType: {} });
     }
   }, []);
 
@@ -213,15 +213,15 @@ export default function MobileApprovalInbox() {
       if (statusFilter) params.status = statusFilter;
 
       const res = await api.get('/approvals', { params });
-      if (res.data.success) {
-        const { approvals: items, pagination: pag } = res.data.data;
-        if (append) {
-          setApprovals(prev => [...prev, ...(items || [])]);
-        } else {
-          setApprovals(items || []);
-        }
-        setPagination(pag || { total: 0, page: 1, totalPages: 1 });
+      const resData = res.data?.data || res.data || {};
+      const items = resData.approvals || resData.items || (Array.isArray(resData) ? resData : []);
+      const pag = resData.pagination || null;
+      if (append) {
+        setApprovals(prev => [...prev, ...items]);
+      } else {
+        setApprovals(items);
       }
+      setPagination(pag || { total: items.length, page: 1, totalPages: 1 });
     } catch (err) {
       console.error('승인 목록 조회 오류:', err);
       setError('승인 목록을 불러오는데 실패했습니다.');

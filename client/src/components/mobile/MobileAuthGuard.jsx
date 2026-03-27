@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
+import MobileErrorBoundary from './MobileErrorBoundary'
 
 /**
  * MobileAuthGuard - 모바일 라우트 인증 보호 레이아웃
@@ -25,5 +26,5 @@ export default function MobileAuthGuard({ allowedRoles = [] }) {
     }
   }
 
-  return <Outlet />
+  return <MobileErrorBoundary><Outlet /></MobileErrorBoundary>
 }

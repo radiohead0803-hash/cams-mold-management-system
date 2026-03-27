@@ -52,7 +52,7 @@ export default function MoldOverviewPage() {
         setMold(scannedMold.mold);
       } else {
         // API로 조회
-        const response = await api.get(`/api/v1/molds/${moldId}`);
+        const response = await api.get(`/molds/${moldId}`);
         if (response.data.success) {
           setMold(response.data.data);
         }

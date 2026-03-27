@@ -29,19 +29,16 @@ export default function MobileReports() {
       
       // 병렬로 여러 통계 API 호출
       const [summaryRes, productionRes] = await Promise.all([
-        api.get(`/api/v1/statistics-report/summary?period=${period}`).catch(() => ({ data: { data: null } })),
-        api.get(`/api/v1/production-quantities/stats?period=${period}`).catch(() => ({ data: { data: null } }))
+        api.get(`/statistics-report/summary`, { params: { period } }).catch(() => ({ data: { data: null } })),
+        api.get(`/statistics/summary`, { params: { period } }).catch(() => ({ data: { data: null } }))
       ]);
       
-      if (summaryRes.data?.success || summaryRes.data?.data) {
-        setSummary(summaryRes.data.data);
-      } else {
-        // API 실패 시 null 유지 → 에러 상태 표시
-        setSummary(null);
-      }
+      const summaryData = summaryRes.data?.data || (summaryRes.data?.success ? summaryRes.data : null);
+      setSummary(summaryData);
 
-      if (productionRes.data?.data) {
-        setProductionStats(productionRes.data.data);
+      const prodData = productionRes.data?.data || null;
+      if (prodData) {
+        setProductionStats(prodData);
       }
     } catch (error) {
       console.error('통계 조회 오류:', error);
@@ -242,7 +239,14 @@ export default function MobileReports() {
         ) : (
           <div className="text-center py-12 text-gray-500">
             <BarChart3 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p>데이터를 불러올 수 없습니다</p>
+            <p>데이터가 없습니다</p>
+            <p className="text-xs text-gray-400 mt-1">통계 데이터를 불러올 수 없습니다.</p>
+            <button
+              onClick={fetchSummary}
+              className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm"
+            >
+              다시 시도
+            </button>
           </div>
         )}
       </div>

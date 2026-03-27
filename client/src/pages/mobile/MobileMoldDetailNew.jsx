@@ -93,12 +93,13 @@ export default function MobileMoldDetailNew() {
   const loadMoldData = async () => {
     try {
       setLoading(true)
-      
+
       // 1. 모바일 API로 시도 (baseURL에 /api/v1 포함)
       try {
         const res = await api.get(`/mobile/mold/${moldId}`)
-        if (res.data.success && res.data.data) {
-          setMold(res.data.data)
+        const data = res.data?.data || res.data
+        if (data && typeof data === 'object' && data.id) {
+          setMold(data)
           return
         }
       } catch (e) {
@@ -108,16 +109,33 @@ export default function MobileMoldDetailNew() {
       // 2. mold-specifications API로 시도
       try {
         const res = await moldSpecificationAPI.getById(moldId)
-        if (res.data?.data) {
-          setMold(res.data.data)
+        const data = res.data?.data || res.data
+        if (data && typeof data === 'object' && data.id) {
+          setMold(data)
           return
         }
       } catch (e) {
-        console.log('mold-specifications API failed')
+        console.log('mold-specifications API failed, trying molds...')
       }
+
+      // 3. molds API 폴백
+      try {
+        const res = await api.get(`/molds/${moldId}`)
+        const data = res.data?.data || res.data
+        if (data && typeof data === 'object') {
+          setMold(data)
+          return
+        }
+      } catch (e) {
+        console.log('molds API failed')
+      }
+
+      // 모든 API 실패 시 에러 표시
+      setMold(null)
 
     } catch (err) {
       console.error('Failed to load mold:', err)
+      setMold(null)
     } finally {
       setLoading(false)
     }

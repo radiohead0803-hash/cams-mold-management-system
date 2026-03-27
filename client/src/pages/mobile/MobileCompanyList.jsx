@@ -33,11 +33,9 @@ export default function MobileCompanyList() {
       setLoading(true);
       setError('');
       const response = await api.get('/companies');
-      if (response.data.success) {
-        setCompanies(response.data.data?.items || response.data.data || []);
-      } else {
-        setError('업체 목록을 불러올 수 없습니다.');
-      }
+      const data = response.data?.data || response.data || [];
+      const items = Array.isArray(data) ? data : data.items || data.companies || [];
+      setCompanies(items);
     } catch (err) {
       console.error('업체 목록 조회 오류:', err);
       setError('업체 목록을 불러오는 중 오류가 발생했습니다.');

@@ -19,14 +19,14 @@ export default function MobileAlerts() {
   const fetchAlerts = async () => {
     try {
       setLoading(true);
-      const params = filter === 'unread' ? { is_read: false } : 
+      const params = filter === 'unread' ? { is_read: false } :
                      filter === 'critical' ? { severity: 'critical' } : {};
       const response = await api.get('/notifications', { params });
-      if (response.data.success) {
-        setAlerts(response.data.data || []);
-      }
+      const data = response.data?.data || response.data || [];
+      setAlerts(Array.isArray(data) ? data : data.items || []);
     } catch (error) {
       console.error('알림 조회 오류:', error);
+      setAlerts([]);
     } finally {
       setLoading(false);
     }

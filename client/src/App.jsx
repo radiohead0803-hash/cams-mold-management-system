@@ -191,7 +191,7 @@ function App() {
       <Route path="/mobile/qr-login" element={<MobileQRLogin />} />
       <Route path="/mobile/camera-test" element={<CameraTest />} />
 
-      {/* ═══ Mobile 인증 필요 라우트 (MobileAuthGuard) ═══ */}
+      {/* ═══ Mobile 인증 필요 라우트 (MobileAuthGuard + ErrorBoundary) ═══ */}
       <Route element={<MobileAuthGuard />}>
         {/* Mobile - 홈 */}
         <Route path="/mobile/home" element={<MobileHomePage />} />

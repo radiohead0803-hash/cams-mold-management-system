@@ -15,6 +15,7 @@ import { recentActions } from '../../utils/mobileStorage';
 import useOfflineSync, { SyncStatus } from '../../hooks/useOfflineSync.jsx';
 import MoldLocationLookup from '../../components/mobile/MoldLocationLookup';
 import useAuthRestore from '../../hooks/useAuthRestore';
+import usePullToRefresh from '../../hooks/usePullToRefresh';
 
 // ─── Skeleton Loader ───
 const SkeletonCard = () => (
@@ -399,14 +400,9 @@ export default function MobileHomePage() {
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [recentActivities, setRecentActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [showLocationLookup, setShowLocationLookup] = useState(false);
 
-  // Pull-to-refresh
   const scrollRef = useRef(null);
-  const touchStartY = useRef(0);
-  const [pullDistance, setPullDistance] = useState(0);
-  const PULL_THRESHOLD = 80;
 
   const { online, syncing, pendingCount, processQueue } = useOfflineSync();
 
@@ -477,33 +473,11 @@ export default function MobileHomePage() {
     loadData();
   });
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
-
-  // Pull-to-refresh handlers
-  const onTouchStart = (e) => {
-    if (scrollRef.current?.scrollTop === 0) {
-      touchStartY.current = e.touches[0].clientY;
-    }
-  };
-
-  const onTouchMove = (e) => {
-    if (scrollRef.current?.scrollTop > 0) return;
-    const delta = e.touches[0].clientY - touchStartY.current;
-    if (delta > 0) {
-      setPullDistance(Math.min(delta * 0.5, 120));
-    }
-  };
-
-  const onTouchEnd = () => {
-    if (pullDistance >= PULL_THRESHOLD && !refreshing) {
-      handleRefresh();
-    }
-    setPullDistance(0);
-  };
+  // Pull-to-refresh 훅 사용
+  const { pullDistance, isRefreshing: refreshing, handlers: pullHandlers } = usePullToRefresh({
+    onRefresh: loadData,
+    threshold: 80,
+  });
 
   const summary = dashboardData?.kpi || dashboardData?.summary || {};
   const kpiItems = getKpiConfig(role, summary);
@@ -575,7 +549,7 @@ export default function MobileHomePage() {
         >
           <RefreshCw
             size={20}
-            className={`text-blue-600 transition-transform ${pullDistance >= PULL_THRESHOLD ? 'animate-spin' : ''}`}
+            className={`text-blue-600 transition-transform ${pullDistance >= 80 ? 'animate-spin' : ''}`}
             style={{ transform: `rotate(${pullDistance * 3}deg)` }}
           />
         </div>
@@ -584,9 +558,7 @@ export default function MobileHomePage() {
       <div
         ref={scrollRef}
         className="overflow-y-auto"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        {...pullHandlers}
       >
         {/* ═══ 1. Header ═══ */}
         <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 px-5 pt-12 pb-16 rounded-b-[1.5rem]">
