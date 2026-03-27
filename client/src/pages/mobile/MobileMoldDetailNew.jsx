@@ -13,6 +13,7 @@ import {
   Edit, Save, RefreshCw, Image, Package, Truck, BarChart3,
   PlusCircle, Send, Navigation
 } from 'lucide-react'
+import MoldLocationModal from '../../components/mobile/MoldLocationModal'
 
 /**
  * 모바일 금형 상세 페이지
@@ -674,6 +675,13 @@ export default function MobileMoldDetailNew() {
                     <span className="text-xs font-medium text-gray-700">이관관리</span>
                   </button>
                   <button
+                    onClick={() => setShowLocationMap(true)}
+                    className="p-3 bg-purple-50 rounded-xl text-center"
+                  >
+                    <MapPin size={20} className="mx-auto mb-1 text-purple-600" />
+                    <span className="text-xs font-medium text-gray-700">위치</span>
+                  </button>
+                  <button
                     onClick={() => setShowQRCode(true)}
                     className="p-3 bg-gray-50 rounded-xl text-center"
                   >
@@ -1094,83 +1102,23 @@ export default function MobileMoldDetailNew() {
         </div>
       )}
 
-      {/* 위치 지도 모달 */}
+      {/* 위치 관리 모달 */}
       {showLocationMap && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowLocationMap(false)}
-        >
-          <div
-            className="bg-white rounded-2xl w-full max-w-md overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <MapPin size={20} className="text-purple-600" />
-                <h3 className="font-bold">금형 위치</h3>
-              </div>
-              <button onClick={() => setShowLocationMap(false)}>
-                <X size={20} className="text-gray-500" />
-              </button>
-            </div>
-            <div className="p-4">
-              {/* 위치 정보 */}
-              <div className="space-y-3 mb-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-500">현재 위치</span>
-                  <span className="font-medium">{mold.current_location || mold.location || '미등록'}</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-500">GPS 좌표</span>
-                  <span className="font-medium text-sm">
-                    {mold.gps_lat && mold.gps_lng 
-                      ? `${Number(mold.gps_lat).toFixed(6)}, ${Number(mold.gps_lng).toFixed(6)}`
-                      : '미등록'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm text-gray-500">마지막 스캔</span>
-                  <span className="font-medium text-sm">
-                    {mold.last_scanned_at 
-                      ? new Date(mold.last_scanned_at).toLocaleString('ko-KR')
-                      : '-'}
-                  </span>
-                </div>
-              </div>
-
-              {/* 지도 (GPS 좌표가 있는 경우) */}
-              {mold.gps_lat && mold.gps_lng && (
-                <div className="h-48 bg-gray-100 rounded-lg overflow-hidden mb-4">
-                  <iframe
-                    title="금형 위치"
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${mold.gps_lat},${mold.gps_lng}&zoom=15`}
-                    allowFullScreen
-                  />
-                </div>
-              )}
-
-              <button
-                onClick={() => {
-                  if (mold.gps_lat && mold.gps_lng) {
-                    window.open(`https://www.google.com/maps?q=${mold.gps_lat},${mold.gps_lng}`, '_blank')
-                  }
-                }}
-                disabled={!mold.gps_lat || !mold.gps_lng}
-                className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 ${
-                  mold.gps_lat && mold.gps_lng
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-200 text-gray-400'
-                }`}
-              >
-                <Navigation size={18} />
-                지도 앱에서 열기
-              </button>
-            </div>
-          </div>
-        </div>
+        <MoldLocationModal
+          moldId={moldId}
+          mold={mold}
+          onClose={() => setShowLocationMap(false)}
+          onUpdate={(newLocation) => {
+            setMold(prev => ({
+              ...prev,
+              current_latitude: newLocation.lat,
+              current_longitude: newLocation.lng,
+              gps_lat: newLocation.lat,
+              gps_lng: newLocation.lng,
+              current_location: newLocation.name,
+            }))
+          }}
+        />
       )}
 
       {/* 이미지 미리보기 모달 */}
