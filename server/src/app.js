@@ -152,6 +152,7 @@ const codeOptionsRouter = require('./routes/codeOptions');
 const moldDocumentsRouter = require('./routes/moldDocuments');
 const moldPhotosRouter = require('./routes/moldPhotos');
 const moldLifecycleRouter = require('./routes/moldLifecycle');
+const gpsTrackingRouter = require('./routes/gpsTracking');
 
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/approvals', approvalsRouter);
@@ -197,7 +198,7 @@ app.use('/api/v1/hq/molds', hqMoldsRouter);
 // Admin routes
 app.use('/api/v1/admin/car-models', carModelsRouter);
 // Checklist forms: /forms, /submit, /results (템플릿 기반 체크리스트 폼)
-app.use('/api/v1/checklists', checklistFormsRouter);
+app.use('/api/v1/checklist-forms', checklistFormsRouter);
 // Development plans
 app.use('/api/v1/dev', devPlansRouter);
 // Mold images
@@ -230,8 +231,8 @@ app.use('/api/v1/scrapping', scrappingRouter);
 app.use('/api/v1/statistics', statisticsRouter);
 // Transfers (이관)
 app.use('/api/v1/transfers', transfersRouter);
-// Production Transfer (양산이관)
-app.use('/api/v1/production-transfer', productionTransferRouter);
+// Production Transfer (양산이관) - 기본 CRUD
+app.use('/api/v1/production-transfer-legacy', productionTransferRouter);
 // T/O 문제점 관리
 app.use('/api/v1/tryout-issues', tryoutIssuesRouter);
 // 파일 업로드
@@ -291,6 +292,8 @@ app.use('/api/v1/mold-documents', moldDocumentsRouter);
 app.use('/api/v1/mold-photos', moldPhotosRouter);
 // 금형 수명주기 관리 (모바일)
 app.use('/api/v1/mold-lifecycle', moldLifecycleRouter);
+// GPS 통합 추적 (QR 스캔, 점검, 수리, 이관, 폐기 등)
+app.use('/api/v1/gps', gpsTrackingRouter);
 
 // Health check
 app.get('/health', (req, res) => {

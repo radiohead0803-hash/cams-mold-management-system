@@ -94,7 +94,7 @@ export function BottomNav() {
 
   const navItems = [
     { icon: Home, label: '홈', path: '/mobile/home' },
-    { icon: QrCode, label: 'QR스캔', path: '/mobile/qr-login' },
+    { icon: QrCode, label: 'QR스캔', path: '/mobile/qr-scan' },
     { icon: Bell, label: '알림', path: '/mobile/alerts' },
     { icon: User, label: '내정보', path: '/mobile/profile' }
   ];

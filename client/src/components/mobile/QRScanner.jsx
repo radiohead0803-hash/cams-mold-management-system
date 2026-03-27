@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, Flashlight, FlashlightOff, Keyboard, X, AlertTriangle, RefreshCw } from 'lucide-react';
 import jsQR from 'jsqr';
+import { getCurrentPosition } from '../../utils/gpsCollector';
 
 // 카메라 권한 상태
 const CAMERA_STATUS = {
@@ -195,7 +196,11 @@ export default function QRScanner({
       if (code) {
         lastScanRef.current = now;
         if (navigator.vibrate) navigator.vibrate(100);
-        onScan?.(code);
+
+        // GPS 수집 (비차단) 후 콜백에 전달
+        getCurrentPosition().then((gps) => {
+          onScan?.(code, { gps });
+        });
       }
     } catch (error) {
       console.error('QR scan error:', error);
@@ -206,7 +211,10 @@ export default function QRScanner({
   const handleManualSubmit = (e) => {
     e.preventDefault();
     if (manualCode.trim()) {
-      onManualInput?.(manualCode.trim());
+      // GPS 수집 후 콜백에 전달 (비차단)
+      getCurrentPosition().then((gps) => {
+        onManualInput?.(manualCode.trim(), { gps });
+      });
       setManualCode('');
       setShowManualInput(false);
     }

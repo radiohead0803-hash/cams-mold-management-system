@@ -77,9 +77,9 @@ export default function MobileMoldDetail() {
     setLoadingActivities(true)
     try {
       // 점검 이력 조회
-      const checksRes = await api.get(`/api/daily-checks?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } }))
+      const checksRes = await api.get(`/daily-checks?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } }))
       // 수리 이력 조회
-      const repairsRes = await api.get(`/api/v1/repair-requests?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } }))
+      const repairsRes = await api.get(`/repair-requests?mold_id=${moldId}&limit=5`).catch(() => ({ data: { data: [] } }))
       
       const checks = (checksRes.data?.data || []).map(c => ({
         type: 'check',
@@ -122,7 +122,7 @@ export default function MobileMoldDetail() {
         console.log('Not in specifications, trying molds...')
       }
       // molds 테이블에서 시도
-      const response = await api.get(`/api/v1/molds/${moldId}`)
+      const response = await api.get(`/molds/${moldId}`)
       if (response.data.success) {
         setMold(response.data.data)
       }

@@ -2,9 +2,9 @@
   <!-- 흰색 배경 -->
   <rect width="512" height="512" rx="96" fill="#ffffff"/>
   <!-- 파란 C 원형 -->
-  <path d="M 370 130 A 185 185 0 1 0 370 382" fill="none" stroke="#1a6fa0" stroke-width="68" stroke-linecap="round"/>
-  <!-- 빨간 배너 (대각선) -->
-  <rect x="95" y="218" width="322" height="76" rx="6" fill="#c41230" transform="rotate(-15, 256, 256)"/>
-  <!-- AMS 텍스트 -->
-  <text x="270" y="274" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="64" fill="#ffffff" transform="rotate(-15, 256, 256)" letter-spacing="6">AMS</text>
+  <path d="M 365 135 A 180 180 0 1 0 365 377" fill="none" stroke="#1a6fa0" stroke-width="70" stroke-linecap="round"/>
+  <!-- 빨간 배너 (수평, C 중앙) -->
+  <rect x="108" y="224" width="296" height="72" rx="4" fill="#c41230"/>
+  <!-- CAMS 텍스트 (C는 파란 원이 담당, AMS만 배너에) -->
+  <text x="256" y="277" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-weight="900" font-size="58" fill="#ffffff" letter-spacing="5">AMS</text>
 </svg>

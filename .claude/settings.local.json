@@ -185,7 +185,16 @@
       "Bash(curl -s https://cams-mold-management-system-production-b7d0.up.railway.app/health)",
       "Bash(curl -sI https://md.icams.co.kr)",
       "Bash(curl -s https://md.icams.co.kr)",
-      "Bash(curl -s https://md.icams.co.kr/assets/index-BqNzd-7c.js)"
+      "Bash(curl -s https://md.icams.co.kr/assets/index-BqNzd-7c.js)",
+      "Bash(curl -s \"https://md.icams.co.kr/assets/index-Chdp5W3b.js\")",
+      "Bash(curl -s \"https://md.icams.co.kr/assets/index-DbeM4tFZ.js\")",
+      "Bash(curl -s \"https://md.icams.co.kr/assets/index-DkM3I1W3.js\")",
+      "Bash(ls \"C:\\\\Users\\\\admin\\\\Documents\\\\Wind surf work\\\\10. 금형관리 전산시스템\\\\P2\\(Ver02\\)\\\\.claude\\\\worktrees\\\\funny-buck\\\\client\\\\public/\")",
+      "Bash(for size:*)",
+      "Bash(do npx:*)",
+      "Bash(npx sharp-cli:*)",
+      "Bash(ls -la *.png)",
+      "Bash(grep -n \"by-qr\\\\|/molds/\" server/src/routes/mobileMold*.js)"
     ]
   }
 }

@@ -24,7 +24,7 @@ const scanQR = async (req, res) => {
       include: [
         {
           association: 'specification',
-          attributes: ['part_name', 'car_model', 'cavity_count']
+          attributes: ['part_name', 'car_model', 'cavity']
         }
       ]
     });

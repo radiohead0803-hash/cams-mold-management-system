@@ -73,7 +73,7 @@ export default function MobileSearch() {
       if (filters.status) params.append('status', filters.status);
       if (filters.type) params.append('type', filters.type);
 
-      const response = await api.get(`/api/mold-specifications/search?${params}`);
+      const response = await api.get(`/mold-specifications/search?${params}`);
       setResults(response.data?.data?.items || response.data?.data || []);
       
       // 최근 검색에 추가

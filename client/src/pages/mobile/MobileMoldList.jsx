@@ -41,13 +41,7 @@ export default function MobileMoldList() {
           const fallback = await api.get('/mobile/dashboard/molds', { params: { ...params, limit: 100 } });
           molds = fallback.data?.data?.molds || fallback.data?.molds || [];
         } catch (e2) {
-          // 3차: mobile/molds/list 폴백 (인증 불필요)
-          try {
-            const fallback2 = await api.get('/mobile/molds/list');
-            molds = fallback2.data?.data || [];
-          } catch (e3) {
-            console.error('금형 목록 조회 실패:', e3.message);
-          }
+          console.error('금형 목록 조회 실패:', e2.message);
         }
       }
 

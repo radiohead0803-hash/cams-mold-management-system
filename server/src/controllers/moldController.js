@@ -3,17 +3,16 @@ const logger = require('../utils/logger');
 
 const getMolds = async (req, res) => {
   try {
-    const { status, current_location, limit = 50, offset = 0 } = req.query;
-    
+    const { status, limit = 50, offset = 0 } = req.query;
+
     const where = {};
     if (status) where.status = status;
-    if (current_location) where.current_location = current_location;
 
     const molds = await Mold.findAndCountAll({
       where,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['mold_number', 'ASC']]
+      order: [['mold_code', 'ASC']]
     });
 
     res.json({

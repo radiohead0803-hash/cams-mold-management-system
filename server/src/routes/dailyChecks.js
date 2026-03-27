@@ -143,7 +143,7 @@ router.post('/', async (req, res) => {
       }
 
       // 타수 계산: 생산수량 / 캐비티 수
-      const cavityCount = mold.cavity_count || 1;
+      const cavityCount = mold.cavity || 1;
       const shotsIncrement = Math.ceil(production_quantity / cavityCount);
       const previousShots = mold.current_shots || 0;
       const newCurrentShots = previousShots + shotsIncrement;

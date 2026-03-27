@@ -5,6 +5,7 @@ import { authAPI } from '../../lib/api'
 import api from '../../lib/api'
 import { QrCode, Camera, X, AlertCircle, CheckCircle, User, Lock, ChevronRight } from 'lucide-react'
 import jsQR from 'jsqr'
+import { getCurrentPosition, logGPSEvent } from '../../utils/gpsCollector'
 
 /**
  * 모바일 QR 로그인 페이지
@@ -36,6 +37,7 @@ export default function MobileQRLogin() {
   const [moldList, setMoldList] = useState([])
   const [loadingMolds, setLoadingMolds] = useState(false)
   const [manualCode, setManualCode] = useState('')
+  const [lastGPS, setLastGPS] = useState(null) // { latitude, longitude, accuracy }
 
   // 이미 로그인된 경우 스캔 단계로
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function MobileQRLogin() {
     setLoadingMolds(true)
     try {
       // 모바일 전용 공개 API 사용 (인증 불필요)
-      const response = await api.get('/api/v1/mobile/molds/list?limit=10')
+      const response = await api.get('/mobile/molds/list?limit=10')
       if (response.data.success && response.data.data) {
         const molds = Array.isArray(response.data.data) 
           ? response.data.data 
@@ -196,13 +198,16 @@ export default function MobileQRLogin() {
   const handleQRDetected = async (qrCode) => {
     stopCamera()
     setError('')
-    
+
+    // GPS 수집 (비차단 — 실패해도 계속 진행)
+    const gpsPromise = getCurrentPosition()
+
     try {
       let moldData = null
 
       // 1. QR 코드로 금형 검색 (MOLD-21, mold_code, 또는 ID)
       try {
-        const response = await api.get(`/api/v1/mobile/molds/by-qr/${encodeURIComponent(qrCode)}`)
+        const response = await api.get(`/mobile/molds/by-qr/${encodeURIComponent(qrCode)}`)
         if (response.data.success && response.data.data) {
           moldData = response.data.data
         }
@@ -213,7 +218,7 @@ export default function MobileQRLogin() {
       // 2. 숫자만 입력된 경우 ID로 검색
       if (!moldData && /^\d+$/.test(qrCode)) {
         try {
-          const specRes = await api.get(`/api/v1/mobile/molds/${qrCode}`)
+          const specRes = await api.get(`/mobile/molds/${qrCode}`)
           if (specRes.data.success && specRes.data.data) {
             moldData = specRes.data.data
           }
@@ -222,13 +227,31 @@ export default function MobileQRLogin() {
         }
       }
 
+      // GPS 결과 수집 (API 호출과 병렬 진행됨)
+      const gpsPos = await gpsPromise
+      if (gpsPos) {
+        setLastGPS(gpsPos)
+        console.log('[QR GPS] Position:', gpsPos.latitude, gpsPos.longitude, 'accuracy:', gpsPos.accuracy)
+      }
+
       if (moldData) {
         // QR 코드 설정
         if (!moldData.qr_token) {
           moldData.qr_token = `MOLD-${moldData.id}`
         }
         setScannedMold({ ...moldData, qrCode })
-        
+
+        // GPS 로그 서버 전송 (비차단)
+        if (gpsPos) {
+          logGPSEvent({
+            moldId: moldData.id,
+            eventType: 'qr_scan',
+            latitude: gpsPos.latitude,
+            longitude: gpsPos.longitude,
+            accuracy: gpsPos.accuracy
+          })
+        }
+
         // 로그인 단계로 이동 (항상 로그인 필요)
         if (isAuthenticated && user) {
           navigateToMoldPage(moldData, user)
@@ -305,14 +328,15 @@ export default function MobileQRLogin() {
   // ========== 네비게이션 ==========
   const navigateToMoldPage = (mold, userData) => {
     const role = userData.user_type || userData.role
-    
-    // 역할별 금형 상세 페이지로 이동
+
+    // 역할별 금형 상세 페이지로 이동 (GPS 포함)
     navigate(`/mobile/mold/${mold.id}`, {
       replace: true,
       state: {
         mold,
         role,
-        user: userData
+        user: userData,
+        gps: lastGPS  // GPS 좌표를 다음 페이지로 전달
       }
     })
   }
