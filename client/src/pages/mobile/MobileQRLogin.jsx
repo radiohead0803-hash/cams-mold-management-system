@@ -79,50 +79,54 @@ export default function MobileQRLogin() {
     }
   }, [stream, scanInterval])
 
-  // 안전한 play — loadedmetadata 대기 후 실행, AbortError 재시도
-  const safePlay = async (video) => {
-    if (!video || !video.srcObject) return
-    await new Promise((resolve) => {
-      if (video.readyState >= 1) return resolve()
-      const h = () => { video.removeEventListener('loadedmetadata', h); resolve() }
-      video.addEventListener('loadedmetadata', h)
-    })
+  // 카메라 연결 플래그 (중복 실행 방지)
+  const connectingRef = useRef(false)
+
+  // 단일 진입점: video에 stream 연결
+  const connectStreamToVideo = async (video, mediaStream) => {
+    if (!video || !mediaStream || connectingRef.current) return
+    connectingRef.current = true
     try {
-      await video.play()
-    } catch (e) {
-      if (e.name === 'AbortError') {
-        await new Promise(r => setTimeout(r, 300))
-        try { await video.play() } catch (_) {}
+      video.srcObject = mediaStream
+      video.muted = true
+      // onloadedmetadata 이벤트로 play
+      video.onloadedmetadata = async () => {
+        try {
+          await video.play()
+          console.log('[QR] Camera playing')
+          startAutoScan()
+        } catch (e) {
+          console.warn('[QR] play error, retrying:', e.name)
+          setTimeout(async () => {
+            try { await video.play(); startAutoScan() } catch (_) {}
+          }, 500)
+        }
       }
+      // 이미 로드된 경우
+      if (video.readyState >= 1) {
+        try {
+          await video.play()
+          console.log('[QR] Camera playing (already loaded)')
+          startAutoScan()
+        } catch (_) {}
+      }
+    } finally {
+      connectingRef.current = false
     }
   }
 
-  // stream 변경 시 video에 연결 (단일 진입점)
+  // stream이 설정되면 video에 연결 시도
   useEffect(() => {
     if (stream && videoRef.current) {
-      const video = videoRef.current
-      video.pause()
-      video.srcObject = null
-      video.srcObject = stream
-      video.muted = true
-      video.setAttribute('playsinline', 'true')
-      safePlay(video).then(() => {
-        console.log('[QR] Camera playing via useEffect')
-        startAutoScan()
-      })
+      connectStreamToVideo(videoRef.current, stream)
     }
-  }, [stream, scanning])
+  }, [stream])
 
-  // video ref 콜백
+  // video ref 콜백 — DOM 생성 시 stream 연결
   const videoCallbackRef = (node) => {
     videoRef.current = node
     if (node && stream) {
-      node.srcObject = stream
-      node.muted = true
-      safePlay(node).then(() => {
-        console.log('[QR] Camera playing via ref callback')
-        startAutoScan()
-      })
+      connectStreamToVideo(node, stream)
     }
   }
 
@@ -152,29 +156,8 @@ export default function MobileQRLogin() {
         video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
       })
 
+      // setStream → useEffect/videoCallbackRef가 자동으로 연결
       setStream(mediaStream)
-
-      // 3) video DOM이 이미 있으면 직접 연결
-      const tryConnect = (retries = 0) => {
-        const video = videoRef.current
-        if (video) {
-          video.pause()
-          video.srcObject = null
-          video.srcObject = mediaStream
-          video.muted = true
-          video.setAttribute('playsinline', 'true')
-          safePlay(video).then(() => {
-            console.log('[QR] Camera playing OK, tracks:', mediaStream.getVideoTracks().length)
-            startAutoScan()
-          }).catch(err => {
-            console.error('[QR] play() failed:', err)
-            setCameraError('카메라 재생 실패: ' + err.message)
-          })
-        } else if (retries < 10) {
-          setTimeout(() => tryConnect(retries + 1), 50)
-        }
-      }
-      tryConnect()
 
     } catch (err) {
       console.error('Camera error:', err.name, err.message)
