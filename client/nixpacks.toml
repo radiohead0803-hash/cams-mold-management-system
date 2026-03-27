@@ -5,9 +5,9 @@ nixPkgs = ["nodejs_20"]
 cmds = ["npm ci --legacy-peer-deps"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["npm cache clean --force && npm run build"]
 
 [start]
 cmd = "npx serve -s dist -l ${PORT:-3000}"
 
-# Force rebuild - cache bust v1.3.0
+# Force rebuild - cache bust v1.4.0 - 2026-03-27T09
