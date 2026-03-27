@@ -79,56 +79,8 @@ export default function MobileQRLogin() {
     }
   }, [stream, scanInterval])
 
-  // 카메라 연결 플래그 (중복 실행 방지)
-  const connectingRef = useRef(false)
-
-  // 단일 진입점: video에 stream 연결
-  const connectStreamToVideo = async (video, mediaStream) => {
-    if (!video || !mediaStream || connectingRef.current) return
-    connectingRef.current = true
-    try {
-      video.srcObject = mediaStream
-      video.muted = true
-      // onloadedmetadata 이벤트로 play
-      video.onloadedmetadata = async () => {
-        try {
-          await video.play()
-          console.log('[QR] Camera playing')
-          startAutoScan()
-        } catch (e) {
-          console.warn('[QR] play error, retrying:', e.name)
-          setTimeout(async () => {
-            try { await video.play(); startAutoScan() } catch (_) {}
-          }, 500)
-        }
-      }
-      // 이미 로드된 경우
-      if (video.readyState >= 1) {
-        try {
-          await video.play()
-          console.log('[QR] Camera playing (already loaded)')
-          startAutoScan()
-        } catch (_) {}
-      }
-    } finally {
-      connectingRef.current = false
-    }
-  }
-
-  // stream이 설정되면 video에 연결 시도
-  useEffect(() => {
-    if (stream && videoRef.current) {
-      connectStreamToVideo(videoRef.current, stream)
-    }
-  }, [stream])
-
-  // video ref 콜백 — DOM 생성 시 stream 연결
-  const videoCallbackRef = (node) => {
-    videoRef.current = node
-    if (node && stream) {
-      connectStreamToVideo(node, stream)
-    }
-  }
+  // 카메라 스트림 ref (state 대신 ref로 직접 관리)
+  const streamRef = useRef(null)
 
   // ========== QR 스캔 관련 ==========
   const startCamera = async () => {
@@ -136,7 +88,6 @@ export default function MobileQRLogin() {
       setCameraError('')
       setError('')
 
-      // HTTPS 체크
       if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
         setCameraError('카메라 사용을 위해 HTTPS 연결이 필요합니다.')
         return
@@ -146,18 +97,30 @@ export default function MobileQRLogin() {
         return
       }
 
-      // 1) scanning=true 먼저 → video DOM 생성
-      setScanning(true)
-
-      // 2) 약간의 지연 후 카메라 시작 (DOM이 렌더될 시간)
-      await new Promise(r => setTimeout(r, 100))
-
+      // 1) 먼저 카메라 스트림 획득
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
       })
 
-      // setStream → useEffect/videoCallbackRef가 자동으로 연결
+      streamRef.current = mediaStream
       setStream(mediaStream)
+
+      // 2) scanning=true → video DOM 생성
+      setScanning(true)
+
+      // 3) DOM 렌더 대기 후 video에 직접 연결 (CameraTest와 동일 패턴)
+      await new Promise(r => setTimeout(r, 200))
+
+      const video = videoRef.current
+      if (video) {
+        video.srcObject = mediaStream
+        video.muted = true
+        video.playsInline = true
+        await video.play()
+        console.log('[QR] Camera playing, size:', video.videoWidth, 'x', video.videoHeight)
+        startAutoScan()
+      }
 
     } catch (err) {
       console.error('Camera error:', err.name, err.message)
@@ -182,6 +145,10 @@ export default function MobileQRLogin() {
   }
 
   const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
     if (stream) {
       stream.getTracks().forEach(track => track.stop())
       setStream(null)
@@ -420,18 +387,19 @@ export default function MobileQRLogin() {
 
             {/* 카메라 뷰 */}
             {scanning ? (
-              <div className="rounded-2xl overflow-hidden relative" style={{ height: '60vh', maxHeight: '500px', background: '#000' }}>
+              <div style={{ position: 'relative', height: '60vh', maxHeight: '500px', borderRadius: '16px', overflow: 'hidden' }}>
+                {/* 카메라 영상 — CameraTest와 동일 패턴 */}
                 <video
-                  ref={videoCallbackRef}
+                  ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 0 }}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
                 />
                 <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-                {/* 스캔 가이드 */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                {/* 스캔 가이드 — 영상 위 투명 오버레이 */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
                   <div className="w-56 h-56 relative">
                     <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-blue-400 rounded-tl-xl" />
                     <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-blue-400 rounded-tr-xl" />
@@ -441,7 +409,7 @@ export default function MobileQRLogin() {
                 </div>
 
                 {/* 안내 텍스트 */}
-                <div style={{ position: 'absolute', bottom: '16px', left: 0, right: 0, textAlign: 'center', zIndex: 10 }}>
+                <div style={{ position: 'absolute', bottom: '16px', left: 0, right: 0, textAlign: 'center' }}>
                   <span className="bg-black/60 text-white text-sm px-4 py-2 rounded-full">QR 코드를 사각형 안에 맞춰주세요</span>
                 </div>
               </div>
