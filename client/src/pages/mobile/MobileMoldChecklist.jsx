@@ -4,7 +4,7 @@ import {
   ArrowLeft, Save, CheckCircle, Clock, ChevronDown, ChevronUp,
   AlertCircle, Send, FileText
 } from 'lucide-react';
-import api, { moldSpecificationAPI, standardDocumentAPI } from '../../lib/api';
+import api, { moldSpecificationAPI, checklistMasterAPI } from '../../lib/api';
 
 // 폴백용 기본 금형체크리스트 항목 (DB 로드 실패 시 사용)
 const DEFAULT_CHECKLIST_CATEGORIES = [
@@ -111,13 +111,30 @@ export default function MobileMoldChecklist() {
   useEffect(() => {
     const loadMaster = async () => {
       try {
-        const res = await standardDocumentAPI.getAll({ template_type: 'mold_checklist', status: 'deployed' });
-        const templates = res.data?.data || res.data;
-        if (Array.isArray(templates) && templates.length > 0) {
-          const items = templates[0].items;
-          if (Array.isArray(items) && items.length > 0) {
-            setChecklistCategories(items);
-            console.log(`[MobileMoldChecklist] 마스터 DB에서 ${items.length}개 카테고리 로드`);
+        const res = await checklistMasterAPI.getItems({ inspection_type: 'mold_checklist', is_active: true });
+        const items = res.data?.data || res.data;
+        if (Array.isArray(items) && items.length > 0) {
+          // DB 행 → 카테고리/아이템 트리 변환
+          const catMap = {};
+          items
+            .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+            .forEach((row) => {
+              const cfg = row.extra_config || {};
+              const catId = cfg.categoryId || row.inspection_sub_type || row.major_category;
+              const catTitle = cfg.categoryTitle || row.major_category;
+              if (!catMap[catId]) {
+                catMap[catId] = { id: catId, title: catTitle, items: [] };
+              }
+              const item = { id: cfg.itemId || catMap[catId].items.length + 1, name: row.item_name };
+              if (cfg.type) item.type = cfg.type;
+              if (cfg.options) item.options = cfg.options;
+              if (cfg.suffix) item.suffix = cfg.suffix;
+              catMap[catId].items.push(item);
+            });
+          const categories = Object.values(catMap);
+          if (categories.length > 0) {
+            setChecklistCategories(categories);
+            console.log(`[MobileMoldChecklist] 마스터 DB에서 ${categories.length}개 카테고리, ${items.length}개 항목 로드`);
           }
         }
       } catch (err) {

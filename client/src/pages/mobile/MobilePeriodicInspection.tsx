@@ -571,7 +571,7 @@ export default function MobilePeriodicInspection() {
     }
     setSaving(true);
     try {
-      await api.post('/checklist-instances/daily/request-approval', buildPayload('pending_approval', selectedApprover.id));
+      await api.post('/checklist-instances/periodic/request-approval', buildPayload('pending_approval', selectedApprover.id));
       setSaveMessage({ type: 'success', text: `${selectedApprover.name}님께 승인요청 완료` });
       setTimeout(() => { moldId ? navigate(`/mobile/mold/${moldId}`) : navigate(-1); }, 2000);
     } catch (err) {

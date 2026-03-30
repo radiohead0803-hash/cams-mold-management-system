@@ -128,7 +128,7 @@ export default function MobileNotificationCenter() {
   // Mark all as read
   const handleMarkAllRead = async () => {
     try {
-      await api.post('/notifications/mark-all-read');
+      await api.patch('/notifications/read-all');
       setNotifications((prev) =>
         prev.map((n) => ({ ...n, is_read: true, read_at: new Date().toISOString() }))
       );

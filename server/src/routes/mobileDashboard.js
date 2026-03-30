@@ -64,11 +64,11 @@ router.get('/dashboard/molds', async (req, res) => {
 
     // 역할별 범위 제한
     if (userType === 'maker') {
-      conditions.push(`(ms.maker_company_id = $${bindIdx} OR ms.target_maker_id = $${bindIdx})`);
+      conditions.push(`(ms.maker_company_id = $${bindIdx} OR ms.maker_id = $${bindIdx})`);
       binds.push(companyId);
       bindIdx++;
     } else if (userType === 'plant') {
-      conditions.push(`(ms.plant_company_id = $${bindIdx} OR ms.id IN (SELECT mold_spec_id FROM plant_molds WHERE plant_id = $${bindIdx}))`);
+      conditions.push(`ms.plant_company_id = $${bindIdx}`);
       binds.push(companyId);
       bindIdx++;
     }
@@ -91,7 +91,7 @@ router.get('/dashboard/molds', async (req, res) => {
 
     // 카운트
     const countRow = await safeQueryOne(
-      `SELECT COUNT(*) AS total FROM mold_specifications ms ${whereClause}`,
+      `SELECT COUNT(*) AS total FROM molds ms ${whereClause}`,
       { bind: binds }
     );
     const total = int(countRow.total);
@@ -102,7 +102,7 @@ router.get('/dashboard/molds', async (req, res) => {
              ms.mold_type, ms.status, ms.development_stage,
              ms.target_delivery_date, ms.updated_at,
              c.company_name AS maker_name
-      FROM mold_specifications ms
+      FROM molds ms
       LEFT JOIN companies c ON ms.maker_company_id = c.id
       ${whereClause}
       ORDER BY ms.updated_at DESC
@@ -179,15 +179,15 @@ async function getAdminDeveloperDashboard() {
   // --- KPI (단일 쿼리 — 실제 스키마에 맞춤) ---
   const kpiRow = await safeQueryOne(`
     SELECT
-      (SELECT COUNT(*) FROM mold_specifications)                                                   AS total_molds,
-      (SELECT COUNT(*) FROM mold_specifications WHERE status IN ('active','양산','양산중'))         AS active_molds,
+      (SELECT COUNT(*) FROM molds)                                                   AS total_molds,
+      (SELECT COUNT(*) FROM molds WHERE status IN ('active','양산','양산중'))                        AS active_molds,
       (SELECT COUNT(*) FROM repair_requests WHERE status NOT IN ('completed','cancelled','완료'))   AS open_repairs,
       (SELECT COUNT(*) FROM qr_sessions WHERE created_at >= CURRENT_DATE)                          AS today_scans,
       0                                                                                            AS over_shot_count,
       (SELECT COUNT(*) FROM checklist_instances
          WHERE inspected_at >= CURRENT_DATE - INTERVAL '7 days'
             OR check_date >= CURRENT_DATE - INTERVAL '7 days')                                     AS inspection_due_count,
-      (SELECT COUNT(*) FROM mold_specifications WHERE status IN ('ng','NG','불량'))                 AS ng_molds,
+      (SELECT COUNT(*) FROM molds WHERE status IN ('ng','NG','불량'))                               AS ng_molds,
       (SELECT COUNT(*) FROM users WHERE is_active = true)                                          AS total_users
   `);
 
@@ -257,7 +257,7 @@ async function getAdminDeveloperDashboard() {
            ms.mold_code, ms.part_name
     FROM qr_sessions qs
     LEFT JOIN users u ON qs.user_id = u.id
-    LEFT JOIN mold_specifications ms ON COALESCE(qs.mold_spec_id, qs.mold_id) = ms.id
+    LEFT JOIN molds ms ON qs.mold_id = ms.id
     ORDER BY qs.created_at DESC
     LIMIT 10
   `);
@@ -265,7 +265,7 @@ async function getAdminDeveloperDashboard() {
   // --- Approvals ---
   const approvalRow = await safeQueryOne(`
     SELECT
-      (SELECT COUNT(*) FROM mold_specifications
+      (SELECT COUNT(*) FROM molds
          WHERE status IN ('design_review','design_approval'))                                     AS design_approval,
       (SELECT COUNT(*) FROM periodic_inspections
          WHERE overall_status = 'pending_approval')                                               AS trial_approval,
@@ -305,24 +305,24 @@ async function getAdminDeveloperDashboard() {
 // ─── maker ──────────────────────────────────────────────────────────────────
 
 async function getMakerDashboard(companyId) {
-  // --- KPI (maker_company_id 사용) ---
+  // --- KPI (maker_company_id 사용 — molds 테이블 기준) ---
   const kpiRow = await safeQueryOne(`
     SELECT
-      (SELECT COUNT(*) FROM mold_specifications
-         WHERE (maker_company_id = $1 OR target_maker_id = $1) AND status NOT IN ('completed','cancelled','scrapped','완료'))  AS in_progress,
-      (SELECT COUNT(*) FROM mold_specifications
-         WHERE (maker_company_id = $1 OR target_maker_id = $1) AND development_stage = 'design')                               AS design,
-      (SELECT COUNT(*) FROM mold_specifications
-         WHERE (maker_company_id = $1 OR target_maker_id = $1) AND development_stage = 'machining')                            AS machining,
-      (SELECT COUNT(*) FROM mold_specifications
-         WHERE (maker_company_id = $1 OR target_maker_id = $1) AND development_stage = 'assembly')                             AS assembly,
-      (SELECT COUNT(*) FROM mold_specifications
-         WHERE (maker_company_id = $1 OR target_maker_id = $1) AND development_stage = 'trial_waiting')                        AS trial_waiting,
-      (SELECT COUNT(*) FROM mold_specifications
-         WHERE (maker_company_id = $1 OR target_maker_id = $1) AND status IN ('completed','완료'))                              AS completed,
-      (SELECT COUNT(*) FROM mold_specifications
-         WHERE (maker_company_id = $1 OR target_maker_id = $1) AND status IN ('completed','완료')
-           AND updated_at >= CURRENT_DATE - INTERVAL '7 days')                                                                  AS week_completed
+      (SELECT COUNT(*) FROM molds
+         WHERE (maker_company_id = $1 OR maker_id = $1) AND status NOT IN ('completed','cancelled','scrapped','완료'))   AS in_progress,
+      (SELECT COUNT(*) FROM molds
+         WHERE (maker_company_id = $1 OR maker_id = $1) AND status = 'design')                                          AS design,
+      (SELECT COUNT(*) FROM molds
+         WHERE (maker_company_id = $1 OR maker_id = $1) AND status = 'machining')                                       AS machining,
+      (SELECT COUNT(*) FROM molds
+         WHERE (maker_company_id = $1 OR maker_id = $1) AND status = 'assembly')                                        AS assembly,
+      (SELECT COUNT(*) FROM molds
+         WHERE (maker_company_id = $1 OR maker_id = $1) AND status = 'trial')                                           AS trial_waiting,
+      (SELECT COUNT(*) FROM molds
+         WHERE (maker_company_id = $1 OR maker_id = $1) AND status IN ('completed','완료'))                              AS completed,
+      (SELECT COUNT(*) FROM molds
+         WHERE (maker_company_id = $1 OR maker_id = $1) AND status IN ('completed','완료')
+           AND updated_at >= CURRENT_DATE - INTERVAL '7 days')                                                           AS week_completed
   `, { bind: [companyId] });
 
   const kpi = {
@@ -337,31 +337,23 @@ async function getMakerDashboard(companyId) {
 
   // --- Assigned molds (top 10) ---
   const assignedMolds = await safeQueryAll(`
-    SELECT ms.id, ms.mold_code, ms.part_name, ms.car_model,
-           ms.status, ms.development_stage, ms.target_delivery_date,
-           ms.created_at, ms.updated_at
-    FROM mold_specifications ms
-    WHERE (ms.maker_company_id = $1 OR ms.target_maker_id = $1)
-      AND ms.status NOT IN ('completed','cancelled','scrapped','완료')
-    ORDER BY
-      CASE ms.development_stage
-        WHEN 'trial_waiting' THEN 1
-        WHEN 'assembly' THEN 2
-        WHEN 'machining' THEN 3
-        WHEN 'design' THEN 4
-        ELSE 5
-      END,
-      ms.target_delivery_date ASC NULLS LAST
+    SELECT m.id, m.mold_code, m.mold_name, m.part_name, m.car_model,
+           m.status, m.sop_date, m.eop_date,
+           m.created_at, m.updated_at
+    FROM molds m
+    WHERE (m.maker_company_id = $1 OR m.maker_id = $1)
+      AND m.status NOT IN ('completed','cancelled','scrapped','완료')
+    ORDER BY m.updated_at DESC
     LIMIT 10
   `, { bind: [companyId] });
 
   // --- Recent activities ---
   const recentActivities = await safeQueryAll(`
-    SELECT 'specification' AS type, ms.id, ms.part_name AS title, ms.status, NULL AS priority,
-           ms.updated_at AS created_at, ms.mold_code, ms.part_name
-    FROM mold_specifications ms
-    WHERE (ms.maker_company_id = $1 OR ms.target_maker_id = $1)
-    ORDER BY ms.updated_at DESC
+    SELECT 'mold' AS type, m.id, m.mold_name AS title, m.status, NULL AS priority,
+           m.updated_at AS created_at, m.mold_code, m.part_name
+    FROM molds m
+    WHERE (m.maker_company_id = $1 OR m.maker_id = $1)
+    ORDER BY m.updated_at DESC
     LIMIT 10
   `, { bind: [companyId] });
 
@@ -374,12 +366,10 @@ async function getPlantDashboard(companyId) {
   // --- KPI ---
   const kpiRow = await safeQueryOne(`
     SELECT
-      (SELECT COUNT(*) FROM mold_specifications ms
-         JOIN plant_molds pm ON ms.id = pm.mold_spec_id
-         WHERE pm.plant_id = $1)                                                                   AS total_molds,
-      (SELECT COUNT(*) FROM mold_specifications ms
-         JOIN plant_molds pm ON ms.id = pm.mold_spec_id
-         WHERE pm.plant_id = $1 AND ms.status = 'active')                                         AS active_molds,
+      (SELECT COUNT(*) FROM molds ms
+         WHERE ms.plant_company_id = $1)                                                             AS total_molds,
+      (SELECT COUNT(*) FROM molds ms
+         WHERE ms.plant_company_id = $1 AND ms.status = 'active')                                   AS active_molds,
       (SELECT COUNT(*) FROM daily_checks
          WHERE DATE(check_date) = CURRENT_DATE)                                                    AS today_checks,
       (SELECT COUNT(*) FROM repair_requests
@@ -390,9 +380,8 @@ async function getPlantDashboard(companyId) {
          WHERE check_date >= DATE_TRUNC('month', CURRENT_DATE))                                    AS monthly_production,
       (SELECT COUNT(*) FROM qr_sessions
          WHERE created_at >= CURRENT_DATE)                                                          AS today_scans,
-      (SELECT COUNT(*) FROM mold_specifications ms
-         JOIN plant_molds pm ON ms.id = pm.mold_spec_id
-         WHERE pm.plant_id = $1 AND ms.status IN ('ng','NG'))                                     AS ng_molds
+      (SELECT COUNT(*) FROM molds ms
+         WHERE ms.plant_company_id = $1 AND ms.status IN ('ng','NG'))                               AS ng_molds
   `, { bind: [companyId] });
 
   const kpi = {
@@ -429,7 +418,7 @@ async function getPlantDashboard(companyId) {
       SELECT 'daily_check' AS type, dc.id, dc.status, dc.check_date AS created_at,
              ms.mold_code, ms.part_name, u.name AS user_name
       FROM daily_checks dc
-      LEFT JOIN mold_specifications ms ON dc.mold_id = ms.id
+      LEFT JOIN molds ms ON dc.mold_id = ms.id
       LEFT JOIN users u ON dc.user_id = u.id
       ORDER BY dc.created_at DESC
       LIMIT 5
@@ -439,7 +428,7 @@ async function getPlantDashboard(companyId) {
       SELECT 'repair' AS type, rr.id, rr.status, rr.created_at,
              ms.mold_code, ms.part_name, u.name AS user_name
       FROM repair_requests rr
-      LEFT JOIN mold_specifications ms ON rr.mold_id = ms.id
+      LEFT JOIN molds ms ON rr.mold_id = ms.id
       LEFT JOIN users u ON rr.requester_id = u.id
       WHERE rr.requester_company_id = $1
       ORDER BY rr.created_at DESC

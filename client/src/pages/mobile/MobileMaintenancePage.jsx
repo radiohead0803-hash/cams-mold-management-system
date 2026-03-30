@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Wrench, ArrowLeft, Plus, Calendar, Clock, 
+import {
+  Wrench, ArrowLeft, Plus, Calendar, Clock, X,
   CheckCircle, ChevronRight, Cog, Droplets, Settings, Save
 } from 'lucide-react';
 import api from '../../lib/api';
@@ -34,10 +34,15 @@ export default function MobileMaintenancePage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [saveMessage, setSaveMessage] = useState(null);
+  const [statistics, setStatistics] = useState(null);
+  const [types, setTypes] = useState([]);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     loadRecords();
-    // 서버 draft 복원은 내부 API로 처리
+    loadStatistics();
+    loadTypes();
   }, [moldId]);
 
   const loadRecords = async () => {
@@ -50,6 +55,36 @@ export default function MobileMaintenancePage() {
       console.error('Failed to load records:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStatistics = async () => {
+    try {
+      const response = await api.get('/maintenance/statistics');
+      setStatistics(response.data.data);
+    } catch (error) {
+      console.error('Failed to load statistics:', error);
+    }
+  };
+
+  const loadTypes = async () => {
+    try {
+      const response = await api.get('/maintenance/types');
+      setTypes(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load types:', error);
+    }
+  };
+
+  const loadDetail = async (id) => {
+    try {
+      setDetailLoading(true);
+      const response = await api.get(`/maintenance/${id}`);
+      setSelectedRecord(response.data.data);
+    } catch (error) {
+      console.error('Failed to load detail:', error);
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -93,6 +128,7 @@ export default function MobileMaintenancePage() {
       setShowForm(false);
       setFormData({ maintenance_type: '', description: '', work_details: '', cost: '' });
       loadRecords();
+      loadStatistics();
     } catch (error) {
       console.error('Failed to submit:', error);
       alert('등록에 실패했습니다.');
@@ -120,6 +156,30 @@ export default function MobileMaintenancePage() {
         </button>
       </div>
 
+      {/* 통계 카드 */}
+      {statistics && statistics.by_type && statistics.by_type.length > 0 && (
+        <div className="px-4 pt-3">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {statistics.by_type.slice(0, 6).map((stat) => {
+              const Icon = TYPE_ICONS[stat.maintenance_type] || Wrench;
+              return (
+                <div key={stat.maintenance_type} className="flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 px-3 py-2.5 min-w-[100px]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                      <Icon size={16} className="text-orange-600" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] text-gray-500 whitespace-nowrap">{stat.maintenance_type}</div>
+                      <div className="text-lg font-bold text-gray-900">{stat.count}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 목록 */}
       <div className="p-4">
         {loading ? (
@@ -142,7 +202,8 @@ export default function MobileMaintenancePage() {
               return (
                 <div
                   key={record.id}
-                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
+                  className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 active:bg-gray-50 cursor-pointer"
+                  onClick={() => loadDetail(record.id)}
                 >
                   <div className="flex items-start gap-3">
                     <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
@@ -175,6 +236,108 @@ export default function MobileMaintenancePage() {
         )}
       </div>
 
+      {/* 상세 보기 모달 */}
+      {selectedRecord && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+          <div className="bg-white w-full rounded-t-2xl max-h-[85vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white px-6 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">유지보전 상세</h2>
+              <button onClick={() => setSelectedRecord(null)} className="p-1 rounded-full hover:bg-gray-100">
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            {detailLoading ? (
+              <div className="text-center py-12 text-gray-500">로딩 중...</div>
+            ) : (
+              <div className="p-6 space-y-5">
+                {/* 유형 헤더 */}
+                <div className="flex items-center gap-3">
+                  {(() => { const Icon = TYPE_ICONS[selectedRecord.maintenance_type] || Wrench; return (
+                    <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+                      <Icon size={24} className="text-orange-600" />
+                    </div>
+                  ); })()}
+                  <div>
+                    <div className="font-semibold text-gray-900 text-lg">{selectedRecord.maintenance_type}</div>
+                    <div className="text-sm text-gray-500">
+                      {selectedRecord.mold_code ? `${selectedRecord.mold_code}` : ''}{selectedRecord.part_name ? ` - ${selectedRecord.part_name}` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 금형 정보 */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">금형 정보</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">금형코드</span>
+                      <span className="font-medium text-gray-900">{selectedRecord.mold_code || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">품번</span>
+                      <span className="font-medium text-gray-900">{selectedRecord.part_number || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">품명</span>
+                      <span className="font-medium text-gray-900">{selectedRecord.part_name || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">현재 타수</span>
+                      <span className="font-medium text-gray-900">{selectedRecord.current_shots?.toLocaleString() || '-'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 작업 정보 */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">작업 정보</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">유지보전 유형</span>
+                      <span className="font-medium text-gray-900">{selectedRecord.maintenance_type || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">카테고리</span>
+                      <span className="font-medium text-gray-900">{selectedRecord.maintenance_category || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">수행일</span>
+                      <span className="font-medium text-gray-900">
+                        {selectedRecord.performed_at ? new Date(selectedRecord.performed_at).toLocaleString('ko-KR') : '-'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">담당자</span>
+                      <span className="font-medium text-gray-900">{selectedRecord.performed_by_name || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">비용</span>
+                      <span className="font-medium text-gray-900">{selectedRecord.cost ? `${selectedRecord.cost.toLocaleString()}원` : '-'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 작업 내용 */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">작업 내용</h3>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <div className="text-gray-500 mb-1">설명</div>
+                      <p className="text-gray-900">{selectedRecord.description || '-'}</p>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 mb-1">작업 상세</div>
+                      <p className="text-gray-900">{selectedRecord.work_details || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 등록 폼 모달 */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
@@ -190,7 +353,7 @@ export default function MobileMaintenancePage() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">유형 *</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {['정기점검', '세척', '윤활', '습합', '수리', '부품교체'].map((type) => (
+                  {(types.length > 0 ? types : ['정기점검', '세척', '윤활', '습합', '수리', '부품교체']).map((type) => (
                     <button
                       key={type}
                       onClick={() => setFormData({ ...formData, maintenance_type: type })}
