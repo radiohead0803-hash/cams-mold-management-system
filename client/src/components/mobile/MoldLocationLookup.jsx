@@ -104,8 +104,8 @@ function MapButtons({ lat, lng, name }) {
 
 // ─── 금형 카드 ───
 function MoldCard({ mold, distance }) {
-  const lat = mold.gps_latitude || mold.current_latitude || null
-  const lng = mold.gps_longitude || mold.current_longitude || null
+  const lat = mold.last_gps_lat || mold.base_gps_lat || mold.gps_latitude || mold.current_latitude || null
+  const lng = mold.last_gps_lng || mold.base_gps_lng || mold.gps_longitude || mold.current_longitude || null
   const hasGps = lat && lng
   const status = mold.status || 'inactive'
   const location = mold.current_location || mold.location_name || mold.company_name || ''
@@ -116,7 +116,7 @@ function MoldCard({ mold, distance }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <span className="font-bold text-sm text-blue-600 truncate">
-              {mold.mold_code || mold.mold_number || `#${mold.id}`}
+              {mold.mold_code || `#${mold.id}`}
             </span>
             <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${statusColors[status] || 'bg-gray-100 text-gray-600'}`}>
               {statusLabels[status] || status}
@@ -210,11 +210,12 @@ export default function MoldLocationLookup({ onClose }) {
     try {
       setLoading(true)
       setSearched(true)
-      const res = await api.get('/mold-specifications', {
+      const res = await api.get('/molds', {
         params: { limit: 20, search: searchQuery.trim() }
       })
       if (res.data.success) {
-        setMolds(res.data.data || [])
+        const result = res.data.data
+        setMolds(Array.isArray(result) ? result : result?.items || [])
       }
     } catch (err) {
       console.error('금형 검색 실패:', err)
@@ -254,17 +255,17 @@ export default function MoldLocationLookup({ onClose }) {
 
         try {
           // 위치 정보가 있는 금형 전체 조회
-          const res = await api.get('/mold-specifications', {
+          const res = await api.get('/molds', {
             params: { limit: 100 }
           })
           if (res.data.success) {
-            const all = res.data.data || []
+            const all = res.data.data?.items || res.data.data || []
             // GPS 좌표가 있는 금형만 필터 + 거리 계산
             const withDistance = all
-              .filter(m => (m.gps_latitude || m.current_latitude) && (m.gps_longitude || m.current_longitude))
+              .filter(m => (m.last_gps_lat || m.base_gps_lat) && (m.last_gps_lng || m.base_gps_lng))
               .map(m => {
-                const lat = m.gps_latitude || m.current_latitude
-                const lng = m.gps_longitude || m.current_longitude
+                const lat = m.last_gps_lat || m.base_gps_lat
+                const lng = m.last_gps_lng || m.base_gps_lng
                 return {
                   ...m,
                   _distance: calcDistance(latitude, longitude, lat, lng)

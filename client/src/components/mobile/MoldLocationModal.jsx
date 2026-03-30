@@ -12,11 +12,11 @@ export default function MoldLocationModal({ moldId, mold, onClose, onUpdate }) {
   const [updatedLocation, setUpdatedLocation] = useState(null)
 
   const currentLocation = updatedLocation || {
-    name: mold?.current_location || mold?.location || '',
-    lat: mold?.current_latitude || mold?.gps_lat || null,
-    lng: mold?.current_longitude || mold?.gps_lng || null,
+    name: mold?.current_location || mold?.location || mold?.last_gps_address || '',
+    lat: mold?.last_gps_lat || mold?.base_gps_lat || mold?.current_latitude || mold?.gps_lat || null,
+    lng: mold?.last_gps_lng || mold?.base_gps_lng || mold?.current_longitude || mold?.gps_lng || null,
     companyName: mold?.company_name || mold?.plant_name || '',
-    address: mold?.address || mold?.company_address || '',
+    address: mold?.address || mold?.company_address || mold?.last_gps_address || '',
   }
 
   const hasGps = currentLocation.lat && currentLocation.lng
@@ -35,10 +35,10 @@ export default function MoldLocationModal({ moldId, mold, onClose, onUpdate }) {
       async (position) => {
         const { latitude, longitude } = position.coords
         try {
-          await api.patch(`/mold-specifications/${moldId}`, {
-            current_latitude: latitude,
-            current_longitude: longitude,
-            current_location_name: `GPS 업데이트 (${new Date().toLocaleString('ko-KR')})`,
+          await api.patch(`/molds/${moldId}/location`, {
+            latitude: latitude,
+            longitude: longitude,
+            location_name: `GPS 업데이트 (${new Date().toLocaleString('ko-KR')})`,
           })
 
           const newLocation = {

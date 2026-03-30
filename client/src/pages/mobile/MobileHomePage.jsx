@@ -336,9 +336,9 @@ function mapApiToActivities(data, role) {
   if (!data) return [];
   const activities = [];
 
-  // Developer / system_admin: recentAlerts + recentMolds
-  if (data.recentAlerts?.length) {
-    data.recentAlerts.forEach((a) => {
+  // Developer / system_admin: recentActivities + recentMolds
+  if (data.recentActivities?.length) {
+    data.recentActivities.forEach((a) => {
       activities.push({
         id: `alert-${a.id}`,
         type: a.priority === 'high' ? 'repair' : 'default',
@@ -801,9 +801,9 @@ export default function MobileHomePage() {
               </div>
             ) : (
               /* Also try server-side recent data */
-              dashboardData?.recentAlerts?.length > 0 ? (
+              dashboardData?.recentActivities?.length > 0 ? (
                 <div className="divide-y divide-gray-50">
-                  {dashboardData.recentAlerts.map((alert) => (
+                  {dashboardData.recentActivities.map((alert) => (
                     <ActivityItem
                       key={alert.id}
                       icon={Bell}
