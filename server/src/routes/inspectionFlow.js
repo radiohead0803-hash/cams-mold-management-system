@@ -36,7 +36,7 @@ router.post('/start', async (req, res) => {
     // 금형 정보 조회
     const [mold] = await sequelize.query(`
       SELECT 
-        ms.id, ms.mold_number, ms.part_name, ms.car_model,
+        ms.id, ms.mold_code, ms.part_name, ms.car_model,
         ms.current_shots, ms.target_shots, ms.cavity_count,
         ms.status, ms.location,
         pm.plant_id
@@ -98,7 +98,7 @@ router.post('/start', async (req, res) => {
       data: {
         mold: {
           id: mold.id,
-          moldNumber: mold.mold_number,
+          moldCode: mold.mold_code,
           partName: mold.part_name,
           carModel: mold.car_model,
           currentShots: mold.current_shots || 0,
@@ -393,7 +393,7 @@ router.get('/today-status', async (req, res) => {
 
     // 미점검 금형 목록
     const [uncheckedMolds] = await sequelize.query(`
-      SELECT ms.id, ms.mold_number, ms.part_name, ms.car_model, ms.location
+      SELECT ms.id, ms.mold_code, ms.part_name, ms.car_model, ms.location
       FROM mold_specifications ms
       JOIN plant_molds pm ON ms.id = pm.mold_spec_id
       WHERE pm.plant_id = :companyId 
@@ -402,7 +402,7 @@ router.get('/today-status', async (req, res) => {
           SELECT mold_id FROM daily_checks 
           WHERE DATE(check_date) = CURRENT_DATE AND status = 'completed'
         )
-      ORDER BY ms.mold_number
+      ORDER BY ms.mold_code
       LIMIT 20
     `, {
       replacements: { companyId },

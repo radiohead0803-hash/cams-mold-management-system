@@ -84,7 +84,7 @@ const startDailyChecklist = async (req, res) => {
         alert_type: 'shot_milestone',
         priority: 'high',
         title: `Shot Milestone Reached: ${shot_count.toLocaleString()}`,
-        message: `Mold ${mold.mold_number} has reached ${shot_count.toLocaleString()} shots. Periodic inspection may be required.`,
+        message: `Mold ${mold.mold_code} has reached ${shot_count.toLocaleString()} shots. Periodic inspection may be required.`,
         target_users: [user_id]
       });
     }
@@ -199,7 +199,7 @@ const getDailyChecklist = async (req, res) => {
         {
           model: Mold,
           as: 'mold',
-          attributes: ['id', 'mold_number', 'mold_name', 'product_name']
+          attributes: ['id', 'mold_code', 'mold_name', 'product_name']
         },
         {
           model: User,
@@ -258,7 +258,7 @@ const getChecklistHistory = async (req, res) => {
         {
           model: Mold,
           as: 'mold',
-          attributes: ['id', 'mold_number', 'mold_name']
+          attributes: ['id', 'mold_code', 'mold_name']
         },
         {
           model: User,

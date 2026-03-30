@@ -51,7 +51,7 @@ export function useRepairRequests(params?: { status?: string; plantId?: number }
         setLoading(true);
         setError(null);
 
-        const res = await api.get('/api/v1/repair-requests', {
+        const res = await api.get('/repair-requests', {
           params
         });
 

@@ -45,7 +45,7 @@ export default function QRLogin() {
     const fetchMolds = async () => {
       setLoadingMolds(true)
       try {
-        const response = await api.get('/api/v1/molds?limit=10')
+        const response = await api.get('/molds?limit=10')
         if (response.data.success && response.data.data) {
           // data가 배열인 경우와 객체인 경우 모두 처리
           const molds = Array.isArray(response.data.data) 
@@ -173,7 +173,7 @@ export default function QRLogin() {
       console.log('[QRLogin] Scanning QR code:', qrValue)
       
       // QR 스캔 API 호출 (신규 엔드포인트)
-      const response = await api.post('/api/v1/mobile/qr/scan', { 
+      const response = await api.post('/mobile/qr/scan', { 
         code: qrValue
       })
       

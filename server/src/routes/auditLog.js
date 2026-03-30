@@ -228,7 +228,7 @@ router.get('/liability-changes', authorize(['system_admin', 'mold_developer']), 
         al.created_at,
         u.name as user_name,
         rr.title as repair_title,
-        ms.mold_number
+        ms.mold_code
       FROM audit_logs al
       LEFT JOIN users u ON al.user_id = u.id
       LEFT JOIN repair_requests rr ON al.entity_type = 'repair_request' AND al.entity_id = rr.id::text

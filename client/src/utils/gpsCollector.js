@@ -63,7 +63,7 @@ export async function logGPSEvent({ moldId, eventType, latitude, longitude, accu
   if (!latitude || !longitude) return;
 
   try {
-    await api.post('/api/v1/gps/log', {
+    await api.post('/gps/log', {
       moldId,
       eventType,
       latitude,
@@ -114,7 +114,7 @@ export async function getGPSHistory(moldId, options = {}) {
     if (options.limit) params.set('limit', options.limit);
     if (options.eventType) params.set('eventType', options.eventType);
 
-    const response = await api.get(`/api/v1/gps/history/${moldId}?${params.toString()}`);
+    const response = await api.get(`/gps/history/${moldId}?${params.toString()}`);
     return response.data?.data?.logs || [];
   } catch (e) {
     console.warn('[GPS Collector] History fetch failed:', e.message);

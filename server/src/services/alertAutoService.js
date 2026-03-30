@@ -119,7 +119,7 @@ const checkInspectionOverdueAlerts = async () => {
     const [overdueDaily] = await sequelize.query(`
       SELECT 
         ms.id as mold_id,
-        ms.mold_number,
+        ms.mold_code,
         ms.part_name,
         pm.plant_id as company_id,
         COALESCE(
@@ -153,7 +153,7 @@ const checkInspectionOverdueAlerts = async () => {
         alertType: ALERT_TYPES.INSPECTION_OVERDUE,
         severity: SEVERITY.MEDIUM,
         title: '[점검 지연] 일상점검 미완료',
-        message: `${mold.mold_number} (${mold.part_name || '-'}) - 오늘 일상점검이 완료되지 않았습니다.`
+        message: `${mold.mold_code} (${mold.part_name || '-'}) - 오늘 일상점검이 완료되지 않았습니다.`
       });
       createdCount++;
     }
@@ -175,7 +175,7 @@ const checkShotsAlerts = async () => {
     const [shotsWarning] = await sequelize.query(`
       SELECT 
         ms.id as mold_id,
-        ms.mold_number,
+        ms.mold_code,
         ms.part_name,
         ms.current_shots,
         ms.target_shots,
@@ -209,7 +209,7 @@ const checkShotsAlerts = async () => {
         alertType: isExceeded ? ALERT_TYPES.SHOTS_EXCEEDED : ALERT_TYPES.SHOTS_WARNING,
         severity: isExceeded ? SEVERITY.CRITICAL : SEVERITY.HIGH,
         title: isExceeded ? '[타수 초과] 목표 타수 도달' : '[타수 경고] 목표 타수 임박',
-        message: `${mold.mold_number} (${mold.part_name || '-'}) - 현재 ${mold.current_shots?.toLocaleString()}타 / 목표 ${mold.target_shots?.toLocaleString()}타 (${percent}%)`
+        message: `${mold.mold_code} (${mold.part_name || '-'}) - 현재 ${mold.current_shots?.toLocaleString()}타 / 목표 ${mold.target_shots?.toLocaleString()}타 (${percent}%)`
       });
       createdCount++;
     }

@@ -64,7 +64,7 @@ router.get('/qr/sessions', async (req, res) => {
         qs.gps_latitude, qs.gps_longitude, qs.gps_accuracy,
         qs.created_at,
         u.id as user_id, u.name as user_name, u.user_type,
-        ms.id as mold_id, ms.mold_number, ms.part_name
+        ms.id as mold_id, ms.mold_code, ms.part_name
       FROM qr_sessions qs
       LEFT JOIN users u ON qs.user_id = u.id
       LEFT JOIN mold_specifications ms ON qs.mold_id = ms.id
@@ -93,7 +93,7 @@ router.get('/qr/sessions', async (req, res) => {
       } : null,
       mold: s.mold_id ? {
         id: s.mold_id,
-        mold_number: s.mold_number,
+        mold_code: s.mold_code,
         part_name: s.part_name
       } : null
     }));

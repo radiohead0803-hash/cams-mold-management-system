@@ -58,7 +58,7 @@ const getSystemAdminKpis = async (req, res) => {
         {
           model: Mold,
           as: 'mold',
-          attributes: ['id', 'mold_number', 'mold_name']
+          attributes: ['id', 'mold_code', 'mold_name']
         },
         {
           model: User,
@@ -166,7 +166,7 @@ const getPlantKpis = async (req, res) => {
       if (needsDailyCheck || needsPeriodicCheck) {
         todayChecks.push({
           moldId: mold.id,
-          moldCode: mold.mold_number,
+          moldCode: mold.mold_code,
           moldName: mold.mold_name,
           checkType: needsDailyCheck ? 'daily' : 'periodic',
           dueShot: needsDailyCheck ?
@@ -188,7 +188,7 @@ const getPlantKpis = async (req, res) => {
       order: [['created_at', 'DESC']],
       limit: 10,
       include: [
-        { model: Mold, as: 'mold', attributes: ['mold_number'] },
+        { model: Mold, as: 'mold', attributes: ['mold_code'] },
         { model: User, as: 'assignedTo', attributes: ['name', 'company_name'] }
       ]
     });
@@ -196,7 +196,7 @@ const getPlantKpis = async (req, res) => {
     // 7. 최근 NG 알림
     const recentNg = await sequelize.query(`
       SELECT 
-        m.mold_number as "moldCode",
+        m.mold_code as "moldCode",
         m.mold_name as "moldName",
         'NG 발생' as "ngSummary",
         dc.created_at as "checkedAt"
@@ -219,7 +219,7 @@ const getPlantKpis = async (req, res) => {
         latitude: { [Op.ne]: null },
         longitude: { [Op.ne]: null }
       },
-      attributes: ['id', 'mold_number', 'latitude', 'longitude', 'status']
+      attributes: ['id', 'mold_code', 'mold_name', 'status']
     });
 
     res.json({
@@ -234,7 +234,7 @@ const getPlantKpis = async (req, res) => {
         todayChecks,
         repairs: repairs.map(r => ({
           id: r.id,
-          moldCode: r.mold?.mold_number,
+          moldCode: r.mold?.mold_code,
           title: r.title,
           status: r.status,
           makerName: r.assignedTo?.company_name || '-',
@@ -244,9 +244,7 @@ const getPlantKpis = async (req, res) => {
         recentNg,
         locations: locations.map(l => ({
           moldId: l.id,
-          moldCode: l.mold_number,
-          lat: parseFloat(l.latitude),
-          lng: parseFloat(l.longitude),
+          moldCode: l.mold_code,
           status: l.status
         }))
       }
@@ -329,7 +327,7 @@ const getMakerKpis = async (req, res) => {
       order: [['created_at', 'DESC']],
       limit: 10,
       include: [
-        { model: Mold, as: 'mold', attributes: ['mold_number'] }
+        { model: Mold, as: 'mold', attributes: ['mold_code'] }
       ]
     });
 
@@ -344,7 +342,7 @@ const getMakerKpis = async (req, res) => {
         },
         devMolds: devMolds.map(m => ({
           moldId: m.id,
-          moldCode: m.mold_number,
+          moldCode: m.mold_code,
           moldName: m.mold_name,
           stage: m.stage || 'P1',
           devPlanStatus: 'draft',
@@ -354,7 +352,7 @@ const getMakerKpis = async (req, res) => {
         })),
         assignedRepairs: assignedRepairs.map(r => ({
           id: r.id,
-          moldCode: r.mold?.mold_number,
+          moldCode: r.mold?.mold_code,
           title: r.title,
           status: r.status,
           assignedAt: r.assigned_at
@@ -400,7 +398,7 @@ const getDeveloperKpis = async (req, res) => {
     const recentMolds = await Mold.findAll({
       limit: 10,
       order: [['created_at', 'DESC']],
-      attributes: ['id', 'mold_number', 'mold_name', 'status', 'created_at']
+      attributes: ['id', 'mold_code', 'mold_name', 'status', 'created_at']
     });
 
     res.json({
@@ -410,7 +408,7 @@ const getDeveloperKpis = async (req, res) => {
         pendingApprovals,
         recentMolds: recentMolds.map(m => ({
           id: m.id,
-          moldCode: m.mold_number,
+          moldCode: m.mold_code,
           moldName: m.mold_name,
           status: m.status,
           createdAt: m.created_at

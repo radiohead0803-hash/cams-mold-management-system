@@ -165,7 +165,7 @@ router.get('/ng-top', async (req, res) => {
     const [byMold] = await sequelize.query(`
       SELECT 
         ms.id as mold_id,
-        ms.mold_number,
+        ms.mold_code,
         ms.part_name,
         COUNT(dci.id) as ng_count,
         COUNT(DISTINCT dc.id) as check_count
@@ -174,7 +174,7 @@ router.get('/ng-top', async (req, res) => {
       JOIN mold_specifications ms ON dc.mold_id = ms.id
       WHERE dci.is_ng = true
         AND dc.check_date >= CURRENT_DATE - INTERVAL ':days days'
-      GROUP BY ms.id, ms.mold_number, ms.part_name
+      GROUP BY ms.id, ms.mold_code, ms.part_name
       ORDER BY ng_count DESC
       LIMIT :limit
     `, {

@@ -86,7 +86,7 @@ router.get('/summary', async (req, res) => {
     const [molds] = await sequelize.query(
       `SELECT
         id,
-        mold_number,
+        mold_code,
         mold_name,
         status,
         current_shots,

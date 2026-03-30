@@ -40,7 +40,7 @@ router.get('/plant', authorize(['plant']), async (req, res) => {
 
     // 2. Action List (오늘 해야 할 일)
     const [pendingInspections] = await sequelize.query(`
-      SELECT ms.id, ms.mold_number, ms.part_name, 'daily' as type, '일상점검' as type_label
+      SELECT ms.id, ms.mold_code, ms.part_name, 'daily' as type, '일상점검' as type_label
       FROM mold_specifications ms
       JOIN plant_molds pm ON ms.id = pm.mold_spec_id
       WHERE pm.plant_id = :companyId
@@ -136,7 +136,7 @@ router.get('/maker', authorize(['maker']), async (req, res) => {
     // 2. Action List
     const [pendingRepairs] = await sequelize.query(`
       SELECT rr.id, rr.title, rr.description, rr.priority, rr.status, rr.created_at,
-             ms.mold_number, ms.part_name
+             ms.mold_code, ms.part_name
       FROM repair_requests rr
       JOIN mold_specifications ms ON rr.mold_id = ms.id
       WHERE rr.assigned_maker_id = :companyId
@@ -216,7 +216,7 @@ router.get('/developer', authorize(['mold_developer', 'system_admin']), async (r
     // 2. Action List (승인 대기)
     const [pendingApprovals] = await sequelize.query(`
       (SELECT 'periodic_inspection' as type, '정기점검 승인' as type_label, 
-              pi.id, ms.mold_number, ms.part_name, pi.created_at
+              pi.id, ms.mold_code, ms.part_name, pi.created_at
        FROM periodic_inspections pi
        JOIN mold_specifications ms ON pi.mold_id = ms.id
        WHERE pi.status = 'pending_approval'
@@ -224,7 +224,7 @@ router.get('/developer', authorize(['mold_developer', 'system_admin']), async (r
        LIMIT 5)
       UNION ALL
       (SELECT 'transfer' as type, '이관 승인' as type_label,
-              t.id, ms.mold_number, ms.part_name, t.created_at
+              t.id, ms.mold_code, ms.part_name, t.created_at
        FROM transfers t
        JOIN mold_specifications ms ON t.mold_id = ms.id
        WHERE t.status = 'pending'
@@ -232,7 +232,7 @@ router.get('/developer', authorize(['mold_developer', 'system_admin']), async (r
        LIMIT 5)
       UNION ALL
       (SELECT 'scrapping' as type, '폐기 승인' as type_label,
-              sr.id, ms.mold_number, ms.part_name, sr.created_at
+              sr.id, ms.mold_code, ms.part_name, sr.created_at
        FROM scrapping_requests sr
        JOIN mold_specifications ms ON sr.mold_id = ms.id
        WHERE sr.status IN ('pending_first_approval', 'pending_final_approval')
@@ -244,7 +244,7 @@ router.get('/developer', authorize(['mold_developer', 'system_admin']), async (r
 
     // 3. 리스크 금형 리스트
     const [riskMolds] = await sequelize.query(`
-      SELECT ms.id, ms.mold_number, ms.part_name, ms.current_shots, ms.target_shots,
+      SELECT ms.id, ms.mold_code, ms.part_name, ms.current_shots, ms.target_shots,
              ROUND(ms.current_shots::numeric / NULLIF(ms.target_shots, 0) * 100, 1) as shots_percentage,
              CASE 
                WHEN ms.current_shots >= ms.target_shots THEN 'critical'
@@ -343,7 +343,7 @@ router.get('/admin', authorize(['system_admin']), async (req, res) => {
     // 3. 시스템 활동 로그 (최근)
     const [recentActivity] = await sequelize.query(`
       (SELECT 'daily_check' as type, '일상점검' as type_label, dc.id, dc.created_at, 
-              ms.mold_number, u.name as user_name
+              ms.mold_code, u.name as user_name
        FROM daily_checks dc
        JOIN mold_specifications ms ON dc.mold_id = ms.id
        LEFT JOIN users u ON dc.inspector_id = u.id
@@ -351,7 +351,7 @@ router.get('/admin', authorize(['system_admin']), async (req, res) => {
        LIMIT 5)
       UNION ALL
       (SELECT 'repair_request' as type, '수리요청' as type_label, rr.id, rr.created_at,
-              ms.mold_number, u.name as user_name
+              ms.mold_code, u.name as user_name
        FROM repair_requests rr
        JOIN mold_specifications ms ON rr.mold_id = ms.id
        LEFT JOIN users u ON rr.requester_id = u.id

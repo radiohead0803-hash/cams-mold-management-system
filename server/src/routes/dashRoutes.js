@@ -202,7 +202,7 @@ router.get('/recent-activities', async (req, res) => {
         },
         {
           association: 'mold',
-          attributes: ['id', 'mold_number', 'mold_name']
+          attributes: ['id', 'mold_code', 'mold_name']
         }
       ]
     });

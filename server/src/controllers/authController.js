@@ -136,7 +136,7 @@ const qrLogin = async (req, res) => {
         token,
         mold: {
           id: mold.id,
-          mold_number: mold.mold_number,
+          mold_code: mold.mold_code,
           mold_name: mold.mold_name,
           product_name: mold.product_name,
           total_shots: mold.total_shots,

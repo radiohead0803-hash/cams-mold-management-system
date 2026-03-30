@@ -67,7 +67,7 @@ async function listRepairRequests(req, res) {
       const plain = item.get({ plain: true });
       return {
         ...plain,
-        mold_number: plain.mold?.mold_code || plain.mold_code || '',
+        mold_code: plain.mold?.mold_code || plain.mold_code || '',
         mold_name: plain.mold?.mold_name || plain.mold_name || ''
       };
     });

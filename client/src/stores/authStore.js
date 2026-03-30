@@ -1,10 +1,28 @@
 import { create } from 'zustand'
 import api from '../lib/api'
 
+// 스토어 생성 시점에 즉시 localStorage에서 복원 (새로고침 시 깜빡임 방지)
+const getInitialState = () => {
+  try {
+    const stored = localStorage.getItem('cams-auth')
+    if (stored) {
+      const { user, token } = JSON.parse(stored)
+      if (user && token) {
+        return { user, token, isAuthenticated: true }
+      }
+    }
+  } catch (e) {
+    localStorage.removeItem('cams-auth')
+  }
+  return { user: null, token: null, isAuthenticated: false }
+}
+
+const initial = getInitialState()
+
 export const useAuthStore = create((set) => ({
-  user: null,
-  token: null,
-  isAuthenticated: false,
+  user: initial.user,
+  token: initial.token,
+  isAuthenticated: initial.isAuthenticated,
   loading: false,
   error: null,
 

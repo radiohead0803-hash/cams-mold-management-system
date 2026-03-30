@@ -182,14 +182,13 @@ const getMoldLocations = async (req, res) => {
       success: true,
       data: molds.map(mold => ({
         moldId: mold.id,
-        moldCode: mold.mold_number,
+        moldCode: mold.mold_code,
         moldName: mold.mold_name,
         status: mold.status,
-        latitude: parseFloat(mold.latitude),
-        longitude: parseFloat(mold.longitude),
-        isOutOfArea: mold.is_out_of_area,
-        locationName: mold.current_location,
-        locationCompanyId: mold.current_location_company_id,
+        latitude: mold.latitude ? parseFloat(mold.latitude) : null,
+        longitude: mold.last_latitude ? parseFloat(mold.last_latitude) : null,
+        locationStatus: mold.location_status,
+        location: mold.location,
         updatedAt: mold.updated_at
       }))
     });
@@ -206,39 +205,35 @@ const getMoldLocations = async (req, res) => {
 const getMoldLocation = async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const mold = await Mold.findByPk(id, {
-      attributes: [
-        'id',
-        'mold_number',
-        'mold_name',
-        'latitude',
-        'longitude',
-        'is_out_of_area',
-        'current_location',
-        'current_location_company_id',
-        'updated_at'
-      ]
-    });
-    
-    if (!mold) {
+
+    const [rows] = await sequelize.query(`
+      SELECT id, mold_code, mold_name, status, location, location_status,
+             base_gps_lat, base_gps_lng, last_gps_lat, last_gps_lng, last_gps_time,
+             updated_at
+      FROM molds WHERE id = $1
+    `, { bind: [id] });
+
+    if (!rows || rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: { message: 'Mold not found' }
       });
     }
-    
+
+    const mold = rows[0];
     res.json({
       success: true,
       data: {
         moldId: mold.id,
-        moldCode: mold.mold_number,
+        moldCode: mold.mold_code,
         moldName: mold.mold_name,
-        latitude: mold.latitude ? parseFloat(mold.latitude) : null,
-        longitude: mold.longitude ? parseFloat(mold.longitude) : null,
-        isOutOfArea: mold.is_out_of_area,
-        locationName: mold.current_location,
-        locationCompanyId: mold.current_location_company_id,
+        latitude: mold.last_gps_lat ? parseFloat(mold.last_gps_lat) : null,
+        longitude: mold.last_gps_lng ? parseFloat(mold.last_gps_lng) : null,
+        baseLat: mold.base_gps_lat ? parseFloat(mold.base_gps_lat) : null,
+        baseLng: mold.base_gps_lng ? parseFloat(mold.base_gps_lng) : null,
+        locationStatus: mold.location_status,
+        location: mold.location,
+        lastGpsTime: mold.last_gps_time,
         updatedAt: mold.updated_at
       }
     });
@@ -255,47 +250,40 @@ const getMoldLocation = async (req, res) => {
 const updateMoldLocation = async (req, res) => {
   try {
     const { id } = req.params;
-    const { latitude, longitude, location_name, company_id } = req.body;
-    
+    const { latitude, longitude, location_name } = req.body;
+
     if (!latitude || !longitude) {
       return res.status(400).json({
         success: false,
         error: { message: 'Latitude and longitude are required' }
       });
     }
-    
-    const mold = await Mold.findByPk(id);
-    
-    if (!mold) {
+
+    // 금형 존재 확인
+    const [rows] = await sequelize.query('SELECT id, mold_code FROM molds WHERE id = $1', { bind: [id] });
+    if (!rows || rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: { message: 'Mold not found' }
       });
     }
-    
-    // 위치 업데이트
-    await mold.update({
-      latitude,
-      longitude,
-      current_location: location_name || mold.current_location,
-      current_location_company_id: company_id || mold.current_location_company_id,
-      is_out_of_area: false, // 위치 업데이트 시 일단 정상으로 설정
-      updated_at: new Date()
-    });
-    
-    // TODO: 위치 이탈 검증 로직 추가
-    // - 등록된 공장/창고 범위 내에 있는지 확인
-    // - 범위 밖이면 is_out_of_area = true 설정 및 알림 생성
-    
+
+    // 위치 업데이트 (실제 DB 컬럼 사용)
+    await sequelize.query(`
+      UPDATE molds SET last_gps_lat = $1, last_gps_lng = $2, last_gps_time = NOW(),
+             location = COALESCE($3, location), updated_at = NOW()
+      WHERE id = $4
+    `, { bind: [latitude, longitude, location_name || null, id] });
+
     res.json({
       success: true,
       data: {
-        moldId: mold.id,
-        moldCode: mold.mold_number,
-        latitude: parseFloat(mold.latitude),
-        longitude: parseFloat(mold.longitude),
-        locationName: mold.current_location,
-        updatedAt: mold.updated_at
+        moldId: parseInt(id),
+        moldCode: rows[0].mold_code,
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        locationName: location_name,
+        updatedAt: new Date()
       }
     });
   } catch (error) {
