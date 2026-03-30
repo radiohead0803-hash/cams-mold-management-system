@@ -1,4 +1,4 @@
-const { Mold, MoldLocationLog } = require('../models/newIndex');
+const { Mold, MoldLocationLog, Company } = require('../models/newIndex');
 const { calculateDistanceM, isValidCoordinate } = require('../utils/geo');
 const { notifyAdmins } = require('../services/notificationService');
 
@@ -47,13 +47,14 @@ exports.updateMoldLocation = async (req, res) => {
     let baseLat = mold.base_gps_lat;
     let baseLng = mold.base_gps_lng;
 
-    // 기준 GPS가 없으면 생산처 GPS 사용
+    // 기준 GPS가 없으면 생산처(회사) GPS 사용
     if (!baseLat || !baseLng) {
-      if (mold.plant_id) {
-        const plant = await Plant.findByPk(mold.plant_id);
-        if (plant) {
-          baseLat = plant.gps_lat;
-          baseLng = plant.gps_lng;
+      const plantCompanyId = mold.plant_company_id || mold.plant_id;
+      if (plantCompanyId) {
+        const company = await Company.findByPk(plantCompanyId);
+        if (company) {
+          baseLat = company.latitude;
+          baseLng = company.longitude;
         }
       }
     }
@@ -174,7 +175,7 @@ exports.getMoldLocationLogs = async (req, res) => {
     let logs = [];
     try {
       const [rows] = await sequelize.query(
-        `SELECT * FROM gps_location_logs WHERE mold_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+        `SELECT * FROM mold_location_logs WHERE mold_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
         { bind: [parseInt(moldId), parseInt(limit), parseInt(offset)] }
       );
       logs = rows;

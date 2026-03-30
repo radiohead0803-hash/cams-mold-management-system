@@ -35,14 +35,13 @@ router.post('/start', async (req, res) => {
 
     // 금형 정보 조회
     const [mold] = await sequelize.query(`
-      SELECT 
-        ms.id, ms.mold_code, ms.part_name, ms.car_model,
-        ms.current_shots, ms.target_shots, ms.cavity_count,
-        ms.status, ms.location,
-        pm.plant_id
-      FROM mold_specifications ms
-      LEFT JOIN plant_molds pm ON ms.id = pm.mold_spec_id
-      WHERE ms.id = :moldId
+      SELECT
+        m.id, m.mold_code, m.part_name, m.car_model,
+        m.current_shots, m.target_shots, m.cavity_count,
+        m.status, m.location,
+        m.plant_company_id AS plant_id
+      FROM molds m
+      WHERE m.id = :moldId
     `, {
       replacements: { moldId },
       type: sequelize.QueryTypes.SELECT
@@ -199,7 +198,7 @@ router.post('/complete', async (req, res) => {
     let shotsUpdated = false;
     if (productionQty && productionQty > 0) {
       const [moldInfo] = await sequelize.query(`
-        SELECT cavity_count, current_shots FROM mold_specifications
+        SELECT cavity_count, current_shots FROM molds
         WHERE id = :moldId
       `, {
         replacements: { moldId },
@@ -212,7 +211,7 @@ router.post('/complete', async (req, res) => {
       const newShots = (moldInfo?.current_shots || 0) + shotsIncrease;
 
       await sequelize.query(`
-        UPDATE mold_specifications
+        UPDATE molds
         SET current_shots = :newShots, updated_at = NOW()
         WHERE id = :moldId
       `, {
@@ -376,16 +375,15 @@ router.get('/today-status', async (req, res) => {
     const companyId = req.user.company_id;
 
     const [status] = await sequelize.query(`
-      SELECT 
-        COUNT(DISTINCT ms.id) as total_molds,
+      SELECT
+        COUNT(DISTINCT m.id) as total_molds,
         COUNT(DISTINCT dc.mold_id) as checked_molds,
         COUNT(DISTINCT CASE WHEN dc.status = 'completed' THEN dc.mold_id END) as completed_molds,
         COUNT(DISTINCT CASE WHEN dci.is_ng = true THEN dc.id END) as ng_count
-      FROM mold_specifications ms
-      JOIN plant_molds pm ON ms.id = pm.mold_spec_id
-      LEFT JOIN daily_checks dc ON ms.id = dc.mold_id AND DATE(dc.check_date) = CURRENT_DATE
+      FROM molds m
+      LEFT JOIN daily_checks dc ON m.id = dc.mold_id AND DATE(dc.check_date) = CURRENT_DATE
       LEFT JOIN daily_check_items dci ON dc.id = dci.daily_check_id
-      WHERE pm.plant_id = :companyId AND ms.status = 'active'
+      WHERE m.plant_company_id = :companyId AND m.status = 'active'
     `, {
       replacements: { companyId },
       type: sequelize.QueryTypes.SELECT
@@ -393,16 +391,15 @@ router.get('/today-status', async (req, res) => {
 
     // 미점검 금형 목록
     const [uncheckedMolds] = await sequelize.query(`
-      SELECT ms.id, ms.mold_code, ms.part_name, ms.car_model, ms.location
-      FROM mold_specifications ms
-      JOIN plant_molds pm ON ms.id = pm.mold_spec_id
-      WHERE pm.plant_id = :companyId 
-        AND ms.status = 'active'
-        AND ms.id NOT IN (
-          SELECT mold_id FROM daily_checks 
+      SELECT m.id, m.mold_code, m.part_name, m.car_model, m.location
+      FROM molds m
+      WHERE m.plant_company_id = :companyId
+        AND m.status = 'active'
+        AND m.id NOT IN (
+          SELECT mold_id FROM daily_checks
           WHERE DATE(check_date) = CURRENT_DATE AND status = 'completed'
         )
-      ORDER BY ms.mold_code
+      ORDER BY m.mold_code
       LIMIT 20
     `, {
       replacements: { companyId },

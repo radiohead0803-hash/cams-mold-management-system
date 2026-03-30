@@ -70,7 +70,7 @@ const getMoldByQR = async (req, res) => {
   try {
     const { qrCode } = req.params;
     
-    const mold = await Mold.findOne({ where: { qr_code: qrCode } });
+    const mold = await Mold.findOne({ where: { qr_token: qrCode } });
 
     if (!mold) {
       return res.status(404).json({
@@ -169,7 +169,8 @@ const getMoldLocations = async (req, res) => {
     const { status } = req.query;
     // raw SQL로 실제 DB 컬럼 사용
     let sql = `SELECT m.id, m.mold_code, m.mold_name, m.status, m.location, m.location_status,
-                      m.base_gps_lat AS latitude, m.last_gps_lat AS last_latitude,
+                      m.base_gps_lat AS latitude, m.base_gps_lng AS longitude,
+                      m.last_gps_lat, m.last_gps_lng,
                       m.updated_at
                FROM molds m WHERE m.base_gps_lat IS NOT NULL`;
     const binds = [];
@@ -186,7 +187,9 @@ const getMoldLocations = async (req, res) => {
         moldName: mold.mold_name,
         status: mold.status,
         latitude: mold.latitude ? parseFloat(mold.latitude) : null,
-        longitude: mold.last_latitude ? parseFloat(mold.last_latitude) : null,
+        longitude: mold.longitude ? parseFloat(mold.longitude) : null,
+        lastLatitude: mold.last_gps_lat ? parseFloat(mold.last_gps_lat) : null,
+        lastLongitude: mold.last_gps_lng ? parseFloat(mold.last_gps_lng) : null,
         locationStatus: mold.location_status,
         location: mold.location,
         updatedAt: mold.updated_at
